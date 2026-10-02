@@ -58,7 +58,11 @@ export function OfferCards({ offers, currency }: { offers: Offer[]; currency: st
               {o.freeQuantity > 0 && <em> + {o.freeQuantity} مجاناً</em>}
             </span>
             <span className="lp-offer-price" dir="ltr">
-              {o.compareAtPrice && o.compareAtPrice > o.price && (
+              {/* Already measured — against the price, and against real
+                  delivered orders. See price-honesty.ts. This used to repeat
+                  the «must be above the price» half here, which is a second
+                  copy of a rule that can only ever be one. */}
+              {o.compareAtPrice !== null && o.compareAtPrice !== undefined && (
                 <s>{o.compareAtPrice.toLocaleString('en-US')}</s>
               )}
               {o.price.toLocaleString('en-US')} {currency}

@@ -19,6 +19,13 @@ import { isValidShippingTransition } from '../shipping-workflow';
  *   2. Is it news? The same status arriving twice is not a change, and a
  *      webhook retried three times must not write three activity rows.
  *   3. Is the move legal? The transition machine decides, never the feed.
+ *
+ * AND A FEED NEVER BLOCKS, BUT IT TELLS. A blocking change request stops OUR
+ * forward transitions; it does not stop a courier's. So when the parcel moves
+ * while a request is under review, the request is flagged — otherwise the
+ * person deciding it approves a change to an order that is no longer the
+ * order she was shown. That is contract invariant 7, and the column it writes
+ * (`changedDuringReview`) existed with nothing writing it.
  */
 
 export type ApplyOutcome =
@@ -67,6 +74,23 @@ export async function applyCourierEvent(input: {
           source,
         }),
       },
+    });
+
+    /*
+     * EVERY pending request, not only the blocking ones.
+     *
+     * A non-blocking request is precisely the one that did NOT stop the
+     * pipeline, so it is the one most likely to be overtaken by the parcel —
+     * splitting the rule would flag the safer half and miss the other.
+     *
+     * `changedDuringReview: false` in the WHERE is not for idempotence
+     * (updateMany is already idempotent) — it keeps `updatedAt` from being
+     * bumped by every later event, because the change-request queue sorts and
+     * ages by it and a courier feed must not reorder a human's worklist.
+     */
+    await tx.orderChangeRequest.updateMany({
+      where: { orderId: order.id, status: 'PENDING', changedDuringReview: false },
+      data: { changedDuringReview: true },
     });
   });
 

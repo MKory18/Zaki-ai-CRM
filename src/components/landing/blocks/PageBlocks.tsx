@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
-import type { LandingSection } from '@/lib/landing-sections';
+import { COD_LINE, type LandingSection } from '@/lib/landing-sections';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
 import { sanitizeRich, isRich } from '@/lib/rich-text';
 import type { Palette } from '@/lib/landing-theme';
@@ -24,11 +24,19 @@ import { Slider } from './Slider';
  * names a colour, so changing the accent restyles the entire page.
  */
 
+import { moneyText } from '@/lib/money';
+
 export interface BlockContext {
   palette: Palette;
   productName: string;
   price: number;
   currency: string;
+  /**
+   * The country's own decimals. Absent reads as two, which is what the
+   * hand-rolled formatter this replaced always assumed — and wrong for
+   * every currency that keeps three.
+   */
+  minorUnit?: number;
   /** Real remaining stock, or null when we do not know it. */
   stock: number | null;
   offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; compareAtPrice?: number | null; isDefault?: boolean }[];
@@ -253,20 +261,20 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
         <section className="lp-section">
           <div
             style={{
-              border: '2px dashed var(--lp-accent-border)',
-              borderRadius: 'var(--lp-radius)',
+              border: '2px dashed var(--store-accent-border)',
+              borderRadius: 'var(--store-radius)',
               padding: '22px 16px',
               textAlign: 'center',
-              background: 'var(--lp-accent-tint)',
+              background: 'var(--store-accent-tint)',
             }}
           >
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--lp-muted)' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--store-muted)' }}>
               صفحة الشكر — تظهر مكان النموذج بعد إرسال الطلب
             </p>
-            <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--lp-text)', marginTop: 8 }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--store-text)', marginTop: 8 }}>
               {s.title || 'تم تسجيل طلبك بنجاح'}
             </p>
-            <p style={{ fontSize: 12.5, color: 'var(--lp-muted)', marginTop: 4, whiteSpace: 'pre-line' }}>
+            <p style={{ fontSize: 12.5, color: 'var(--store-muted)', marginTop: 4, whiteSpace: 'pre-line' }}>
               {s.message || 'سنتواصل معك قريبًا لتأكيد الطلب.'}
             </p>
           </div>
@@ -354,7 +362,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
         if (!ctx.placeholders) return null;
         return (
           <Section title={s.title}>
-            <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
+            <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--store-cat-cols': s.columns } as React.CSSProperties}>
               {[0, 1, 2].map((i) => (
                 <span key={i} className="lp-catalog-card">
                   <span className="lp-catalog-media">
@@ -395,7 +403,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
               })}
             </div>
           )}
-          <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--lp-cat-cols': s.columns } as React.CSSProperties}>
+          <div className={`lp-catalog lp-catalog-${s.cardSize}`} style={{ '--store-cat-cols': s.columns } as React.CSSProperties}>
             {items.map((it) => (
               <a key={`${it.kind}-${it.id}`} href={it.href} className="lp-catalog-card">
                 <span className="lp-catalog-media">
@@ -501,6 +509,154 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       return (
         <Section title={s.title}>
           <FaqList items={items} />
+        </Section>
+      );
+    }
+
+/**
+     * «منتجنا / البدائل» — a table, and a table is the right shape: two
+     * columns a person's eye runs across, not two paragraphs they have to
+     * hold in their head at once.
+     *
+     * The other column is «البدائل» and there is nowhere to name a brand,
+     * so a page built here cannot be refused by an ad platform for naming
+     * one.
+     */
+    case 'comparison': {
+      const rows = s.rows.filter((r) => r.aspect.trim());
+      if (!rows.length) {
+        if (!ctx.placeholders) return null;
+        return <Section title={s.title}><SlotFrame label="جدول المقارنة — تكتب الفروق التي يقدر الزبون يتحقّق منها" /></Section>;
+      }
+      return (
+        <Section title={s.title}>
+          <table className="lp-compare">
+            <thead>
+              <tr>
+                <th />
+                <th className="lp-compare-ours">{s.oursLabel}</th>
+                <th>{s.theirsLabel}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i}>
+                  <th scope="row">{r.aspect}</th>
+                  <td className="lp-compare-ours">{r.ours}</td>
+                  <td>{r.theirs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
+      );
+    }
+
+    /** «الأسبوع الأول · الثالث · الثامن» — and no photograph anywhere. */
+    case 'timeline': {
+      const points = s.points.filter((p) => p.when.trim() || p.what.trim());
+      if (!points.length) {
+        if (!ctx.placeholders) return null;
+        return <Section title={s.title}><SlotFrame label="خط زمني — متى، وماذا يحدث" /></Section>;
+      }
+      return (
+        <Section title={s.title}>
+          <ol className="lp-timeline">
+            {points.map((p, i) => (
+              <li key={i}>
+                <span className="lp-timeline-when">{p.when}</span>
+                <span className="lp-timeline-what">{p.what}</span>
+              </li>
+            ))}
+          </ol>
+        </Section>
+      );
+    }
+
+    /**
+     * Three questions, shown as questions. It does not run — a visitor
+     * answering on the page would need state, and what this block owes the
+     * structure is the STORY: «اسألني ثلاثة وأقول لك أيّها». The offers
+     * block below still shows every tier, because the answer is a
+     * suggestion and not a decision.
+     */
+    case 'quiz': {
+      const questions = s.questions.filter((q) => q.ask.trim());
+      if (!questions.length) {
+        if (!ctx.placeholders) return null;
+        return <Section title={s.title}><SlotFrame label="ثلاثة أسئلة — كل واحد بخيارين أو ثلاثة" /></Section>;
+      }
+      return (
+        <Section title={s.title}>
+          <ol className="lp-quiz">
+            {questions.map((q, i) => (
+              <li key={i}>
+                <p className="lp-quiz-ask">{q.ask}</p>
+                <div className="lp-quiz-options">
+                  {q.options.filter(Boolean).map((o, j) => (
+                    <span key={j} className="lp-quiz-option">{o}</span>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+          {s.result.trim() && <p className="lp-quiz-result" {...rich(s.result)} />}
+        </Section>
+      );
+    }
+
+    /** The doubt said out loud before the visitor says it to themselves. */
+    case 'objections': {
+      const items = s.items.filter((i) => i.doubt.trim());
+      if (!items.length) {
+        if (!ctx.placeholders) return null;
+        return <Section title={s.title}><SlotFrame label="الاعتراضات — ما يمنع الطلب، وجوابه" /></Section>;
+      }
+      return (
+        <Section title={s.title}>
+          <div className="lp-objections">
+            {items.map((item, i) => (
+              <div key={i} className="lp-objection">
+                <p className="lp-objection-doubt">{item.doubt}</p>
+                <p className="lp-objection-answer">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+          {s.guarantee.trim() && <p className="lp-guarantee" {...rich(s.guarantee)} />}
+        </Section>
+      );
+    }
+
+    /** The steps, then what each ingredient does. No percentages anywhere. */
+    case 'mechanism': {
+      const steps = s.steps.filter((x) => x.title.trim() || x.text.trim());
+      const ingredients = s.ingredients.filter((x) => x.name.trim());
+      if (!steps.length && !ingredients.length) {
+        if (!ctx.placeholders) return null;
+        return <Section title={s.title}><SlotFrame label="الخطوات والمكوّنات — وما يفعله كل واحد" /></Section>;
+      }
+      return (
+        <Section title={s.title}>
+          {steps.length > 0 && (
+            <ol className="lp-mechanism">
+              {steps.map((x, i) => (
+                <li key={i}>
+                  <span className="lp-mechanism-step">{x.title}</span>
+                  <span className="lp-mechanism-text">{x.text}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {ingredients.length > 0 && (
+            <dl className="lp-ingredients">
+              {ingredients.map((x, i) => (
+                <div key={i}>
+                  <dt>{x.name}</dt>
+                  <dd>{x.does}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </Section>
       );
     }
@@ -633,10 +789,10 @@ function SlotFrame({ label }: { label: string }) {
       style={{
         padding: '18px 14px',
         textAlign: 'center',
-        border: '2px dashed var(--lp-accent-border)',
-        borderRadius: 'var(--lp-radius)',
-        background: 'var(--lp-accent-tint)',
-        color: 'var(--lp-accent)',
+        border: '2px dashed var(--store-accent-border)',
+        borderRadius: 'var(--store-radius)',
+        background: 'var(--store-accent-tint)',
+        color: 'var(--store-accent)',
         fontSize: 12,
         fontWeight: 700,
       }}
@@ -663,10 +819,10 @@ function ImageFrame({ label, ratio }: { label: string; ratio: number }) {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
-        border: '2px dashed var(--lp-accent-border)',
-        borderRadius: 'var(--lp-radius)',
-        background: 'var(--lp-accent-tint)',
-        color: 'var(--lp-accent)',
+        border: '2px dashed var(--store-accent-border)',
+        borderRadius: 'var(--store-radius)',
+        background: 'var(--store-accent-tint)',
+        color: 'var(--store-accent)',
         fontSize: 12,
         fontWeight: 700,
       }}
@@ -679,7 +835,7 @@ function ImageFrame({ label, ratio }: { label: string; ratio: number }) {
 function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'hero' }>; ctx: BlockContext }) {
   const headline = s.headline || ctx.productName;
   return (
-    <header className="lp-hero">
+    <header className="lp-hero" data-hero={s.variant}>
       {s.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={s.image} alt={headline} className="lp-hero-img" />
@@ -689,11 +845,32 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
       <h1 className="lp-h1" data-edit="headline" {...rich(headline)} />
       {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline" {...rich(s.subheadline)} />}
       {s.showPrice && ctx.price > 0 && (
+        /*
+          THROUGH THE ONE DOOR. This wrote the price with a
+          `toLocaleString` of its own — no minor unit, so a currency with
+          three decimals was rendered with none, on the first screen of
+          the page that sells it.
+        */
         <p className="lp-price" dir="ltr">
-          {ctx.price.toLocaleString('en-US')} <span>{ctx.currency}</span>
+          {moneyText(ctx.price, ctx.currency, ctx.minorUnit ?? 2)}
         </p>
       )}
       <OrderCta className="lp-cta" data-edit="ctaText">{s.ctaText || 'اطلب الآن'}</OrderCta>
+      {/*
+        THE THIRD PART OF THE LOCKED CORE.
+
+        «النواة المقفولة: السعر مع العرض، وزر الطلب، وسطر الدفع عند الاستلام».
+        Two of the three were on the first screen and this one was nowhere:
+        every structure declares `firstScreen.codLine: true` and no renderer
+        drew it, so the promise lived entirely in a schema. A visitor who came
+        from an advert and does not own a card has one question before they
+        read anything, and the answer was a thousand pixels down the page.
+
+        It is not editable and not behind a flag — that is what «مقفولة»
+        means. A seller cannot turn it off, and no skin can hide it: the rule
+        is kept by there being no value that removes it.
+      */}
+      <p className="lp-hero-cod">{COD_LINE}</p>
     </header>
   );
 }

@@ -30,6 +30,8 @@ vi.mock('@/lib/authorization', () => ({ requirePermission: async () => undefined
 vi.mock('@/lib/landing-domain', () => ({ validateDomain: (d: string) => ({ ok: true, domain: d }), forgetHost: vi.fn(), dashboardHosts: () => [] }));
 
 import { POST as createPage } from './route';
+import { LANDING_STRUCTURES } from '@/lib/landing-structures';
+import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { PATCH as patchPage } from './[id]/route';
 import { POST as createStore } from '../geo/stores/route';
 
@@ -100,5 +102,70 @@ describe('a store slug', () => {
     expect(res.status).toBe(409);
     expect(db.store.create).not.toHaveBeenCalled();
     expect(db.store.findFirst.mock.calls.at(-1)![0].where).toEqual({ slug: 'sehha' });
+  });
+});
+
+/**
+ * A PAGE THAT STARTS FROM بنية × مظهر.
+ *
+ * `template` is one of the fifteen page shapes and each carries its own
+ * colours — a structure and a skin welded together. A persuasion STRUCTURE
+ * carries no colour at all, so it is paired with a skin here, and the two
+ * are chosen separately: any structure with any skin.
+ */
+describe('a page started from a structure and a skin', () => {
+  const create = (body: Record<string, unknown>) =>
+    createPage(new Request('http://localhost/api/landing-pages', json({
+      name: 'صفحة', slug: 'a-page', ...body,
+    })) as never);
+
+  it('takes its sections from the structure and its colours from the skin', async () => {
+    const res = await create({ structure: 'origin', skin: 'heritage' });
+    expect(res.status).toBe(201);
+    const written = db.landingPage.create.mock.calls[0][0].data;
+    const sections = JSON.parse(written.sections);
+    const structure = LANDING_STRUCTURES.find((s) => s.id === 'origin')!;
+    expect(sections.map((x: { type: string }) => x.type)).toEqual([...structure.sequence]);
+    // The look is the skin's, and nothing of it came from the structure.
+    expect(JSON.parse(written.theme).accent)
+      .toBe(STORE_TEMPLATES.find((s) => s.id === 'heritage')!.palette.accent);
+  });
+
+  it('every structure runs with every skin', async () => {
+    for (const s of LANDING_STRUCTURES) {
+      for (const skin of [STORE_TEMPLATES[0], STORE_TEMPLATES[4], STORE_TEMPLATES[9]]) {
+        vi.clearAllMocks();
+        db.landingPage.create.mockImplementation(async ({ data }: { data: unknown }) => ({ id: 'n', ...(data as object) }));
+        const res = await create({ structure: s.id, skin: skin.id });
+        expect(res.status, `${s.id} × ${skin.id}`).toBe(201);
+      }
+    }
+  });
+
+  it('refuses a structure it does not know, rather than quietly telling another story', async () => {
+    // `template` falls back on an unknown key — a page shape is a starting
+    // point. A STRUCTURE is the story: silently giving somebody «المشكلة ←
+    // الحل» when they asked for «العرض أولاً» hands them a page whose first
+    // screen contradicts the ad that will point at it.
+    const res = await create({ structure: 'no-such-structure' });
+    expect(res.status).toBe(404);
+    expect(db.landingPage.create).not.toHaveBeenCalled();
+  });
+
+  it('and a skin it does not know', async () => {
+    expect((await create({ structure: 'origin', skin: 'no-such-skin' })).status).toBe(404);
+    expect(db.landingPage.create).not.toHaveBeenCalled();
+  });
+
+  it('while a page shape still falls back, as it always has', async () => {
+    const res = await create({ template: 'no-such-template' });
+    expect(res.status).toBe(201);
+  });
+
+  it('a structure with no skin still gets a page, in nobody’s colours', async () => {
+    const res = await create({ structure: 'offer-first' });
+    expect(res.status).toBe(201);
+    const written = db.landingPage.create.mock.calls[0][0].data;
+    expect(JSON.parse(written.sections).length).toBeGreaterThan(3);
   });
 });

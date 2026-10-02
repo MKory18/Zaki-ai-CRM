@@ -31,7 +31,7 @@ import { FONT_KEYS, UPLOADED_FONT_RE } from './landing-theme';
 
 /** The swatches a selection may be painted with, and what each one is. */
 export const MARK_COLORS = [
-  { key: 'a', label: 'لون الهوية', css: 'var(--lp-accent)' },
+  { key: 'a', label: 'لون الهوية', css: 'var(--store-accent)' },
   { key: '0', label: 'أسود', css: '#111827' },
   { key: '1', label: 'أبيض', css: '#ffffff' },
   { key: '2', label: 'رمادي', css: '#697586' },
@@ -222,7 +222,7 @@ export function richTextCss(): string {
 ${size}
 /* The highlighter uses the theme's own pale tint, so it cannot clash with
    the page it is drawn on — and the text keeps its own colour. */
-.lp-root mark{background:var(--lp-accent-tint);color:inherit;padding:0 .15em;border-radius:.2em;}
+.lp-root mark{background:var(--store-accent-tint);color:inherit;padding:0 .15em;border-radius:.2em;}
 .lp-root u{text-decoration-thickness:.08em;text-underline-offset:.15em;}`;
 }
 

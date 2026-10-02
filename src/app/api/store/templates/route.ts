@@ -8,6 +8,9 @@ import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { parseSections } from '@/lib/landing-sections';
 import { cartBarApplies, parseStoreTheme } from '@/lib/store-theme';
 import { exportTemplate, importTemplate, templateDisposition } from '@/lib/store-template-file';
+import { STORE_TEMPLATES } from '@/lib/store-templates';
+import { publicizeMedia } from '@/lib/public-media';
+import { resolveSkinPalette, skinToSections, skinToStoreTheme } from '@/lib/store-skin';
 import { z } from 'zod';
 
 /**
@@ -22,11 +25,22 @@ import { z } from 'zod';
 
 const applySchema = z.union([
   z.object({ source: z.literal('builtin'), key: z.string().trim().min(1).max(40) }),
+  /**
+   * A WHOLE SHOP, NOT A HOME PAGE.
+   *
+   * `builtin` installs one of the fifteen PAGE shapes: an order of blocks
+   * for the home page. `skin` installs one of the ten SHOP templates: the
+   * palette, the typeface, which arrangement each part of the engine draws
+   * (header, hero, nav, card, product page, cart) and the one feature it
+   * puts forward. They are different units and both are templates, so they
+   * are one gallery and two sources rather than two screens.
+   */
+  z.object({ source: z.literal('skin'), key: z.string().trim().min(1).max(40) }),
   z.object({ source: z.literal('file'), file: z.unknown() }),
 ]);
 
 const select = {
-  id: true, name: true, type: true, theme: true, homeDraft: true,
+  id: true, name: true, type: true, theme: true, homeDraft: true, themeDraft: true,
 } as const;
 
 export async function GET(req: Request) {
@@ -40,7 +54,21 @@ export async function GET(req: Request) {
     if (new URL(req.url).searchParams.get('export') === '1') {
       const file = exportTemplate({
         name: store.name,
-        theme: parseStoreTheme(store.theme),
+        /**
+         * THE CUSTOMISED ONE — «تصدير القالب المخصّص».
+         *
+         * The draft, because that is the template the seller is working
+         * on: a seller who adjusted the colours and pressed «صدّر» before
+         * publishing means the thing on their screen, not the one the shop
+         * is still wearing. A shop with no draft has only the live one,
+         * and then they are the same.
+         *
+         * The file carries the whole `storeThemeSchema`, so the
+         * arrangement and which template it came from travel with the
+         * colours — one schema, so a field added to the theme is a field
+         * the file carries, without a line here.
+         */
+        theme: parseStoreTheme(store.themeDraft ?? store.theme),
         sections: parseSections(store.homeDraft),
       });
       return new NextResponse(JSON.stringify(file, null, 2), {
@@ -52,10 +80,69 @@ export async function GET(req: Request) {
       });
     }
 
+    const theme = parseStoreTheme(store.theme);
+
+    /**
+     * FOUR OF THE SELLER'S OWN PRODUCTS, FOR THE PREVIEWS.
+     *
+     * «معاينة حاسوب وجوال مرسومة بمنتجات التاجر الحقيقية». A gallery drawn
+     * with invented products shows a seller somebody else's shop: the names
+     * are the wrong length, the photographs are the wrong shape, and the
+     * one question they are there to answer — «does MY shop look right in
+     * this?» — is the one it cannot answer.
+     *
+     * Four, because every card arrangement in the engine is two or four
+     * across; and the cheapest columns, because a preview is a drawing and
+     * not a page.
+     */
+    const sample = await db.product.findMany({
+      where: { companyId, storeId: store.id, status: 'ACTIVE' },
+      select: { name: true, image: true, basePrice: true, images: { select: { url: true }, take: 1, orderBy: { sortOrder: 'asc' } } },
+      orderBy: { createdAt: 'desc' },
+      take: 4,
+    });
+
     return NextResponse.json({
       // The gallery's cards: enough to choose by, and no page built until
       // one is asked for.
       templates: PAGE_TEMPLATES.map((t) => ({ key: t.key, label: t.label, hint: t.hint, swatch: t.swatch })),
+      /**
+       * The ten shop templates. They were written, validated at module
+       * load and shipped, and no screen in this system could reach them —
+       * a gallery of fifteen page shapes stood where a seller would look
+       * for them.
+       *
+       * `suggestedFor` is the brief's «فلتر حسب الفئة المقترحة — للتصفح
+       * فقط»: it narrows the list and nothing else. A template is not
+       * refused to a shop because of what it sells.
+       */
+      skins: STORE_TEMPLATES.map((t) => ({
+        key: t.id,
+        label: t.name,
+        suggestedFor: t.suggestedFor,
+        feature: t.feature,
+        mood: t.mood,
+        // From the skin, not inferred from the mood: the corner radius is
+        // `shape.corners` and nothing else decides it.
+        corners: t.shape.corners,
+        // The colours a card is drawn with, resolved the same way the shop
+        // resolves them — so the swatch is the shop, not an approximation.
+        palette: resolveSkinPalette(t),
+        layout: t.layout,
+        home: t.home,
+      })),
+      // Which one this shop is wearing, so the gallery can mark it. It is
+      // matched on the arrangement and the accent rather than stored as a
+      // name: a seller who customises a template is still wearing it, and
+      // one who changed everything is not.
+      installed: theme.template && STORE_TEMPLATES.some((t) => t.id === theme.template)
+        ? theme.template
+        : null,
+      sample: publicizeMedia(sample).map((p) => ({
+        name: p.name,
+        image: p.images[0]?.url ?? p.image ?? null,
+        price: p.basePrice,
+      })),
       singleProduct: !cartBarApplies(store.type),
       storeName: store.name,
     });
@@ -98,6 +185,24 @@ export async function POST(req: Request) {
       theme = { ...parseStoreTheme(store.theme), ...built.theme };
       sections = built.sections;
       label = known.label;
+    } else if (request.source === 'skin') {
+      const skin = STORE_TEMPLATES.find((t) => t.id === request.key);
+      if (!skin) return NextResponse.json({ error: 'قالب غير معروف' }, { status: 404 });
+      /**
+       * The same shape as a page template, for the same reason: the theme
+       * is a PROPOSAL the screen holds as an unsaved change, and only the
+       * draft home page is written. A seller must be able to try one of
+       * the ten, look at it, and walk away.
+       *
+       * The shop's own settings survive. A skin says what it has an
+       * opinion about — the palette, the type, the arrangement — and the
+       * checkout fields, the cart bar and the footer's copyright are not
+       * among them, so installing one changes the look and empties
+       * nothing.
+       */
+      theme = { ...parseStoreTheme(store.theme), ...skinToStoreTheme(skin), template: skin.id };
+      sections = skinToSections(skin);
+      label = skin.name;
     } else {
       const imported = importTemplate(request.file);
       if (!imported.ok) return NextResponse.json({ error: imported.error, code: 'BAD_TEMPLATE' }, { status: 400 });

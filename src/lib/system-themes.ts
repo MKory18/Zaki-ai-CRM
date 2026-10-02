@@ -27,7 +27,7 @@
  * given surface, it was walked along its own hue until it did — the gate is
  * the rule, the hex was the starting point.
  *
- * The store's own look is a separate family entirely (`--lp-*`, see
+ * The store's own look is a separate family entirely (`--store-*`, see
  * landing-theme.ts). Nothing here may reach a shop, and nothing there may
  * reach the dashboard; `theme-isolation.test.ts` enforces it.
  */

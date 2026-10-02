@@ -85,4 +85,26 @@ describe('the contact strip', () => {
     }
     expect(offenders, `رابط رسالة مكتوب في شاشة:\n${offenders.join('\n')}`).toEqual([]);
   });
+
+  /**
+   * AND THE OTHER DIRECTION HAS ONE PLACE TOO.
+   *
+   * A shopper tapping «واتساب» in a shop's header is not this rule: they
+   * have no order, no session and nothing to record an attempt against —
+   * which is every input `ContactButtons` needs. So it has its own owner,
+   * `store-contact.ts`, held to the same one-place discipline: the link
+   * is digits only with the leading + stripped, and one built from
+   * «+963 11 222 3333» as typed opens nothing. To a shopper that looks
+   * exactly like a shop that does not answer.
+   *
+   * The rule above already catches a public page that builds one, because
+   * `wa.me/` is in its pattern. This is the anchor under it — the owner
+   * must still build one, or that rule is being satisfied by a feature
+   * nobody has.
+   */
+  it('and the shop’s own WhatsApp link is built, in its own place', () => {
+    expect(stripComments(repoFile('src/lib/store-contact.ts'))).toContain('wa.me/');
+    expect(stripComments(repoFile('src/components/storefront/StorefrontShell.tsx')))
+      .toContain('whatsappHref(store.supportPhone)');
+  });
 });

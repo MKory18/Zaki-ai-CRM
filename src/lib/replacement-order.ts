@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { orderRefFields } from './order-ref';
 import { reserveOrderLines } from './reservation';
-import { computeCod } from './money';
+import { computeCod, roundMinor } from './money';
 
 /**
  * A SECOND ORDER FOR THE SAME SALE.
@@ -162,8 +162,10 @@ export async function createReplacement(
       productImageSnapshot: order.productImageSnapshot,
       moderatorId: order.moderatorId,
       // Cost of goods follows the count: the same units at the same average.
+      // Rounded by the currency — `plan.minorUnit` is the same one the
+      // money above was computed with.
       estimatedCostOfGoods: changed
-        ? Number((order.estimatedCostOfGoods * factor).toFixed(2))
+        ? roundMinor(order.estimatedCostOfGoods * factor, plan.minorUnit)
         : order.estimatedCostOfGoods,
       // Already confirmed once — it re-enters at preparation, not intake.
       status: 'CONFIRMED',

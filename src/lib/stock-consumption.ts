@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { db as prismaDb } from './db';
 import { drawDownStock, onHandTotal } from './receiving';
+import { roundMinor } from './money';
 
 type Tx = Prisma.TransactionClient | typeof prismaDb;
 
@@ -73,12 +74,21 @@ export async function consumeOrderStock(
     where: { id: input.orderId, companyId: input.companyId },
     select: {
       orderNumber: true,
+      // WHICH SHELF THESE UNITS LEAVE. Availability and reservation are both
+      // store-scoped; this draw-down was not, so an order could be promised
+      // from its own store's shelf and served out of another's.
+      storeId: true,
       items: {
         select: { productId: true, productName: true, quantity: true, freeQuantity: true },
       },
+      // The currency's minor unit, read from the order rather than asked of
+      // the caller: it is a property of the order, and four callers would
+      // otherwise each have to find it and could each find a different one.
+      store: { select: { country: { select: { minorUnit: true } } } },
     },
   });
   if (!order) return { taken: 0, short: 0, alreadyDone: false, cost: 0 };
+  const minorUnit = order.store?.country?.minorUnit ?? 2;
 
   let taken = 0;
   let short = 0;
@@ -92,6 +102,7 @@ export async function consumeOrderStock(
 
     const result = await drawDownStock(tx, {
       companyId: input.companyId,
+      storeId: order.storeId,
       productId: line.productId,
       quantity: need,
       allowNegative: input.allowNegativeStock,
@@ -148,11 +159,15 @@ export async function consumeOrderStock(
   if (taken > 0) {
     await tx.order.update({
       where: { id: input.orderId },
-      data: { estimatedCostOfGoods: Math.round(cost * 100) / 100 },
+      // Rounded by the CURRENCY. Two decimals here was the same defect found
+      // in four other files today, spelled differently — `Math.round(x * 100)
+      // / 100` instead of `.toFixed(2)` — which is why the sweep that caught
+      // those walked past this one. JOD has three.
+      data: { estimatedCostOfGoods: roundMinor(cost, minorUnit) },
     });
   }
 
-  return { taken, short, alreadyDone: false, cost: Math.round(cost * 100) / 100 };
+  return { taken, short, alreadyDone: false, cost: roundMinor(cost, minorUnit) };
 }
 
 /**
@@ -192,19 +207,31 @@ export interface AbsorbedDamage {
   absorbed: number;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
-export function absorbDamaged(input: { sound: number; damaged: number; costPerUnit: number }): AbsorbedDamage {
+/**
+ * `minorUnit` DEFAULTS TO TWO, AND THAT DEFAULT IS FOR A CALLER WITHOUT A
+ * CURRENCY — NOT A GUESS ABOUT THE MONEY.
+ *
+ * `costPerUnit` here is WRITTEN, onto a production batch, so two decimals was
+ * the same defect found in five other files today: JOD has three, and a fils
+ * was dropped from the cost every returned parcel put back on the shelf.
+ */
+export function absorbDamaged(input: {
+  sound: number;
+  damaged: number;
+  costPerUnit: number;
+  minorUnit?: number;
+}): AbsorbedDamage {
   const sound = Math.max(0, Math.trunc(input.sound));
   const damaged = Math.max(0, Math.trunc(input.damaged));
   const cost = Number.isFinite(input.costPerUnit) && input.costPerUnit > 0 ? input.costPerUnit : 0;
+  const unit = input.minorUnit ?? 2;
   if (sound <= 0) return { quantity: 0, totalCost: 0, costPerUnit: 0, absorbed: 0 };
-  const totalCost = round2(cost * (sound + damaged));
+  const totalCost = roundMinor(cost * (sound + damaged), unit);
   return {
     quantity: sound,
     totalCost,
-    costPerUnit: round2(totalCost / sound),
-    absorbed: round2(cost * damaged),
+    costPerUnit: roundMinor(totalCost / sound, unit),
+    absorbed: roundMinor(cost * damaged, unit),
   };
 }
 
@@ -253,10 +280,24 @@ export async function restoreOrderStock(
     where: { id: input.orderId, companyId: input.companyId },
     select: {
       orderNumber: true,
+      /*
+       * WHICH SHELF THEY COME BACK TO.
+       *
+       * The returned batch was created with no `storeId` at all, so the units
+       * landed in the company-wide pile — invisible to the store-scoped
+       * `onHand` the store's own availability reads. The goods were restored
+       * and were never sellable again by the store that lost them.
+       */
+      storeId: true,
       items: { select: { productId: true, quantity: true, freeQuantity: true } },
+      // Read from the order for the same reason `consumeOrderStock` reads it:
+      // the currency is the order's, and asking each caller to find it is how
+      // two of them find different answers.
+      store: { select: { country: { select: { minorUnit: true } } } },
     },
   });
   if (!order) return { restored: 0, alreadyDone: false };
+  const restoreUnit = order.store?.country?.minorUnit ?? 2;
 
   let remaining = input.receivedQty;
   let restored = 0;
@@ -277,7 +318,13 @@ export async function restoreOrderStock(
     // What did this unit cost when it left? Its own batches are the honest
     // answer, and a return at an invented cost silently moves the profit.
     const lastCost = await tx.productionBatch.findFirst({
-      where: { companyId: input.companyId, productId: line.productId },
+      // The store's own last cost. Another store's batch is another shelf's
+      // money, and a return priced off it moves this store's profit.
+      where: {
+        companyId: input.companyId,
+        productId: line.productId,
+        ...(order.storeId ? { storeId: order.storeId } : {}),
+      },
       orderBy: { productionDate: 'desc' },
       select: { costPerUnit: true },
     });
@@ -288,12 +335,14 @@ export async function restoreOrderStock(
     const share = soundTotal > 0 ? Math.round(damagedLeft * (take / soundTotal)) : 0;
     const damagedHere = remaining <= 0 ? damagedLeft : Math.min(damagedLeft, share);
     damagedLeft -= damagedHere;
-    const carried = absorbDamaged({ sound: take, damaged: damagedHere, costPerUnit });
+    const carried = absorbDamaged({ sound: take, damaged: damagedHere, costPerUnit, minorUnit: restoreUnit });
     absorbedTotal += carried.absorbed;
 
     const batch = await tx.productionBatch.create({
       data: {
         companyId: input.companyId,
+        // Back onto the shelf it left, not into the company-wide pile.
+        storeId: order.storeId,
         productId: line.productId,
         batchNumber: `RET-${order.orderNumber}-${line.productId.slice(0, 6)}`,
         quantityProduced: take,
@@ -328,5 +377,5 @@ export async function restoreOrderStock(
     restored += take;
   }
 
-  return { restored, alreadyDone: false, absorbed: round2(absorbedTotal) };
+  return { restored, alreadyDone: false, absorbed: roundMinor(absorbedTotal, restoreUnit) };
 }

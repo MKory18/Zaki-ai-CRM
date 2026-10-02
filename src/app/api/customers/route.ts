@@ -2,7 +2,7 @@
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
-import { findOrCreateCustomer } from '@/lib/customer-identity';
+import { findCustomer, findOrCreateCustomer } from '@/lib/customer-identity';
 import { can, getPermissionScope, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
@@ -160,7 +160,8 @@ export async function POST(req: Request) {
     await requirePermission('customers.create');
 
     const body = await req.json();
-    const { fullName, phone, altPhone, address, city, country, notes } = body;
+    // `country` is NOT read from the body: it is the store's, not typed here.
+    const { fullName, phone, altPhone, address, city, notes } = body;
 
     if (!fullName || !phone) {
       return NextResponse.json({ error: 'Full Name and Phone Number are required', errorAr: 'الاسم ورقم الهاتف مطلوبان.' }, { status: 400 });
@@ -168,43 +169,60 @@ export async function POST(req: Request) {
 
     const normalizedPhone = normalizePhoneNumber(phone);
 
-    // Duplicate detection within THIS store — the same person may be a
-    // customer of two of them, each with its own record.
-    const existing = await db.customer.findFirst({
-      where: { companyId, storeId, phone: normalizedPhone },
-      include: {
-        orders: {
-          select: {
-            id: true,
-            orderNumber: true,
-            status: true,
-            totalAmount: true,
-            createdAt: true,
+    /*
+     * THROUGH THE ONE OWNER, which this file already imported and never
+     * called. Its own `create` had three faults, and the dead import is what
+     * gave them away:
+     *
+     *   · it wrote NO `storeId`. The duplicate check above looked for
+     *     `{ companyId, storeId, phone }` and the row landed with a null
+     *     store, so the check could never find it again — and because
+     *     Postgres treats NULLs as distinct in a unique index,
+     *     `@@unique([companyId, storeId, phone])` did not bind these rows at
+     *     all. The same person could be added from this screen without limit,
+     *     and belonged to no store, so no store-scoped screen listed them.
+     *   · it lost the race it was checking for: two clicks created two rows
+     *     rather than the second reading the first. `findOrCreateCustomer`
+     *     relies on the index and catches P2002.
+     *   · `city: 'Cairo'` and `country: 'Egypt'` were invented for a company
+     *     whose stores are elsewhere — and `country` is a two-letter code
+     *     everywhere else (`@default("EG")`), so this door wrote a second
+     *     vocabulary into one column. The country is the STORE's and is never
+     *     typed here; the city is asked for or left empty.
+     */
+    const existing = await findCustomer(db, companyId, storeId, normalizedPhone);
+    if (existing) {
+      const withOrders = await db.customer.findFirst({
+        where: { id: existing.id },
+        include: {
+          orders: {
+            select: {
+              id: true,
+              orderNumber: true,
+              status: true,
+              totalAmount: true,
+              createdAt: true,
+            },
           },
         },
-      },
-    });
-
-    if (existing) {
+      });
       return NextResponse.json({
         isExisting: true,
         message: 'Customer already exists. Reusing profile to prevent duplication.',
-        customer: existing,
+        customer: withOrders ?? existing,
       });
     }
 
-    const customer = await db.customer.create({
-      data: {
-        companyId,
-        fullName: fullName.trim(),
-        phone: normalizedPhone,
-        rawPhone: phone.trim(),
-        altPhone: altPhone ? altPhone.trim() : null,
-        address: address?.trim() || '',
-        city: city?.trim() || 'Cairo',
-        country: country?.trim() || 'Egypt',
-        notes: notes?.trim() || null,
-      },
+    const customer = await findOrCreateCustomer(db, {
+      companyId,
+      storeId,
+      phone: normalizedPhone,
+      rawPhone: phone.trim(),
+      fullName: fullName.trim(),
+      address: address?.trim() || '',
+      city: city?.trim() || '',
+      altPhone: altPhone ? altPhone.trim() : null,
+      notes: notes?.trim() || null,
     });
 
     await logAudit({

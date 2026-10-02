@@ -47,6 +47,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
           ...(input.freeQuantity !== undefined ? { freeQuantity: input.freeQuantity } : {}),
           ...(input.sellingPrice !== undefined ? { sellingPrice: input.sellingPrice } : {}),
           ...(input.compareAtPrice !== undefined ? { compareAtPrice: input.compareAtPrice ?? null } : {}),
+          ...(input.endsAt !== undefined ? { endsAt: input.endsAt ?? null } : {}),
           ...(input.discount !== undefined ? { discount: input.discount } : {}),
           ...(input.deliveryIncluded !== undefined ? { deliveryIncluded: input.deliveryIncluded } : {}),
           ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),

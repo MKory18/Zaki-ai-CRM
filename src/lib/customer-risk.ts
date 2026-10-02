@@ -9,9 +9,23 @@ type Tx = Prisma.TransactionClient | typeof db;
  * phone, one person, one risk history, never scoped per country.
  *
  * Tiers: under 15% safe, 15–40% watch, above 40% high risk. High risk also
- * when 3+ orders or two returns land within 60 days. A high-risk customer
- * requires prepayment or supervisor approval and is excluded from automated
- * confirmation — the API says so, the UI only renders it.
+ * when two returns land within 60 days.
+ *
+ * WHAT THE TWO FLAGS ARE, EXACTLY — because this comment used to claim «the
+ * API says so, the UI only renders it», and the API does not say so:
+ *
+ *   · `requiresPrepaymentOrApproval` is ADVICE. It reaches the confirmation
+ *     assistant as context and it reaches the screens. NO door refuses a
+ *     cash-on-delivery confirmation for a high-risk customer. The contract
+ *     asks for that refusal; building it means deciding what counts as
+ *     approval and which role may give it, which is the owner's to say.
+ *   · `excludedFromAutomatedConfirmation` has nothing to exclude from: no job
+ *     confirms orders. The day one is written it must read this flag, and the
+ *     guard in `the-customer-invariants.test.ts` says so where it will be
+ *     seen.
+ *
+ * A comment claiming an enforcement that does not exist is worse than
+ * silence: it is the reason nobody looks.
  */
 
 export type RiskTier = 'SAFE' | 'WATCH' | 'HIGH';
@@ -40,16 +54,75 @@ export function tierFor(returnRate: number, orders: number, recentReturns60d: nu
   return 'SAFE';
 }
 
+/**
+ * THE «SAME PERSON» CLAUSE — by phone, across every store of the company.
+ *
+ * `Customer` is unique on `[companyId, storeId, phone]`: the stores are
+ * separate businesses and each keeps its own record of the same person. So
+ * one phone is SEVERAL customer rows with several ids, and asking by id makes
+ * every answer per store. A customer who returned six of ten parcels at one
+ * shop arrived SAFE at the shop next door, while this file said «one phone,
+ * one person, one risk history».
+ *
+ * The system had already ruled the identical question for the blacklist, in
+ * the schema's own words: «a blocked number that can order from the shop next
+ * door blocks nothing.» `activeBlock` matches `{ companyId, phone }` with no
+ * store. The risk is the same fact about the same person.
+ *
+ * IT LIVES HERE, AND ONLY HERE, because reading the number is a privacy cost
+ * and one place should pay it. The confirmation assistant's route is guarded
+ * against selecting a phone at all — rightly: it sends text to a model. So it
+ * asks `customerHistory` instead of resolving the person itself.
+ *
+ * `@@index([companyId, phone])` carries the relation filter. The id is the
+ * fallback for a row that cannot be read, so a missing customer narrows the
+ * question instead of throwing.
+ */
+async function samePerson(tx: Tx, companyId: string, customerId: string) {
+  const me = await tx.customer.findFirst({
+    where: { id: customerId, companyId },
+    select: { phone: true },
+  });
+  return me?.phone ? { customer: { phone: me.phone } } : { customerId };
+}
+
+/** One person's recent orders across the company, newest first. */
+export async function customerHistory(
+  tx: Tx,
+  companyId: string,
+  customerId: string,
+  opts: { exceptOrderId?: string; take?: number } = {}
+) {
+  const whose = await samePerson(tx, companyId, customerId);
+  return tx.order.findMany({
+    where: {
+      companyId,
+      ...whose,
+      ...(opts.exceptOrderId ? { id: { not: opts.exceptOrderId } } : {}),
+    },
+    select: {
+      orderNumber: true,
+      confirmationStatus: true,
+      shippingStatus: true,
+      createdAt: true,
+      totalAmount: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: opts.take ?? 10,
+  });
+}
+
 export async function customerRisk(tx: Tx, companyId: string, customerId: string, now = new Date()): Promise<CustomerRisk> {
   const since = new Date(now.getTime() - SIX_MONTHS_MS);
+  const whose = await samePerson(tx, companyId, customerId);
 
   const [sixMonths, lastTen] = await Promise.all([
     tx.order.findMany({
-      where: { companyId, customerId, createdAt: { gte: since } },
+      where: { companyId, ...whose, createdAt: { gte: since } },
       select: { shippingStatus: true, returnedAt: true, createdAt: true },
     }),
     tx.order.findMany({
-      where: { companyId, customerId },
+      where: { companyId, ...whose },
       orderBy: { createdAt: 'desc' },
       take: 10,
       select: { shippingStatus: true, returnedAt: true, createdAt: true },

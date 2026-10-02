@@ -214,7 +214,12 @@ export async function reserveOrderLines(
 
 /**
  * Release every reservation of an order. MUST run in the same transaction as
- * CANCELLED / VOIDED / unconfirm / NEEDS_REVIEW-after-confirmation.
+ * CANCELLED / VOIDED / unconfirm.
+ *
+ * The contract's fourth case was «NEEDS_REVIEW entered from any
+ * post-confirmation state». That state left `CORE_STATES` on 2026-10-02 —
+ * doubt is held at the intake door, before an order exists, so there is no
+ * confirmed order to un-reserve. The three cases above are all of them.
  */
 export async function releaseOrderLines(tx: Tx, orderId: string): Promise<number> {
   const res = await tx.orderItem.updateMany({

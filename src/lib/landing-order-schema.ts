@@ -22,6 +22,8 @@ import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
  * rejected outright — an unconfigured country must not silently stop taking
  * orders.
  */
+import { MAX_CART_LINES, MAX_LINE_QUANTITY } from './cart';
+
 export interface OrderLocale {
   countryCode: string | null;
   regions: string[];
@@ -65,6 +67,46 @@ export function buildPublicOrderSchema(locale: OrderLocale) {
     // Optional: pages WITHOUT offers fall back to the base product price.
     // When present it must reference a real offer (ownership checked in the route).
     offerId: z.string().trim().max(64, 'يرجى اختيار أحد العروض.').optional().default(''),
+    /**
+     * A BASKET, for a shop that sells more than one thing at a time.
+     *
+     * Absent on a landing page and on a single-product shop, which sell one
+     * product through one door and use `offerId` above. When it is present
+     * it IS the order and `offerId` is ignored: two ways of saying what was
+     * ordered, both honoured, is two orders.
+     *
+     * NO PRICES. Every figure is computed on the server from the offers
+     * table at the moment the order is placed. A total sent from a browser
+     * is a total a browser can choose.
+     */
+    items: z
+      .array(
+        z.object({
+          productId: z.string().trim().min(1).max(64),
+          offerId: z.string().trim().max(64).optional().default(''),
+          quantity: z.coerce.number().int().min(1).max(MAX_LINE_QUANTITY),
+        })
+      )
+      .max(MAX_CART_LINES, 'السلة فيها أصناف أكثر مما نقبله في طلب واحد.')
+      .optional(),
+    /**
+     * A SECOND NUMBER TO TRY.
+     *
+     * `Customer.altPhone` is a column and `findOrCreateCustomer` has always
+     * accepted one; the public schema was the only place that did not know
+     * about it, so «هاتف بديل» could be ordered and even marked required on
+     * the checkout tab and no public door could send one.
+     *
+     * Optional whatever the shop's settings say: the phone above is the
+     * identity, and refusing an order because a second number is missing
+     * loses a sale over a field that exists to help us reach somebody.
+     */
+    alt_phone: z
+      .string()
+      .trim()
+      .max(25, 'رقم الهاتف طويل جدًا.')
+      .optional()
+      .default(''),
     notes: z.string().trim().max(500, 'الملاحظات طويلة جدًا.').optional().default(''),
     // Spam protections (checked below, never stored)
     website: z.string().max(0, 'Spam detected').optional().default(''),
@@ -84,6 +126,7 @@ const FIELD_ERROR_MESSAGES: Record<string, string> = {
   address: 'يرجى إدخال العنوان.',
   city: 'يرجى اختيار المدينة.',
   offerId: 'يرجى اختيار أحد العروض.',
+  items: 'تعذّرت قراءة محتوى السلة. أعد تحميل الصفحة وحاول ثانية.',
   notes: 'الملاحظات طويلة جدًا.',
 };
 

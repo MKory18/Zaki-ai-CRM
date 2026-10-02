@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { activeOffersFor } from '@/lib/offers';
 import { clampStoredHtml, RAW_HTML_CSP, verifyPreviewToken } from '@/lib/landing-pages';
+import { draftState } from '@/lib/landing-draft';
 import {
   sanitizeLandingCss,
   sanitizeLandingHtml,
@@ -91,6 +92,25 @@ export async function GET(req: Request, ctx: Ctx) {
   }
   if (!lp) return new NextResponse('Not found', { status: 404 });
 
+  // The uploaded HTML of a page being PREVIEWED is the draft's, for the same
+  // reason the block page's is: a seller who saved and pressed «معاينة» was
+  // shown the markup their visitors have, which is the markup they had just
+  // replaced. Only behind a valid signed token — a visitor has none and gets
+  // the published columns.
+  if (previewing) {
+    const { draft } = await draftState(lp.id);
+    // The three this route serves, and only the ones the draft mentions: a
+    // key it does not carry must leave the live value standing.
+    if (draft) {
+      const mine = Object.fromEntries(
+        (['htmlContent', 'cssContent', 'pageSettings'] as const)
+          .filter((f) => f in draft)
+          .map((f) => [f, draft[f] ?? null])
+      );
+      lp = { ...lp, ...mine };
+    }
+  }
+
   // Serve the uploaded (untrusted) HTML — re-sanitized at serve time (defense
   // in depth; already sanitized at save). NO form injection: the Trusted
   // Native Order Form is rendered by /lp/[slug] OUTSIDE this iframe.
@@ -145,7 +165,7 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
       : null,
     offers: productOffers.map((o) => ({
       id: o.id, name: o.name, quantity: o.quantity,
-      freeQuantity: o.freeQuantity, price: o.sellingPrice, isDefault: o.isDefault,
+      freeQuantity: o.freeQuantity, price: o.price, isDefault: o.isDefault,
     })),
     recommendations: (lp.recommendations || []).map((r) => ({ id: r.id, name: r.product?.name || '', price: r.product?.basePrice ?? 0, image: r.product?.image || null })),
     currency,

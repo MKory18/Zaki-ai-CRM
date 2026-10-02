@@ -16,6 +16,9 @@ import {
 import { useHistory } from '@/lib/use-history';
 import { RiArchiveLine, RiArrowGoBackLine, RiBookOpenLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiRefreshLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useConfirm } from '@/components/ui/Confirm';
+import { publicAddress } from '@/lib/public-address';
+import { publishQuestion } from '@/lib/landing-publish';
 
 /**
  * CUSTOM LANDING PAGE EDITOR — Phase 1
@@ -237,6 +240,20 @@ export function LandingPageEditorScreen() {
   const lpId = params?.id ?? null;
 
   const [lp, setLp] = useState<any>(null);
+  const confirm = useConfirm();
+  /**
+   * WHAT THE SERVER SAYS ABOUT THIS PAGE'S DRAFT.
+   *
+   * Not derived from `dirty`: that flag knows whether this tab has typed
+   * something, and the question here is whether the DATABASE holds edits a
+   * visitor has not seen — which survives a reload, and which a second tab
+   * may have created. Every save, publish and revert answers with it.
+   */
+  const [state, setState] = useState<{ hasUnpublished: boolean; canRevert: boolean }>({
+    hasUnpublished: false,
+    canRevert: false,
+  });
+  const [reverting, setReverting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -275,6 +292,16 @@ export function LandingPageEditorScreen() {
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * The address the question names — one rule, shared with the list and the
+   * domain screen: a connected domain is the address only once a real
+   * lookup has passed, otherwise /lp/<slug>.
+   */
+  const addressOf = (page: any) =>
+    publicAddress(typeof window === 'undefined' ? '' : window.location.origin, {
+      kind: 'lp', slug: page.slug, domain: page.domain, domainVerifiedAt: page.domainVerifiedAt,
+    }).url;
+
   const load = useCallback(async () => {
     if (!lpId) return;
     setLoading(true);
@@ -282,6 +309,10 @@ export function LandingPageEditorScreen() {
       const data = await crmApi(`/api/landing-pages/${lpId}`);
       const page = data.landingPage;
       setLp(page);
+      // The GET hands back the DRAFT overlaid on the live row, so what loads
+      // here is what «نشر التعديلات» would publish — the editor and the
+      // publish never show each other different pages.
+      setState({ hasUnpublished: Boolean(data.hasUnpublished), canRevert: Boolean(data.canRevert) });
       setHtml(page.htmlContent || STARTER_HTML);
       setCss(page.cssContent || STARTER_CSS);
       if (page.pageSettings) {
@@ -443,11 +474,18 @@ export function LandingPageEditorScreen() {
     setSaving(true);
     setSaveMsg(null);
     try {
-      await crmApi(`/api/landing-pages/${lpId}/content`, {
+      const d = await crmApi(`/api/landing-pages/${lpId}/content`, {
         method: 'PUT',
         body: contentPayload(),
       });
-      setSaveMsg({ ok: true, text: 'تم حفظ المسودة' });
+      // The SERVER says where the write landed. A live page got a draft and
+      // «نشر التعديلات» must appear; an unpublished one was written straight
+      // through and there is nothing to publish separately.
+      setState((prev) => ({ ...prev, hasUnpublished: Boolean(d?.hasUnpublished) }));
+      setSaveMsg({
+        ok: true,
+        text: d?.hasUnpublished ? 'حُفظت المسودة — لم يرها الزوّار بعد' : 'تم الحفظ',
+      });
       setDirty(false);
     } catch (e: any) {
       setSaveMsg({ ok: false, text: e.message || 'تعذر الحفظ' });
@@ -458,6 +496,18 @@ export function LandingPageEditorScreen() {
 
   const togglePublish = async () => {
     if (!lp) return;
+    const publishing = !lp.isPublished;
+    /**
+     * ASKED BEFORE, NOT REPORTED AFTER.
+     *
+     * Both directions, and the words differ because the consequences do —
+     * see src/lib/landing-publish.ts. The unsaved flag matters only here:
+     * publishing writes the editor first, so this press can publish edits
+     * the seller had not decided to publish, and the question says so.
+     */
+    const ok = await confirm(publishQuestion(publishing, addressOf(lp), publishing && dirty));
+    if (!ok) return;
+
     setPublishing(true);
     setSaveMsg(null);
     try {
@@ -465,18 +515,81 @@ export function LandingPageEditorScreen() {
       // Unpublishing does NOT: saving a live page puts the draft in front of
       // customers, and when the unpublish is then refused (a store's front
       // page while the store is open) the seller has published by accident.
-      const publishing = !lp.isPublished;
       if (publishing) {
         await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: contentPayload() });
       }
       await crmApi(`/api/landing-pages/${lpId}`, { method: 'PATCH', body: JSON.stringify({ isPublished: publishing }) });
       setLp({ ...lp, isPublished: publishing });
-      if (publishing) setDirty(false);
+      if (publishing) {
+        setDirty(false);
+        // Publishing promoted whatever draft there was and recorded a step
+        // back; the editor must stop offering to publish it again.
+        setState({ hasUnpublished: false, canRevert: true });
+      }
       setSaveMsg({ ok: true, text: !lp.isPublished ? 'تم نشر الصفحة' : 'تم إلغاء النشر' });
     } catch (e: any) {
       setSaveMsg({ ok: false, text: e.message || 'تعذر النشر' });
     } finally {
       setPublishing(false);
+    }
+  };
+
+  /**
+   * PUT THE SAVED DRAFT IN FRONT OF VISITORS.
+   *
+   * It saves first — the thing published must be what is on the screen, not
+   * what was on it at the last press — and the question says so, exactly as
+   * the publish toggle's does.
+   */
+  const publishEdits = async () => {
+    if (!lp) return;
+    if (!(await confirm(publishQuestion(true, addressOf(lp), dirty)))) return;
+
+    setPublishing(true);
+    setSaveMsg(null);
+    try {
+      if (dirty) {
+        await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PUT', body: contentPayload() });
+      }
+      const d = await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'POST' });
+      setState({ hasUnpublished: Boolean(d.hasUnpublished), canRevert: Boolean(d.canRevert) });
+      setDirty(false);
+      setSaveMsg({ ok: true, text: d.message || 'نُشرت التعديلات' });
+    } catch (e: any) {
+      setSaveMsg({ ok: false, text: e.message || 'تعذر نشر التعديلات' });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  /**
+   * ONE STEP BACK.
+   *
+   * The whole editor is reloaded afterwards rather than patched in place:
+   * the page that is live has changed under it, and a screen showing the
+   * version that was just withdrawn would publish it again on the next save.
+   */
+  const revertToPrevious = async () => {
+    if (!lp) return;
+    const ok = await confirm({
+      title: 'الرجوع للنسخة السابقة؟',
+      body: 'تعود الصفحة إلى ما كانت عليه قبل آخر نشر، ويصبح ما تسحبه الآن هو خطوة الرجوع التالية — فالضغطة مرّةً أخرى تُعيدك. وما في المحرّر غير محفوظ سيضيع.',
+      confirmLabel: 'ارجع',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    setReverting(true);
+    setSaveMsg(null);
+    try {
+      const d = await crmApi(`/api/landing-pages/${lpId}/content`, { method: 'PATCH' });
+      setDirty(false);
+      setSaveMsg({ ok: true, text: d.message || 'رجعت الصفحة للنسخة السابقة' });
+      await load();
+    } catch (e: any) {
+      setSaveMsg({ ok: false, text: e.message || 'تعذر الرجوع' });
+    } finally {
+      setReverting(false);
     }
   };
 
@@ -610,8 +723,17 @@ export function LandingPageEditorScreen() {
               </div>
             )}
             {saveMsg && <span className={`text-xs ${saveMsg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{saveMsg.text}</span>}
+            {/*
+              THE WORD ON THE BUTTON IS NOW TRUE.
+
+              On a published page this saves a DRAFT — nothing a visitor can
+              reach changes — and that is why the label can say so. Before
+              `contentDraft` existed, the same press put a half-written
+              headline in front of every click the advert was paying for.
+            */}
             <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
-              {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
+              {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />}
+              {lp.isPublished ? 'حفظ كمسودة' : 'حفظ'}
             </Button>
             {/* A preview, not a visit: opened with the signed preview token, so
                 it loads no pixel and counts no view — the published address
@@ -633,10 +755,36 @@ export function LandingPageEditorScreen() {
             >
               <RiEyeLine className="h-4 w-4" /> معاينة
             </Button>
+            {/*
+              «نشر التعديلات» — THE ACT A LIVE PAGE ACTUALLY NEEDS.
+
+              The toggle beside it says «إلغاء النشر» for a page that is
+              already live, so until this button existed a seller with a saved
+              draft had no way to put it in front of anyone: the only press
+              that promoted a draft was the one that made an unpublished page
+              live, which this page is not.
+            */}
+            {lp.isPublished && state.hasUnpublished && (
+              <Button variant="success" size="sm" onClick={publishEdits} disabled={publishing}>
+                {publishing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiEarthLine className="h-4 w-4" />}
+                نشر التعديلات
+              </Button>
+            )}
             <Button variant={lp.isPublished ? 'outline' : 'success'} size="sm" onClick={togglePublish} disabled={publishing}>
               {publishing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiEarthLine className="h-4 w-4" />}
               {lp.isPublished ? 'إلغاء النشر' : 'نشر'}
             </Button>
+            {/*
+              ONE STEP BACK, IN ONE PRESS — and it asks, because a visitor
+              feels it. Shown only when there is a step to take: a disabled
+              button here would promise a history this page does not keep.
+            */}
+            {state.canRevert && (
+              <Button variant="ghost" size="sm" onClick={revertToPrevious} disabled={reverting}>
+                {reverting ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiArchiveLine className="h-4 w-4" />}
+                النسخة السابقة
+              </Button>
+            )}
           </div>
         </div>
 

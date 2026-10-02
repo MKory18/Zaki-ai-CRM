@@ -3,7 +3,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { getDateRange, type DateFilter } from '@/lib/analytics';
-import { landingAnalytics } from '@/lib/landing-analytics';
+import { landingAnalytics, pageVerdicts } from '@/lib/landing-analytics';
 
 /**
  * GET /api/growth/landing-analytics — the landing pages of the selected
@@ -28,13 +28,19 @@ export async function GET(req: Request) {
     };
     const { start, end } = getDateRange(filter);
     const now = new Date();
-    const data = await landingAnalytics({
-      companyId,
-      storeId,
-      start: start ?? now,
-      end: end ?? now,
-    });
-    return NextResponse.json(data);
+    /**
+     * THE SAME WINDOW ANSWERS BOTH QUESTIONS.
+     *
+     * «كيف تعمل صفحاتي» and «أيُّ نسختين تغلب» are read at the same moment
+     * by the same person under the same date filter and the same two
+     * permission gates. A second endpoint would be a second place for the
+     * window to be computed differently.
+     */
+    const [data, verdicts] = await Promise.all([
+      landingAnalytics({ companyId, storeId, start: start ?? now, end: end ?? now }),
+      pageVerdicts({ companyId, storeId, start: start ?? now, end: end ?? now }),
+    ]);
+    return NextResponse.json({ ...data, verdicts });
   } catch (error) {
     return apiErrorResponse(error);
   }

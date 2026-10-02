@@ -10,7 +10,7 @@ import { GOOGLE_FAMILY } from '@/lib/block-look';
  * to generate — a lesson already paid for once, by a calendar that collapsed
  * into a single column because `grid-cols-7` had never been used before.
  *
- * Not one colour is named here. Everything reads a `--lp-*` variable the
+ * Not one colour is named here. Everything reads a `--store-*` variable the
  * theme derived, which is what makes one colour picker restyle a whole page.
  */
 export const BLOCK_CSS = `
@@ -43,14 +43,14 @@ export const BLOCK_CSS = `
 }
 
 .lp-root {
-  font-family: var(--lp-font);
-  color: var(--lp-text);
-  background-color: var(--lp-page);
+  font-family: var(--store-font);
+  color: var(--store-text);
+  background-color: var(--store-page);
   /* The page's own photograph, veiled, behind every block. 'cover' and a
      centred position so a portrait photo on a wide screen still fills it;
      'fixed' so the picture stays put while the page scrolls over it, which
      is the whole reason to put one there. */
-  background-image: var(--lp-page-image, none);
+  background-image: var(--store-page-image, none);
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -66,8 +66,8 @@ export const BLOCK_CSS = `
 
 /* ── announcement ── */
 .lp-announce {
-  background: var(--lp-accent);
-  color: var(--lp-accent-text);
+  background: var(--store-accent);
+  color: var(--store-accent-text);
   text-align: center;
   font-size: 13px;
   font-weight: 700;
@@ -82,33 +82,107 @@ export const BLOCK_CSS = `
   padding: 32px 20px 36px;
   text-align: center;
 }
+
+/* ── WHAT THE FIRST SCREEN LEADS WITH ──
+   Four arrangements, and not one of them is «the shop's name, alone» —
+   that is enforced by the vocabulary itself (layout-slots.ts), not by a
+   rule somewhere else. Each keeps the price and the button: a first
+   screen that shows neither has asked a wary customer to scroll before
+   telling them anything they came for. */
+.lp-hero[data-hero='productFirst'] .lp-hero-img { order: -1; }
+
+/* Split: the picture beside the words where there is room, stacked
+   where there is not. */
+@media (min-width: 900px) {
+  .lp-hero[data-hero='offerStrip'],
+  .lp-hero[data-hero='categoryTiles'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 26px;
+    align-items: center;
+    text-align: start;
+  }
+  .lp-hero[data-hero='offerStrip'] .lp-hero-img,
+  .lp-hero[data-hero='categoryTiles'] .lp-hero-img {
+    grid-row: 1 / span 4;
+    grid-column: 2;
+    margin: 0;
+  }
+}
+
+/* Editorial: one photograph, and the words over it rather than under. */
+/* Turned by hand, never on its own: «سلايدر يدوي بثلاث شرائح كحد أقصى».
+   Scroll-snap does it with no script at all, which is the cheapest
+   possible carousel on a phone — and the only kind that cannot start
+   moving while somebody is reading. */
+.lp-hero[data-hero='slider'] {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 12px;
+  scrollbar-width: none;
+}
+.lp-hero[data-hero='slider']::-webkit-scrollbar { display: none; }
+.lp-hero[data-hero='slider'] > * { scroll-snap-align: center; flex: 0 0 100%; }
+
+.lp-hero[data-hero='editorial'] { position: relative; }
+.lp-hero[data-hero='editorial'] .lp-hero-img { width: 100%; }
+@media (min-width: 700px) {
+  .lp-hero[data-hero='editorial'] .lp-h1,
+  .lp-hero[data-hero='editorial'] .lp-hero-sub {
+    position: relative;
+    z-index: 1;
+    /* Paper behind the words: text straight on a photograph is text
+       nobody can read on half the photographs a seller uploads. */
+    background: color-mix(in oklab, var(--store-card) 86%, transparent);
+    padding: 10px 16px;
+    border-radius: var(--store-radius);
+  }
+}
+/* THE COD LINE, UNDER THE BUTTON AND ON THE FIRST SCREEN.
+   Quiet — it reassures, it does not sell — but never hidden: no skin
+   variable can remove it, because none of them is used here. */
+.lp-hero-cod {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--store-muted);
+}
+/* THE HERO IMAGE RESERVES ITS SPACE BEFORE IT ARRIVES.
+   "height: auto" alone means the image occupies nothing until it loads and
+   then pushes the headline, the price and the button down — a layout shift
+   on the LCP element, which is the one place it costs most. The ratio is the
+   same 0.62 the placeholder frame draws, so a page with a photograph and a
+   page without lay out identically. */
 .lp-hero-img {
   display: block;
   width: 100%;
+  aspect-ratio: 1 / 0.62;
+  object-fit: cover;
   max-width: 520px;
   margin: 0 auto 24px;
   height: auto;
-  border-radius: var(--lp-radius);
-  border: 1px solid var(--lp-border);
-  background: var(--lp-card);
+  border-radius: var(--store-radius);
+  border: 1px solid var(--store-border);
+  background: var(--store-card);
 }
 .lp-h1 {
   font-size: clamp(24px, 5.2vw, 38px);
-  font-weight: var(--lp-heading-weight);
+  font-weight: var(--store-heading-weight);
   line-height: 1.3;
   margin: 0 0 12px;
   letter-spacing: -.3px;
 }
 .lp-hero-sub {
   font-size: 15px;
-  color: var(--lp-muted);
+  color: var(--store-muted);
   max-width: 560px;
   margin: 0 auto;
 }
 .lp-price {
   font-size: 30px;
   font-weight: 900;
-  color: var(--lp-accent);
+  color: var(--store-accent);
   margin: 20px 0 0;
 }
 .lp-price span { font-size: 15px; font-weight: 700; }
@@ -117,17 +191,17 @@ export const BLOCK_CSS = `
 .lp-cta {
   display: inline-block;
   margin-top: 22px;
-  background: var(--lp-accent);
-  color: var(--lp-accent-text);
+  background: var(--store-accent);
+  color: var(--store-accent-text);
   font-size: 16px;
   font-weight: 800;
   text-decoration: none;
   padding: 14px 44px;
-  border-radius: var(--lp-radius);
-  box-shadow: 0 6px 20px -8px var(--lp-accent);
+  border-radius: var(--store-radius);
+  box-shadow: 0 6px 20px -8px var(--store-accent);
   transition: background .15s ease, transform .15s ease;
 }
-.lp-cta:hover { background: var(--lp-accent-dark); transform: translateY(-1px); }
+.lp-cta:hover { background: var(--store-accent-dark); transform: translateY(-1px); }
 .lp-cta:active { transform: translateY(0); }
 
 /* ── section rhythm: every block breathes the same ── */
@@ -138,13 +212,13 @@ export const BLOCK_CSS = `
 }
 .lp-h2 {
   font-size: clamp(19px, 3.6vw, 24px);
-  font-weight: var(--lp-heading-weight);
+  font-weight: var(--store-heading-weight);
   margin: 0 0 18px;
   text-align: center;
 }
 .lp-sub {
   text-align: center;
-  color: var(--lp-muted);
+  color: var(--store-muted);
   font-size: 13px;
   margin: -10px 0 18px;
 }
@@ -155,24 +229,24 @@ export const BLOCK_CSS = `
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: var(--lp-card);
-  border: 1px solid var(--lp-border);
-  border-radius: var(--lp-radius);
+  background: var(--store-card);
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
   padding: 14px 16px;
 }
 .lp-benefit-mark {
   flex: 0 0 26px;
   height: 26px;
   border-radius: 999px;
-  background: var(--lp-accent-tint);
-  color: var(--lp-accent);
+  background: var(--store-accent-tint);
+  color: var(--store-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-top: 1px;
 }
 .lp-benefits strong { display: block; font-size: 14.5px; font-weight: 800; }
-.lp-benefits p { font-size: 13px; color: var(--lp-muted); margin-top: 2px; }
+.lp-benefits p { font-size: 13px; color: var(--store-muted); margin-top: 2px; }
 
 /* ── gallery ── */
 .lp-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -181,13 +255,13 @@ export const BLOCK_CSS = `
   height: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
-  border-radius: var(--lp-radius);
-  border: 1px solid var(--lp-border);
+  border-radius: var(--store-radius);
+  border: 1px solid var(--store-border);
 }
 
 /* ── catalog: the shop's own pages and products ──
    ONE COLUMN COUNT IS THE SELLER'S, ONE IS THE PHONE'S. The
-   --lp-cat-cols variable is their choice for a wide screen; a phone is too
+   --store-cat-cols variable is their choice for a wide screen; a phone is too
    narrow for three cards, and honouring the number there would make every
    shop unreadable on the device most shoppers hold. The media query at the
    bottom of this sheet widens it.
@@ -200,8 +274,8 @@ export const BLOCK_CSS = `
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: calc(var(--lp-radius) + 6px);
-  background: var(--lp-card, #fff);
+  border-radius: calc(var(--store-radius) + 6px);
+  background: var(--store-card, #fff);
   text-decoration: none;
   color: inherit;
   isolation: isolate;
@@ -209,22 +283,22 @@ export const BLOCK_CSS = `
      boxes; a card should read as an object sitting on the page. The first
      shadow is the contact edge, the second the soft ambient one. */
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--lp-text) 6%, transparent),
-    0 1px 2px color-mix(in srgb, var(--lp-text) 8%, transparent),
-    0 8px 24px -12px color-mix(in srgb, var(--lp-text) 22%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--store-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--store-text) 8%, transparent),
+    0 8px 24px -12px color-mix(in srgb, var(--store-text) 22%, transparent);
   transition: transform .28s cubic-bezier(.2, .7, .3, 1), box-shadow .28s cubic-bezier(.2, .7, .3, 1);
 }
 .lp-catalog-card:hover {
   transform: translateY(-4px);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--lp-accent) 24%, transparent),
-    0 2px 4px color-mix(in srgb, var(--lp-text) 10%, transparent),
-    0 20px 40px -16px color-mix(in srgb, var(--lp-accent) 42%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--store-accent) 24%, transparent),
+    0 2px 4px color-mix(in srgb, var(--store-text) 10%, transparent),
+    0 20px 40px -16px color-mix(in srgb, var(--store-accent) 42%, transparent);
 }
 
 /* The picture is the product. It fills its frame and leans in a little
    when the cursor is on it — the one piece of motion a shop needs. */
-.lp-catalog-media { position: relative; overflow: hidden; background: var(--lp-page); }
+.lp-catalog-media { position: relative; overflow: hidden; background: var(--store-page); }
 .lp-catalog-card img {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -244,15 +318,15 @@ export const BLOCK_CSS = `
   width: 100%;
   aspect-ratio: 1 / 1;
   background:
-    radial-gradient(120% 90% at 22% 12%, color-mix(in srgb, var(--lp-accent) 16%, transparent) 0%, transparent 62%),
-    linear-gradient(140deg, color-mix(in srgb, var(--lp-accent) 9%, var(--lp-card)) 0%, var(--lp-card) 70%);
+    radial-gradient(120% 90% at 22% 12%, color-mix(in srgb, var(--store-accent) 16%, transparent) 0%, transparent 62%),
+    linear-gradient(140deg, color-mix(in srgb, var(--store-accent) 9%, var(--store-card)) 0%, var(--store-card) 70%);
 }
 .lp-catalog-noimg::after {
   content: attr(data-letter);
   font-size: clamp(26px, 7vw, 40px);
   font-weight: 900;
   line-height: 1;
-  color: color-mix(in srgb, var(--lp-accent) 30%, transparent);
+  color: color-mix(in srgb, var(--store-accent) 30%, transparent);
 }
 
 /* Which of the two kinds this is. A landing page the seller built is a
@@ -268,9 +342,9 @@ export const BLOCK_CSS = `
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: .2px;
-  color: var(--lp-accent-text, #fff);
-  background: var(--lp-accent);
-  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--lp-accent) 65%, transparent);
+  color: var(--store-accent-text, #fff);
+  background: var(--store-accent);
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--store-accent) 65%, transparent);
 }
 
 .lp-catalog-body {
@@ -302,8 +376,8 @@ export const BLOCK_CSS = `
   border-radius: 999px;
   font-size: .82rem;
   font-weight: 900;
-  color: var(--lp-accent);
-  background: color-mix(in srgb, var(--lp-accent) 11%, transparent);
+  color: var(--store-accent);
+  background: color-mix(in srgb, var(--store-accent) 11%, transparent);
 }
 
 /* The three sizes are the PICTURE's shape, not the grid's: the seller asks
@@ -328,12 +402,12 @@ export const BLOCK_CSS = `
 .lp-catalog-cat {
   padding: 8px 16px;
   border-radius: 999px;
-  border: 1px solid var(--lp-border);
-  background: var(--lp-card);
+  border: 1px solid var(--store-border);
+  background: var(--store-card);
   font-size: .82rem;
   font-weight: 700;
   text-decoration: none;
-  color: var(--lp-muted);
+  color: var(--store-muted);
   /* A thumb needs somewhere to land; these are the one control on this
      block a shopper actually presses. */
   min-height: 40px;
@@ -341,26 +415,26 @@ export const BLOCK_CSS = `
   align-items: center;
   transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
 }
-.lp-catalog-cat:hover { color: var(--lp-text); border-color: var(--lp-accent-border, var(--lp-accent)); }
+.lp-catalog-cat:hover { color: var(--store-text); border-color: var(--store-accent-border, var(--store-accent)); }
 .lp-catalog-cat.is-on {
-  background: var(--lp-accent);
-  border-color: var(--lp-accent);
-  color: var(--lp-accent-text, #fff);
-  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--lp-accent) 80%, transparent);
+  background: var(--store-accent);
+  border-color: var(--store-accent);
+  color: var(--store-accent-text, #fff);
+  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--store-accent) 80%, transparent);
 }
 
 /* ── slider ── */
-.lp-slider { position: relative; overflow: hidden; border-radius: var(--lp-radius); border: 1px solid var(--lp-border); touch-action: pan-y; user-select: none; }
+.lp-slider { position: relative; overflow: hidden; border-radius: var(--store-radius); border: 1px solid var(--store-border); touch-action: pan-y; user-select: none; }
 .lp-slider-track { display: flex; transition: transform 0.45s ease; }
 .lp-slider-slide { flex: 0 0 100%; }
 .lp-slider-slide img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
 .lp-slider-dots { position: absolute; inset-inline: 0; bottom: 10px; display: flex; justify-content: center; gap: 6px; }
 .lp-slider-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; background: rgba(255,255,255,0.6); box-shadow: 0 0 0 1px rgba(0,0,0,0.15); cursor: pointer; transition: width 0.2s; }
-.lp-slider-dots button.on { width: 22px; background: var(--lp-accent); }
+.lp-slider-dots button.on { width: 22px; background: var(--store-accent); }
 @media (prefers-reduced-motion: reduce) { .lp-slider-track { transition: none; } }
 
 /* ── free text ── */
-.lp-prose p { font-size: 15px; color: var(--lp-text); margin-bottom: 12px; white-space: pre-wrap; }
+.lp-prose p { font-size: 15px; color: var(--store-text); margin-bottom: 12px; white-space: pre-wrap; }
 .lp-prose p:last-child { margin-bottom: 0; }
 
 /* ── offers ──
@@ -379,14 +453,14 @@ export const BLOCK_CSS = `
   font: inherit;
   color: inherit;
   cursor: pointer;
-  background: var(--lp-card);
-  border: 1.5px solid var(--lp-border);
-  border-radius: var(--lp-radius);
+  background: var(--store-card);
+  border: 1.5px solid var(--store-border);
+  border-radius: var(--store-radius);
   padding: 10px 14px;
   transition: border-color .15s ease, background .15s ease;
 }
-.lp-offer:hover { border-color: var(--lp-accent); }
-.lp-offer-best { border-color: var(--lp-accent); background: var(--lp-accent-tint); }
+.lp-offer:hover { border-color: var(--store-accent); }
+.lp-offer-best { border-color: var(--store-accent); background: var(--store-accent-tint); }
 .lp-offer-name {
   grid-area: 1 / 1;
   display: flex;
@@ -396,54 +470,54 @@ export const BLOCK_CSS = `
   font-weight: 800;
 }
 .lp-offer-tag {
-  background: var(--lp-accent);
-  color: var(--lp-accent-text);
+  background: var(--store-accent);
+  color: var(--store-accent-text);
   font-size: 9.5px;
   font-weight: 800;
   padding: 1.5px 7px;
   border-radius: 999px;
   white-space: nowrap;
 }
-.lp-offer-qty { grid-area: 2 / 1; font-size: 11px; color: var(--lp-muted); }
-.lp-offer-qty em { font-style: normal; color: var(--lp-accent); font-weight: 700; }
+.lp-offer-qty { grid-area: 2 / 1; font-size: 11px; color: var(--store-muted); }
+.lp-offer-qty em { font-style: normal; color: var(--store-accent); font-weight: 700; }
 .lp-offer-price {
   grid-area: 1 / 2;
   text-align: end;
   font-size: 16px;
   font-weight: 900;
-  color: var(--lp-accent);
+  color: var(--store-accent);
   white-space: nowrap;
 }
 .lp-offer-price s {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--lp-muted);
+  color: var(--store-muted);
   margin-inline-end: 6px;
 }
-.lp-offer-unit { grid-area: 2 / 2; text-align: end; font-size: 10px; color: var(--lp-muted); }
+.lp-offer-unit { grid-area: 2 / 2; text-align: end; font-size: 10px; color: var(--store-muted); }
 
 /* ── reviews ── */
 .lp-reviews { display: grid; gap: 12px; }
 .lp-reviews figure {
   margin: 0;
-  background: var(--lp-card);
-  border: 1px solid var(--lp-border);
-  border-radius: var(--lp-radius);
+  background: var(--store-card);
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
   padding: 16px 18px;
 }
-.lp-stars { display: flex; gap: 2px; color: var(--lp-accent); margin-bottom: 8px; }
+.lp-stars { display: flex; gap: 2px; color: var(--store-accent); margin-bottom: 8px; }
 .lp-reviews blockquote { margin: 0; font-size: 14px; }
-.lp-reviews figcaption { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--lp-muted); }
+.lp-reviews figcaption { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--store-muted); }
 
 /* ── faq ── */
 .lp-faq { display: grid; gap: 8px; }
 .lp-faq-item {
-  background: var(--lp-card);
-  border: 1px solid var(--lp-border);
-  border-radius: var(--lp-radius);
+  background: var(--store-card);
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
   overflow: hidden;
 }
-.lp-faq-open { border-color: var(--lp-accent-border); }
+.lp-faq-open { border-color: var(--store-accent-border); }
 .lp-faq-item button {
   width: 100%;
   display: flex;
@@ -460,9 +534,9 @@ export const BLOCK_CSS = `
   padding: 14px 16px;
   cursor: pointer;
 }
-.lp-faq-item button svg { flex: 0 0 auto; color: var(--lp-muted); transition: transform .18s ease; }
-.lp-faq-open button svg { transform: rotate(180deg); color: var(--lp-accent); }
-.lp-faq-item p { padding: 0 16px 14px; font-size: 13.5px; color: var(--lp-muted); }
+.lp-faq-item button svg { flex: 0 0 auto; color: var(--store-muted); transition: transform .18s ease; }
+.lp-faq-open button svg { transform: rotate(180deg); color: var(--store-accent); }
+.lp-faq-item p { padding: 0 16px 14px; font-size: 13.5px; color: var(--store-muted); }
 
 /* ── urgency ── */
 .lp-urgency {
@@ -477,19 +551,19 @@ export const BLOCK_CSS = `
 .lp-urgency > p { font-size: 14px; font-weight: 700; }
 .lp-countdown { display: flex; align-items: center; gap: 6px; }
 .lp-countdown span {
-  background: var(--lp-accent);
-  color: var(--lp-accent-text);
+  background: var(--store-accent);
+  color: var(--store-accent-text);
   font-size: 20px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   min-width: 46px;
   padding: 7px 4px;
-  border-radius: calc(var(--lp-radius) / 1.6);
+  border-radius: calc(var(--store-radius) / 1.6);
 }
-.lp-countdown i { color: var(--lp-accent); font-style: normal; font-weight: 900; }
-.lp-countdown-over { font-size: 13px; color: var(--lp-muted); }
-.lp-stock { font-size: 13px; color: var(--lp-muted); }
-.lp-stock strong { color: var(--lp-accent); font-weight: 900; }
+.lp-countdown i { color: var(--store-accent); font-style: normal; font-weight: 900; }
+.lp-countdown-over { font-size: 13px; color: var(--store-muted); }
+.lp-stock { font-size: 13px; color: var(--store-muted); }
+.lp-stock strong { color: var(--store-accent); font-weight: 900; }
 
 /* ── form ── */
 .lp-form-section { max-width: 560px; }
@@ -501,6 +575,158 @@ export const BLOCK_CSS = `
    is what made it look squeezed and off-centre. The section owns the
    spacing here; the form just fills it. */
 .lp-root #zaki-order-form { padding: 0; }
+
+/* -- the five blocks the ten structures needed --
+   Nothing here names a colour: every one is a --store-* variable, so a
+   block drawn under one skin and the same block under another are the
+   same shape in two palettes. No backticks in this file: it is one
+   template literal. */
+
+/* the comparison table -- two columns an eye runs across */
+.lp-compare {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: start;
+}
+.lp-compare th,
+.lp-compare td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--store-border);
+  vertical-align: top;
+}
+.lp-compare thead th {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--store-muted);
+  border-bottom-width: 2px;
+}
+.lp-compare tbody th {
+  font-weight: 600;
+  color: var(--store-text);
+  width: 34%;
+}
+.lp-compare td { color: var(--store-muted); }
+/* OUR column is the one that is read, so it is the one that is lit. */
+.lp-compare .lp-compare-ours {
+  color: var(--store-text);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--store-accent) 7%, transparent);
+}
+
+/* the timeline -- what happens over time, never a before-and-after photo */
+.lp-timeline {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 620px;
+  display: grid;
+  gap: 2px;
+}
+.lp-timeline li {
+  display: grid;
+  grid-template-columns: minmax(70px, auto) 1fr;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--store-border);
+}
+.lp-timeline li:last-child { border-bottom: 0; }
+.lp-timeline-when {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--store-accent);
+}
+.lp-timeline-what { font-size: 14px; line-height: 1.75; color: var(--store-muted); }
+
+/* the quiz -- three questions, shown as questions */
+.lp-quiz { list-style: none; margin: 0 auto; padding: 0; max-width: 620px; display: grid; gap: 16px; }
+.lp-quiz-ask { margin: 0 0 8px; font-weight: 600; font-size: 15px; }
+.lp-quiz-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-quiz-option {
+  border: 1px solid var(--store-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--store-muted);
+}
+.lp-quiz-result {
+  max-width: 620px;
+  margin: 18px auto 0;
+  padding: 12px 14px;
+  border-radius: var(--store-radius);
+  background: color-mix(in srgb, var(--store-accent) 9%, transparent);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* the objections -- the doubt said out loud before the visitor says it */
+.lp-objections { max-width: 640px; margin: 0 auto; display: grid; gap: 12px; }
+.lp-objection {
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
+  padding: 13px 15px;
+  background: var(--store-card);
+}
+.lp-objection-doubt { margin: 0 0 6px; font-weight: 700; font-size: 14.5px; }
+.lp-objection-answer { margin: 0; font-size: 14px; line-height: 1.8; color: var(--store-muted); }
+.lp-guarantee {
+  max-width: 640px;
+  margin: 16px auto 0;
+  padding: 13px 15px;
+  border-radius: var(--store-radius);
+  border: 1px solid var(--store-accent);
+  font-size: 14px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+/* how it works -- the steps, then what each ingredient does */
+.lp-mechanism {
+  list-style: none;
+  counter-reset: lp-step;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 620px;
+  display: grid;
+  gap: 14px;
+}
+.lp-mechanism li { display: grid; gap: 4px; padding-inline-start: 38px; position: relative; }
+.lp-mechanism li::before {
+  counter-increment: lp-step;
+  content: counter(lp-step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--store-accent);
+  color: var(--store-accent-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.lp-mechanism-step { font-weight: 600; font-size: 15px; }
+.lp-mechanism-text { font-size: 14px; line-height: 1.75; color: var(--store-muted); }
+.lp-ingredients {
+  max-width: 620px;
+  margin: 22px auto 0;
+  display: grid;
+  gap: 2px;
+}
+.lp-ingredients > div {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--store-border);
+}
+.lp-ingredients > div:last-child { border-bottom: 0; }
+.lp-ingredients dt { font-weight: 600; font-size: 14px; }
+.lp-ingredients dd { margin: 0; font-size: 14px; line-height: 1.75; color: var(--store-muted); }
 
 /* ── trust ── */
 .lp-trust {
@@ -518,18 +744,18 @@ export const BLOCK_CSS = `
   justify-items: center;
   gap: 3px;
   text-align: center;
-  background: var(--lp-card);
-  border: 1px solid var(--lp-border);
-  border-radius: var(--lp-radius);
+  background: var(--store-card);
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
   padding: 14px 10px;
-  color: var(--lp-accent);
+  color: var(--store-accent);
 }
-.lp-trust strong { font-size: 13px; font-weight: 800; color: var(--lp-text); }
-.lp-trust span { font-size: 11.5px; color: var(--lp-muted); }
+.lp-trust strong { font-size: 13px; font-weight: 800; color: var(--store-text); }
+.lp-trust span { font-size: 11.5px; color: var(--store-muted); }
 
 /* ── footer ── */
 .lp-footer {
-  border-top: 1px solid var(--lp-border);
+  border-top: 1px solid var(--store-border);
   text-align: center;
   padding: 26px 20px 28px;
   display: grid;
@@ -544,35 +770,35 @@ export const BLOCK_CSS = `
   width: 100%;
   max-width: 760px;
   padding-top: 14px;
-  border-top: 1px solid var(--lp-border);
+  border-top: 1px solid var(--store-border);
 }
 .lp-footer-cols h3 {
   font-size: 13px;
   font-weight: 800;
   margin: 0 0 8px;
   padding-bottom: 6px;
-  color: var(--lp-text);
-  border-bottom: 2px solid var(--lp-accent);
+  color: var(--store-text);
+  border-bottom: 2px solid var(--store-accent);
   display: inline-block;
 }
 .lp-footer-cols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .lp-footer-cols a {
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--lp-muted);
+  color: var(--store-muted);
   text-decoration: none;
 }
-.lp-footer-cols a:hover { color: var(--lp-accent); }
+.lp-footer-cols a:hover { color: var(--store-accent); }
 .lp-footer-phone {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--lp-accent);
+  color: var(--store-accent);
   font-weight: 800;
   font-size: 14px;
   text-decoration: none;
 }
-.lp-footer p { font-size: 11.5px; color: var(--lp-muted); }
+.lp-footer p { font-size: 11.5px; color: var(--store-muted); }
 
 /* ── the button that follows you down ── */
 .lp-sticky {
@@ -586,13 +812,13 @@ export const BLOCK_CSS = `
   gap: 10px;
   max-width: 520px;
   margin: 0 auto;
-  background: var(--lp-accent);
-  color: var(--lp-accent-text);
+  background: var(--store-accent);
+  color: var(--store-accent-text);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
   padding: 13px 22px;
-  border-radius: var(--lp-radius);
+  border-radius: var(--store-radius);
   box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .45);
 }
 .lp-sticky b { font-weight: 900; font-variant-numeric: tabular-nums; opacity: .92; }
@@ -624,7 +850,7 @@ export const BLOCK_CSS = `
   .lp-reviews { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-offers { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
   /* The seller's own column count, now that there is room for it. */
-  .lp-catalog { grid-template-columns: repeat(var(--lp-cat-cols, 3), minmax(0, 1fr)); }
+  .lp-catalog { grid-template-columns: repeat(var(--store-cat-cols, 3), minmax(0, 1fr)); }
 }
 /* ─────────────────────────────────────────────────────
    WHAT A BLOCK'S OWN LOOK OVERRIDES.
@@ -680,8 +906,8 @@ html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
   color: var(--look-heading, inherit);
 }
 html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
-  background: var(--look-btn-bg, var(--lp-accent));
-  color: var(--look-btn-fg, var(--lp-accent-text));
+  background: var(--look-btn-bg, var(--store-accent));
+  color: var(--look-btn-fg, var(--store-accent-text));
   padding: var(--look-btn-pad, 14px 44px);
   font-size: var(--look-btn-size, 16px);
   width: var(--look-btn-width, auto);

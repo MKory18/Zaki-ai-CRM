@@ -28,15 +28,19 @@ vi.mock('@/components/landing/LandingPageView', () => ({ LandingPageView: () => 
 vi.mock('@/components/storefront/StorefrontShell', () => ({ StorefrontShell: () => null }));
 vi.mock('@/components/tracking/LandingTrackingPixels', () => ({ LandingTrackingPixels: () => null }));
 vi.mock('@/lib/tracking/tracking-config', () => ({ getTrackingPixelsForPage: async () => [] }));
-vi.mock('@/lib/db', () => ({ db: {} }));
+vi.mock('@/lib/db', () => ({
+  db: { country: { findUnique: async () => ({ minorUnit: 0 }) } },
+}));
 
+import { DEFAULT_STORE_THEME } from '@/lib/store-theme';
 import Home from './[store]/page';
+import { CategoryNav } from '@/components/storefront/CategoryNav';
 import ProductPage from './[store]/p/[sku]/page';
 import { LandingPageView } from '@/components/landing/LandingPageView';
 
 const store = (over: Record<string, unknown> = {}) => ({
   id: 's1', slug: 'sehha', companyId: 'c1', countryId: 'k1', type: 'SINGLE_PRODUCT', landingPageId: null,
-  currencyCode: 'SYP', countryCode: 'SY', name: 'صحة', ...over,
+  currencyCode: 'SYP', countryCode: 'SY', name: 'صحة', theme: DEFAULT_STORE_THEME, ...over,
 });
 
 const home = (search: Record<string, string> = {}) =>
@@ -85,5 +89,44 @@ describe('a many-products store', () => {
     storefrontProducts.mockResolvedValue([]);
     await home();
     expect(storefrontProducts).toHaveBeenCalledWith('c1', 's1');
+  });
+
+  /**
+   * The props this element was handed, or null.
+   *
+   * The props and not merely its presence: an element is in the tree
+   * whatever it would draw, so `<CategoryNav categories={[]} />` — which
+   * renders nothing — satisfied a guard that only looked for the type.
+   */
+  const propsOf = (node: unknown, type: unknown): Record<string, unknown> | null => {
+    if (Array.isArray(node)) {
+      for (const n of node) {
+        const hit = propsOf(n, type);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    const el = node as { type?: unknown; props?: Record<string, unknown> } | null;
+    if (!el || typeof el !== 'object') return null;
+    if (el.type === type) return el.props ?? {};
+    return propsOf(el.props?.children, type);
+  };
+
+  /**
+   * «أول شاشة ما فيها منتج ولا عرض ولا فئة» — the brief's own words for
+   * this page. RENDERED, not grepped: a guard that searched the source
+   * for «CategoryNav» stayed green when the element was wrapped in
+   * `{false && …}`, which is exactly how a section goes missing.
+   */
+  it('opens with a way into the products, not with the shop’s name', async () => {
+    getStorefront.mockResolvedValue(store({ type: 'MULTI_PRODUCT' }));
+    storefrontProducts.mockResolvedValue([
+      { id: 'a', sku: 'A', name: 'أ', image: null, fromPrice: 10, basePrice: 10, category: { id: 'c', name: 'فئة' } },
+      { id: 'b', sku: 'B', name: 'ب', image: null, fromPrice: 20, basePrice: 20, category: { id: 'd', name: 'أخرى' } },
+    ]);
+    const nav = propsOf(await home(), CategoryNav);
+    expect(nav, 'لا طريق إلى المنتجات في أول شاشة').toBeTruthy();
+    // And it has something to offer: the nav draws nothing below two.
+    expect((nav!.categories as unknown[]).length, 'الطريق معروض وفارغ').toBeGreaterThan(1);
   });
 });

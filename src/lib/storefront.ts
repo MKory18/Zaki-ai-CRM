@@ -4,6 +4,8 @@ import { type LandingTheme } from './landing-theme';
 import { DEFAULT_STORE_THEME, parseStoreTheme, type StoreTheme } from './store-theme';
 import { parseMenuItems, visibleItems, type MenuItem, type MenuKey } from './store-menus';
 import { directionOf } from './store-languages';
+import { liveOfferWhere } from './offers';
+import { parseCategoryAttributes, parseProductAttributes, type ProductAttributes } from './product-attributes';
 import { publicizeMedia } from './public-media';
 import type { CatalogItem } from '@/components/landing/blocks/PageBlocks';
 
@@ -36,12 +38,38 @@ import type { CatalogItem } from '@/components/landing/blocks/PageBlocks';
 export interface StorefrontProduct {
   id: string;
   sku: string;
+  /**
+   * WHAT A LINK TO THIS PRODUCT SHOULD SAY.
+   *
+   * The readable address when it has one, the SKU when it does not — a
+   * product saved before addresses existed still has to be reachable.
+   * One field so that every surface links the same way and none of them
+   * decides the fallback for itself.
+   */
+  handle: string;
   name: string;
   description: string | null;
   image: string | null;
   basePrice: number;
   /** The cheapest per-unit bundle, for a "from" price on a listing. */
   fromPrice: number;
+  /**
+   * What kind of thing this is, as the shop's own products name it.
+   *
+   * Here so the search can rank by it and the grid can filter by it without
+   * loading the catalogue a second time in a different shape. The category
+   * is company-wide and hangs off the product — see the note in
+   * `storefrontCatalog` on why there is no store-scoped copy of it.
+   */
+  category: { id: string; name: string } | null;
+  /**
+   * This product's answers to its category's questions.
+   *
+   * Read against that category's schema here, once, so every surface
+   * downstream — the grid, the filter sheet, the product page — sees the
+   * same answers and nobody parses them a second way.
+   */
+  attributes: ProductAttributes;
 }
 
 export interface Storefront {
@@ -172,14 +200,20 @@ export async function storefrontProducts(
   storeId: string,
   limit = 60
 ): Promise<StorefrontProduct[]> {
+  const now = new Date();
   const products = await db.product.findMany({
     where: { companyId, storeId, status: 'ACTIVE', basePrice: { gt: 0 } },
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: {
-      id: true, sku: true, name: true, description: true, image: true, basePrice: true,
+      id: true, sku: true, name: true, description: true, image: true, basePrice: true, attributes: true,
+      slug: true, previousSlugs: true,
+      category: { select: { id: true, name: true, attributeSchema: true } },
       offers: {
-        where: { status: 'ACTIVE' },
+        // The same predicate the product page and the order path use. This
+        // read spelled `status: 'ACTIVE'` itself, so a bundle that had
+        // finished went on setting the per-unit price in the grid.
+        where: liveOfferWhere(now),
         select: { quantity: true, freeQuantity: true, sellingPrice: true },
       },
       images: {
@@ -207,6 +241,9 @@ export async function storefrontProducts(
       image: p.images[0]?.url ?? p.image,
       basePrice: p.basePrice,
       fromPrice: perUnit.length ? Math.min(...perUnit) : p.basePrice,
+      handle: p.slug || p.sku,
+      category: p.category && { id: p.category.id, name: p.category.name },
+      attributes: parseProductAttributes(p.attributes, parseCategoryAttributes(p.category?.attributeSchema ?? null)),
     };
   });
 }
@@ -218,17 +255,51 @@ export async function storefrontProducts(
  * company and is already URL-safe — a second "slug" column would be one
  * more name for the same thing, and one more place for them to disagree.
  */
+/**
+ * ONE PRODUCT, BY WHATEVER ADDRESS THE LINK CARRIED.
+ *
+ * Three of them answer, in this order:
+ *   · the readable address it has now,
+ *   · one it used to have — because a link that has gone round a family
+ *     group keeps being tapped for weeks after a rename, and 404 is the
+ *     shop's own advertising going dark,
+ *   · the SKU, which is every link that existed before addresses did.
+ *
+ * The caller compares the `handle` it gets back with the one it was
+ * given: when they differ, that link is an old one and the page sends
+ * the shopper to the current address permanently. One product, one
+ * address, and nothing lost on the way.
+ */
 export const storefrontProduct = cache(async function storefrontProduct(
   companyId: string,
   storeId: string,
-  sku: string
+  handle: string
 ): Promise<(StorefrontProduct & { gallery: string[] }) | null> {
+  const now = new Date();
   const p = await db.product.findFirst({
-    where: { companyId, storeId, sku: sku.toUpperCase(), status: 'ACTIVE', basePrice: { gt: 0 } },
+    where: {
+      companyId,
+      storeId,
+      status: 'ACTIVE',
+      basePrice: { gt: 0 },
+      OR: [
+        { slug: handle },
+        { sku: handle.toUpperCase() },
+        // An address it used to have. The column is a JSON array, so the
+        // match is on the quoted string — which is why `isSlug` guards
+        // what may ever be written into it.
+        { previousSlugs: { contains: `"${handle}"` } },
+      ],
+    },
     select: {
-      id: true, sku: true, name: true, description: true, image: true, basePrice: true,
+      id: true, sku: true, name: true, description: true, image: true, basePrice: true, attributes: true,
+      slug: true, previousSlugs: true,
+      category: { select: { id: true, name: true, attributeSchema: true } },
       offers: {
-        where: { status: 'ACTIVE' },
+        // The same predicate the product page and the order path use. This
+        // read spelled `status: 'ACTIVE'` itself, so a bundle that had
+        // finished went on setting the per-unit price in the grid.
+        where: liveOfferWhere(now),
         select: { quantity: true, freeQuantity: true, sellingPrice: true },
       },
       images: {
@@ -256,6 +327,9 @@ export const storefrontProduct = cache(async function storefrontProduct(
     image: gallery[0] ?? publicizeMedia(p.image),
     basePrice: p.basePrice,
     fromPrice: perUnit.length ? Math.min(...perUnit) : p.basePrice,
+    handle: p.slug || p.sku,
+    category: p.category && { id: p.category.id, name: p.category.name },
+    attributes: parseProductAttributes(p.attributes, parseCategoryAttributes(p.category?.attributeSchema ?? null)),
     gallery,
   };
 });

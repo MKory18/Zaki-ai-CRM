@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { activeOffersFor } from '@/lib/offers';
 import { ruleFor } from '@/lib/phone-rules';
 import { verifyPreviewToken, clampStoredHtml } from '@/lib/landing-pages';
+import { draftState } from '@/lib/landing-draft';
 import { sellingCurrency } from '@/lib/selling-currency';
 import OrderForm from '@/components/landing/OrderForm';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
@@ -55,17 +56,9 @@ import { publicizeMedia } from '@/lib/public-media';
  */
 async function fetchOffers(companyId: string, productId: string | null) {
   if (!productId) return [];
-  const fromProduct = await activeOffersFor(db, companyId, productId);
-  return fromProduct.map((o) => ({
-    id: o.id,
-    name: o.name,
-    quantity: o.quantity,
-    freeQuantity: o.freeQuantity,
-    price: o.sellingPrice,
-    // A "was" price that is not above the price is not a saving.
-    compareAtPrice: o.compareAtPrice !== null && o.compareAtPrice > o.sellingPrice ? o.compareAtPrice : null,
-    isDefault: o.isDefault,
-  }));
+  // The view itself: one mapping, and the struck-through price already
+  // measured against real delivered orders — see price-honesty.ts.
+  return activeOffersFor(db, companyId, productId);
 }
 
 /**
@@ -164,6 +157,23 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
     lp = await findPage({ id: target.frontPageId, storeId: target.storeId, isPublished: true });
   }
   if (!lp || (!previewing && !lp.isPublished)) notFound();
+
+  /**
+   * A PREVIEW SHOWS THE DRAFT. A VISIT SHOWS WHAT IS PUBLISHED.
+   *
+   * Once a published page could hold unpublished edits, «معاينة» became the
+   * one button that had to know: a seller who saved a draft and pressed it
+   * was shown the page their visitors see — the version they had just
+   * changed — and would reasonably conclude the save had failed.
+   *
+   * Only behind a valid signed token, which is the seller in the dashboard's
+   * own frame. A visitor arriving at the public address has no token and
+   * reads the live columns, so nothing unpublished can leak through this.
+   */
+  if (previewing) {
+    const { draft } = await draftState(lp.id);
+    if (draft) lp = { ...lp, ...draft };
+  }
   const companyId = lp.company!.id;
 
   const [offers, recs] = await loadLpData(lp.id, companyId, lp.product?.id ?? null);
@@ -254,6 +264,9 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
         recommendations={recommendations}
         regions={regions}
         phonePlaceholder={ruleFor(countryCode)?.example}
+        // The shop's own number, for the optional confirmation button
+        // on the thank-you screen. A shop with none gets no button.
+        whatsapp={lp.store?.supportPhone ?? null}
         showOfferPicker={!pageHasOffersBlock}
         thankYou={thankYou}
       />

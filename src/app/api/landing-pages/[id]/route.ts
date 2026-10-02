@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { validateSlug, clampStoredHtml, conversionRate } from '@/lib/landing-pages';
+import { draftState, publishContent } from '@/lib/landing-draft';
 import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
 import { standDownRedirectsTo, suggestSlugRedirect } from '@/lib/store-redirects';
@@ -40,12 +41,29 @@ export async function GET(_req: Request, ctx: Ctx) {
     });
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
 
+    /**
+     * THE EDITOR OPENS ON THE DRAFT, NOT ON WHAT VISITORS ARE READING.
+     *
+     * Otherwise «حفظ كمسودة» would not survive a reload: the seller saves,
+     * reloads, and their work is gone from the screen while sitting in the
+     * column. Worse, the publish would then promote a draft the editor was
+     * not showing — publishing something nobody had looked at.
+     *
+     * Overlaid field by field, so a draft that touched only the sections
+     * still shows the live html beside them.
+     */
+    const state = await draftState(lp.id);
     return NextResponse.json({
       landingPage: {
         ...lp,
-        htmlContent: clampStoredHtml(lp.htmlContent),
+        ...(state.draft ?? {}),
+        htmlContent: clampStoredHtml(state.draft?.htmlContent ?? lp.htmlContent),
         conversionRate: conversionRate(lp.viewsCount, lp.ordersCount),
       },
+      // «تعديلات غير منشورة» · «الرجوع للنسخة السابقة» · «نُشرت في».
+      hasUnpublished: state.hasUnpublished,
+      canRevert: state.canRevert,
+      publishedAt: state.publishedAt,
     });
   } catch (error) {
     const { body, status } = apiError(error);
@@ -195,6 +213,23 @@ export async function PATCH(req: Request, ctx: Ctx) {
       // domain.ts): its own page by slug, and a store's host every published
       // page of the store. A new slug or a publish change must count at once.
       if (updated.slug !== lp.slug || updated.isPublished !== lp.isPublished) await forgetPageHosts(lp);
+
+      /**
+       * GOING LIVE STAMPS THE PUBLISH AND PROMOTES ANY DRAFT.
+       *
+       * A page being published for the first time has its content in the
+       * live columns already — the editor saves before it flips the flag,
+       * and a page that is not yet published has no audience to protect, so
+       * that save went straight through. There is nothing to promote and
+       * `publishContent` only records the moment.
+       *
+       * A page that was taken down with a draft still sitting in it DOES
+       * have something to promote, and it is the same thing the editor shows
+       * (the GET above opens on the draft) — so the press publishes what the
+       * seller is looking at, which is the only version of this that is not
+       * a surprise.
+       */
+      if (parsed.data.isPublished === true && !lp.isPublished) await publishContent(lp.id);
 
       if (updated.slug !== lp.slug) {
         // ── The advertisement is still pointing at the old address ──

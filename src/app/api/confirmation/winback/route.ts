@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { logAudit } from '@/lib/audit';
+import { computeCod } from '@/lib/money';
 import { orderRefFields } from '@/lib/order-ref';
 import {
   maxWinbackDiscount,
@@ -239,7 +240,29 @@ export async function POST(req: Request) {
     // The discount is the WHOLE of it, not a second helping on top of what
     // came off before — the ceiling above already subtracted the old one.
     const totalDiscount = carried + discount;
-    const totalAmount = Math.max(0, unit * quantity - totalDiscount);
+    /*
+     * THROUGH THE ONE DOOR, NOT A FORMULA OF ITS OWN.
+     *
+     * This was `Math.max(0, unit * quantity - totalDiscount)` — the COD
+     * computed a second time, by hand, in a route nobody thinks of as a
+     * money route. Three things it got wrong and `computeCod` does not:
+     * it rounded nowhere, so a Jordanian order carried a float; it ignored
+     * `priceIncludesDelivery`, which the row below faithfully copies and
+     * which decides whether a fee is inside the price or on top of it; and
+     * it clamped a negative to zero instead of clamping the DISCOUNT to the
+     * subtotal, which is where the clamp belongs.
+     *
+     * «If the same figure is computed in two different places in the code,
+     * that is a defect even when the two agree today.»
+     */
+    const money = computeCod({
+      lines: [{ quantity, unitPrice: unit }],
+      discount: totalDiscount,
+      deliveryFee: 0,
+      priceIncludesDelivery: order.priceIncludesDelivery ?? false,
+      minorUnit: country.minorUnit,
+    });
+    const totalAmount = money.cod;
 
     const created = await db.$transaction(async (tx) => {
       const refs = await orderRefFields(tx, companyId, country.orderPrefix, 0);

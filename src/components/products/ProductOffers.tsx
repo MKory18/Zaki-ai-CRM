@@ -30,6 +30,7 @@ interface Offer {
   freeQuantity: number;
   sellingPrice: number;
   compareAtPrice: number | null;
+  endsAt: string | null;
   discount: number;
   deliveryIncluded: boolean;
   isDefault: boolean;
@@ -142,9 +143,13 @@ export function ProductOffers({
             quantity: t.n,
             freeQuantity: t.free,
             sellingPrice: Math.round(basePrice * t.mult),
-            // The "was" price is what the same count costs one at a time —
-            // a real comparison, not an invented one.
-            compareAtPrice: t.n > 1 ? Math.round(basePrice * (t.n + t.free)) : null,
+            // NO «was» PRICE. It used to be generated here as
+            // `basePrice × (quantity + free)` — arithmetic about a price the
+            // shop may never have charged — and the comment beside it called
+            // that a real comparison. A struck-through price is now shown
+            // only as far as real delivered orders support it, so generating
+            // one would have produced a number that is simply never drawn.
+            compareAtPrice: null,
             isDefault: i === 1,
             sortOrder: i,
           }),
@@ -374,10 +379,25 @@ export function ProductOffers({
                   setDraft({ ...draft, compareAtPrice: e.target.value === '' ? null : Number(e.target.value) })
                 }
               />
+              <Input
+                label="ينتهي العرض"
+                type="datetime-local" dir="ltr"
+                placeholder="بلا نهاية"
+                value={draft.endsAt ? draft.endsAt.slice(0, 16) : ''}
+                onChange={(e) =>
+                  setDraft({ ...draft, endsAt: e.target.value === '' ? null : new Date(e.target.value).toISOString() })
+                }
+              />
             </div>
             <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-              «السعر» هو ما يدفعه الزبون فعلاً. «السعر قبل الخصم» للعرض فقط — يظهر مشطوباً
-              ولا يدخل في أي حساب مال.
+              «السعر» هو ما يدفعه الزبون فعلاً. «السعر قبل الخصم» للعرض فقط — لا يدخل في أي
+              حساب مال، ولا يظهر مشطوباً إلا بقدر ما تسنده طلباتٌ مُسلَّمة فعلاً بهذا السعر
+              من قبل: فإن لم يُبَع بهذا السعر خمس مرات على الأقل، لا يظهر شيء. ورقمٌ أعلى مما
+              تسنده الطلبات يُعرض بما تسنده، لا بما كُتب.
+            </p>
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              «ينتهي العرض» اختياري. حين تضعه، يتوقّف العرض عن البيع في تلك اللحظة — والعدّاد
+              الذي يراه الزبون يقرأ الوقت نفسه، فلا يصل إلى الصفر بينما العرض ما زال قائماً.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">

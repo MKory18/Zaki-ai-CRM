@@ -83,6 +83,19 @@ const lpEditorHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * WHERE THE BUILD IS WRITTEN — `.next`, unless something says otherwise.
+   *
+   * A dev server holds `.next` open on Windows, so `next build` beside a
+   * running `next dev` fails on a locked file. The performance budgets this
+   * project is held to («JavaScript أقل من 120 كيلوبايت للصفحة») can only
+   * be measured against a production build, and measuring them must not
+   * mean stopping the server somebody is working against.
+   *
+   * Unset in every normal build and in production: the default is the
+   * default.
+   */
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   output: 'standalone',
   serverExternalPackages: ['sharp'],
   // Do not advertise the framework version

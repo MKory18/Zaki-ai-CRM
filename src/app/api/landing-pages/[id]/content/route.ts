@@ -15,17 +15,27 @@ import {
 } from '@/lib/landing-html-sanitize';
 import { landingThemeSchema } from '@/lib/landing-theme';
 import { landingSectionsSchema } from '@/lib/landing-sections';
+import { draftState, publishContent, revertContent, saveContent, type PageContent } from '@/lib/landing-draft';
 
 interface Ctx {
   params: Promise<{ id: string }>;
 }
 
 /**
- * PUT /api/landing-pages/[id]/content — save the custom HTML/CSS editor draft.
+ * PUT /api/landing-pages/[id]/content — save the editor's work.
  * Server-side sanitization happens BEFORE persistence: the stored artifact
  * itself carries no active content (scripts/handlers/js-URLs are stripped).
  * Only slug/product/publish state is untouched — this endpoint never changes
  * them (publish goes through the existing PATCH route).
+ *
+ * AND ON A PUBLISHED PAGE IT NOW SAVES A DRAFT, WHICH IT DID NOT.
+ *
+ * This comment said «draft» from the day it was written and the code wrote
+ * the live columns: a seller pressing «حفظ كمسودة» on a live page put a
+ * half-finished headline in front of every click the advert was paying for.
+ * `saveContent` decides where the write lands — the draft for a live page,
+ * the row itself for one with no audience — and nothing else in this file
+ * had to know. See src/lib/landing-draft.ts.
  */
 export async function PUT(req: Request, ctx: Ctx) {
   try {
@@ -95,9 +105,13 @@ export async function PUT(req: Request, ctx: Ctx) {
       data.sections = sections.data.length ? JSON.stringify(sections.data) : null;
     }
 
-    const updated = await db.landingPage.update({
+    // Sanitised above, so what reaches the draft is what would reach a
+    // visitor — a draft holding unsanitised markup would make «نشر» the
+    // moment the stripping happened, and the editor would be previewing
+    // something the published page is not.
+    await saveContent(lp.id, data as Partial<PageContent>, lp.isPublished);
+    const updated = await db.landingPage.findUniqueOrThrow({
       where: { id: lp.id },
-      data,
       select: { id: true, name: true, slug: true, isPublished: true, updatedAt: true },
     });
 
@@ -110,10 +124,118 @@ export async function PUT(req: Request, ctx: Ctx) {
       newData: {
         htmlBytes: parsed.data.html ? Buffer.byteLength(parsed.data.html, 'utf8') : 0,
         cssBytes: parsed.data.css ? Buffer.byteLength(parsed.data.css, 'utf8') : 0,
+        // Which of the two this save was, in the log that gets read after
+        // somebody asks «من غيّر الصفحة المنشورة؟».
+        into: lp.isPublished ? 'draft' : 'live',
       },
     });
 
-    return NextResponse.json({ success: true, landingPage: updated });
+    return NextResponse.json({
+      success: true,
+      landingPage: updated,
+      // The editor draws «تعديلات غير منشورة» from this rather than guessing
+      // from its own dirty flag, which cannot know what the server did.
+      hasUnpublished: lp.isPublished,
+    });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+/**
+ * POST — put the draft in front of visitors. PATCH — one step back.
+ *
+ * Three acts on one page's content, on one route, which is how
+ * `/api/store/theme` already does it. The verbs cannot be the same ones:
+ * PUT was taken by the save years before a draft existed, and renaming it
+ * would have been a breaking change to buy a symmetry nobody reads. What
+ * the two routes share is the three acts and the column names.
+ *
+ * BOTH NEED `landing_pages.publish`, NOT `edit`. A visitor feels both of
+ * them: one changes the page they are reading, the other changes it back.
+ * Saving is the act that touches nobody, and it is the one with the weaker
+ * permission.
+ */
+async function pageFor(id: string) {
+  const { user, companyId, storeId } = await requireContext();
+  // No fallback to `edit`. The paragraph above says a visitor feels both of
+  // these acts; falling back would hand them to everyone who may type in the
+  // editor, which is the opposite of what it argues for.
+  await requirePermission('landing_pages.publish');
+  const lp = await db.landingPage.findFirst({
+    where: { id, companyId, storeId },
+    select: { id: true, name: true, isPublished: true },
+  });
+  return { user, companyId, lp };
+}
+
+export async function POST(_req: Request, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const { user, companyId, lp } = await pageFor(id);
+    if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
+
+    const before = await draftState(lp.id);
+    if (!before.hasUnpublished) {
+      // Not an error worth a 500 and not a success worth a cleared editor:
+      // the seller pressed «نشر التعديلات» with nothing to publish, which
+      // happens after two tabs.
+      return NextResponse.json({ error: 'لا تعديلات غير منشورة', code: 'NOTHING_TO_PUBLISH' }, { status: 409 });
+    }
+
+    await publishContent(lp.id);
+
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'LANDING_PAGE_CONTENT_PUBLISHED',
+      entity: 'LandingPage',
+      entityId: lp.id,
+      newData: { name: lp.name },
+    });
+
+    const after = await draftState(lp.id);
+    return NextResponse.json({
+      success: true,
+      hasUnpublished: after.hasUnpublished,
+      canRevert: after.canRevert,
+      publishedAt: after.publishedAt,
+      message: 'نُشرت التعديلات — ويمكنك الرجوع للنسخة السابقة بضغطة.',
+    });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+export async function PATCH(_req: Request, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const { user, companyId, lp } = await pageFor(id);
+    if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
+
+    if (!(await revertContent(lp.id))) {
+      return NextResponse.json({ error: 'لا نسخة سابقة لهذه الصفحة', code: 'NO_PREVIOUS' }, { status: 409 });
+    }
+
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'LANDING_PAGE_CONTENT_REVERTED',
+      entity: 'LandingPage',
+      entityId: lp.id,
+      newData: { name: lp.name },
+    });
+
+    const after = await draftState(lp.id);
+    return NextResponse.json({
+      success: true,
+      hasUnpublished: after.hasUnpublished,
+      // True again, and deliberately: the thing just undone is the next step
+      // back, so a seller who reverted by mistake presses again.
+      canRevert: after.canRevert,
+      publishedAt: after.publishedAt,
+      message: 'رجعت الصفحة للنسخة السابقة — والنسخة التي سحبتها صارت خطوةَ الرجوع التالية.',
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

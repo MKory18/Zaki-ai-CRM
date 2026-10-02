@@ -62,3 +62,66 @@ export async function landingPageMetadata(slug: string): Promise<Metadata> {
     icons: storeIcons(lp.store),
   };
 }
+
+/**
+ * WHERE THIS SHOP LIVES, ABSOLUTELY.
+ *
+ * A crawler and a chat app do not have our origin, so every URL in the
+ * markup and in a share preview has to carry it. Configured rather than
+ * taken from a request header: a header can be forged, and an Open Graph
+ * image pointing at somebody else's host is a shop advertising on their
+ * behalf.
+ *
+ * Falls back to a relative world rather than to a guess — a wrong
+ * absolute URL is worse than none, because a chat app caches it.
+ */
+export function publicOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '';
+  return configured.trim().replace(/\/+$/, '');
+}
+
+/**
+ * THE SHARE PREVIEW — a picture, a name and a price.
+ *
+ * «المنتجات بتنتشر بواتساب، والرابط بلا معاينة ما حدا بيضغطه». A bare
+ * link in a family group is a link nobody taps, and this is the whole
+ * difference between a product that spreads and one that does not.
+ *
+ * The price goes in the DESCRIPTION rather than only in a tag, because
+ * most chat apps render the description and ignore the rest — and the
+ * price is the thing somebody forwarding it wants shown.
+ */
+export function sharePreview(args: {
+  title: string;
+  description?: string | null;
+  image?: string | null;
+  path: string;
+  type?: 'website' | 'article';
+}): Metadata {
+  const origin = publicOrigin();
+  const url = origin ? `${origin}${args.path}` : args.path;
+  const image = args.image
+    ? (/^https?:\/\//.test(args.image) ? args.image : origin ? `${origin}${args.image}` : null)
+    : null;
+
+  return {
+    // The one address this page should be indexed under. Every storefront
+    // page can be reached with a query string on it; without this each of
+    // those is a separate page competing with the others.
+    alternates: { canonical: url },
+    openGraph: {
+      title: args.title,
+      ...(args.description ? { description: args.description } : {}),
+      url,
+      type: args.type ?? 'website',
+      ...(image ? { images: [image] } : {}),
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title: args.title,
+      ...(args.description ? { description: args.description } : {}),
+      ...(image ? { images: [image] } : {}),
+    },
+    ...(args.description ? { description: args.description } : {}),
+  };
+}

@@ -110,12 +110,34 @@ export async function onHandTotal(tx: Tx, companyId: string, productId: string):
  */
 export async function drawDownStock(
   tx: Tx,
-  input: { companyId: string; productId: string; quantity: number; allowNegative: boolean }
+  input: {
+    companyId: string;
+    productId: string;
+    quantity: number;
+    allowNegative: boolean;
+    /**
+     * WHICH SHELF. Stock is the store's — the batch carries `storeId` and
+     * `onHand` filters by it — and this draw-down did not, so an order
+     * reserved against its own store's shelf was served FIFO from EVERY
+     * store's batches and could empty a shelf another store had already
+     * promised. That is the exact case the batch's own doc comment was
+     * written against.
+     *
+     * Null or absent keeps the old company-wide behaviour, the same
+     * convention `onHand` uses, so an order with no store still draws.
+     */
+    storeId?: string | null;
+  }
 ): Promise<{ taken: number; short: number; cost: number }> {
   if (input.quantity <= 0) return { taken: 0, short: 0, cost: 0 };
 
   const batches = await tx.productionBatch.findMany({
-    where: { companyId: input.companyId, productId: input.productId, quantityRemaining: { gt: 0 } },
+    where: {
+      companyId: input.companyId,
+      productId: input.productId,
+      quantityRemaining: { gt: 0 },
+      ...(input.storeId ? { storeId: input.storeId } : {}),
+    },
     orderBy: [{ productionDate: 'asc' }, { createdAt: 'asc' }],
     // `costPerUnit` because the money that LEFT is only knowable here.
     // `product-cost.ts` describes this figure — «the CONSUMED cost… taken
@@ -151,5 +173,16 @@ export async function drawDownStock(
    * the shortfall at the last batch's rate would invent money for goods
    * the shelf did not have.
    */
-  return { taken: input.quantity - left, short: left, cost: Math.round(cost * 100) / 100 };
+  /*
+   * AND THE COST IS NOT ROUNDED HERE.
+   *
+   * It was `Math.round(cost * 100) / 100` — two decimals, in a function that
+   * has no idea which currency it is counting. JOD has three, so a batch at
+   * 3.333 taken three times is 9.999 and was handed back as 10.00; the
+   * caller's own `roundMinor(cost, minorUnit)` then rounded a figure that
+   * had already lost the digit. Same defect as the six fixed on 2026-10-02,
+   * and the same ruling applies: a DERIVED figure is rounded once, by
+   * whoever knows the currency — never on the way there.
+   */
+  return { taken: input.quantity - left, short: left, cost };
 }

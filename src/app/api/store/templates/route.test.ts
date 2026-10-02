@@ -9,7 +9,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
-  db: { store: { findFirst: vi.fn(), update: vi.fn() } },
+  db: {
+    store: { findFirst: vi.fn(), update: vi.fn() },
+    // The gallery draws its previews with the seller's OWN products,
+    // so the route reads four of them. A double that does not know
+    // about this is a double that has fallen behind the route.
+    product: { findMany: vi.fn().mockResolvedValue([]) },
+  },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
   logAudit: vi.fn(),
@@ -22,6 +28,7 @@ vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) })
 
 import { GET, POST } from './route';
 import { PAGE_TEMPLATES } from '@/lib/page-templates';
+import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { DEFAULT_STORE_THEME } from '@/lib/store-theme';
 import { TEMPLATE_FILE_KIND } from '@/lib/store-template-file';
 
@@ -39,6 +46,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', storeId: 's1' });
   requirePermission.mockResolvedValue(undefined);
+  // `resetAllMocks` wipes implementations, so this belongs here and not in
+  // the factory: a shop with no products still has a gallery, and its
+  // previews are drawn with empty boxes.
+  db.product.findMany.mockResolvedValue([]);
   db.store.findFirst.mockResolvedValue({ ...STORE });
   db.store.update.mockResolvedValue({});
 });
@@ -177,5 +188,122 @@ describe('the guards', () => {
       expect(t.hint.length).toBeGreaterThan(5);
       expect(t.swatch).toMatch(/^#[0-9a-f]{6}$/i);
     }
+  });
+});
+
+/**
+ * THE TEN SHOP TEMPLATES.
+ *
+ * They were written, validated at module load and shipped, and no screen
+ * in this system could reach one: a gallery of fifteen PAGE shapes stood
+ * where a seller would look for them. The unit is different — a page
+ * template orders the blocks of a home page, a shop template dresses the
+ * whole engine — so they are one gallery with two sources rather than a
+ * second screen.
+ */
+describe('the shop templates', () => {
+  it('the gallery lists all ten, with what a seller chooses by', async () => {
+    const body = await (await get()).json();
+    expect(body.skins).toHaveLength(STORE_TEMPLATES.length);
+    for (const s of body.skins) {
+      expect(s.label.length).toBeGreaterThan(1);
+      // The filter the brief asks for — «فلتر حسب الفئة المقترحة».
+      expect(s.suggestedFor.length).toBeGreaterThan(3);
+      // The one capability this template puts forward.
+      expect(s.feature.length).toBeGreaterThan(2);
+      // Drawn, not described: the card needs the resolved palette, the
+      // arrangement of each part, and the corner radius.
+      expect(s.palette.accent).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(s.palette.surface0).toBeTruthy();
+      expect(s.palette.textPrimary).toBeTruthy();
+      expect(['soft', 'sharp']).toContain(s.corners);
+      expect(s.layout.header).toBeTruthy();
+      expect(s.layout.hero).toBeTruthy();
+      expect(s.layout.productCard).toBeTruthy();
+    }
+  });
+
+  it('draws the previews with the seller’s own products', async () => {
+    db.product.findMany.mockResolvedValue([
+      // Real shapes: `publicizeMedia` rewrites an address only when the
+      // owner and the file are the UUIDs the storage layer writes. A
+      // fixture with `p1/a.webp` is refused — correctly — and a test
+      // built on one would be testing nothing.
+      {
+        name: 'كريم مرطّب',
+        image: null,
+        basePrice: 14,
+        images: [{ url: '/api/media/companies/11111111-1111-1111-1111-111111111111/products/22222222-2222-2222-2222-222222222222/33333333-3333-3333-3333-333333333333.webp' }],
+      },
+    ]);
+    const body = await (await get()).json();
+    expect(body.sample).toHaveLength(1);
+    expect(body.sample[0].name).toBe('كريم مرطّب');
+    // The image reaches the gallery by its PUBLIC address — a shopper's
+    // route, because the preview draws it the way the shop will.
+    expect(body.sample[0].image).toContain('/api/public/media/');
+    // The company id never reaches a public address.
+    expect(body.sample[0].image).not.toContain('11111111');
+  });
+
+  it('installing one writes the draft and nothing a customer sees', async () => {
+    const res = await post({ source: 'skin', key: STORE_TEMPLATES[0].id });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.themeApplied).toBe(false);
+    expect(body.installed).toBe(STORE_TEMPLATES[0].name);
+
+    const written = db.store.update.mock.calls[0][0].data;
+    // THE DRAFT, AND ONLY THE DRAFT. `theme` is what every live page
+    // renders from; writing it here would repaint the shop on "try this".
+    expect(Object.keys(written)).toEqual(['homeDraft']);
+    expect(JSON.parse(written.homeDraft).length).toBeGreaterThan(0);
+  });
+
+  it('and the proposal says which template it came from', async () => {
+    const body = await (await post({ source: 'skin', key: 'pearl' })).json();
+    expect(body.theme.template).toBe('pearl');
+    // Recorded, so «القالب المثبّت معلّم» stays true after a seller
+    // changes a colour.
+    expect(body.theme.accent).toBeTruthy();
+    expect(body.theme.layout.header).toBeTruthy();
+  });
+
+  it('keeps the settings a template has no opinion about', async () => {
+    const body = await (await post({ source: 'skin', key: 'souq' })).json();
+    // The checkout fields and the cart bar are the shop's, not the
+    // template's: installing a look must not empty a seller's settings.
+    expect(body.theme.checkout).toBeDefined();
+    expect(body.theme.cartBar).toBeDefined();
+  });
+
+  it('refuses a template that does not exist, rather than installing the last one', async () => {
+    const res = await post({ source: 'skin', key: 'no-such-template' });
+    expect(res.status).toBe(404);
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('a Single Product shop is told where its template lives', async () => {
+    db.store.findFirst.mockResolvedValue({ ...STORE, type: 'SINGLE_PRODUCT' });
+    const res = await post({ source: 'skin', key: 'lab' });
+    expect(res.status).toBe(409);
+    expect(db.store.update).not.toHaveBeenCalled();
+  });
+
+  it('marks the one this shop is wearing, and only if it still exists', async () => {
+    db.store.findFirst.mockResolvedValue({
+      ...STORE,
+      theme: JSON.stringify({ ...DEFAULT_STORE_THEME, template: 'amber' }),
+    });
+    expect((await (await get()).json()).installed).toBe('amber');
+
+    db.store.findFirst.mockResolvedValue({
+      ...STORE,
+      theme: JSON.stringify({ ...DEFAULT_STORE_THEME, template: 'a-template-that-was-removed' }),
+    });
+    expect((await (await get()).json()).installed).toBeNull();
+
+    db.store.findFirst.mockResolvedValue(STORE);
+    expect((await (await get()).json()).installed).toBeNull();
   });
 });

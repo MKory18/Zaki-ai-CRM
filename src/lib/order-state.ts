@@ -10,11 +10,38 @@
  * Zone is derived from the state — `getZone(state)` — and is never stored.
  */
 
+/**
+ * THE CLOSED LIST. Fourteen states, and TWO WERE REMOVED ON 2026-10-02 —
+ * written here because an absence explains nothing to the next reader, and
+ * because this enum is the contract's own list and a removal from it has to
+ * carry its reason.
+ *
+ * `IN_TRANSFER` — the courier-to-courier move. It EXISTS: `POST
+ * /api/ops/tracking/transfer`, rules in `courier-transfer.ts`. It is not a
+ * state, and must not be: the original parcel is physically at the first
+ * company UNDER THEIR BARCODE and will appear in THEIR statement. Writing
+ * `IN_TRANSFER` onto the order means overwriting its provider, which detaches
+ * the order from the shipment still holding it — and the statement never
+ * matches. The move raises a REPLACEMENT order instead, so each parcel keeps
+ * the courier whose statement will settle it. The code also confessed the
+ * state had nothing of its own to say: its customer sentence was byte-
+ * identical to SHIPPED's.
+ *
+ * `NEEDS_REVIEW` — the review EXISTS, one door earlier and better. A doubtful
+ * intake is held as a MESSAGE (`telegram/inbound.ts`, `processingStatus:
+ * 'NEEDS_REVIEW'` with a `reviewReason`, its own screen, filters and a retry)
+ * and never becomes an order: no order number, no reserved stock, no queue to
+ * pollute. That is why `return_to_state` was never built — there is no state
+ * to return to, because nothing moved. A second review model inside the order
+ * lifecycle would be the same idea twice.
+ *
+ * Zero orders and zero status-log rows ever held either value; the removal
+ * broke no stored data. Guarded in `the-state-invariants.test.ts`.
+ */
 export const CORE_STATES = [
   'NEW', 'CLAIMED', 'CONFIRMED', 'PREPARING', 'READY_TO_SHIP', 'SHIPPED',
   'DELIVERED', 'PARTIALLY_DELIVERED', 'WAITING_RETURN',
-  'NO_ANSWER', 'POSTPONED', 'IN_TRANSFER', 'RETURNED', 'CANCELLED',
-  'NEEDS_REVIEW', 'VOIDED',
+  'NO_ANSWER', 'POSTPONED', 'RETURNED', 'CANCELLED', 'VOIDED',
 ] as const;
 export type CoreState = (typeof CORE_STATES)[number];
 
@@ -23,7 +50,6 @@ export type Zone = 'INTAKE' | 'CONFIRMATION' | 'WAREHOUSE' | 'TRANSIT' | 'CLOSED
 
 const ZONES: Record<CoreState, Zone> = {
   NEW: 'INTAKE',
-  NEEDS_REVIEW: 'INTAKE',
   CLAIMED: 'CONFIRMATION',
   NO_ANSWER: 'CONFIRMATION',
   POSTPONED: 'CONFIRMATION',
@@ -31,7 +57,6 @@ const ZONES: Record<CoreState, Zone> = {
   PREPARING: 'WAREHOUSE',
   READY_TO_SHIP: 'WAREHOUSE',
   SHIPPED: 'TRANSIT',
-  IN_TRANSFER: 'TRANSIT',
   WAITING_RETURN: 'TRANSIT',
   DELIVERED: 'CLOSED',
   PARTIALLY_DELIVERED: 'CLOSED',
@@ -387,10 +412,8 @@ export const STATE_LABEL_AR: Record<CoreState, string> = {
   WAITING_RETURN: 'بانتظار الإرجاع',
   NO_ANSWER: 'لا يرد',
   POSTPONED: 'مؤجل',
-  IN_TRANSFER: 'قيد التحويل',
   RETURNED: 'مرتجع',
   CANCELLED: 'ملغى',
-  NEEDS_REVIEW: 'يحتاج مراجعة',
   VOIDED: 'مُبطَل',
 };
 
@@ -421,9 +444,7 @@ export const STATE_TONE: Record<CoreState, StateTone> = {
   WAITING_RETURN: 'warn',
   NO_ANSWER: 'warn',
   POSTPONED: 'warn',
-  IN_TRANSFER: 'warn',
   RETURNED: 'bad',
   CANCELLED: 'bad',
-  NEEDS_REVIEW: 'warn',
   VOIDED: 'bad',
 };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidHex } from './landing-theme';
 import { landingSectionsSchema, type LandingSection } from './landing-sections';
 import { DEFAULT_STORE_THEME, storeThemeSchema, type StoreTheme } from './store-theme';
 
@@ -39,13 +40,25 @@ const IMAGE_FIELDS = ['image', 'images', 'background', 'before', 'after', 'avata
  * Deep rather than top-level: a slider's images live inside its items, and a
  * block's `look.background` holds one too. A shallow sweep would leave the
  * ones that are hardest to notice.
+ *
+ * A COLOUR IS NOT AN IMAGE, EVEN WHEN THE KEY SAYS `background`.
+ *
+ * The field names are matched at any depth, and `background` means an
+ * uploaded picture on a block and a HEX COLOUR on `theme.colors` and
+ * `theme.header`. Emptying those produced a file whose palette had a blank
+ * where the page colour should be — and `storeThemeSchema` refuses a blank
+ * hex, so every exported customised template was a file that could not be
+ * imported. Found by the round-trip test, not by a seller, which is the
+ * only reason it is written here rather than in a support ticket.
+ *
+ * The value settles it with no guessing: `#rrggbb` is never a path.
  */
 export function stripImages<T>(value: T): T {
   if (Array.isArray(value)) return value.map((v) => stripImages(v)) as unknown as T;
   if (!value || typeof value !== 'object') return value;
   const out: Record<string, unknown> = {};
   for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-    if ((IMAGE_FIELDS as readonly string[]).includes(key)) {
+    if ((IMAGE_FIELDS as readonly string[]).includes(key) && !(typeof v === 'string' && isValidHex(v))) {
       // An image field keeps its SHAPE — '' or [] — so a block that expects
       // one does not meet an undefined it was never written for.
       out[key] = Array.isArray(v) ? [] : typeof v === 'object' && v !== null ? stripImages(v) : '';

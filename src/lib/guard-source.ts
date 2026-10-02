@@ -26,7 +26,12 @@ import { join, relative } from 'node:path';
 export const SELLER_SURFACES = [
   '/components/landing/',
   '/components/public/',
-  '/components/store/',
+  // `/components/store/` stood here and no such directory has ever existed.
+  // The shop's fifteen components live in `/components/storefront/`, so for
+  // as long as that entry sat here the whole storefront was governed by the
+  // DASHBOARD's rules — the exact opposite of what this list is for, and
+  // invisible because the files happened to comply.
+  '/components/storefront/',
   '/app/(public)/',
   '/app/lp/',
   '/app/s/',
@@ -122,6 +127,52 @@ export function dashboardFiles(ext: '.ts' | '.tsx' | 'both' = '.tsx'): GuardFile
       else if (match(p) && !p.includes('.test.')) {
         const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
         if (!SELLER_SURFACES.some((s) => rel.includes(s))) {
+          out.push({ rel, src: readFileSync(p, 'utf8') });
+        }
+      }
+    }
+  };
+  walk(join(process.cwd(), 'src'));
+  return out;
+}
+
+/**
+ * THE SELLER'S EDITOR IS NOT THE SHOPPER'S PAGE.
+ *
+ * `BlockBuilder` draws the dashboard's page editor and lives under
+ * `/components/landing/` only because it edits landing blocks. It is
+ * Arabic and right-to-left for every seller, so a left-to-right rule
+ * applied to it would be a rule about a page nobody will ever see that
+ * way.
+ */
+const EDITOR_ONLY = [
+  '/components/landing/blocks/BlockBuilder.tsx',
+  // Imported by BlockBuilder and by nothing else — the toolbar that appears
+  // over selected words while a seller is writing.
+  '/components/landing/blocks/SelectionBar.tsx',
+];
+
+/**
+ * EVERY FILE A SHOPPER'S PAGE IS DRAWN FROM — the exact complement of
+ * `dashboardFiles`, built from the same list so the two can never drift
+ * apart and leave a file governed by neither.
+ *
+ * It exists because the shop's direction is the SELLER's choice:
+ * `directionOf(store.language)`. A rule written for Arabic only is a rule
+ * that half of these shops will break on their first day, and nothing in
+ * an Arabic preview would ever show it.
+ */
+export function shopperFiles(ext: '.ts' | '.tsx' | 'both' = '.tsx'): GuardFile[] {
+  const out: GuardFile[] = [];
+  const match = (p: string) => (ext === 'both' ? /\.tsx?$/.test(p) : p.endsWith(ext));
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (match(p) && !p.includes('.test.')) {
+        const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
+        const editor = EDITOR_ONLY.some((e) => rel.includes(e));
+        if (SELLER_SURFACES.some((s) => rel.includes(s)) && !editor) {
           out.push({ rel, src: readFileSync(p, 'utf8') });
         }
       }

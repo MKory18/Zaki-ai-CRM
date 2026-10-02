@@ -12,15 +12,15 @@ export function FormPlaceholder() {
   return (
     <div
       style={{
-        border: '2px dashed var(--lp-accent-border)',
-        borderRadius: 'var(--lp-radius)',
+        border: '2px dashed var(--store-accent-border)',
+        borderRadius: 'var(--store-radius)',
         padding: '28px 16px',
         textAlign: 'center',
-        background: 'var(--lp-accent-tint)',
+        background: 'var(--store-accent-tint)',
       }}
     >
-      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--lp-accent)' }}>نموذج الطلب</p>
-      <p style={{ fontSize: 11.5, color: 'var(--lp-muted)', marginTop: 4 }}>
+      <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--store-accent)' }}>نموذج الطلب</p>
+      <p style={{ fontSize: 11.5, color: 'var(--store-muted)', marginTop: 4 }}>
         الاسم، الهاتف، المحافظة، العنوان — يظهر كاملاً في الصفحة المنشورة
       </p>
     </div>

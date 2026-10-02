@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { LAYOUT_SLOTS } from './layout-slots';
 import {
   DEFAULT_THEME,
+  STATE_COLORS,
   fontValueSchema,
   landingThemeSchema,
   paletteFor,
@@ -60,15 +62,181 @@ export const storeFontsSchema = z.object({
  * palette — see storePalette below.
  */
 export const storeColorsSchema = z.object({
-  primary: hex.optional(),
-  secondary: hex.optional(),
-  primaryLight: hex.optional(),
-  secondaryLight: hex.optional(),
+  /** The page's own paper. The first surface. */
   background: hex.optional(),
   success: hex.optional(),
   warning: hex.optional(),
   danger: hex.optional(),
+  /**
+   * A pale wash of the accent: a badge's background, a selected row.
+   *
+   * This was «أساسي فاتح» and it was one of four pickers writing variables
+   * that nothing read. See `migrateLegacyColors`.
+   */
+  accentTint: hex.optional(),
+  // ── named by role: the five that were derived-only, and could not be
+  //    said at all by a shop or a template that wanted to say them ──
+  /** The card's own colour, against the page behind it. */
+  surface1: hex.optional(),
+  /** The ink. */
+  textPrimary: hex.optional(),
+  /** The quieter ink: a hint, a label, a struck-through price. */
+  textSecondary: hex.optional(),
+  /** Rules and outlines. */
+  border: hex.optional(),
+  /**
+   * What is written ON the accent — a primary button's own text.
+   *
+   * Derived by measurement (`readableOn`) and right almost always. Named
+   * here for the almost: a brand whose button must carry its second colour
+   * rather than ink or paper. The contrast rule still applies to it.
+   */
+  accentContrast: hex.optional(),
+
+  // ── the four a catalogue needs and a landing page never did ──
+  /**
+   * The third surface: a sort bar, a filter sheet, a strip behind a row.
+   *
+   * A landing page is one column of blocks on paper, so two surfaces were
+   * enough. A product grid is three layers — the page, the card, and the
+   * things that are neither — and the third had nowhere to come from.
+   */
+  surface2: hex.optional(),
+  /** The price's own ink. The page's text colour until a shop says otherwise. */
+  price: hex.optional(),
+  /** The struck-through price beside it. */
+  priceCompare: hex.optional(),
+  /**
+   * The «-20%» badge.
+   *
+   * Separate from `danger` on purpose. In most palettes they are the same
+   * red, and in a shop whose brand IS red they must not be: a discount is
+   * good news, and it cannot be painted in the colour that means a failure.
+   */
+  offerBadge: hex.optional(),
 });
+
+/**
+ * EVERY COLOUR A SHOP CAN NAME, AND THE VARIABLE IT WRITES.
+ *
+ * One table, and `storeThemeVars` walks it. A field that is in the schema
+ * and not in here reaches no page, and the guard in store-theme.test.ts
+ * compares the two lists in both directions — because for as long as this
+ * table did not exist, four fields were in the schema, on the screen, and
+ * in the database, and reached nothing at all.
+ *
+ * The accent is not here. It is not a named colour: it is `theme.accent`,
+ * the one colour every other is derived from, and it sits on the landing
+ * theme with its own control on the screen.
+ */
+export const COLOR_VAR = Object.freeze({
+  background: '--store-page',
+  surface1: '--store-card',
+  surface2: '--store-surface-2',
+  textPrimary: '--store-text',
+  textSecondary: '--store-muted',
+  border: '--store-border',
+  accentTint: '--store-accent-tint',
+  accentContrast: '--store-accent-text',
+  price: '--store-price',
+  priceCompare: '--store-price-compare',
+  offerBadge: '--store-offer-badge',
+  success: '--store-success',
+  warning: '--store-warning',
+  danger: '--store-danger',
+});
+
+/**
+ * THE FOUR NAMES THAT ARE NOW ROLES.
+ *
+ * `primary` was the accent — a second control for a colour the screen
+ * already had a picker for, three rows above it. `secondary` was the ink,
+ * `primaryLight` the accent's wash, `secondaryLight` the muted ink. All
+ * four wrote variables no component ever read.
+ *
+ * Read-time, not a migration: the column is JSON, the rows are a seller's
+ * own colours, and rewriting them in place to fix OUR naming is a write we
+ * do not need to make. A row that has both the old key and the new one
+ * keeps the new one — the old is what it was before somebody set the new.
+ */
+const LEGACY_COLOR: Readonly<Record<string, string>> = Object.freeze({
+  secondary: 'textPrimary',
+  primaryLight: 'accentTint',
+  secondaryLight: 'textSecondary',
+});
+
+export function migrateLegacyColors(row: Record<string, unknown>): Record<string, unknown> {
+  const colors = row.colors;
+  if (!colors || typeof colors !== 'object') return row;
+
+  const from = colors as Record<string, unknown>;
+  const to: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(from)) {
+    if (key === 'primary') continue; // handled below — it is the accent
+    to[LEGACY_COLOR[key] ?? key] = key in LEGACY_COLOR && LEGACY_COLOR[key] in from
+      ? from[LEGACY_COLOR[key]]
+      : value;
+  }
+
+  // `primary` becomes the accent only where the shop never set one of its
+  // own. `accent` is required by the landing theme and so is almost always
+  // present; the case this catches is a row written before it was.
+  const out: Record<string, unknown> = { ...row, colors: to };
+  if (typeof from.primary === 'string' && typeof row.accent !== 'string') {
+    out.accent = from.primary;
+  }
+  return out;
+}
+
+/**
+ * WHICH VARIANT OF EACH ENGINE COMPONENT THIS SHOP WEARS.
+ *
+ * Declared on the template contract in store-skin.ts since Stage 1, and
+ * until now it landed nowhere: `skinToStoreTheme` wrote colours and
+ * typefaces and dropped the layout, so a template could be installed and
+ * still look like every other one.
+ *
+ * The vocabulary is `LAYOUT_SLOTS`, imported rather than repeated. A
+ * second copy is how a template comes to name a variant no renderer has —
+ * and the page then draws nothing, or the default, and nobody finds out
+ * from the code.
+ *
+ * Every slot is optional: a shop that predates this wears the defaults,
+ * which are the variants the storefront already drew.
+ */
+export const storeLayoutSchema = z
+  .object({
+    header: z.enum(LAYOUT_SLOTS.header).optional(),
+    hero: z.enum(LAYOUT_SLOTS.hero).optional(),
+    categoryNav: z.enum(LAYOUT_SLOTS.categoryNav).optional(),
+    productCard: z.enum(LAYOUT_SLOTS.productCard).optional(),
+    categoryPage: z.enum(LAYOUT_SLOTS.categoryPage).optional(),
+    productPage: z.enum(LAYOUT_SLOTS.productPage).optional(),
+    cart: z.enum(LAYOUT_SLOTS.cart).optional(),
+  })
+  .strict();
+
+/**
+ * What the storefront drew before any of this existed.
+ *
+ * Named so that «this shop chose the plain header» and «this shop has
+ * never chosen» are the same drawing and a different fact — and a
+ * renderer never has to ask which.
+ */
+/** The card variants, named once. */
+export type CardVariant = (typeof LAYOUT_SLOTS.productCard)[number];
+export type CategoryNavVariant = (typeof LAYOUT_SLOTS.categoryNav)[number];
+export type ProductPageVariant = (typeof LAYOUT_SLOTS.productPage)[number];
+
+export const DEFAULT_LAYOUT: Required<z.infer<typeof storeLayoutSchema>> = {
+  header: 'minimal',
+  hero: 'productFirst',
+  categoryNav: 'chips',
+  productCard: 'portrait',
+  categoryPage: 'grid3',
+  productPage: 'galleryTop',
+  cart: 'page',
+};
 
 export const storeHeaderSchema = z.object({
   /** Bar height in px. Bounded so a header cannot eat the page. */
@@ -183,6 +351,22 @@ export const storeThemeSchema = landingThemeSchema.extend({
   checkout: storeCheckoutSchema.optional(),
   cartBar: storeCartBarSchema.optional(),
   home: storeHomeSchema.optional(),
+  layout: storeLayoutSchema.optional(),
+  /**
+   * WHICH OF THE TEN SHOP TEMPLATES THIS SHOP IS WEARING.
+   *
+   * Recorded on install rather than guessed afterwards. The alternative
+   * was to derive it — match the accent and the arrangement back to a
+   * template — and that is wrong twice: two templates may share an accent,
+   * and a seller who changes a colour is still wearing the template they
+   * chose. «القالب المثبّت معلّم بأعلى الشاشة» has to be true after
+   * customisation, which only a recorded answer can be.
+   *
+   * Optional, and nothing reads it but the gallery: a shop that was
+   * painted by hand has never worn one, and that is not a missing value,
+   * it is the answer.
+   */
+  template: z.string().trim().min(1).max(40).optional(),
 });
 
 /**
@@ -209,6 +393,7 @@ export const DEFAULT_STORE_THEME: StoreTheme = {
   checkout: storeCheckoutSchema.parse({}),
   cartBar: storeCartBarSchema.parse({}),
   home: storeHomeSchema.parse({}),
+  layout: {},
 };
 
 /**
@@ -228,6 +413,8 @@ export function parseStoreTheme(raw: string | null | undefined): StoreTheme {
   }
   if (!parsed || typeof parsed !== 'object') return DEFAULT_STORE_THEME;
 
+  parsed = migrateLegacyColors(parsed as Record<string, unknown>);
+
   const whole = storeThemeSchema.safeParse({ ...DEFAULT_THEME, ...(parsed as object) });
   if (whole.success) return { ...DEFAULT_STORE_THEME, ...asStoreTheme(whole.data) };
 
@@ -241,7 +428,7 @@ export function parseStoreTheme(raw: string | null | undefined): StoreTheme {
   const parts = {
     fonts: storeFontsSchema, colors: storeColorsSchema, header: storeHeaderSchema,
     footer: storeFooterSchema, product: storeProductSchema, checkout: storeCheckoutSchema,
-    cartBar: storeCartBarSchema, home: storeHomeSchema,
+    cartBar: storeCartBarSchema, home: storeHomeSchema, layout: storeLayoutSchema,
   } as const;
   for (const [key, schema] of Object.entries(parts)) {
     const got = schema.safeParse(row[key] ?? {});
@@ -312,6 +499,13 @@ export function themeForPage(
 }
 
 /** The face used for headings / menus, falling back to the body face. */
+export function layoutOf<K extends keyof typeof DEFAULT_LAYOUT>(
+  theme: StoreTheme,
+  slot: K
+): (typeof DEFAULT_LAYOUT)[K] {
+  return (theme.layout?.[slot] as (typeof DEFAULT_LAYOUT)[K] | undefined) ?? DEFAULT_LAYOUT[slot];
+}
+
 export function headingFont(theme: StoreTheme): FontValue {
   return (theme.fonts?.heading as FontValue | undefined) ?? theme.font;
 }
@@ -324,25 +518,78 @@ export function menuFont(theme: StoreTheme): FontValue {
  *
  * The derived palette first — so a colour the seller never named is the one
  * the accent implies — then the named ones on top. Nothing here is a hex
- * literal in a component: a component reads var(--lp-…), and this is the
+ * literal in a component: a component reads var(--store-…), and this is the
  * one place the values are decided.
  */
 export function storeThemeVars(theme: StoreTheme): Record<string, string> {
   const palette: Palette = paletteFor(theme);
   const vars: Record<string, string> = {
     ...paletteVars(palette),
-    '--lp-primary': theme.colors?.primary ?? palette.accent,
-    '--lp-secondary': theme.colors?.secondary ?? palette.text,
-    '--lp-primary-light': theme.colors?.primaryLight ?? palette.accentTint,
-    '--lp-secondary-light': theme.colors?.secondaryLight ?? palette.muted,
-    '--lp-success': theme.colors?.success ?? '#00a651',
-    '--lp-warning': theme.colors?.warning ?? '#f59e0b',
-    '--lp-danger': theme.colors?.danger ?? '#fb323f',
-    '--lp-header-h': `${theme.header?.height ?? 72}px`,
-    '--lp-header-bg': theme.header?.background ?? palette.cardBg,
+    // The six the derived palette does not write. A price is read, not
+    // decorated — it is the page's own ink, and the price it replaced is
+    // the muted one — and a discount badge is the brand's colour rather
+    // than the red that means a failure.
+    '--store-price': palette.text,
+    '--store-price-compare': palette.muted,
+    '--store-offer-badge': palette.accent,
+    '--store-success': STATE_COLORS.success,
+    '--store-warning': STATE_COLORS.warning,
+    '--store-danger': STATE_COLORS.danger,
+    '--store-header-h': `${theme.header?.height ?? 72}px`,
+    '--store-header-bg': theme.header?.background ?? palette.cardBg,
   };
-  if (theme.colors?.background) {
-    vars['--lp-page'] = theme.colors.background;
+  // Every colour a shop can name, written over the derived one. Driven by
+  // COLOR_VAR rather than by a line each, because a field with no line is
+  // a colour picker that changes nothing — which is exactly what four of
+  // these were, for as long as they existed.
+  for (const field of Object.keys(COLOR_VAR) as (keyof typeof COLOR_VAR)[]) {
+    const value = theme.colors?.[field];
+    if (value) vars[COLOR_VAR[field]] = value;
   }
   return vars;
+}
+
+
+/**
+ * EVERY ROLE'S COLOUR, AS THE SHOP WILL ACTUALLY PAINT IT.
+ *
+ * The contrast rule is written in ROLES («النص على البطاقة»), the editor's
+ * pickers are written in FIELDS (`textPrimary`, `surface1`), and most
+ * fields are unset most of the time because the palette derives them from
+ * the accent. Checking a pair therefore cannot read the theme's own
+ * `colors` — half of them are empty, and the colour the shopper sees is
+ * the derived one.
+ *
+ * So it reads what `storeThemeVars` resolved: the same map the page is
+ * painted from, built by the same function, with the seller's named
+ * colours already written over the derived ones. One resolver, so the
+ * editor's verdict and the shop's appearance cannot disagree.
+ */
+const ROLE_VAR: Readonly<Record<string, string>> = Object.freeze({
+  surface0: COLOR_VAR.background,
+  surface1: COLOR_VAR.surface1,
+  surface2: COLOR_VAR.surface2,
+  textPrimary: COLOR_VAR.textPrimary,
+  textSecondary: COLOR_VAR.textSecondary,
+  border: COLOR_VAR.border,
+  // The accent has no field of its own: it IS the theme's accent, and the
+  // picker above the grid is the control for it.
+  accent: '--store-accent',
+  accentContrast: COLOR_VAR.accentContrast,
+  price: COLOR_VAR.price,
+  priceCompare: COLOR_VAR.priceCompare,
+  offerBadge: COLOR_VAR.offerBadge,
+  success: COLOR_VAR.success,
+  warning: COLOR_VAR.warning,
+  danger: COLOR_VAR.danger,
+});
+
+export function themeRoleColors(theme: StoreTheme): Record<string, string> {
+  const vars = storeThemeVars(theme);
+  const out: Record<string, string> = {};
+  for (const [role, name] of Object.entries(ROLE_VAR)) {
+    const value = vars[name];
+    if (value) out[role] = value;
+  }
+  return out;
 }

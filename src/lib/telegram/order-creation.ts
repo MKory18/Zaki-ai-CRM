@@ -17,7 +17,7 @@ import { notify } from '../notify';
 import { logAudit } from '../audit';
 import { resolveRegionId } from '@/lib/regions';
 import { orderRefFields } from '../order-ref';
-import { computeCod } from '../money';
+import { computeCod, roundMinor } from '../money';
 
 export interface CreateTelegramOrderInput {
   companyId: string;
@@ -52,17 +52,32 @@ const MAX_UNIT_PRICE = 100_000;
  * Parse the advertised TOTAL order price text ("45 دولار" / "$45" / "45 USD" /
  * "٤٥ دولار") → validated number. Returns null when missing/invalid — the
  * caller must NOT fall back silently to DB pricing.
+ *
+ * TWO DECIMALS WAS A GUESS ABOUT THE CURRENCY, AND IT COST A FILS.
+ *
+ * The pattern accepted at most two decimal places and the result was then
+ * `.toFixed(2)`. On the Jordanian store in this database the currency is JOD,
+ * **minorUnit 3** — so an advertised «14.250» was read as 14.25 and «14.255»
+ * was refused as unparseable. The money is rounded by the currency now, the
+ * way `computeCod`, `allocateDiscount` and the waybill all round.
+ *
+ * `minorUnit` defaults to 2 so the function keeps its old behaviour for a
+ * caller that does not know the store — but the one caller does.
  */
-export function parseAdvertisedPrice(priceText: string | undefined | null): number | null {
+export function parseAdvertisedPrice(
+  priceText: string | undefined | null,
+  minorUnit = 2
+): number | null {
   if (!priceText || !priceText.trim()) return null;
   const t = toLatinDigits(priceText);
   // Negative prices are invalid (reject before the digits match)
   if (/(?:^|\s)[-–—]\s*\d/.test(t)) return null;
-  const m = t.match(/\d+(?:[.,]\d{1,2})?/);
+  const places = Math.max(0, Math.min(6, Math.trunc(minorUnit)));
+  const m = t.match(places > 0 ? new RegExp(`\\d+(?:[.,]\\d{1,${places}})?`) : /\d+/);
   if (!m) return null;
   const n = parseFloat(m[0].replace(',', '.'));
   if (!Number.isFinite(n) || n <= 0 || n > MAX_UNIT_PRICE) return null;
-  return Number(n.toFixed(2));
+  return roundMinor(n, places);
 }
 
 /**
@@ -105,15 +120,32 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
    *     fallback to DB.
    * totalAmount is NEVER multiplied by quantity anywhere else.
    */
-  const parsedTotal = parseAdvertisedPrice(priceText);
+  const parsedTotal = parseAdvertisedPrice(priceText, store.country.minorUnit);
   if (parsedTotal === null) {
     return { ok: false, reason: 'MISSING_PRICE' };
   }
   const totalAmount = parsedTotal;
   const shipCost = 0;
-  // Unit price derived server-side: total / quantity (quantity already
-  // validated ≥ 1 — no division by zero possible)
-  const price = Number((totalAmount / quantity).toFixed(2));
+  /*
+   * Unit price derived server-side: total / quantity (quantity already
+   * validated ≥ 1 — no division by zero possible), and DELIBERATELY NOT
+   * ROUNDED.
+   *
+   * «العرض ع ٣ بـ١٠ بنحصّل ع ١٠» — the advertised total is what the customer
+   * pays, and the unit price is a derived figure that exists so the line can
+   * be priced. Rounding it first is what broke that: 10.000 JOD over three
+   * pieces became 3.333 a piece, and `computeCod` then multiplied back to
+   * 9.999. The shop lost a fils to arithmetic nobody asked for, and the
+   * first edit through the orders PATCH moved the stored total down to match.
+   *
+   * Unrounded, the division carries its own precision and the PRODUCT is
+   * what gets rounded: 3 × (10/3) is 10.000000000000002, which `roundMinor`
+   * returns as exactly 10. The hair is gone — not absorbed by anybody.
+   *
+   * This is also what `resolvePublicLines` already does for an offer, whose price
+   * is likewise the total for its own quantity. One rule at every door.
+   */
+  const price = totalAmount / quantity;
 
   const productRow = await db.product.findFirst({
     where: { id: product.id, companyId },
@@ -121,9 +153,15 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   });
   if (!productRow) return { ok: false, reason: 'PRODUCT_NOT_FOUND' };
 
-  // Note: order.totalAmount stores the Telegram total as-is. The orders PATCH
-  // API recomputes total on later edits via its own formula — that is
-  // pre-existing behavior for ALL orders, not a double-multiply here.
+  // `order.totalAmount` stores the Telegram total as-is.
+  //
+  // This note used to say the orders PATCH «recomputes total on later edits
+  // via its own formula». It does not, and has not since the PATCH was moved
+  // onto `computeCod` — it calls the same function this does. The sentence
+  // outlived the thing it described, which is the worst kind of comment:
+  // it sends the next reader to fix what is already fixed, and it reads as
+  // permission for a second formula.
+  //
   // ONE COD function (contract PART 5). Telegram orders carry no fee yet.
   const money = computeCod({
     lines: [{ quantity, unitPrice: price }],
@@ -132,7 +170,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
   });
 
   const unitCost = productRow.batches[0]?.costPerUnit || 0;
-  const estimatedCostOfGoods = Number((unitCost * quantity).toFixed(2));
+  const estimatedCostOfGoods = roundMinor(unitCost * quantity, store.country.minorUnit);
   const now = new Date();
 
   try {

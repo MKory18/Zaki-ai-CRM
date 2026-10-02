@@ -31,7 +31,21 @@ export type RedirectKind = (typeof REDIRECT_KINDS)[number];
  * the match is on the path, and a `from` carrying `?c=ad1` would silently
  * never match anything.
  */
-export const REDIRECT_FROM = /^\/(?![/\\])[A-Za-z0-9/_.\-]{0,200}$/;
+/**
+ * ARABIC IS A PATH TOO.
+ *
+ * This was `[A-Za-z0-9/_.-]` — Latin only — so a seller whose shop is
+ * written in Arabic could not redirect any address their shop actually
+ * has. It also made «تغيير رابط منتج بيولّد إعادة توجيه تلقائية»
+ * impossible to honour even by hand.
+ *
+ * The letters are added; nothing is loosened. A backslash, whitespace,
+ * a query and a fragment are still out, and the leading `//` that would
+ * make a path into a protocol-relative URL is still refused — that one
+ * is what turns a redirect into an open door to another host.
+ */
+export const REDIRECT_FROM =
+  /^\/(?![/\\])[\u0621-\u063A\u0641-\u064AA-Za-z0-9/_.\-]{0,200}$/;
 
 /** Where a redirect may send somebody: a path here, or an absolute http(s) URL. */
 export const REDIRECT_TO = /^(\/(?![/\\])[^\s?#]*|https?:\/\/[^\s]+)$/;

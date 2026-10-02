@@ -1,7 +1,10 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_THEME } from './landing-theme';
 import {
   CHECKOUT_FIELDS,
+  COLOR_VAR,
   DEFAULT_STORE_THEME,
   MANDATORY_CHECKOUT_FIELDS,
   cartBarApplies,
@@ -10,6 +13,7 @@ import {
   menuFont,
   parseStoreTheme,
   requiredCheckoutFields,
+  storeColorsSchema,
   storeThemeSchema,
   storeThemeVars,
   themeForPage,
@@ -152,25 +156,129 @@ describe('the fonts', () => {
 describe('every colour is a variable', () => {
   it('a colour the seller never named still has a value, from the accent', () => {
     const vars = storeThemeVars(of({ accent: '#b8256e' }));
-    expect(vars['--lp-primary']).toBe('#b8256e');
-    for (const key of ['--lp-secondary', '--lp-primary-light', '--lp-success', '--lp-warning', '--lp-danger']) {
-      expect(vars[key], key).toMatch(/^#|^rgb/);
+    expect(vars['--store-accent']).toBe('#b8256e');
+    for (const variable of Object.values(COLOR_VAR)) {
+      expect(vars[variable], variable).toMatch(/^#|^rgb/);
     }
   });
 
   it('a named colour wins over the derived one', () => {
-    const vars = storeThemeVars(of({ accent: '#b8256e', colors: { primary: '#0000ff', danger: '#ff0000' } }));
-    expect(vars['--lp-primary']).toBe('#0000ff');
-    expect(vars['--lp-danger']).toBe('#ff0000');
+    const vars = storeThemeVars(of({ accent: '#b8256e', colors: { textPrimary: '#0000ff', danger: '#ff0000' } }));
+    expect(vars['--store-text']).toBe('#0000ff');
+    expect(vars['--store-danger']).toBe('#ff0000');
+  });
+
+  /**
+   * THE GUARD THAT WAS MISSING.
+   *
+   * «أساسي» · «ثانوي» · «أساسي فاتح» · «ثانوي فاتح» were offered on the
+   * theme screen, stored on the shop, and emitted as four variables with
+   * zero consumers. Nothing compared the fields a shop may set against the
+   * variables a page may read, so nothing noticed for as long as they
+   * existed. Both directions, from the schema itself.
+   */
+  it('every colour a shop can name reaches a variable, and no variable twice', () => {
+    const fields = Object.keys(storeColorsSchema.shape).sort();
+    expect(fields).toEqual(Object.keys(COLOR_VAR).sort());
+    expect(new Set(Object.values(COLOR_VAR)).size).toBe(fields.length);
+  });
+
+  /**
+   * AND THE OTHER HALF OF THE QUESTION: does the variable reach a page?
+   *
+   * The guard above asks whether every field reaches a variable. Asking
+   * the reverse found three more pickers that change nothing — «نجاح» ·
+   * «تحذير» · «خطر» are emitted and no storefront component reads them.
+   * They predate this and they have a reader coming (the order and
+   * thank-you pages), so they are listed rather than removed — and the
+   * list is what a test holds shut. A variable that leaves it must be
+   * read; a variable that stays in it must still be unread, so the day
+   * the engine reads one, this has to be pruned.
+   */
+  it('every variable a shop can name is read by a component, or is listed as waiting', () => {
+    const AWAITING_CONSUMER = new Set([
+      // What the catalogue has not drawn YET. `--store-surface-2` and
+      // `--store-price` left the list the day the cart drew a thumbnail's
+      // empty state and a line total in them — which is what this list is
+      // for: it can only ever get shorter.
+      '--store-price-compare', '--store-offer-badge',
+      // Older than this work: the order and thank-you pages will read them.
+      // `--store-danger` left the list the day the tracking form drew a
+      // refusal in it — which is what this list is for.
+      '--store-success', '--store-warning',
+    ]);
+
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.(tsx?|css)$/.test(name) && !/\.test\.tsx?$/.test(name)) files.push(full);
+      }
+    };
+    walk(join(process.cwd(), 'src'));
+
+    const read = new Set<string>();
+    for (const file of files) {
+      for (const m of readFileSync(file, 'utf8').matchAll(/var\(\s*(--store-[a-z0-9-]+)/g)) {
+        read.add(m[1]);
+      }
+    }
+
+    const emitted = Object.values(COLOR_VAR);
+    expect(emitted.filter((v) => !read.has(v) && !AWAITING_CONSUMER.has(v))).toEqual([]);
+    // And nothing lingers on the list after something starts reading it.
+    expect([...AWAITING_CONSUMER].filter((v) => read.has(v))).toEqual([]);
+  });
+
+  it('and setting it actually moves that variable', () => {
+    const plain = storeThemeVars(of({ accent: '#b8256e' }));
+    for (const [field, variable] of Object.entries(COLOR_VAR)) {
+      const named = storeThemeVars(of({ accent: '#b8256e', colors: { [field]: '#123456' } }));
+      expect(named[variable], field).toBe('#123456');
+      // The negative control: naming one colour moves ONE variable.
+      const moved = Object.keys(named).filter((k) => named[k] !== plain[k]);
+      expect(moved, field).toEqual([variable]);
+    }
+  });
+
+  /**
+   * What sellers already saved is not lost. The four old names are read
+   * onto the roles they always described — at parse time, because the
+   * column is JSON and rewriting a seller's colours to fix OUR naming is
+   * a write we do not need to make.
+   */
+  it('reads the four old names onto the roles they described', () => {
+    const theme = parseStoreTheme(JSON.stringify({
+      ...DEFAULT_THEME,
+      colors: { secondary: '#111111', primaryLight: '#eeeeee', secondaryLight: '#777777' },
+    }));
+    expect(theme.colors).toMatchObject({
+      textPrimary: '#111111',
+      accentTint: '#eeeeee',
+      textSecondary: '#777777',
+    });
+    const vars = storeThemeVars(theme);
+    expect(vars['--store-text']).toBe('#111111');
+    expect(vars['--store-accent-tint']).toBe('#eeeeee');
+    expect(vars['--store-muted']).toBe('#777777');
+  });
+
+  it('keeps the new name when a row carries both', () => {
+    const theme = parseStoreTheme(JSON.stringify({
+      ...DEFAULT_THEME,
+      colors: { secondary: '#111111', textPrimary: '#222222' },
+    }));
+    expect(theme.colors?.textPrimary).toBe('#222222');
   });
 
   it('the header height is a variable too, so no component writes a pixel', () => {
-    expect(storeThemeVars(of({ header: { height: 96, sticky: true, onFrontPage: true } }))['--lp-header-h']).toBe('96px');
+    expect(storeThemeVars(of({ header: { height: 96, sticky: true, onFrontPage: true } }))['--store-header-h']).toBe('96px');
   });
 
   it('refuses a colour that is not one', () => {
-    expect(storeThemeSchema.safeParse({ ...DEFAULT_THEME, colors: { primary: 'blue' } }).success).toBe(false);
-    expect(storeThemeSchema.safeParse({ ...DEFAULT_THEME, colors: { primary: '#fff' } }).success).toBe(false);
+    expect(storeThemeSchema.safeParse({ ...DEFAULT_THEME, colors: { textPrimary: 'blue' } }).success).toBe(false);
+    expect(storeThemeSchema.safeParse({ ...DEFAULT_THEME, colors: { textPrimary: '#fff' } }).success).toBe(false);
   });
 });
 

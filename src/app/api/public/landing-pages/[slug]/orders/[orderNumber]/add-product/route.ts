@@ -5,6 +5,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { verifyAddonToken } from '@/lib/landing-pages';
 import { ORDER_NUMBER_RE } from '@/lib/order-ref';
 import { zodMessage } from '@/lib/zod-message';
+import { roundMinor } from '@/lib/money';
 
 interface Ctx {
   params: Promise<{ slug: string; orderNumber: string }>;
@@ -108,7 +109,12 @@ export async function POST(req: Request, ctx: Ctx) {
     // ─── Resolve order: token orderId + orderNumber + landing-page slug must all match ───
     const order = await db.order.findFirst({
       where: { id: tok.orderId, orderNumber: tok.orderNumber },
-      include: { landingPage: { select: { id: true, name: true, slug: true, isPublished: true } } },
+      include: {
+        landingPage: { select: { id: true, name: true, slug: true, isPublished: true } },
+        // The CURRENCY'S minor unit, which decides where this money rounds.
+        // See below — it is not two decimals everywhere.
+        store: { select: { country: { select: { minorUnit: true } } } },
+      },
     });
     if (!order || !order.landingPage || order.landingPage.slug !== slug) {
       return NextResponse.json({ error: 'غير مسموح' }, { status: 404, headers: CORS });
@@ -135,7 +141,26 @@ export async function POST(req: Request, ctx: Ctx) {
 
     const unitPrice = rec.product.basePrice; // server-side price — never from the browser
     const addQty = 1; // one unit per add — client cannot choose quantity
-    const addTotal = Number((unitPrice * addQty).toFixed(2));
+
+    /*
+     * TWO DECIMALS IS NOT A ROUNDING RULE, IT IS A GUESS ABOUT THE CURRENCY.
+     *
+     * This was `Number((unitPrice * addQty).toFixed(2))`, and the figure it
+     * produces is WRITTEN — to the add-on row, to the order's `totalAmount`
+     * (which is what the courier is told to collect) and to the page's
+     * `upsellRevenue`. On the Jordanian store in this database the currency
+     * is JOD with **minorUnit 3**, so an add-on at 1.234 was stored as 1.23:
+     * a fils lost on the order, and three rows disagreeing with the product
+     * they came from.
+     *
+     * `roundMinor` is the rule the rest of the money uses — `computeCod`,
+     * `allocateDiscount`, the delivery fee and the waybill all round through
+     * it. A second rounding rule in the one place that writes money after an
+     * order exists is exactly the «same figure computed twice» the audit
+     * hunts, and the two disagree whenever the currency is not 1/100.
+     */
+    const minorUnit = order.store?.country?.minorUnit ?? 2;
+    const addTotal = roundMinor(unitPrice * addQty, minorUnit);
 
     // ─── Update the SAME order server-side (no new order, total from DB) ───
     const result = await db.$transaction(async (tx) => {

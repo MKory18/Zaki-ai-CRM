@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
-import { RiEyeLine, RiInformationLine, RiLoader4Line, RiPercentLine, RiShoppingBagLine } from '@remixicon/react';
+import { RiEyeLine, RiInformationLine, RiLoader4Line, RiPercentLine, RiShoppingBagLine, RiTrophyLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { MIN_DELIVERED, MIN_VISITORS, type Verdict } from '@/lib/page-verdict';
 
 /**
  * تحليلات صفحات الهبوط — for the screen's one date window.
@@ -30,6 +31,8 @@ interface Data {
   byPage: Row[];
   byDevice: Row[];
   byCampaign: Row[];
+  /** One per product that has more than one page — see `pageVerdicts`. */
+  verdicts: { productId: string; productName: string; pages: number; verdict: Verdict }[];
 }
 
 export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; from: string }) {
@@ -78,6 +81,37 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
       )}
 
       <Table title="حسب الصفحة" rows={data.byPage} empty="لا زيارات ولا طلبات من صفحات الهبوط في هذه المدة." linkPages />
+
+      {/*
+        THE VERDICT BETWEEN TWO PAGES FOR ONE PRODUCT.
+
+        It was computed and reachable by nobody: `pageVerdict` shipped with
+        its floors, its margin and its refusals, and no screen asked it
+        anything. Here, under the per-page table, because the question
+        «أيُّهما غلب» is the one a seller has while reading that table.
+
+        AND IT IS A SENTENCE, NOT A SWITCH. «النظام بيقترح الفائز مع حجم
+        العيّنة — ما بيطفّي الخاسر لحاله»: there is no button in this block,
+        and the module behind it has no way to turn a page off.
+      */}
+      {data.verdicts.length > 0 && (
+        <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+          <h3 className="border-b border-[var(--sys-surface-strong)] px-4 py-2.5 text-sm font-bold text-[var(--sys-heading)]">
+            <RiTrophyLine className="me-1 inline h-4 w-4" />
+            المقارنة بين نسخ الصفحة
+          </h3>
+          <div className="divide-y divide-[var(--sys-surface-strong)]">
+            {data.verdicts.map((v) => (
+              <VerdictBlock key={v.productId} {...v} />
+            ))}
+          </div>
+          <p className="border-t border-[var(--sys-surface-strong)] px-4 py-2.5 text-xs leading-relaxed text-[var(--sys-muted)]">
+            المقياس: طلبات مُسلَّمة ومحصَّلة لكل 100 زائر — لا عدد النماذج المرسلة. صفحةٌ تجمع نماذج كثيرة
+            وترتجع كثيراً خاسرة، وأجرةُ المندوب تُدفع في الاتجاهين. هذا اقتراحٌ مع حجم العيّنة، ولا يُطفئ
+            النظامُ أيَّ صفحة من تلقاء نفسه.
+          </p>
+        </section>
+      )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Table title="حسب الجهاز" rows={data.byDevice} empty="لا بيانات." />
         <Table title="حسب الحملة" rows={data.byCampaign} empty="لا حملات لها زيارات أو طلبات في هذه المدة." />
@@ -86,6 +120,88 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
         المشاهدة زيارة حقيقية لصفحة منشورة — المعاينة من لوحة التحكم وروابط المعاينة في المحادثات لا تُعدّ. الطلب
         كل طلب جاء من صفحة هبوط خلال المدة، والحملة من رمز ?c= في رابطها.
       </p>
+    </div>
+  );
+}
+
+/**
+ * ONE PRODUCT'S PAGES, RANKED — OR WHAT THEY ARE STILL SHORT OF.
+ *
+ * The two shapes `pageVerdict` answers in are drawn as two different
+ * things on purpose. A ranking with «العيّنة صغيرة» written underneath
+ * would be read as a ranking; a refusal has to look like a refusal.
+ */
+function VerdictBlock({
+  productName,
+  pages,
+  verdict,
+}: {
+  productName: string;
+  pages: number;
+  verdict: Verdict;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-xs font-bold text-[var(--sys-heading)]">
+        {productName} <span className="font-normal text-[var(--sys-muted)]">· {pages} صفحات</span>
+      </p>
+
+      {!verdict.ok ? (
+        <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          لا حكم بعد. المطلوب لكل نسخة {fmt(MIN_VISITORS)} زائر و{fmt(MIN_DELIVERED)} طلبات مُسلَّمة، وما
+          زال ينقص:{' '}
+          {verdict.waiting
+            .map((w) =>
+              [
+                w.needVisitors > 0 ? `${fmt(w.needVisitors)} زائر` : null,
+                w.needDelivered > 0 ? `${fmt(w.needDelivered)} مُسلَّم` : null,
+              ]
+                .filter(Boolean)
+                .join(' و')
+            )
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs font-semibold text-[var(--sys-foreground)]">
+            {verdict.tooClose
+              ? 'الفرق بينهما أصغر من أن يُسمّى فائزاً — اتركهما تعملان.'
+              : `المقترَح: «${verdict.ranked.find((r) => r.pageId === verdict.winner)?.label ?? ''}»`}
+          </p>
+          <div className="mt-1.5 space-y-1">
+            {verdict.ranked.map((r) => (
+              <div key={r.pageId} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                <span
+                  className={
+                    r.pageId === verdict.winner
+                      ? 'font-bold text-[var(--sys-primary)]'
+                      : 'text-[var(--sys-foreground)]'
+                  }
+                >
+                  {r.label}
+                </span>
+                <span className="tabular-nums text-[var(--sys-heading)]" dir="ltr">
+                  {r.collectedPer100.toFixed(1)}
+                </span>
+                <span className="text-[var(--sys-muted)]">محصَّل لكل 100 زائر</span>
+                {/* The two rates separately: they fail in opposite directions
+                    and a blended number hides which one is wrong. */}
+                <span className="text-[var(--sys-muted)]">
+                  · تحويل {pct(r.conversionRate === null ? null : Math.round(r.conversionRate * 1000) / 10)} · تسليم{' '}
+                  {pct(r.deliveryRate === null ? null : Math.round(r.deliveryRate * 1000) / 10)}
+                </span>
+                {/* The sample travels with the verdict so a person can judge
+                    it — this is not a significance test and does not pretend
+                    to be one. */}
+                <span className="text-[var(--sys-muted)]">
+                  · من {fmt(r.visitors)} زائر و{fmt(r.delivered)} مُسلَّم
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

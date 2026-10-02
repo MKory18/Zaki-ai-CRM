@@ -191,7 +191,27 @@ describe('and every door that raises an order costs it the same way', () => {
   it('the storefront no longer writes a literal zero', () => {
     const src = publicOrder();
     expect(src, 'واجهة المتجر ما زالت تكتب صفراً').not.toMatch(/const unitCost = 0;/);
-    expect(src).toContain('productCost(db, companyId, product.id)).average');
+    expect(src).toContain('productCost(db, companyId, line.product.id)).average');
+  });
+
+  /**
+   * AND IT COSTS EVERY LINE, not the one the row happens to show.
+   *
+   * A basket's head is a display choice — the largest line, because an order
+   * row has one cell for a product. Costing the head alone would understate
+   * the goods on every order with more than one thing in it, which is every
+   * order the cart exists to make possible.
+   */
+  it('and it costs the whole basket, not the head of it', () => {
+    const src = publicOrder();
+    expect(src).toMatch(/costOfGoods = lines\.reduce/);
+    // THE VARIABLE, NOT THE EXPRESSION AROUND IT. This line used to pin
+    // `Number(costOfGoods.toFixed(2))` whole, so changing the ROUNDING — a
+    // different question, and one this test has no opinion on — broke a guard
+    // about which LINES are costed. What it means is that the figure written
+    // comes from the basket total.
+    expect(src).toMatch(/estimatedCostOfGoods:[^\n]*costOfGoods/);
+    expect(src, 'الكلفة تُقرأ من سطر واحد').not.toMatch(/estimatedCostOfGoods:[^\n]*head\./);
   });
 
   it('the AI intake stops picking a batch of its own', () => {

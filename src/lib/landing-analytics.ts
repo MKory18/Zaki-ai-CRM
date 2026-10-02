@@ -1,5 +1,6 @@
 import { db } from './db';
 import { localDay, DEVICE_LABEL, type DeviceClass } from './landing-views';
+import { pageVerdict, type Verdict } from './page-verdict';
 
 /**
  * LANDING PAGE ANALYTICS FOR ONE DATE WINDOW — views, orders, conversion;
@@ -167,4 +168,149 @@ export async function landingAnalytics(scope: {
     byDevice,
     byCampaign,
   };
+}
+
+/**
+ * THE NUMBERS A VERDICT BETWEEN TWO PAGES IS MADE OF.
+ *
+ * Separate from `landingAnalytics` above, which answers «how is the
+ * performance screen doing» for one window across every page. This answers
+ * a different question — «which of these two won» — and it needs two
+ * columns that one does not: how many orders ARRIVED, and how many were
+ * PAID for. «الصفحة الفائزة هي الي بتطلّع أكتر طلبات مُسلَّمة ومحصَّلة لكل
+ * ١٠٠ زائر.»
+ *
+ * The verdict itself is `pageVerdict`, and it is deliberately somewhere
+ * else: this reads, that decides, and the deciding has no database in it
+ * at all — which is how «ما بيطفّي الخاسر لحاله» is kept true by
+ * construction rather than by discipline.
+ *
+ * COLLECTED IS A SUBSET OF DELIVERED and is read from the settlement
+ * status, not inferred from the delivery date: a parcel handed over on
+ * Tuesday whose cash reaches the company on Friday is delivered on Tuesday
+ * and collected on Friday, and a page judged on the first of those is
+ * judged on money that has not arrived.
+ */
+export async function pageNumbersFor(scope: {
+  companyId: string;
+  storeId: string;
+  pageIds: string[];
+  start: Date;
+  end: Date;
+}): Promise<Map<string, { visitors: number; orders: number; delivered: number; collected: number }>> {
+  const { companyId, storeId, pageIds, start, end } = scope;
+  const out = new Map<string, { visitors: number; orders: number; delivered: number; collected: number }>();
+  if (pageIds.length === 0) return out;
+  // EVERY PAGE ASKED ABOUT GETS AN ANSWER, including one with no rows at
+  // all. A map that simply omitted it would make a page nobody visited
+  // vanish from its own comparison — and `pageVerdict` reads the floors by
+  // subtraction, so an absent number becomes NaN, NaN > 0 is false, and the
+  // page would be reported as having CLEARED the floors it never reached.
+  for (const id of pageIds) out.set(id, { visitors: 0, orders: 0, delivered: 0, collected: 0 });
+
+  const base = { companyId, storeId, landingPageId: { in: pageIds } };
+  const window = { createdAt: { gte: start, lte: end } };
+
+  const [views, orders, delivered, collected] = await Promise.all([
+    db.landingPageView.groupBy({
+      by: ['landingPageId'],
+      where: { companyId, storeId, landingPageId: { in: pageIds }, day: { gte: asDateColumn(localDay(start)), lte: asDateColumn(localDay(end)) } },
+      _sum: { count: true },
+    }),
+    db.order.groupBy({ by: ['landingPageId'], where: { ...base, ...window }, _count: { _all: true } }),
+    db.order.groupBy({
+      by: ['landingPageId'],
+      where: { ...base, ...window, deliveredAt: { not: null } },
+      _count: { _all: true },
+    }),
+    db.order.groupBy({
+      by: ['landingPageId'],
+      // The money, not the parcel. SETTLED and COLLECTED are the two
+      // states in which the company has it.
+      where: { ...base, ...window, deliveredAt: { not: null }, settlementStatus: { in: ['COLLECTED', 'SETTLED'] } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  for (const row of views) {
+    const r = out.get(row.landingPageId ?? '');
+    if (r) r.visitors = row._sum.count ?? 0;
+  }
+  for (const [rows, key] of [[orders, 'orders'], [delivered, 'delivered'], [collected, 'collected']] as const) {
+    for (const row of rows) {
+      const r = out.get(row.landingPageId ?? '');
+      if (r) r[key] = row._count._all;
+    }
+  }
+  return out;
+}
+
+/**
+ * WHICH PAGES ARE EVEN BEING COMPARED.
+ *
+ * «نسخ صفحة لاختبار A/B: نفس المنتج، بنية أو مظهر أو عنوان مختلف، رابط
+ * مختلف، والإسناد منفصل.» That sentence is the whole grouping rule, and it
+ * is already true of the data: two pages selling one product ARE the test,
+ * whether one was duplicated from the other or written from scratch.
+ *
+ * SO NOTHING RECORDS A LINEAGE, AND NOTHING SHOULD. A `variantOf` column
+ * would have to be kept honest by every page that is ever created,
+ * duplicated or re-pointed at another product, and the one page somebody
+ * built by hand instead of duplicating would sit outside its own test. The
+ * product is the thing the comparison is actually about.
+ *
+ * A product with one page is not a comparison and is left out — `pageVerdict`
+ * would refuse it anyway, and a screen full of «صفحة واحدة لا حكم لها» is a
+ * screen nobody reads.
+ */
+export async function pageVerdicts(scope: {
+  companyId: string;
+  storeId: string;
+  start: Date;
+  end: Date;
+}): Promise<{ productId: string; productName: string; pages: number; verdict: Verdict }[]> {
+  const { companyId, storeId, start, end } = scope;
+
+  const pages = await db.landingPage.findMany({
+    where: { companyId, storeId, productId: { not: null } },
+    select: { id: true, name: true, productId: true, product: { select: { name: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const groups = new Map<string, { productName: string; pages: { id: string; name: string }[] }>();
+  for (const p of pages) {
+    const key = p.productId!;
+    const g = groups.get(key) ?? { productName: p.product?.name ?? '—', pages: [] };
+    g.pages.push({ id: p.id, name: p.name });
+    groups.set(key, g);
+  }
+  const tested = [...groups.entries()].filter(([, g]) => g.pages.length >= 2);
+  if (tested.length === 0) return [];
+
+  const numbers = await pageNumbersFor({
+    companyId,
+    storeId,
+    pageIds: tested.flatMap(([, g]) => g.pages.map((p) => p.id)),
+    start,
+    end,
+  });
+
+  return tested.map(([productId, g]) => ({
+    productId,
+    productName: g.productName,
+    pages: g.pages.length,
+    verdict: pageVerdict(
+      g.pages.map((p) => ({
+        pageId: p.id,
+        // The PAGE's name, not the product's: both rows describe one product
+        // and what a seller needs is which of their two pages it was.
+        label: p.name,
+        // Never undefined — `pageNumbersFor` pre-fills every id it is given,
+        // and the test beside it holds that. A `?? { …zeros }` here looked
+        // careful and was unreachable: no mutation could make it fire, which
+        // is the honest sign that it was defending against nothing.
+        ...numbers.get(p.id)!,
+      }))
+    ),
+  }));
 }

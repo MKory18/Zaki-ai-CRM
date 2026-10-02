@@ -76,9 +76,23 @@ describe('the actions themselves', () => {
   });
 
   it('and the notes button reads the order’s own notes, internal only', () => {
+    /*
+     * The button and its modal moved to `OrderNotesPeek` on 2026-10-02, so the
+     * returns desk could have them too — the contract surfaces notes in four
+     * places and that was the one with an input and no way to read. This
+     * screen now says WHICH kinds it wants, and the shared component is what
+     * fetches; both halves are still checked, in their new homes.
+     */
     const src = actions();
-    expect(src).toMatch(/\/api\/orders\/\$\{orderId\}\/notes/);
-    expect(src).toMatch(/\.filter\(\(n\) => n\.kind === 'internal'\)/);
+    expect(src).toMatch(/<OrderNotesPeek/);
+    expect(src).toMatch(/kinds=\{INTERNAL_ONLY\}/);
+    expect(src).toMatch(/const INTERNAL_ONLY = \['internal'\] as const;/);
+
+    const peek = repoFile('src/components/orders/OrderNotesPeek.tsx');
+    expect(peek).toMatch(/\/api\/orders\/\$\{orderId\}\/notes/);
+    // The filter is the component's, and it must honour the kinds it is given
+    // rather than showing everything when a screen asked for one kind.
+    expect(peek).toMatch(/kinds \? \(notes \?\? \[\]\)\.filter\(\(n\) => kinds\.includes\(n\.kind\)\) : \(notes \?\? \[\]\)/);
   });
 
   /**

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { OrderNotesPeek } from '@/components/orders/OrderNotesPeek';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
@@ -48,6 +49,13 @@ interface Completion {
   awaiting: ('MONEY' | 'GOODS')[];
   label: string;
 }
+
+/*
+ * WHAT THE CLERK NEEDS TO HAVE READ. Not `settlement`: that kind is finance's
+ * argument with the courier about money, and this desk is about the goods in
+ * the box. Showing it here would hand a counting clerk a dispute to read.
+ */
+const GOODS_NOTES = ['follow_up', 'return', 'internal'] as const;
 
 interface Row {
   id: string;
@@ -444,6 +452,29 @@ function ReceiveDialog({
               />
               احتساب أجرة إرجاع لشركة الشحن (تُؤخذ من جدول الأجور)
             </label>
+
+            {/*
+              READ BEFORE WRITING. The contract surfaces notes on «settlement
+              exceptions, return receiving, tracking and order detail» and this
+              desk was the one place that had the INPUT and no way to read what
+              anybody had already written — so the clerk with the box open
+              could not see last week's «الزبون قال إنّ القطعة مكسورة».
+
+              Above the input on purpose: the order is read, then added to.
+            */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-[var(--sys-muted-foreground)]">
+                ما كُتب على هذا الطلب قبل الآن
+              </span>
+              <OrderNotesPeek
+                orderId={order.id}
+                orderNumber={order.merchantRef ?? order.orderNumber}
+                kinds={GOODS_NOTES}
+                showKind
+                label="التعليقات"
+                emptyText="لا تعليق على هذا الطلب — لم يكتب أحد شيئاً عن هذه القطع."
+              />
+            </div>
 
             <Input
               label="ملاحظة (اختياري)"

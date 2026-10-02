@@ -30,8 +30,8 @@ export interface PerformanceSettings {
   /**
    * Fewer orders than this and no score is produced at all.
    *
-   * Not the same number as a commission rule's `minSampleOrders`: that one
-   * sits on a rule and gates MONEY for that rule alone. This gates a
+   * Not the same number as a commission rule's sample floor (`minOrders`):
+   * that one sits on a rule and gates MONEY for that rule alone. This gates a
    * measurement, for everybody, and an owner may reasonably want a lower
    * bar to talk to somebody than to pay them.
    */

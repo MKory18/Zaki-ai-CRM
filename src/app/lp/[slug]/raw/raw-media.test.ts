@@ -10,7 +10,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const { db, verifyPreviewToken } = vi.hoisted(() => ({
-  db: { landingPage: { findFirst: vi.fn() }, offer: { findMany: vi.fn(async () => []) } },
+  db: {
+    landingPage: { findFirst: vi.fn() },
+    offer: { findMany: vi.fn(async () => []) },
+    // A preview reads the page's unpublished draft when it has one
+    // (landing-draft.ts); these fixtures have none, so the statement answers
+    // with no rows and the preview shows the live columns.
+    $queryRawUnsafe: vi.fn(async () => []),
+  },
   verifyPreviewToken: vi.fn(),
 }));
 

@@ -16,6 +16,10 @@ const { db, verifyPreviewToken } = vi.hoisted(() => ({
     offer: { findMany: vi.fn(async () => []) },
     landingPageRecommendation: { findMany: vi.fn(async () => []) },
     region: { findMany: vi.fn(async () => []) },
+    // A preview reads the page's unpublished draft when it has one
+    // (landing-draft.ts); these fixtures have none, so the statement answers
+    // with no rows and the preview shows the live columns.
+    $queryRawUnsafe: vi.fn(async () => []),
   },
   verifyPreviewToken: vi.fn(),
 }));
@@ -115,7 +119,7 @@ describe('the store owns the look, and the page inherits it', () => {
     expect(text).toContain('#ff00ff');
     expect(text).not.toContain('#0a7d32');
     // corners came from the store, which the page never overrode
-    expect(text).toContain('"--lp-radius":"4px"');
+    expect(text).toContain('"--store-radius":"4px"');
   });
 });
 
@@ -139,5 +143,50 @@ describe('the store the page belongs to', () => {
     const text = renderedProps(await LandingPageView({ target: { slug: 'offer' } })).join('\n');
     expect(text).toContain('"phone":"0999"');
     expect(text).toContain('"logo":"/api/public/store-logo/s/l.webp"');
+  });
+});
+
+/**
+ * THE UNPUBLISHED EDITS GO TO THE SELLER AND TO NOBODY ELSE.
+ *
+ * Once a published page could hold a draft, «معاينة» had to show it —
+ * otherwise a seller who saved and pressed it was shown the version they
+ * had just replaced and would conclude the save had failed. The same change
+ * makes the leak possible, so the visitor's side is asserted beside it.
+ */
+describe('a page with unpublished edits', () => {
+  const draftBlocks = JSON.stringify([
+    { ...blocks[0], headline: 'عنوانُ المسودّة' },
+    blocks[1],
+    blocks[2],
+  ]);
+
+  beforeEach(() => {
+    db.landingPage.findFirst.mockResolvedValue(page); // published, live headline «عرض»
+    db.$queryRawUnsafe.mockResolvedValue([
+      { contentDraft: JSON.stringify({ sections: draftBlocks }), contentPrevious: null, contentPublishedAt: null },
+    ] as never);
+  });
+
+  it('shows the draft to the seller holding a valid token', async () => {
+    verifyPreviewToken.mockResolvedValue({ lpId: LP });
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer', previewToken: 'tok' } })).join('\n');
+    expect(text).toContain('عنوانُ المسودّة');
+    expect(text).not.toContain('"headline":"عرض"');
+  });
+
+  it('and shows a visitor what is published, never the draft', async () => {
+    // No token: the live columns, and nothing asks the database for a draft.
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer' } })).join('\n');
+    expect(text).not.toContain('عنوانُ المسودّة');
+    expect(text).toContain('"headline":"عرض"');
+    expect(db.$queryRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it('and shows a visitor the published page even when the token is bad', async () => {
+    verifyPreviewToken.mockResolvedValue(null);
+    const text = renderedProps(await LandingPageView({ target: { slug: 'offer', previewToken: 'forged' } })).join('\n');
+    expect(text).not.toContain('عنوانُ المسودّة');
+    expect(db.$queryRawUnsafe).not.toHaveBeenCalled();
   });
 });

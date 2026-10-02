@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
+import { NOTE_KIND_AR } from '@/lib/order-notes';
 import { arDateShort } from '@/lib/format';
 import { RiChatQuoteLine, RiLoader4Line, RiSendPlaneLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
@@ -31,12 +32,11 @@ interface Note {
   authorName: string | null;
 }
 
-const KIND_AR: Record<string, string> = {
-  internal: 'داخلية',
-  follow_up: 'متابعة',
-  return: 'مرتجع',
-  settlement: 'تسوية',
-};
+/*
+ * The four words live in `lib/order-notes.ts` now. A second copy here is how
+ * «متابعة» becomes «اتصال» on one screen and nobody chose that.
+ */
+const KIND_AR = NOTE_KIND_AR as Record<string, string>;
 
 /** One colour per author, picked from their name so it never moves. */
 const TONES = [

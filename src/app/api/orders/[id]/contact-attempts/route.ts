@@ -6,6 +6,7 @@ import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable } from '@/l
 import { CONTACT_METHODS, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
+import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
 import { can, authorize } from '@/lib/authorization';
 import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
@@ -131,7 +132,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
 
       const terminal = ['CONFIRMED', 'REJECTED', 'CANCELLED'].includes(order.confirmationStatus);
-      if (result === 'NO_ANSWER' && noAnswers >= NO_ANSWER_LIMIT && !terminal) {
+      /*
+       * AND THE PARCEL MUST STILL BE OURS TO CANCEL.
+       *
+       * This is the one door that cancels an order without a person pressing
+       * cancel, and it did not ask. Today it cannot reach a shipped parcel —
+       * but only by coincidence: shipping requires `confirmationStatus ===
+       * 'CONFIRMED'` (assertReadyToShip) and CONFIRMED happens to be in the
+       * `terminal` list above, so the auto-close is skipped. Two unrelated
+       * lists overlapping is not a rule; it is a rule's shadow, and it
+       * disappears the day anybody ships an order by another path or edits
+       * either list.
+       *
+       * The rule itself is `assertCancellable`, and it is the same function
+       * the shipments door and the stand-down door call: once the parcel has
+       * left, cancelling is a change REQUEST and the stock returns through
+       * the returns door, counted — not by a status written here.
+       */
+      const stillOurs = assertCancellable(order as unknown as StateSource).allowed;
+      if (result === 'NO_ANSWER' && noAnswers >= NO_ANSWER_LIMIT && !terminal && stillOurs) {
         await tx.order.update({
           where: { id },
           data: {

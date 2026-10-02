@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LAYOUT_SLOTS } from './layout-slots';
 import { richTextSchema } from './rich-text';
 import { fontValueSchema } from './landing-theme';
 
@@ -146,6 +147,15 @@ const announcement = z.object({
 const hero = z.object({
   ...base,
   type: z.literal('hero'),
+  /**
+   * WHAT THE FIRST SCREEN LEADS WITH.
+   *
+   * From the engine's parts catalogue, so a template and a page cannot
+   * name different things — and so there is no name here that means «the
+   * shop's name, alone», which is «البطل ضايع على الاسم» and the first
+   * complaint the brief makes about this storefront.
+   */
+  variant: z.enum(LAYOUT_SLOTS.hero).default('productFirst'),
   image: z.string().max(2048).default(''),
   headline: richTextSchema(120).default(''),
   subheadline: richTextSchema(240).default(''),
@@ -232,6 +242,116 @@ const faq = z.object({
 });
 
 /**
+ * «منتجنا / البدائل» — AND NEVER A COMPETITOR BY NAME.
+ *
+ * «المقارنة بتكون عادلة وقابلة للتحقق — ما في تشهير بعلامة منافسة
+ * بالاسم». There is no field here for the other side's name, which is the
+ * enforcement: a seller cannot write one because there is nowhere to put
+ * it. The column is «البدائل», and what is compared is an ASPECT a
+ * customer can check — a material, a size, a delivery time — not an
+ * opinion about somebody else's product.
+ *
+ * Six rows at most. A table of fifteen differences is not a comparison, it
+ * is a seller listing everything they can think of.
+ */
+const comparison = z.object({
+  ...base,
+  type: z.literal('comparison'),
+  title: richTextSchema(120).default('لماذا هذا وليس غيره'),
+  /** What the two columns are called. The second has no brand in it. */
+  oursLabel: z.string().max(40).default('منتجنا'),
+  theirsLabel: z.string().max(40).default('البدائل'),
+  rows: z.array(z.object({
+    aspect: z.string().max(80).default(''),
+    ours: z.string().max(120).default(''),
+    theirs: z.string().max(120).default(''),
+  })).max(6).default([]),
+});
+
+/**
+ * A TIMELINE, NOT A BEFORE-AND-AFTER.
+ *
+ * «خط زمني بدل صور قبل/بعد — لأن منصات الإعلان بتقيّد صور قبل/بعد بفئات
+ * كتير». The block carries no image field at all: a page that cannot hold
+ * the picture cannot have the ad refused for it, and a seller who wants
+ * one has the gallery block beside this one.
+ */
+const timeline = z.object({
+  ...base,
+  type: z.literal('timeline'),
+  title: richTextSchema(120).default('ماذا يحدث مع الوقت'),
+  points: z.array(z.object({
+    when: z.string().max(40).default(''),
+    what: z.string().max(240).default(''),
+  })).max(5).default([]),
+});
+
+/**
+ * «ثلاث أسئلة بضغطة ← التوصية المناسبة».
+ *
+ * Three questions at most, and that is the whole design: «ثلاث ضغطات كحد
+ * أقصى». A quiz that asks seven is a form, and a visitor who came from an
+ * ad does not fill forms to be sold to.
+ *
+ * It recommends, it does not decide: the recommendation names what to look
+ * at, and the offers block below still shows every tier. «الي بيجاوب نيته
+ * أعلى — مرتجعات أقل» only holds if the answer is a suggestion.
+ */
+const quiz = z.object({
+  ...base,
+  type: z.literal('quiz'),
+  title: richTextSchema(120).default('أي واحد يناسبك؟'),
+  questions: z.array(z.object({
+    ask: z.string().max(120).default(''),
+    options: z.array(z.string().max(60)).max(4).default([]),
+  })).max(3).default([]),
+  /** What is said once they have answered. Not a price, and not a promise. */
+  result: richTextSchema(240).default(''),
+});
+
+/**
+ * «ممكن تكون عم تفكر…» × خمسة اعتراضات وجوابها.
+ *
+ * Different from the FAQ beside it, and the difference is the point: a
+ * question is something a visitor wants to know, an objection is a reason
+ * they have already decided not to buy. Naming it out loud before they do
+ * is what this block is for — «للمنتجات الأغلى والأجهزة».
+ */
+const objections = z.object({
+  ...base,
+  type: z.literal('objections'),
+  title: richTextSchema(120).default('ممكن تكون عم تفكر…'),
+  items: z.array(z.object({
+    doubt: z.string().max(160).default(''),
+    answer: z.string().max(600).default(''),
+  })).max(6).default([]),
+  /** The guarantee, which this structure puts in front rather than at the end. */
+  guarantee: richTextSchema(240).default(''),
+});
+
+/**
+ * «رسم كيف بيشتغل ← المكوّنات وكل واحد شو بيعمل».
+ *
+ * «الإقناع بالفهم. ادعاءات متواضعة ومحددة» — so each ingredient says what
+ * it DOES, in its own short line, and there is no field for a percentage
+ * or a certificate: a number here would be a claim this system cannot
+ * stand behind, and the facts engine is where numbers come from.
+ */
+const mechanism = z.object({
+  ...base,
+  type: z.literal('mechanism'),
+  title: richTextSchema(120).default('كيف يشتغل'),
+  steps: z.array(z.object({
+    title: z.string().max(80).default(''),
+    text: z.string().max(240).default(''),
+  })).max(5).default([]),
+  ingredients: z.array(z.object({
+    name: z.string().max(60).default(''),
+    does: z.string().max(160).default(''),
+  })).max(8).default([]),
+});
+
+/**
  * Urgency. Deliberately narrow: a note and a countdown of real minutes from
  * the moment the visitor arrives. There is no "only 3 left" field, because
  * the system knows the real stock and inventing a smaller number to hurry
@@ -247,12 +367,38 @@ const urgency = z.object({
   showRealStock: z.boolean().default(false),
 });
 
+/**
+ * THE SENTENCE THAT SAYS NOBODY PAYS NOW.
+ *
+ * «النواة المقفولة: السعر مع العرض، وزر الطلب، وسطر الدفع عند الاستلام —
+ * ظاهرة فوق أول شاشة على 360 بكسل.»
+ *
+ * It was written out separately in the form's default subtitle and on the
+ * shop's product page, and the first screen of a landing page did not say it
+ * at all — `firstScreen.codLine` was declared `true` by all ten structures
+ * and nothing drew one. A promise in a schema that no renderer keeps is the
+ * most expensive kind of rule: it reads as enforced.
+ *
+ * One constant, because the same sentence in three files drifts into three
+ * sentences, and a shopper who reads two of them wonders which is true.
+ */
+export const COD_LINE = 'ادفع عند الاستلام — لا حاجة لبطاقة';
+
 /** The order form. Always rendered; this block only fixes WHERE. */
 const form = z.object({
   ...base,
   type: z.literal('form'),
   title: richTextSchema(120).default('أكمل الطلب'),
-  subtitle: richTextSchema(240).default('ادفع عند الاستلام — لا حاجة لبطاقة'),
+  /*
+   * NOT THE COD LINE AGAIN.
+   *
+   * It was this sentence's default, and now the hero carries it as part of
+   * the locked core — so a visitor scrolling one page read «ادفع عند
+   * الاستلام» here, again beside the amount inside the form, and a third
+   * time in the trust row under the button. The fact is not in doubt by the
+   * time somebody reaches the fields; what they need here is what to do.
+   */
+  subtitle: richTextSchema(240).default('املأ بياناتك ويتواصل معك فريقنا للتأكيد'),
 });
 
 /** The three reassurances under the button. */
@@ -387,7 +533,8 @@ const catalog = z.object({
 
 export const landingSectionSchema = z.discriminatedUnion('type', [
   announcement, hero, slider, benefits, gallery, text, offers,
-  reviews, faq, urgency, form, trust, footer, sticky, thankyou, catalog,
+  reviews, faq, comparison, timeline, quiz, objections, mechanism,
+  urgency, form, trust, footer, sticky, thankyou, catalog,
 ]);
 
 export type LandingSection = z.infer<typeof landingSectionSchema>;
@@ -413,6 +560,11 @@ export const SECTION_LABEL: Record<SectionType, string> = {
   offers: 'العروض',
   reviews: 'آراء المشترين',
   faq: 'أسئلة شائعة',
+  comparison: 'جدول مقارنة',
+  timeline: 'خط زمني',
+  quiz: 'اختبار قصير',
+  objections: 'الاعتراضات وجوابها',
+  mechanism: 'كيف يشتغل',
   urgency: 'تحفيز',
   form: 'نموذج الطلب',
   trust: 'ضمانات',
@@ -432,6 +584,11 @@ export const SECTION_HINT: Record<SectionType, string> = {
   offers: 'عروض الكميات — تُدار من تبويب العروض',
   reviews: 'تجارب مشترين سابقين',
   faq: 'الأسئلة التي تمنع الشراء',
+  comparison: 'منتجك والبدائل — بلا ذكر علامة منافسة بالاسم',
+  timeline: 'ما يحدث مع الوقت — بدل صور قبل وبعد',
+  quiz: 'ثلاثة أسئلة ثم توصية — ثلاث ضغطات كحد أقصى',
+  objections: 'الشكوك التي تمنع الطلب، مسمّاة ومجابة',
+  mechanism: 'الخطوات والمكوّنات، وما يفعله كل واحد',
   urgency: 'عدّاد وقت وملاحظة مخزون حقيقية',
   form: 'مكان النموذج في الصفحة',
   trust: 'ثلاث طمأنات تحت الزر',
@@ -510,8 +667,13 @@ export function newSection(type: SectionType): LandingSection {
     offers: { title: 'اختر العرض المناسب' },
     reviews: { title: 'آراء المشترين', items: [{ name: '', text: '', stars: 5 }] },
     faq: { title: 'أسئلة شائعة', items: [{ q: '', a: '' }] },
+    comparison: { title: 'لماذا هذا وليس غيره', oursLabel: 'منتجنا', theirsLabel: 'البدائل', rows: [{ aspect: '', ours: '', theirs: '' }] },
+    timeline: { title: 'ماذا يحدث مع الوقت', points: [{ when: '', what: '' }] },
+    quiz: { title: 'أي واحد يناسبك؟', questions: [{ ask: '', options: ['', ''] }], result: '' },
+    objections: { title: 'ممكن تكون عم تفكر…', items: [{ doubt: '', answer: '' }], guarantee: '' },
+    mechanism: { title: 'كيف يشتغل', steps: [{ title: '', text: '' }], ingredients: [{ name: '', does: '' }] },
     urgency: { text: '', minutes: 0, showRealStock: false },
-    form: { title: 'أكمل الطلب', subtitle: 'ادفع عند الاستلام — لا حاجة لبطاقة' },
+    form: { title: 'أكمل الطلب', subtitle: 'املأ بياناتك ويتواصل معك فريقنا للتأكيد' },
     trust: {
       items: [
         { title: 'طلب آمن', text: 'بياناتك محفوظة' },

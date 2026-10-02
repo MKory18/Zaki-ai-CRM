@@ -97,7 +97,7 @@ export async function loadStoreFonts(storeId: string | null | undefined): Promis
   // pure function with no idea which store it is drawing — and a font the
   // seller deleted resolves to its fallback instead of to nothing.
   const vars = families
-    .map((f) => `--lp-uf-${f.key}: ${f.stack};`)
+    .map((f) => `--store-uf-${f.key}: ${f.stack};`)
     .join(' ');
 
   return {

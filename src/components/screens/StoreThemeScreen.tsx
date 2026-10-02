@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { SkinGallery, type SkinCard } from '@/components/store/SkinGallery';
+import { LayoutPanel } from '@/components/store/LayoutPanel';
+import { ContrastNotes } from '@/components/store/ContrastNotes';
+import type { SampleProduct } from '@/components/store/SkinPreview';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
@@ -9,7 +13,7 @@ import {
   CHECKOUT_FIELDS, DEFAULT_STORE_THEME, MANDATORY_CHECKOUT_FIELDS,
   checkoutOrder, type CheckoutField, type StoreTheme,
 } from '@/lib/store-theme';
-import { RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
+import { RiArrowGoBackLine, RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TemplateGallery } from '@/components/ui/TemplateGallery';
 import { routeLabel } from '@/lib/route-registry';
@@ -34,17 +38,26 @@ import { routeLabel } from '@/lib/route-registry';
  * accent, so a seller who picks one colour gets a whole shop.
  */
 
+/** What `GET /api/store/templates` answers with, for the ten. */
+interface ShopTemplates {
+  skins: SkinCard[];
+  installed: string | null;
+  sample: SampleProduct[];
+  storeName: string;
+}
+
 const SWATCHES = [
   '#b8256e', '#e11d48', '#ea580c', '#f59e0b',
   '#16a34a', '#0d9488', '#2563eb', '#4f46e5',
   '#7c3aed', '#0f172a', '#8b5a2b', '#be123c',
 ];
 
-type TabKey = 'gallery' | 'general' | 'chrome' | 'product' | 'checkout' | 'cart' | 'home';
+type TabKey = 'gallery' | 'general' | 'layout' | 'chrome' | 'product' | 'checkout' | 'cart' | 'home';
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'gallery', label: 'معرض القوالب', icon: RiLayoutGridLine },
   { key: 'general', label: 'عام', icon: RiPaletteLine },
+  { key: 'layout', label: 'الترتيب', icon: RiLayoutGridLine },
   { key: 'chrome', label: 'الترويسة والتذييل', icon: RiLayoutTopLine },
   { key: 'product', label: 'إعدادات المنتج', icon: RiShoppingBagLine },
   { key: 'checkout', label: 'الدفع', icon: RiBankCardLine },
@@ -53,11 +66,20 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
 ];
 
 const COLOR_FIELDS: { key: keyof NonNullable<StoreTheme['colors']>; label: string; hint: string }[] = [
-  { key: 'primary', label: 'أساسي', hint: 'لون الفعل: الأزرار والروابط' },
-  { key: 'secondary', label: 'ثانوي', hint: 'العناوين والنص الغامق' },
-  { key: 'primaryLight', label: 'أساسي فاتح', hint: 'خلفية الشارات والصفوف المختارة' },
-  { key: 'secondaryLight', label: 'ثانوي فاتح', hint: 'النص الخافت والشروح' },
-  { key: 'background', label: 'خلفية', hint: 'ورق الصفحة' },
+  // Named by the job each does. «أساسي» used to be the first of these and
+  // it wrote a variable nothing read — three rows under the accent picker,
+  // which is the control that actually sets the colour of the actions.
+  { key: 'background', label: 'الصفحة', hint: 'ورق الصفحة' },
+  { key: 'surface1', label: 'البطاقة', hint: 'سطح البطاقة فوق الصفحة' },
+  { key: 'surface2', label: 'سطح ثالث', hint: 'شريط الفرز وورقة الفلاتر' },
+  { key: 'textPrimary', label: 'النص', hint: 'العناوين والنص الغامق' },
+  { key: 'textSecondary', label: 'نص خافت', hint: 'الشروح والملاحظات' },
+  { key: 'border', label: 'الحدود', hint: 'الخطوط والفواصل' },
+  { key: 'accentTint', label: 'أساسي فاتح', hint: 'خلفية الشارات والصفوف المختارة' },
+  { key: 'accentContrast', label: 'نص الزر', hint: 'ما يُكتب فوق اللون الأساسي' },
+  { key: 'price', label: 'السعر', hint: 'رقم السعر على البطاقة' },
+  { key: 'priceCompare', label: 'قبل الخصم', hint: 'السعر المشطوب بجانبه' },
+  { key: 'offerBadge', label: 'شارة العرض', hint: 'شارة نسبة الخصم على المنتج' },
   { key: 'success', label: 'نجاح', hint: 'محصَّل · تم' },
   { key: 'warning', label: 'تحذير', hint: 'يحتاج انتباه' },
   { key: 'danger', label: 'خطر', hint: 'متأخر · خسارة' },
@@ -97,8 +119,27 @@ export function StoreThemeScreen() {
    * the design somebody spent an evening on is a gallery nobody browses.
    */
   const [picked, setPicked] = useState<string | null>(null);
+  /**
+   * The ten shop templates, and the shop's own products to draw them with.
+   * Unlike the fifteen page shapes these are NOT a constant this bundle
+   * holds: which one is installed and which products exist are both facts
+   * about this shop, and only the server knows them.
+   */
+  const [shop, setShop] = useState<ShopTemplates | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /**
+   * SAVING IS NOT PUBLISHING ANY MORE.
+   *
+   * `theme` is what every live storefront page paints from, and this
+   * editor used to write it on every save — so a seller moving a colour
+   * repainted the shop for every customer standing in it, while the home
+   * page beside it had had a draft and a deliberate publish since the day
+   * it was written. These three say where the shop stands.
+   */
+  const [unpublished, setUnpublished] = useState(false);
+  const [canRevert, setCanRevert] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -108,10 +149,18 @@ export function StoreThemeScreen() {
       // asking the server to name them was a request whose answer never
       // differs from `PAGE_TEMPLATES`. The install call still goes to the
       // server, which is where the decision about the draft belongs.
-      const data = await apiJson<{ store: StoreInfo; theme: StoreTheme }>('/api/store/theme');
+      const [data, gallery] = await Promise.all([
+        apiJson<{ store: StoreInfo; theme: StoreTheme; hasUnpublished: boolean; canRevert: boolean }>(
+          '/api/store/theme'
+        ),
+        apiJson<ShopTemplates>('/api/store/templates').catch(() => null),
+      ]);
       setStore(data.store);
       setTheme(data.theme);
       setSaved(data.theme);
+      setUnpublished(data.hasUnpublished);
+      setCanRevert(data.canRevert);
+      setShop(gallery);
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر تحميل القالب' });
     } finally {
@@ -148,11 +197,11 @@ export function StoreThemeScreen() {
    * any customer does — so this reloads rather than pretending to know what
    * the server decided.
    */
-  async function install(source: 'builtin' | 'file', payload: string | unknown) {
+  async function install(source: 'builtin' | 'skin' | 'file', payload: string | unknown) {
     setInstalling(typeof payload === 'string' ? payload : 'file');
     setMsg(null);
     try {
-      const body = source === 'builtin' ? { source, key: payload } : { source, file: payload };
+      const body = source === 'file' ? { source, file: payload } : { source, key: payload };
       const res = await apiJson<{ installed: string; theme: StoreTheme; themeApplied: boolean }>(
         '/api/store/templates',
         { method: 'POST', body: JSON.stringify(body) }
@@ -186,17 +235,60 @@ export function StoreThemeScreen() {
     setSaving(true);
     setMsg(null);
     try {
-      const res = await apiJson<{ theme: StoreTheme }>('/api/store/theme', {
+      const res = await apiJson<{ theme: StoreTheme; hasUnpublished: boolean }>('/api/store/theme', {
         method: 'PATCH',
         body: JSON.stringify(theme),
       });
       setTheme(res.theme);
       setSaved(res.theme);
-      setMsg({ ok: true, text: 'تم الحفظ' });
+      setUnpublished(res.hasUnpublished);
+      // It says what it did. «تم الحفظ» on a screen that used to repaint
+      // the shop would let a seller believe the shop had changed.
+      setMsg({ ok: true, text: 'حُفظت المسوّدة — لا شيء تغيّر عند الزبون حتى تنشر' });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر الحفظ' });
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** The one act a customer feels, and the only one that asks first. */
+  async function publish() {
+    if (!confirm('سينتقل شكل المتجر إلى هذه المسوّدة ويراه كل زبون الآن. متابعة؟')) return;
+    setPublishing(true);
+    setMsg(null);
+    try {
+      const res = await apiJson<{ theme: StoreTheme }>('/api/store/theme', { method: 'POST' });
+      setTheme(res.theme);
+      setSaved(res.theme);
+      setUnpublished(false);
+      setCanRevert(true);
+      setMsg({ ok: true, text: 'نُشر — المتجر يرتدي هذا الشكل الآن' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر النشر' });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  /**
+   * One press, no dialog: «رجوع للنسخة السابقة بضغطة». It is safe to press
+   * because pressing it again returns — the thing it undoes becomes the
+   * next step back.
+   */
+  async function revert() {
+    setPublishing(true);
+    setMsg(null);
+    try {
+      const res = await apiJson<{ theme: StoreTheme }>('/api/store/theme', { method: 'PUT' });
+      setTheme(res.theme);
+      setSaved(res.theme);
+      setUnpublished(false);
+      setMsg({ ok: true, text: 'رجع المتجر إلى الشكل السابق — اضغط مرّة أخرى للعودة' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر الرجوع' });
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -224,11 +316,32 @@ export function StoreThemeScreen() {
           <Button variant="secondary" size="sm" disabled={!dirty || saving} onClick={() => setTheme(saved)}>
             تراجع
           </Button>
-          <Button size="sm" disabled={!dirty || saving} onClick={() => void save()}>
-            {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ
+          <Button size="sm" variant="secondary" disabled={!dirty || saving} onClick={() => void save()}>
+            {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} احفظ المسوّدة
           </Button>
+          <Button size="sm" disabled={dirty || !unpublished || publishing} onClick={() => void publish()}>
+            {publishing && <RiLoader4Line className="h-4 w-4 animate-spin" />} انشر
+          </Button>
+          {canRevert && (
+            <Button size="sm" variant="secondary" disabled={publishing} onClick={() => void revert()}>
+              <RiArrowGoBackLine className="h-4 w-4 icon-mirror" /> النسخة السابقة
+            </Button>
+          )}
         </div>
       </header>
+
+      {/*
+        WHERE THE SHOP STANDS, ABOVE EVERYTHING ELSE.
+        A seller must never have to guess whether what they are looking at
+        is what a customer is looking at.
+      */}
+      {(dirty || unpublished) && (
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          {dirty
+            ? 'تغييرات لم تُحفظ بعد. احفظ المسوّدة ثم انشرها ليراها الزبون.'
+            : 'مسوّدة محفوظة لم تُنشر — الزبون ما زال يرى الشكل السابق.'}
+        </p>
+      )}
 
       <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
         {tabs.map(({ key, label, icon: Icon }) => (
@@ -287,11 +400,40 @@ export function StoreThemeScreen() {
           </div>
 
           {/*
+            THE TEN SHOP TEMPLATES, FIRST.
+
+            They dress the whole engine — palette, type, and which
+            arrangement each part draws — and the fifteen below order the
+            blocks of one page. A seller looking for «how should my shop
+            look» means the first; one looking for «what goes on my home
+            page» means the second. Two units, one screen, in the order a
+            shop is actually built.
+          */}
+          {shop && shop.skins.length > 0 && (
+            <div className={CARD}>
+              <p className="text-sm font-bold text-[var(--sys-heading)]">قوالب المتجر</p>
+              <p className="mb-3 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
+                كل قالب يغيّر الألوان والخط وترتيب الترويسة والبطل والبطاقة وصفحة المنتج — ولا يمسّ
+                منتجاً ولا طلباً ولا سعراً ولا رابطاً.
+              </p>
+              <SkinGallery
+                skins={shop.skins}
+                installed={shop.installed}
+                products={shop.sample}
+                storeName={shop.storeName}
+                installing={installing}
+                onInstall={(key) => void install('skin', key)}
+              />
+            </div>
+          )}
+
+          {/*
             SHOWN, NOT DESCRIBED — and by the renderer that draws the real
             page, so the card cannot promise a shape the shop will not get.
             The same gallery the landing page's create dialog uses: one
             grid, one set of fifteen, no second place to be out of date.
           */}
+          <p className="text-sm font-bold text-[var(--sys-heading)]">قوالب الصفحة الرئيسية</p>
           <TemplateGallery
             value={picked}
             onChange={setPicked}
@@ -463,7 +605,38 @@ export function StoreThemeScreen() {
                 );
               })}
             </div>
+
+            {/*
+              Under the grid, not beside one picker: a contrast failure is
+              a fact about a PAIR, and which of the two to move is the
+              seller's call. It names the pair by what a shopper reads and
+              offers the nearest colour that works.
+            */}
+            <div className="mt-3">
+              <ContrastNotes
+                theme={theme}
+                onFix={(field, hex) => setPart('colors', { [field]: hex })}
+              />
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* ── الترتيب: أيّ نسخة يرسمها كل جزء من المحرّك ── */}
+      {tab === 'layout' && (
+        <div className={CARD}>
+          <p className="text-sm font-bold text-[var(--sys-heading)]">الترتيب</p>
+          <p className="mb-4 mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            كل قالب يأتي بترتيبه، وهذه الضوابط تغيّره دون مغادرته. ولا نسخة هنا تحذف البحث أو السلة
+            أو زر واتساب — هي ترتيب، لا طرح.
+          </p>
+          <LayoutPanel
+            layout={theme.layout}
+            cartApplies={store?.cartBarApplies !== false}
+            onChange={(slot, variant) =>
+              setTheme((t) => ({ ...t, layout: { ...(t.layout ?? {}), [slot]: variant } }))
+            }
+          />
         </div>
       )}
 

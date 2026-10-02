@@ -1,10 +1,10 @@
 import { priceIncludesDeliveryFor } from './delivery-fees';
-import { activeOffersFor } from './offers';
+import { activeOffersFor, type OfferView } from './offers';
 import { db } from './db';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
 import { orderRefFields } from './order-ref';
-import { computeCod } from './money';
+import { computeCod, roundMinor } from './money';
 import { productCost } from './product-cost';
 import { matchRegion } from './regions';
 import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
@@ -41,6 +41,91 @@ import {
  */
 
 /** Where the order came in through. Resolved by the route, never by the browser. */
+/**
+ * ONE THING ORDERED, priced by the server.
+ *
+ * `quantity` is PIECES, not picks: two of a «٣ قطع» bundle is six. The
+ * division from a bundle's total to a unit price happens once, where the
+ * offer row is read, and never in a browser.
+ */
+export interface ResolvedLine {
+  product: { id: string; name: string; image: string | null; basePrice: number };
+  offer: OfferView | null;
+  quantity: number;
+  freeQuantity: number;
+  unitPrice: number;
+}
+
+/** What a basket asked for, before anything has been priced. */
+export interface ChosenLine {
+  productId: string;
+  /** '' for the product at its base price. */
+  offerId: string;
+  count: number;
+}
+
+export type ResolveResult =
+  | { ok: true; lines: ResolvedLine[] }
+  | { ok: false; fieldErrors: Record<string, string> };
+
+/**
+ * WHAT THIS BASKET IS, AND WHAT EACH LINE COSTS — the one answer.
+ *
+ * Extracted from `createPublicOrder` because the cart page has to show a
+ * total before anybody orders, and the only honest way to get one is to
+ * ask the code that will charge it. A second pricing path beside this one
+ * would agree on the day it was written and disagree on the next.
+ *
+ * Every figure comes from the offer row. A quantity or a price sent by a
+ * browser is ignored, and an offer's price is the TOTAL for its own
+ * quantity — so asking for two of a «٣ قطع» bundle is six pieces at the
+ * same unit price, and that division happens here, once.
+ *
+ * `products` is everything the door may sell. A product that is not in it
+ * is refused rather than priced: that is how an id from another shop's
+ * catalogue fails.
+ */
+export async function resolvePublicLines(
+  companyId: string,
+  products: SellingSurface['products'],
+  chosen: ChosenLine[]
+): Promise<ResolveResult> {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const lines: ResolvedLine[] = [];
+
+  for (const want of chosen) {
+    const p = byId.get(want.productId);
+    if (!p) {
+      return { ok: false, fieldErrors: { items: 'أحد المنتجات لم يعد متاحاً. أعد تحميل الصفحة.' } };
+    }
+
+    // One query per product: a basket is bounded at MAX_CART_LINES, and
+    // this runs when somebody opens their cart or presses «اطلب».
+    const offers = await activeOffersFor(db, companyId, p.id);
+    let offer: OfferView | null = null;
+    if (want.offerId) {
+      const found = offers.find((o) => o.id === want.offerId);
+      if (!found) return { ok: false, fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' } };
+      offer = found;
+    } else if (offers.length > 0) {
+      // Offers exist — an explicit selection is required.
+      return { ok: false, fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' } };
+    }
+
+    const unitsPerPick = offer ? offer.quantity : 1;
+    const unitPrice = offer ? offer.price / offer.quantity : p.basePrice;
+    lines.push({
+      product: p,
+      offer,
+      quantity: unitsPerPick * want.count,
+      freeQuantity: (offer ? offer.freeQuantity : 0) * want.count,
+      unitPrice,
+    });
+  }
+
+  return { ok: true, lines };
+}
+
 export interface SellingSurface {
   companyId: string;
   store: {
@@ -48,7 +133,18 @@ export interface SellingSurface {
     countryId: string;
     country: { code: string; currencyCode: string; orderPrefix: string; minorUnit: number };
   };
-  product: { id: string; name: string; image: string | null; basePrice: number };
+  /**
+   * EVERYTHING THIS DOOR MAY SELL, and nothing else.
+   *
+   * One product for a landing page or a single-product shop. For a cart, the
+   * products the basket named — loaded by the ROUTE, scoped to this store,
+   * so an id from another shop's catalogue simply is not here and the order
+   * is refused rather than priced.
+   *
+   * It was a single product, and everything downstream was single with it
+   * although `computeCod` has taken a list of lines all along.
+   */
+  products: { id: string; name: string; image: string | null; basePrice: number }[];
   /** The landing page, when the door was one. */
   landingPage: { id: string; name: string; slug: string } | null;
   /** What the order records as its origin. */
@@ -88,7 +184,11 @@ export async function createPublicOrder(
   surface: SellingSurface,
   raw: unknown
 ): Promise<IntakeResult> {
-  const { companyId, store, product } = surface;
+  const { companyId, store } = surface;
+  const principalProduct = surface.products[0];
+  if (!principalProduct) {
+    return { ok: false, status: 400, body: { error: 'لا يوجد منتج في هذا الطلب' } };
+  }
 
   // ─── Validation, against THIS country ───
   // The phone format and the list of cities depend on the country the shop
@@ -128,35 +228,28 @@ export async function createPublicOrder(
   // every other intake path uses.
   const region = matchRegion(regions, v.city);
 
-  // ─── Offer resolution (server-authoritative) ───
+  // ─── What was ordered, resolved on the server ───
   // The offers belong to the PRODUCT: one bundle, one price, wherever it is
   // sold. quantity / freeQuantity / price all come from the row — a quantity
   // or a price sent by the browser is ignored.
-  const productOffers = await activeOffersFor(db, companyId, product.id);
+  //
+  // A basket, when one was sent, IS the order; `offerId` is then ignored,
+  // because two ways of saying what was ordered, both honoured, is two
+  // orders. One query per product: a basket is bounded at MAX_CART_LINES,
+  // and this runs once, when somebody presses «اطلب».
+  const chosen = v.items?.length
+    ? v.items.map((i) => ({ productId: i.productId, offerId: i.offerId || '', count: i.quantity }))
+    : [{ productId: principalProduct.id, offerId: v.offerId || '', count: 1 }];
 
-  let offer: { id: string; name: string; quantity: number; freeQuantity: number; price: number; deliveryIncluded: boolean } | null = null;
-  if (v.offerId) {
-    const found = productOffers.find((o) => o.id === v.offerId);
-    if (!found) {
-      return {
-        ok: false,
-        status: 400,
-        body: { ...ORDER_VALIDATION_ERROR_BODY, fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' } },
-      };
-    }
-    offer = { ...found, price: found.sellingPrice };
-  } else if (productOffers.length > 0) {
-    // Offers exist — an explicit selection is required.
+  const resolved = await resolvePublicLines(companyId, surface.products, chosen);
+  if (!resolved.ok) {
     return {
       ok: false,
       status: 400,
-      body: { ...ORDER_VALIDATION_ERROR_BODY, fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' } },
+      body: { ...ORDER_VALIDATION_ERROR_BODY, fieldErrors: resolved.fieldErrors },
     };
   }
-
-  const price = offer ? offer.price : product.basePrice; // server-side — never from the browser
-  const qty = offer ? offer.quantity : 1;
-  const freeQty = offer ? offer.freeQuantity : 0;
+  const lines = resolved.lines;
 
   // ─── Blacklist, company-wide ───
   // The message says nothing: telling somebody they are blacklisted invites
@@ -186,6 +279,8 @@ export async function createPublicOrder(
     phone: normalizedPhone,
     rawPhone: v.phone,
     fullName: v.full_name,
+    // Stored when given; the phone above stays the identity.
+    altPhone: v.alt_phone ? normalizePhoneNumber(v.alt_phone) : null,
     address: v.address,
     city: v.city,
     notes: v.notes || null,
@@ -219,19 +314,79 @@ export async function createPublicOrder(
    * hand averages to zero, and that is a real answer to «ما كلفة وحدةٍ
    * الآن؟» when there is nothing on the shelf to read a price from.
    */
-  const unitCost = (await productCost(db, companyId, product.id)).average;
+  // Per line, and summed. `productCost` is asked once per distinct product:
+  // a basket with two bundles of the same product must not count its cost
+  // twice as a query, only as a quantity.
+  const unitCosts = new Map<string, number>();
+  for (const line of lines) {
+    if (!unitCosts.has(line.product.id)) {
+      unitCosts.set(line.product.id, (await productCost(db, companyId, line.product.id)).average);
+    }
+  }
+  const costOfGoods = lines.reduce(
+    (sum, l) => sum + (unitCosts.get(l.product.id) ?? 0) * l.quantity,
+    0
+  );
 
   // ONE COD function (contract PART 5). The offer price is the total for its
   // quantity; free units are real lines at zero price, so they never enter
   // the money maths — only stock and COGS.
   const money = computeCod({
-    lines: [{ quantity: qty, unitPrice: qty > 0 ? price / qty : price, freeQuantity: freeQty }],
+    lines: lines.map((l) => ({
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      freeQuantity: l.freeQuantity,
+    })),
     minorUnit: store.country.minorUnit,
   });
   const totalAmount = money.cod;
 
-  // The store's pricing policy — the same rule a direct order follows.
-  const priceIncludesDelivery = await priceIncludesDeliveryFor(store.id, offer?.deliveryIncluded);
+  /**
+   * THE HEAD OF THE ORDER IS ITS PRINCIPAL LINE.
+   *
+   * `Order.productId`, `quantity`, `sellingPrice` and the two snapshots are
+   * what every existing screen shows in a row, and they cannot show four
+   * products in one cell. So they describe the LARGEST line, and
+   * `Order.items` is what was ordered. For a one-line order the two are the
+   * same thing, which is every order this system has taken until now.
+   *
+   * `totalAmount` is the whole order and always has been — it comes from
+   * `computeCod` over every line, so the head being one line never makes
+   * the money wrong.
+   */
+  let principal = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if ((money.lineTotals[i] ?? 0) > (money.lineTotals[principal] ?? 0)) principal = i;
+  }
+  const head = lines[principal];
+
+  /**
+   * The store's pricing policy — the same rule a direct order follows.
+   *
+   * An offer may override it, and the contract settles what happens when a
+   * basket holds more than one: «If ANY line includes delivery, the whole
+   * order does.»
+   *
+   * THIS USED TO IGNORE EVERY OFFER THE MOMENT THERE WERE TWO LINES, and
+   * fell back to the shop's policy. The reasoning was not silly — the fee is
+   * charged once for the whole order, so two bundles disagreeing have no
+   * answer between them — but the effect was that a bundle advertised as
+   * «السعر شامل التوصيل» had the fee added anyway as soon as the customer
+   * put something else in the basket. A promise printed on the offer and
+   * broken at the door.
+   *
+   * WHAT THE CONTRACT'S RULE COSTS, said plainly rather than hidden: a
+   * customer can add one cheap delivery-included bundle to a large basket
+   * and the whole order ships free. That is the price of never breaking the
+   * printed promise, and it is the owner's ruling. The lever if it is ever
+   * abused is the OFFER — do not mark a cheap bundle delivery-included —
+   * not a second rule here.
+   */
+  const anyLineIncludesDelivery = lines.some((l) => l.offer?.deliveryIncluded === true);
+  const priceIncludesDelivery = await priceIncludesDeliveryFor(
+    store.id,
+    anyLineIncludesDelivery ? true : undefined
+  );
 
   // The door, as the order channels name it — so the channel table on the
   // performance screen and the landing-page tab count the same orders. New
@@ -256,17 +411,21 @@ export async function createPublicOrder(
             regionId: region?.id ?? null,
             ...refs,
             customerId: customer!.id,
-            productId: product.id,
-            quantity: qty,
-            freeQuantity: freeQty,
-            sellingPrice: price,
+            productId: head.product.id,
+            quantity: head.quantity,
+            freeQuantity: head.freeQuantity,
+            sellingPrice: money.lineTotals[principal] ?? money.subtotal,
             shippingCost: 0,
             totalAmount,
             currency: store.country.currencyCode,
             moderatorId: null, // anonymous source — no user may be assigned from the browser
-            estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
-            productNameSnapshot: product.name,
-            productImageSnapshot: product.image || null,
+            // Cost rounds by the CURRENCY, like every other figure on
+            // this row — `.toFixed(2)` here put a 2-decimal cost beside a
+            // 3-decimal JOD total, and the profit report subtracts one from
+            // the other.
+            estimatedCostOfGoods: roundMinor(costOfGoods, store.country.minorUnit),
+            productNameSnapshot: head.product.name,
+            productImageSnapshot: head.product.image || null,
             status: 'NEW',
             confirmationStatus: 'NEW',
             shippingStatus: 'NOT_READY',
@@ -282,7 +441,7 @@ export async function createPublicOrder(
             channelId: channel?.id ?? null,
             deviceClass: surface.deviceClass ?? null,
             priceIncludesDelivery,
-            offerId: offer?.id ?? null,
+            offerId: head.offer?.id ?? null,
             customerNotes: v.notes || null,
             internalNotes: null,
           },
@@ -295,19 +454,24 @@ export async function createPublicOrder(
     }
     if (!created) throw new Error('Failed to generate a unique order number');
 
-    // Order line, gift units included: they consume stock and show in COGS.
-    await tx.orderItem.create({
-      data: {
+    // Every line, gift units included: they consume stock and show in COGS.
+    // `createMany` rather than a loop — one statement, and a basket that
+    // half-wrote itself is not a thing this order path can produce.
+    await tx.orderItem.createMany({
+      data: lines.map((l, i) => ({
         companyId,
-        orderId: created.id,
-        productId: product.id,
-        productName: product.name,
-        quantity: qty,
-        freeQuantity: freeQty,
-        unitPrice: money.subtotal / qty,
-        lineTotal: money.lineTotals[0] ?? money.subtotal,
+        orderId: created!.id,
+        productId: l.product.id,
+        // A snapshot: the name as it was sold, so renaming a product later
+        // never rewrites what an old order says was bought.
+        productName: l.product.name,
+        quantity: l.quantity,
+        freeQuantity: l.freeQuantity,
+        unitPrice: l.unitPrice,
+        discountShare: money.discountShares[i] ?? 0,
+        lineTotal: money.lineTotals[i] ?? 0,
         addedStage: 'INTAKE',
-      },
+      })),
     });
 
     await tx.customer.update({
@@ -330,9 +494,16 @@ export async function createPublicOrder(
           source: surface.source,
           landingPage: surface.landingPage?.name ?? null,
           landingPageSlug: surface.landingPage?.slug ?? null,
-          offer: offer
-            ? { name: offer.name, quantity: offer.quantity, freeQuantity: offer.freeQuantity, price: offer.price }
-            : { fallback: 'basePrice', price: product.basePrice },
+          // Every line, not just the head: the head is a display choice, and
+          // an activity entry that recorded only it would be a record of
+          // part of the order.
+          lines: lines.map((l) => ({
+            product: l.product.name,
+            quantity: l.quantity,
+            freeQuantity: l.freeQuantity,
+            offer: l.offer ? l.offer.name : null,
+            unitPrice: l.unitPrice,
+          })),
           createdBy: 'public visitor',
         }),
       },
@@ -369,9 +540,14 @@ export async function createPublicOrder(
     orderNumber: order.orderNumber,
     total: Number(order.totalAmount),
     currency: order.currency,
-    quantity: qty,
-    productId: product.id,
-    productName: product.name,
+    // The head line, as the row shows it — and the count of everything in
+     // the order beside it, so an app that only reads one number reads the
+     // one that is true of the whole order.
+     quantity: head.quantity,
+     items: lines.length,
+     pieces: lines.reduce((n, l) => n + l.quantity + l.freeQuantity, 0),
+     productId: head.product.id,
+     productName: head.product.name,
     source: surface.source,
     storeId: store.id,
     city: v.city,

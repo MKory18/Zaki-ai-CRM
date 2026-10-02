@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import {
   CONVERSION_TRIGGERS, VALUE_SOURCES, validateEventName, collidesWithBrowserPixel,
   TRIGGER_AR, TRIGGER_HINT_AR, VALUE_SOURCE_AR, SUGGESTED_EVENT_NAMES,
+  type ConversionTrigger, type ValueSource,
 } from '@/lib/conversions/types';
 
 /**
@@ -28,9 +29,37 @@ const createSchema = z.object({
   name: z.string().trim().min(2).max(60),
   eventName: z.string().trim().min(3).max(40),
   trigger: z.enum(CONVERSION_TRIGGERS),
-  valueSource: z.enum(VALUE_SOURCES).default('ORDER_TOTAL'),
+  /**
+   * NO DEFAULT HERE — the trigger decides it. See `defaultValueSource`.
+   * A flat `.default('ORDER_TOTAL')` made «delivered» report the ordered
+   * amount, which `conversions/types.ts` calls a lie in its own words.
+   */
+  valueSource: z.enum(VALUE_SOURCES).optional(),
   enabled: z.boolean().default(true),
 });
+
+/**
+ * WHICH NUMBER, WHEN NOBODY PICKED ONE.
+ *
+ * «Conversion values sent to ad platforms use the COLLECTED amount at
+ * DELIVERED, not the ordered amount.» The door defaulted every conversion to
+ * `ORDER_TOTAL`, including one triggered at delivery — and the module that
+ * computes the value already says exactly why that is wrong: «At delivery,
+ * the collected amount is the truth and the order total is a wish… Sending
+ * the total there would teach Meta that every delivery is worth full price,
+ * which is the same lie the delivery-rate multiplier was invented to patch.»
+ *
+ * A DEFAULT and not a prohibition, because this module's whole stance is
+ * informed choice: a seller who means to send the order total at delivery
+ * may still say so. They just have to say it.
+ *
+ * Before delivery the order total IS the right figure — nothing has been
+ * collected yet, so `collectedAmount` would read as the full total anyway and
+ * the name would be the only thing that changed.
+ */
+export function defaultValueSource(trigger: ConversionTrigger): ValueSource {
+  return trigger === 'order.delivered' ? 'COLLECTED_AMOUNT' : 'ORDER_TOTAL';
+}
 
 export async function GET() {
   try {
@@ -111,7 +140,9 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: 'البيانات غير صالحة' }, { status: 400 });
     }
-    const { pixelId, name, trigger, valueSource, enabled } = parsed.data;
+    const { pixelId, name, trigger, enabled } = parsed.data;
+    // The trigger decides it when nobody said. See `defaultValueSource`.
+    const valueSource = parsed.data.valueSource ?? defaultValueSource(trigger);
 
     // Meta accepts a name with a space or an Arabic letter and then it
     // appears nowhere useful in Events Manager and cannot be selected when

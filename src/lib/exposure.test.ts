@@ -135,6 +135,10 @@ describe('what the browser is allowed to remember', () => {
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',
     'ui/SavedViews.tsx': 'a name and a query string — a question to re-ask, never an answer or a record id',
+    'storefront/RecentlyViewed.tsx':
+      'a shopper’s own «شوهد مؤخراً» — product ids, one key per shop. Never sent anywhere except to ask what those products are, never stored against a person, and nothing in it names one',
+    'storefront/useCart.ts':
+      'a shopper’s basket — product ids, offer ids and counts, one key per shop. No price, because a price in a browser is a price a browser can edit; and no name, phone or address, which is what the test below proves rather than what this line promises',
   };
 
   it('writes to storage only in the places that were thought about', () => {

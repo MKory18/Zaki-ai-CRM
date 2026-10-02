@@ -1,8 +1,18 @@
 'use client';
 
 import { TemplateGallery } from '@/components/ui/TemplateGallery';
+import { StructureGallery } from '@/components/store/StructureGallery';
+import { SlotFields, type SlotCopy } from '@/components/store/SlotFields';
+import { TemplatePreview } from '@/components/landing/TemplatePreview';
+import { LANDING_STRUCTURES } from '@/lib/landing-structures';
+import { DIALECTS, DIALECT_LABEL, structureToSections, type Dialect } from '@/lib/landing-structure';
+import { newSection } from '@/lib/landing-sections';
+import { STORE_TEMPLATES } from '@/lib/store-templates';
+import { skinToLandingTheme } from '@/lib/store-skin';
+import { buildTemplate } from '@/lib/page-templates';
+import type { LandingTheme } from '@/lib/landing-theme';
 import React, { useEffect, useState } from 'react';
-import { useTell } from '@/components/ui/Confirm';
+import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -12,6 +22,7 @@ import { Badge } from '@/components/ui/Badge';
 import { screenApi as crmApi, qs } from '@/lib/screen-api';
 import { formatDate } from '@/lib/screen-api';
 import { publicAddress } from '@/lib/public-address';
+import { publishQuestion } from '@/lib/landing-publish';
 import { copyText } from '@/lib/clipboard';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
@@ -22,8 +33,32 @@ import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
+/** One shape for both starting points; the unused half is simply not sent. */
+const BLANK_FORM = {
+  name: '',
+  slug: '',
+  productId: '',
+  template: 'classic',
+  structure: '',
+  skin: '',
+  /**
+   * THE DIALECT THE COPY IS WRITTEN IN.
+   *
+   * Formal Arabic by default, and deliberately: `copyIn` falls back to
+   * whatever dialect HAS text, so one pass written in الفصحى المبسّطة
+   * serves every visitor, and a Levantine-only page would read wrong in
+   * Cairo and in Nouakchott. The chips below switch it for a seller who
+   * wants a second pass in a dialect.
+   */
+  dialect: 'msa' as Dialect,
+};
+
+/** The library's own theme, which is what a page with no skin is given. */
+const BARE_THEME = buildTemplate('blank').theme as LandingTheme;
+
 export function LandingPagesScreen() {
   const tell = useTell();
+  const confirm = useConfirm();
   const { currentUser } = useApp();
   // The performance screen's own gate — a link that opens onto a refusal is noise.
   const canAnalytics = userCan(currentUser, 'reports.view') || userCan(currentUser, 'analytics.view');
@@ -34,7 +69,23 @@ export function LandingPagesScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', slug: '', productId: '', template: 'classic' });
+  const [form, setForm] = useState(BLANK_FORM);
+  /**
+   * WHICH OF THE TWO STARTING POINTS IS OPEN.
+   *
+   * `structure` is the default, and that is a changed default: the fifteen
+   * ready-made shapes used to be the only thing here. A SHAPE carries its
+   * own colours, so choosing one decides the story and the look together
+   * and neither can be changed without changing the other. A STRUCTURE is
+   * the story alone — «بنية × مظهر» — so the same story can be worn ten
+   * ways and the same look can carry ten stories.
+   *
+   * The fifteen are still one labelled tab away, and nothing about them
+   * changed: a page created from one is created exactly as before.
+   */
+  const [source, setSource] = useState<'structure' | 'template'>('structure');
+  /** What the seller writes into the structure's slots, per dialect. */
+  const [copy, setCopy] = useState<SlotCopy>({});
   const [products, setProducts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,6 +119,38 @@ export function LandingPagesScreen() {
     const p = products.find((x: any) => x.id === form.productId);
     return p ? { name: p.name, price: Number(p.basePrice ?? 0), currency: p.currency || '' } : null;
   }, [products, form.productId]);
+
+  /** The structure whose story the skin previews and the slots belong to. */
+  const chosenStructure = React.useMemo(
+    () => LANDING_STRUCTURES.find((x) => x.id === form.structure) ?? null,
+    [form.structure]
+  );
+
+  /**
+   * THE STRUCTURE, DRAWN — ONCE, AND WORN TEN WAYS.
+   *
+   * The ten skin previews below are the SAME sections with ten different
+   * themes, because that is exactly what a skin is: `بنية × مظهر`. Building
+   * the sections once rather than per card is not only cheaper — it is the
+   * claim being made. If each card built its own, a skin could quietly
+   * change the story and the grid would not show it.
+   *
+   * It is rebuilt when the copy changes, so the words a seller types appear
+   * in every preview as they type them.
+   */
+  const previewSections = React.useMemo(
+    () => (chosenStructure ? structureToSections(chosenStructure, copy, form.dialect, newSection) : []),
+    [chosenStructure, copy, form.dialect]
+  );
+
+  /** What the server will store for each skin — the bare theme, overlaid. */
+  const skinThemes = React.useMemo(
+    () =>
+      Object.fromEntries(
+        STORE_TEMPLATES.map((t) => [t.id, { ...BARE_THEME, ...skinToLandingTheme(t) } as LandingTheme])
+      ),
+    []
+  );
 
   /**
    * The link this row hands over.
@@ -118,6 +201,16 @@ export function LandingPagesScreen() {
   };
 
   const togglePublish = async (lp: any) => {
+    /**
+     * THE SAME QUESTION AS THE EDITOR'S, FROM THE SAME SENTENCE.
+     *
+     * This row's toggle was the quieter of the two and the likelier to be
+     * pressed by accident — it sits between «أظهِرها في المتجر» and «نسخ
+     * الرابط» on a list of pages, where the hand is scanning rather than
+     * deciding. `unsaved` is false here: this screen holds no edits.
+     */
+    if (!(await confirm(publishQuestion(!lp.isPublished, publicUrl(lp))))) return;
+
     setBusyId(lp.id);
     try {
       await crmApi(`/api/landing-pages/${lp.id}`, { method: 'PATCH', body: JSON.stringify({ isPublished: !lp.isPublished }) });
@@ -156,9 +249,27 @@ export function LandingPagesScreen() {
     setFormError(null);
     setSaving(true);
     try {
+      /**
+       * ONE OF THE TWO STARTING POINTS IS SENT, NEVER BOTH.
+       *
+       * The route refuses slot copy that arrives without a structure, for
+       * the right reason: the fifteen shapes have no slots, so there would
+       * be nowhere for those words to land and the seller would open an
+       * empty page believing they had written it. Sending both halves would
+       * walk into that refusal.
+       */
+      const start =
+        source === 'structure'
+          ? { structure: form.structure, skin: form.skin || undefined, copy, dialect: form.dialect }
+          : { template: form.template };
       const data = await crmApi('/api/landing-pages', {
         method: 'POST',
-        body: JSON.stringify({ name: form.name, slug: form.slug.toLowerCase().trim(), productId: form.productId || null, template: form.template }),
+        body: JSON.stringify({
+          name: form.name,
+          slug: form.slug.toLowerCase().trim(),
+          productId: form.productId || null,
+          ...start,
+        }),
       });
       setCreateOpen(false);
       window.location.href = `/store/landing-pages/${data.landingPage.id}`;
@@ -185,7 +296,7 @@ export function LandingPagesScreen() {
           title={routeLabel('/store/landing-pages')}
           description="صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا"
           actions={
-            <Button onClick={() => { setForm({ name: '', slug: '', productId: '', template: 'classic' }); setFormError(null); setCreateOpen(true); }}>
+            <Button onClick={() => { setForm(BLANK_FORM); setCopy({}); setFormError(null); setCreateOpen(true); }}>
               <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
             </Button>
           }
@@ -343,28 +454,181 @@ export function LandingPagesScreen() {
           </div>
 
           {/*
-            The shape of the page, chosen SECOND.
-            
+            THE SHAPE OF THE PAGE, CHOSEN SECOND.
+
             It lived in the editor, a thousand pixels down the panel, past
             every decision the template was about to make for you. Here it
             costs nothing: there is no page yet, so nothing to warn about
             losing. Pick the shape, then name it.
+
+            AND THERE ARE TWO KINDS OF STARTING POINT, SO BOTH ARE NAMED.
+            A ready-made shape is a story and a look welded together; a
+            persuasion structure is the story alone, worn by any of the ten
+            skins. Both tabs are on the screen rather than behind a menu,
+            because a seller who cannot see that the ten structures exist
+            will go on using the fifteen forever.
           */}
           <div>
-            <label className="text-xs font-semibold text-[var(--sys-foreground)]">شكل الصفحة</label>
-            <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-              كل قالب معروض كما سيظهر{chosenProduct ? ` وهو يبيع «${chosenProduct.name}»` : ''} — ويمكنك
-              تغيير كل شيء بعدها.
-            </p>
-            <div className="max-h-[22rem] overflow-y-auto pe-1">
-              <TemplateGallery
-                value={form.template}
-                onChange={(key) => setForm({ ...form, template: key })}
-                product={chosenProduct}
-                columns="sm:grid-cols-2"
-              />
+            <span className="text-xs font-semibold text-[var(--sys-foreground)]">من أين تبدأ الصفحة</span>
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              {([
+                ['structure', 'بنية إقناع × مظهر', 'القصّة والمظهر منفصلان — أيّ بنية من العشر بأيّ مظهر من العشرة، والنصّ تكتبه هنا'],
+                ['template', 'شكل جاهز', 'خمسة عشر شكلاً، كلٌّ بألوانه ونصّه الجاهز — تعدّل كلّ شيء بعد الإنشاء'],
+              ] as const).map(([key, label, hint]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSource(key)}
+                  aria-pressed={source === key}
+                  className={`rounded-lg border p-2.5 text-start ${
+                    source === key
+                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary)]/5'
+                      : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]'
+                  }`}
+                >
+                  <span className="block text-xs font-bold text-[var(--sys-heading)]">{label}</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{hint}</span>
+                </button>
+              ))}
             </div>
           </div>
+
+          {source === 'template' ? (
+            <div>
+              <label className="text-xs font-semibold text-[var(--sys-foreground)]">شكل الصفحة</label>
+              <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
+                كل قالب معروض كما سيظهر{chosenProduct ? ` وهو يبيع «${chosenProduct.name}»` : ''} — ويمكنك
+                تغيير كل شيء بعدها.
+              </p>
+              <div className="max-h-[22rem] overflow-y-auto pe-1">
+                <TemplateGallery
+                  value={form.template}
+                  onChange={(key) => setForm({ ...form, template: key })}
+                  product={chosenProduct}
+                  columns="sm:grid-cols-2"
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-[var(--sys-foreground)]">1 · البنية — ترتيب القصّة</label>
+                <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
+                  لا لونَ في هذه البطاقات: البنية ترتيبٌ وقصّة وخاناتُ نصّ، والمظهر يُختار بعدها.
+                </p>
+                <div className="max-h-[22rem] overflow-y-auto pe-1">
+                  <StructureGallery
+                    structures={LANDING_STRUCTURES}
+                    value={form.structure || null}
+                    onChange={(id) => setForm({ ...form, structure: id })}
+                    productName={chosenProduct?.name}
+                  />
+                </div>
+              </div>
+
+              {/*
+                WHAT THE SKIN STEP DRAWS IS THE CHOSEN STRUCTURE.
+
+                Ten cards, one sections tree, ten themes — so the grid shows
+                the only thing a skin changes. Before a structure is chosen
+                there is nothing to dress, and ten previews of nothing would
+                be a control that cannot keep its promise, so the step says
+                what it is waiting for instead.
+              */}
+              <div>
+                <label className="text-xs font-semibold text-[var(--sys-foreground)]">2 · المظهر — الألوان والخطّ</label>
+                {!chosenStructure ? (
+                  <p className="mt-1 rounded-lg border border-[var(--sys-border)] p-3 text-xs text-[var(--sys-muted-foreground)]">
+                    يظهر بعد اختيار البنية — لأنّه معاينةُ بنيتك أنت بكلّ مظهر، لا عشرَ صورٍ عامّة.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
+                      «{chosenStructure.name}» بعشرة مظاهر — نفس الترتيب ونفس النصّ، واللونُ والخطُّ فقط يتغيّران.
+                    </p>
+                    <div className="max-h-[24rem] overflow-y-auto pe-1">
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        {STORE_TEMPLATES.map((t) => {
+                          const picked = form.skin === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setForm({ ...form, skin: picked ? '' : t.id })}
+                              aria-pressed={picked}
+                              className={`overflow-hidden rounded-lg border text-start ${
+                                picked
+                                  ? 'border-[var(--sys-primary)] ring-1 ring-[var(--sys-primary)]'
+                                  : 'border-[var(--sys-border)] hover:border-[var(--sys-primary)]/40'
+                              }`}
+                            >
+                              <TemplatePreview
+                                sections={previewSections}
+                                theme={skinThemes[t.id]}
+                                product={chosenProduct}
+                                height={150}
+                                zoom={0.3}
+                              />
+                              <span className="block p-2">
+                                <span className="block text-xs font-bold text-[var(--sys-foreground)]">{t.name}</span>
+                                <span className="mt-0.5 block text-xs text-[var(--sys-muted)]">{t.suggestedFor}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--sys-muted)]">
+                      بلا مظهر؟ تُنشأ بألوان المكتبة الافتراضية، وتُلوّنها متى شئت.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/*
+                THE COPY, THIRD — AND IT REACHES THE PAGE. The route built
+                the sections from an EMPTY copy map, so these fields were a
+                form whose answers were discarded; now every sentence typed
+                here lands in the block its slot names.
+              */}
+              {chosenStructure && (
+                <div>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">3 · النصّ — خاناتُ هذه البنية</label>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-[var(--sys-muted)]">اللهجة</span>
+                    {DIALECTS.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setForm({ ...form, dialect: d })}
+                        aria-pressed={form.dialect === d}
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${
+                          form.dialect === d
+                            ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
+                            : 'border border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
+                        }`}
+                      >
+                        {DIALECT_LABEL[d]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
+                    اتركها فارغةً فتبدأ الصفحةُ بهيكل القصّة تكتبه في المحرّر — وما تكتبه هنا يظهر في المعاينة فوراً.
+                  </p>
+                  <div className="mt-2 max-h-[26rem] overflow-y-auto pe-1">
+                    <SlotFields
+                      structure={chosenStructure}
+                      copy={copy}
+                      dialect={form.dialect}
+                      onChange={(slotKey, dialect, text) =>
+                        setCopy((prev) => ({ ...prev, [slotKey]: { ...prev[slotKey], [dialect]: text } }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           <div>
             <label className="text-xs font-semibold text-[var(--sys-foreground)]">اسم الصفحة *</label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: صفحة Tremella" />
@@ -376,7 +640,18 @@ export function LandingPagesScreen() {
           {formError && <div className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] rounded-lg px-3 py-2">{formError}</div>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
-            <Button onClick={createLandingPage} disabled={saving || form.name.trim().length < 2 || form.slug.trim().length < 3}>
+            {/* A structure is not optional on its own tab: there is no
+                default story, and a silent fallback would hand somebody a
+                first screen that contradicts the advert pointing at it. */}
+            <Button
+              onClick={createLandingPage}
+              disabled={
+                saving ||
+                form.name.trim().length < 2 ||
+                form.slug.trim().length < 3 ||
+                (source === 'structure' && !form.structure)
+              }
+            >
               {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إنشاء
             </Button>
           </div>

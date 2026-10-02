@@ -6,7 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { AiNotConfigured, aiChat } from '@/lib/ai-provider';
-import { customerRisk } from '@/lib/customer-risk';
+import { customerHistory, customerRisk } from '@/lib/customer-risk';
 import { assistantByKey } from '@/lib/ai-assistants';
 import { deriveCoreState, STATE_LABEL_AR, type StateSource } from '@/lib/order-state';
 
@@ -53,16 +53,19 @@ export async function POST(req: Request) {
 
     const risk = order.customer ? await customerRisk(db, companyId, order.customer.id) : null;
 
-    // The previous orders of THIS customer, as facts rather than prose: what
-    // happened to each, so a risk the agent should know is visible and a
-    // clean history is visibly clean instead of silently absent.
+    /*
+     * The previous orders of THIS PERSON, as facts rather than prose: what
+     * happened to each, so a risk the agent should know is visible and a clean
+     * history is visibly clean instead of silently absent.
+     *
+     * Asked of `customerHistory` rather than built here, because the question
+     * «which orders are the same person's» is answered by the PHONE — and this
+     * route must not select a phone. It sends text to a model, and a test says
+     * so. So the one module that already has to read the number answers it,
+     * and the number never enters this process.
+     */
     const history = order.customer
-      ? await db.order.findMany({
-          where: { companyId, customerId: order.customer.id, id: { not: order.id } },
-          select: { orderNumber: true, confirmationStatus: true, shippingStatus: true, createdAt: true, totalAmount: true },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        })
+      ? await customerHistory(db, companyId, order.customer.id, { exceptOrderId: order.id })
       : [];
 
     const context = {

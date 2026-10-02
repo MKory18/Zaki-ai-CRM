@@ -14,6 +14,10 @@ const { db, ua, recordLandingView, resolveCampaign, verifyPreviewToken } = vi.ho
     offer: { findMany: vi.fn(async () => []) },
     landingPageRecommendation: { findMany: vi.fn(async () => []) },
     region: { findMany: vi.fn(async () => []) },
+    // A preview reads the page's unpublished draft when it has one
+    // (landing-draft.ts); these fixtures have none, so the statement answers
+    // with no rows and the preview shows the live columns.
+    $queryRawUnsafe: vi.fn(async () => []),
   },
   ua: { value: 'Mozilla/5.0 (iPhone) Mobile Safari' as string | null },
   recordLandingView: vi.fn(),

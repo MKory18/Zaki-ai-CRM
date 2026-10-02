@@ -5,7 +5,7 @@ import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProv
  *
  * Only the tracking engine, which starts empty and receives the pixels of
  * the company that owns the page being shown. No stylesheet, font, title or
- * icon of the dashboard's: a page is dressed by its own theme (--lp-*), and
+ * icon of the dashboard's: a page is dressed by its own theme (--store-*), and
  * named and iconed by its own store.
  */
 export function PublicLayout({ children }: { children: React.ReactNode }) {

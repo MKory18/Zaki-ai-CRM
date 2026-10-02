@@ -82,6 +82,7 @@ export async function POST(req: Request) {
           freeQuantity: input.freeQuantity,
           sellingPrice: input.sellingPrice,
           compareAtPrice: input.compareAtPrice ?? null,
+          endsAt: input.endsAt ?? null,
           discount: input.discount,
           deliveryIncluded: input.deliveryIncluded,
           isDefault: input.isDefault,

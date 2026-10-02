@@ -5,6 +5,8 @@ import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
+import { parseCategoryAttributes, parseProductAttributes } from '@/lib/product-attributes';
+import { parseHistory, rememberSlug, slugify, uniqueSlug } from '@/lib/slug';
 import { can, authorize } from '@/lib/authorization';
 import { requireContext } from '@/lib/geo-context';
 
@@ -14,7 +16,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { user, companyId, storeId } = await requireContext();
     const product = await db.product.findUnique({
       where: { id },
-      include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
+      include: {
+        images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },
+        // The category's QUESTIONS travel with the product's answers.
+        // Apart, the card that edits them would have to ask twice and
+        // could draw an answer against a schema that had since changed.
+        category: { select: { id: true, name: true, attributeSchema: true } },
+      },
     });
     // Scope-evaluated view authorization — out-of-scope products report 404
     const viewAuth = product ? authorize(user, 'products.view', product) : { allowed: false, reason: 'NO_PERMISSION' as const };
@@ -51,9 +59,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { user, companyId, storeId } = await requireContext();
 
     const body = await req.json();
-    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType, categoryId } = body;
+    const { name, nameEn, sku, description, descriptionEn, basePrice, status, sourceType, categoryId, attributes } = body;
 
-    const existing = await db.product.findFirst({ where: { id, ...inStore(companyId, storeId) } });
+    const existing = await db.product.findFirst({
+      where: { id, ...inStore(companyId, storeId) },
+      // The category comes with it because the answers below are read
+      // against ITS questions; a second query for one column would be a
+      // round trip on every product edit.
+      include: { category: { select: { attributeSchema: true } } },
+    });
     if (!existing || existing.companyId !== companyId) {
       return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
     }
@@ -103,6 +117,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       resolvedCategoryId = cat.id;
     }
 
+    /**
+      * A READABLE ADDRESS, AND THE ONE IT REPLACES.
+      *
+      * Recomputed only when the NAME changes: an address that shifted
+      * every time somebody edited a price would break links for no
+      * reason anybody could explain.
+      *
+      * Unique within the store, because two shops may both sell
+      * «كريم مرطّب» — and the old address is kept so the link that has
+      * gone round a family group still arrives.
+      */
+    let addressing: { slug?: string | null; previousSlugs?: string | null } = {};
+    if (name && name.trim() !== existing.name) {
+      const wanted = slugify(name);
+      if (wanted) {
+        const siblings = await db.product.findMany({
+          where: { storeId: existing.storeId, id: { not: existing.id }, slug: { not: null } },
+          select: { slug: true },
+        });
+        const next = uniqueSlug(wanted, siblings.flatMap((s) => (s.slug ? [s.slug] : [])));
+        if (next && next !== existing.slug) {
+          addressing = {
+            slug: next,
+            previousSlugs: JSON.stringify(
+              rememberSlug(parseHistory(existing.previousSlugs), existing.slug ?? '', next)
+            ),
+          };
+        }
+      }
+    }
+
     const updated = await db.product.update({
       where: { id },
       data: {
@@ -120,8 +165,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
          * scoped to that shelf.
          */
         ...(categoryId !== undefined ? { categoryId: resolvedCategoryId } : {}),
+        /**
+         * WHAT KIND OF THING IT IS — this product's answers to its
+         * category's questions.
+         *
+         * Read against that category's schema before being stored, so an
+         * answer to a question nobody asks, or an option that was removed
+         * from the list, never lands in the column. The parser is the same
+         * one the storefront reads with, so what is saved here and what a
+         * filter sees cannot be two different things.
+         *
+         * Absent leaves it alone. A product's answers are edited on their
+         * own card, and a PATCH that renamed the product must not wipe
+         * them.
+         */
+        ...(attributes !== undefined
+          ? {
+              attributes: JSON.stringify(
+                parseProductAttributes(
+                  JSON.stringify(attributes ?? {}),
+                  parseCategoryAttributes(existing.category?.attributeSchema ?? null)
+                )
+              ),
+            }
+          : {}),
         ...(basePrice !== undefined ? { basePrice: parseFloat(basePrice) || 0 } : {}),
         ...(status ? { status } : {}),
+        ...addressing,
       },
     });
 

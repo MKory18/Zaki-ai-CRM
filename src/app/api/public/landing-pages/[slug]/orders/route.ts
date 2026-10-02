@@ -119,7 +119,7 @@ export async function POST(req: Request, ctx: Ctx) {
       companyId: lp.company.id, // server-derived — NEVER from the browser
       store: lp.store,
       campaignId,
-      product: lp.product,
+      products: [lp.product],
       landingPage: { id: lp.id, name: lp.name, slug: lp.slug },
       source: LANDING_PAGE_SOURCE,
       dedupeScope: `lp:${lp.id}`,

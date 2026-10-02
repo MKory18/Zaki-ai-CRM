@@ -19,6 +19,23 @@ export const arabic = IBM_Plex_Sans_Arabic({
   subsets: ['arabic', 'latin'],
   weight: ['400', '500', '600', '700'],
   display: 'swap',
+  /*
+   * NO PRELOAD — measured on a storefront page in a production build.
+   *
+   * These faces are the DASHBOARD's and the root layout does not carry
+   * them, yet nine `<link rel="preload" as="font">` for them appeared in
+   * the HTML of `/s/<shop>/shop`: 218 KB fetched at the highest priority
+   * a browser has, on a page that applies none of it — the stylesheet
+   * declaring them was preloaded too and never linked. On the connection
+   * this shop is held to, that is the whole budget spent before the first
+   * product is painted.
+   *
+   * What `preload: false` costs is on the dashboard, and it is small: a
+   * logged-in seller loads these faces on their first screen instead of
+   * at the same moment as the document, and has them cached from then on.
+   * What it buys is the shopper's first screen.
+   */
+  preload: false,
 });
 
 /**
@@ -39,6 +56,8 @@ export const publicSans = Public_Sans({
    */
   weight: ['400', '600'],
   display: 'swap',
+  /* Same reason as above — see the note on `arabic`. */
+  preload: false,
 });
 
 /** The class that puts the system's font variables in scope. */

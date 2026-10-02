@@ -39,6 +39,13 @@ interface ChangeRequest {
   reason: string;
   status: string;
   blocking: boolean;
+  /**
+   * The parcel moved while this request was waiting to be decided. A feed
+   * never blocks, so a courier can carry the order past the request — and
+   * deciding one without knowing that is deciding about an order that no
+   * longer exists in the shape it was raised against.
+   */
+  changedDuringReview: boolean;
   createdAt: string;
   slaDueAt: string | null;
   overdue: boolean;
@@ -388,6 +395,13 @@ export function ChangeRequestsScreen() {
               {tab === 'PENDING' && r.overdue && (
                 <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                   تجاوز مهلة المراجعة
+                </span>
+              )}
+              {/* Beside the state chip on purpose: the sentence is about that
+                  chip having changed, not about the request. */}
+              {tab === 'PENDING' && r.changedDuringReview && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
+                  تغيّرت حالة الطلب أثناء المراجعة
                 </span>
               )}
               <span className="mr-auto text-xs text-[var(--sys-muted-foreground)]">

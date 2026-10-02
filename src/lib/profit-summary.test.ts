@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { PROFIT_FIELDS, ZERO_SUMMARY } from './profit-summary';
+import { stripComments } from './guard-source';
 
 /**
  * THE SCREEN THAT DIED RATHER THAN SHOWING A ZERO.
@@ -88,7 +89,12 @@ describe('a value inside a template string', () => {
   it('is never written the JSX way, which prints the code instead', () => {
     const offenders: string[] = [];
     for (const { rel, src } of screens(join(process.cwd(), 'src'))) {
-      for (const [i, line] of src.split('\n').entries()) {
+      // COMMENTS FIRST. A doc comment that writes the correct spelling of
+      // this very mistake is prose, not markup — and this guard reported
+      // one as an offence, which is the fifth time in this work that a rule
+      // has failed on the sentence explaining it. `stripComments` keeps the
+      // line count, so the numbers below still point at the right line.
+      for (const [i, line] of stripComments(src).split('\n').entries()) {
         if (!line.includes('`')) continue;
         // Split the LINE on backticks: the odd pieces are inside a
         // template literal, the even ones are ordinary JSX. Pairing

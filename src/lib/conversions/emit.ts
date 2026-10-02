@@ -118,6 +118,20 @@ export function conversionValue(
       ? Number(order.collectedAmount ?? order.totalAmount ?? 0)
       : Number(order.totalAmount ?? 0);
   if (!Number.isFinite(raw) || raw < 0) return 0;
+  /*
+   * TWO DECIMALS HERE IS DELIBERATE, and it is NOT the `roundMinor` defect
+   * found in seven other places on 2026-10-02.
+   *
+   * Those wrote money into THIS system's own records — an order's cost, a
+   * settlement, a partial delivery — where a dropped digit is a real
+   * discrepancy somebody has to reconcile, and JOD has three of them.
+   *
+   * This number leaves for an ad platform. It is a signal for optimisation,
+   * not a figure anybody settles on, Meta takes a plain float, and the
+   * rounding is to nearest so it carries no bias. Pinned by a test at
+   * `conversions.test.ts` («10.005 → 10.01»), and written down here because
+   * the next sweep for `* 100 / 100` will find this line and should stop.
+   */
   return Math.round(raw * 100) / 100;
 }
 

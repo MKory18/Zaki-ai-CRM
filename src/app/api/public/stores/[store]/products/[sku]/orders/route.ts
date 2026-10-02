@@ -117,7 +117,7 @@ export async function POST(req: Request, ctx: Ctx) {
       deviceClass: deviceClassOf(req.headers.get('user-agent')),
       companyId: store.companyId,
       store: { id: store.id, countryId: store.countryId, country },
-      product,
+      products: [product],
       landingPage: null,
       campaignId,
       source: 'Store',

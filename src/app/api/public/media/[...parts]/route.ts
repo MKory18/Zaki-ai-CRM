@@ -3,6 +3,7 @@ import { isSafeStorageKey, readStoredFile } from '@/lib/storage';
 import { verifyPreviewToken } from '@/lib/landing-pages';
 import { PUBLIC_MEDIA_FILE } from '@/lib/public-media';
 import { publicMediaCompany } from '@/lib/public-media-server';
+import { IMAGE_WIDTHS } from '@/lib/responsive-image';
 
 interface Ctx {
   params: Promise<{ parts: string[] }>;
@@ -47,6 +48,54 @@ export async function GET(req: Request, ctx: Ctx) {
 
   const stored = await readStoredFile(storageKey);
   if (!stored) return NOT_FOUND();
+
+  /**
+   * A NARROWER RENDER, WHEN ONE WAS ASKED FOR.
+   *
+   * Every stored photograph is a WebP capped at 1200px, and a shelf on a
+   * 360px phone draws twelve of them at about 165px each. Without this the
+   * browser downloads the full picture twelve times and throws away nine
+   * tenths of every one.
+   *
+   * THE WIDTH MUST BE ON THE LIST. `?w=` on a public route that runs a
+   * resizer is otherwise a way to ask one server for a thousand renders of
+   * one file. An unknown width is not refused — it falls through to the
+   * original, so a stale link still shows the picture.
+   *
+   * A FAILED RESIZE SERVES THE ORIGINAL. sharp is an optional native
+   * dependency; if it cannot load, a shop shows heavier images, not none.
+   * The same decision the upload pipeline already makes.
+   */
+  const asked = Number(new URL(req.url).searchParams.get('w'));
+  const width = (IMAGE_WIDTHS as readonly number[]).includes(asked) ? asked : null;
+  if (width) {
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of stored.stream) chunks.push(chunk as Buffer);
+      const sharpModule = await import('sharp').then((m) => m.default ?? m);
+      const out = await sharpModule(Buffer.concat(chunks))
+        .resize(width, null, { withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+      return new NextResponse(new Uint8Array(out), {
+        headers: {
+          'Content-Type': 'image/webp',
+          'Content-Length': String(out.length),
+          // The same day as the original, and for the same reason: a
+          // public image may stop being public.
+          'Cache-Control': preview ? 'private, no-store' : 'public, max-age=86400',
+          Vary: 'Accept',
+          'X-Content-Type-Options': 'nosniff',
+          'Content-Security-Policy': "default-src 'none'; sandbox",
+        },
+      });
+    } catch (e) {
+      console.warn('resize skipped, serving the original:', e);
+      const again = await readStoredFile(storageKey);
+      if (!again) return NOT_FOUND();
+      stored.stream = again.stream;
+    }
+  }
 
   const body = new ReadableStream({
     start(controller) {

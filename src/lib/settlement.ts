@@ -284,9 +284,35 @@ export async function runMatching(
     // back (or writes it in the notes) but whose barcode we never recorded.
     // Never the phone: two customers share one often enough to settle the
     // wrong order, and a wrong match is money moved against the wrong order.
+    /*
+     * SCOPED TO THE COURIER WHOSE STATEMENT THIS IS.
+     *
+     * A barcode is the COURIER's identifier, not ours — and there is no
+     * unique index on `trackingNumber`, nor could there be one that means
+     * anything across couriers: two companies issuing numeric sequences
+     * collide as a matter of course. Unscoped, a statement from one courier
+     * could attach a line to an order shipped with another whose barcode
+     * happened to equal it, and the money was then compared and resolved
+     * against the wrong order — silently, because `findFirst` has no
+     * `orderBy` and simply returns one of them.
+     *
+     * The sweep below already asks the question this way
+     * (`deliveryProviderId: statement.deliveryProviderId`); this half did
+     * not, in the same function.
+     *
+     * The merchant-reference fallback stays company-wide ON PURPOSE: that
+     * reference is OURS and `@@unique([companyId, merchantRef])` holds it, so
+     * it names one order whoever is carrying the parcel. Scoping it would
+     * break the match for an order that changed couriers after we sent it.
+     */
     const byBarcode = line.barcode
       ? await tx.order.findFirst({
-          where: { companyId, storeId, trackingNumber: line.barcode },
+          where: {
+            companyId,
+            storeId,
+            deliveryProviderId: statement.deliveryProviderId,
+            trackingNumber: line.barcode,
+          },
           select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
         })
       : null;

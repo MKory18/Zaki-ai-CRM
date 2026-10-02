@@ -268,7 +268,7 @@ describe('a new order', () => {
       {
         companyId: 'c1',
         store: { id: 'store-b', countryId: 'jo', country: { code: 'JO', currencyCode: 'JOD', orderPrefix: 'ORD', minorUnit: 3 } },
-        product: { id: 'p1', name: 'منتج', image: null, basePrice: 10 },
+        products: [{ id: 'p1', name: 'منتج', image: null, basePrice: 10 }],
         landingPage: null,
         source: 'STOREFRONT',
         campaignId: null,
@@ -310,7 +310,7 @@ describe('a new order', () => {
       {
         companyId: 'c1',
         store: { id: 'store-b', countryId: 'jo', country: { code: 'JO', currencyCode: 'JOD', orderPrefix: 'ORD', minorUnit: 3 } },
-        product: { id: 'p1', name: 'منتج', image: null, basePrice: 10 },
+        products: [{ id: 'p1', name: 'منتج', image: null, basePrice: 10 }],
         landingPage: null,
         source: 'Store',
         campaignId: null,

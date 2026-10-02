@@ -28,7 +28,6 @@ import { Money } from '@/components/ui/Money';
  */
 
 
-
 /** A band as it is being typed: empty strings until it is a number. */
 interface TierDraft {
   from: string;
@@ -60,7 +59,7 @@ interface Rule {
   isActive: boolean;
   /** In force right now — not merely active with a future or past date. */
   inForce: boolean;
-  minSampleOrders: number;
+
 }
 
 interface Totals {
@@ -439,6 +438,16 @@ function NewRuleDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     else if (period === 'PER_ORDER') setPeriod('DAILY');
     // A rate has no per-order meaning either — it is a span's figure.
     if (next === 'DELIVERY_RATE' && type === 'PERCENT') setType('PER_ORDER');
+    /*
+     * THE CONTRACT'S FLOOR, SHOWN RATHER THAN APPLIED BEHIND THEIR BACK.
+     *
+     * «Delivery-rate tiers with a minimum sample of 30 orders.» The save door
+     * puts 30 on a rate rule left blank, because no floor at all means «100%
+     * out of two» clears every band. Filling the box here means the person
+     * SEES the number they are agreeing to, and can change it, instead of
+     * discovering it on the next reload.
+     */
+    if (next === 'DELIVERY_RATE' && minOrders === '') setMinOrders('30');
   }
 
   const parsedTiers = () =>

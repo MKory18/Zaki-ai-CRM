@@ -2,6 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
+import { whatsappHref } from '@/lib/store-contact';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
 /**
@@ -16,7 +17,7 @@ import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
  *  - the uploaded landing-page HTML (opaque-origin sandbox) cannot access
  *    or manipulate this form in any way.
  *
- * Theming: every brand colour here reads `var(--lp-*, <the old value>)`. On
+ * Theming: every brand colour here reads `var(--store-*, <the old value>)`. On
  * a block-built page those variables carry the seller's derived palette and
  * the form wears the page's colours; anywhere else the fallback is exactly
  * what was hard-coded before, so nothing already published changes. The form
@@ -64,7 +65,29 @@ interface OrderFormProps {
    * is selected.
    */
   showOfferPicker?: boolean;
-  
+  /**
+   * WHICH WAY THIS FORM READS.
+   *
+   * It defaults to `rtl` because a landing page is written in Arabic and
+   * every one that exists today relies on that. A STOREFRONT does not: its
+   * direction is `directionOf(store.language)`, the seller's own choice,
+   * and a shop selling in English had the whole page mirror around a form
+   * that stayed put — the one block on the page still reading the other
+   * way. The shop passes its own direction; nobody else has to know.
+   */
+  dir?: 'rtl' | 'ltr';
+  /**
+   * THE SHOP'S OWN NUMBER, FOR THE CONFIRMATION BUTTON.
+   *
+   * «زر تأكيد اختياري عبر واتساب برسالة معبّاة». Optional in both senses:
+   * a shop that has entered no number gets no button — one that opens
+   * WhatsApp with nothing behind it is worse than none — and a customer
+   * who ignores it has still ordered. The order is placed either way; this
+   * is a customer reaching a person, which is what shortens a confirmation
+   * call to nothing.
+   */
+  whatsapp?: string | null;
+
 
 
 /**
@@ -118,7 +141,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, endpoint, thankYou }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, dir = 'rtl', whatsapp, endpoint, thankYou }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -128,6 +151,15 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     offers.find((o) => o.isDefault)?.id || offers[0]?.id || ''
   );
   const [addons, setAddons] = useState<Record<string, 'added' | 'adding'>>({});
+  /**
+   * «بيظهر مرة وحدة، وبيختفي إذا رفضه الزائر».
+   *
+   * A customer who said no once and is shown the same offer again has been
+   * told their answer did not count. It is component state and that is the
+   * right scope: this screen exists only until they leave it, and there is
+   * no second visit to remember.
+   */
+  const [offerRefused, setOfferRefused] = useState(false);
   // Global tracking: Purchase — ONLY after the server confirms a real order,
   // with the SERVER-AUTHORITATIVE total/currency from the response. Deduped
   // per orderNumber (local ref + central engine) — re-renders never re-fire.
@@ -314,7 +346,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   }
 
   const inputCls =
-    'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[var(--lp-accent-border,#e8b9d0)] focus:border-[var(--lp-accent,#b8256e)] transition-colors';
+    'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[var(--store-accent-border,#e8b9d0)] focus:border-[var(--store-accent,#b8256e)] transition-colors';
   const labelCls = 'block text-sm font-semibold text-[#364152] mb-1.5';
   const fieldErr = (key: string) => fieldErrors[key];
   const FieldError = ({ k }: { k: string }) =>
@@ -328,8 +360,8 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   return (
     <section
       id="zaki-order-form"
-      dir="rtl"
-      className="w-full bg-[var(--lp-page,#f7f7f8)] px-4 py-10 sm:px-6"
+      dir={dir}
+      className="w-full bg-[var(--store-page,#f7f7f8)] px-4 py-10 sm:px-6"
       aria-label="نموذج الطلب"
     >
       <div className="mx-auto w-full max-w-md">
@@ -345,14 +377,26 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               the one part of the screen still describing the previous step.
               It becomes the receipt: what was ordered, and what it costs
               now, add-ons included. */}
-          <div className="bg-[var(--lp-accent,#121926)] px-5 py-5 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--lp-accent-text,#697586)] opacity-75">
+          <div className="bg-[var(--store-accent,#121926)] px-5 py-5 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--store-accent-text,#697586)] opacity-75">
               {state === 'success' ? 'طلبك' : 'اطلب الآن'}
             </p>
-            <h2 className="mt-1 text-xl font-bold text-[var(--lp-accent-text,#ffffff)]">{productName}</h2>
-            <p className="mt-1 text-2xl font-extrabold text-[var(--lp-accent-text,#b8256e)]" dir="ltr">
+            <h2 className="mt-1 text-xl font-bold text-[var(--store-accent-text,#ffffff)]">{productName}</h2>
+            <p className="mt-1 text-2xl font-extrabold text-[var(--store-accent-text,#b8256e)]" dir="ltr">
               {fmt(state === 'success' && totals ? totals.total : offer ? offer.price : basePrice)} {currency}
             </p>
+            {/*
+              «المبلغ المتوقع عند الاستلام». The figure was already here and
+              said nothing about itself — a customer looking at a number
+              after ordering wants to know whether it is what they pay, and
+              when. A receipt that states the amount and not the moment is
+              half a receipt.
+            */}
+            {state === 'success' && (
+              <p className="mt-1 text-xs font-semibold text-[var(--store-accent-text,#ffffff)] opacity-80">
+                تدفعه عند الاستلام
+              </p>
+            )}
           </div>
 
           {state === 'success' ? (
@@ -365,7 +409,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {totals && (
                 // The header already carries the number. This says why it
                 // moved, which is the part the customer needs to trust.
-                <p className="mt-1 text-xs font-semibold text-[var(--lp-accent,#b8256e)]">
+                <p className="mt-1 text-xs font-semibold text-[var(--store-accent,#b8256e)]">
                   تم تحديث الإجمالي بعد الإضافة
                 </p>
               )}
@@ -373,8 +417,29 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 {thankYou?.message?.trim() || 'سنتواصل معك قريبًا لتأكيد الطلب.'}
               </p>
 
+              {/*
+                A CONFIRMATION THE CUSTOMER CHOOSES, NOT ONE THEY WAIT FOR.
+
+                The order is already placed; nothing here is required. What
+                it buys is a confirmation call that is already half done —
+                the message carries the order number, so the person on the
+                other end is not asking «شو رقم طلبك؟» first.
+              */}
+              {whatsappHref(whatsapp) && result.orderNumber && (
+                <a
+                  href={`${whatsappHref(whatsapp)}?text=${encodeURIComponent(
+                    `مرحباً، بدّي أأكّد طلبي رقم ${result.orderNumber}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-[#e3e8ef] px-5 py-3 text-sm font-bold text-[#121926] hover:border-[var(--store-accent,#b8256e)]"
+                >
+                  أكّد طلبك على واتساب
+                </a>
+              )}
+
               {/* Post-order upsells */}
-              {recommendations.length > 0 && (
+              {!offerRefused && recommendations.length > 0 && (
                 <div className="mt-6 rounded-xl border border-[#e3e8ef] bg-[#f8fafc] p-4 text-start">
                   <p className="mb-3 text-center text-sm font-bold text-[#121926]">
                     🔥 عرض خاص لك — أضفها إلى طلبك الآن
@@ -394,7 +459,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="line-clamp-2 text-sm font-semibold leading-snug text-[#121926]">{rec.name}</p>
-                            <p className="text-sm font-bold text-[var(--lp-accent,#b8256e)]" dir="ltr">
+                            <p className="text-sm font-bold text-[var(--store-accent,#b8256e)]" dir="ltr">
                               {fmt(rec.price)} {currency}
                             </p>
                           </div>
@@ -407,7 +472,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                               type="button"
                               onClick={() => addRecommendation(rec.id)}
                               disabled={st === 'adding'}
-                              className="shrink-0 rounded-lg bg-[var(--lp-accent,#b8256e)] px-3 py-2 text-xs font-bold text-white transition hover:bg-[var(--lp-accent-dark,#a01f5f)] disabled:opacity-60 active:scale-95"
+                              className="shrink-0 rounded-lg bg-[var(--store-accent,#b8256e)] px-3 py-2 text-xs font-bold text-white transition hover:bg-[var(--store-accent-dark,#a01f5f)] disabled:opacity-60 active:scale-95"
                             >
                               {st === 'adding' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'أضف إلى طلبي'}
                             </button>
@@ -419,6 +484,25 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   {errorMsg && (
                     <p className="mt-2 text-center text-xs text-rose-600">{errorMsg}</p>
                   )}
+                  {/*
+                    A WAY TO SAY NO, AND TO BE BELIEVED.
+
+                    «بيظهر مرة وحدة، وبيختفي إذا رفضه الزائر». An offer with
+                    no way out is not an offer, and a customer who has
+                    already ordered does not owe this screen another
+                    decision. It is placed AFTER the items, not beside them:
+                    the first thing to read is what is offered.
+
+                    It hides nothing they added — an add-on already put on
+                    the order stays on it.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => setOfferRefused(true)}
+                    className="mt-3 w-full text-center text-xs text-[#697586] underline"
+                  >
+                    لا شكراً، أكمل بطلبي
+                  </button>
                 </div>
               )}
             </div>
@@ -461,7 +545,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           type="button"
                           onClick={() => { setSelectedOffer(o.id); setFieldErrors((fe) => { const n = { ...fe }; delete n.offerId; return n; }); }}
                           className={`w-full rounded-xl border-2 p-3.5 text-start transition ${
-                            sel ? 'border-[var(--lp-accent,#b8256e)] bg-[#fdf2f7]' : 'border-[#e3e8ef] bg-white hover:border-[var(--lp-accent-border,#e8b9d0)]'
+                            sel ? 'border-[var(--store-accent,#b8256e)] bg-[#fdf2f7]' : 'border-[#e3e8ef] bg-white hover:border-[var(--store-accent-border,#e8b9d0)]'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
@@ -482,7 +566,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                               )}
                             </div>
                             <div className="shrink-0 text-end">
-                              <p className="text-lg font-extrabold text-[var(--lp-accent,#b8256e)]" dir="ltr">
+                              <p className="text-lg font-extrabold text-[var(--store-accent,#b8256e)]" dir="ltr">
                                 {fmt(o.price)} {currency}
                               </p>
                               {oOriginal > o.price && (
@@ -495,7 +579,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           <div className="mt-2 flex items-center justify-end">
                             <span
                               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition ${
-                                sel ? 'bg-[var(--lp-accent,#b8256e)] text-white' : 'bg-[#f8fafc] text-[#697586]'
+                                sel ? 'bg-[var(--store-accent,#b8256e)] text-white' : 'bg-[#f8fafc] text-[#697586]'
                               }`}
                             >
                               {sel ? '✓ العرض المختار' : 'اختر هذا العرض'}
@@ -516,7 +600,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* الاسم الكامل */}
               <div>
                 <label htmlFor="zf-full_name" className={labelCls}>
-                  الاسم الكامل <span className="text-[var(--lp-accent,#b8256e)]">*</span>
+                  الاسم الكامل <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-full_name"
@@ -536,7 +620,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* رقم الهاتف */}
               <div>
                 <label htmlFor="zf-phone" className={labelCls}>
-                  رقم الهاتف <span className="text-[var(--lp-accent,#b8256e)]">*</span>
+                  رقم الهاتف <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-phone"
@@ -558,7 +642,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* العنوان */}
               <div>
                 <label htmlFor="zf-address" className={labelCls}>
-                  العنوان <span className="text-[var(--lp-accent,#b8256e)]">*</span>
+                  العنوان <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>
                 <input
                   id="zf-address"
@@ -578,7 +662,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* المدينة / الولاية — searchable Syrian locations */}
               <div className="relative">
                 <label htmlFor="zf-city" className={labelCls}>
-                  المدينة / الولاية <span className="text-[var(--lp-accent,#b8256e)]">*</span>
+                  المدينة / الولاية <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>
                 <button
                   type="button"
@@ -596,14 +680,20 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 {cityOpen && (
                   <div className="absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-hidden rounded-xl border border-[#e3e8ef] bg-white shadow-lg">
                     <div className="relative border-b border-[#e3e8ef]">
-                      <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa4b2]" />
+                      {/* LOGICAL, NOT PHYSICAL. `right-3` put this icon at the
+                          start of a right-to-left page and on top of the typed
+                          text in a left-to-right one — and the shop's language
+                          is the seller's to choose. The sibling list below has
+                          always used `text-start`; this was the line it was
+                          never applied to. */}
+                      <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa4b2]" />
                       <input
                         type="text"
                         autoFocus
                         value={cityQuery}
                         onChange={(e) => setCityQuery(e.target.value)}
                         placeholder="ابحث عن المحافظة أو المدينة…"
-                        className="w-full border-0 px-4 py-3 pr-9 text-sm focus:outline-none"
+                        className="w-full border-0 px-4 py-3 ps-9 text-sm focus:outline-none"
                       />
                     </div>
                     <div className="max-h-56 overflow-y-auto">
@@ -612,7 +702,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           key={name}
                           type="button"
                           onClick={() => { setCityValue(name); setCityOpen(false); setCityQuery(''); setFieldErrors((fe) => { const n = { ...fe }; delete n.city; return n; }); }}
-                          className={`block w-full px-4 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === name ? 'bg-[#fdf2f7] font-semibold text-[var(--lp-accent,#b8256e)]' : 'text-[#364152]'}`}
+                          className={`block w-full px-4 py-2 text-start text-sm hover:bg-[#f8fafc] ${cityValue === name ? 'bg-[#fdf2f7] font-semibold text-[var(--store-accent,#b8256e)]' : 'text-[#364152]'}`}
                         >
                           {name}
                         </button>
@@ -668,7 +758,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               <button
                 type="submit"
                 disabled={state === 'loading' || (!hasOffers && false) || (hasOffers && !selectedOffer)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--lp-accent,#b8256e)] px-5 py-4 text-base font-bold text-[var(--lp-accent-text,#ffffff)] shadow-sm transition hover:bg-[var(--lp-accent-dark,#a01f5f)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--store-accent,#b8256e)] px-5 py-4 text-base font-bold text-[var(--store-accent-text,#ffffff)] shadow-sm transition hover:bg-[var(--store-accent-dark,#a01f5f)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
               >
                 {state === 'loading' ? (
                   <>

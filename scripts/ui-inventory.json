@@ -199,6 +199,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/orders/OrderNotesPeek.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/orders/OrderResponsibility.tsx": {
     "buttons": 4,
     "inputs": 2,
@@ -265,7 +275,7 @@
     "columns": 4,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 6,
     "links": 1,
     "tabs": 0
   },
@@ -319,6 +329,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/products/ProductAttributes.tsx": {
+    "buttons": 1,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/products/ProductHeadline.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -331,7 +351,7 @@
   },
   "src/components/products/ProductOffers.tsx": {
     "buttons": 10,
-    "inputs": 7,
+    "inputs": 8,
     "columns": 0,
     "cards": 1,
     "modals": 0,
@@ -620,12 +640,12 @@
     "tabs": 0
   },
   "src/components/screens/finance/DifferenceActions.tsx": {
-    "buttons": 2,
+    "buttons": 1,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
-    "modals": 1,
-    "icons": 5,
+    "modals": 0,
+    "icons": 3,
     "links": 0,
     "tabs": 0
   },
@@ -760,17 +780,17 @@
     "tabs": 0
   },
   "src/components/screens/LandingPageEditorScreen.tsx": {
-    "buttons": 21,
+    "buttons": 23,
     "inputs": 8,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 18,
+    "icons": 22,
     "links": 0,
     "tabs": 0
   },
   "src/components/screens/LandingPagesScreen.tsx": {
-    "buttons": 11,
+    "buttons": 14,
     "inputs": 2,
     "columns": 6,
     "cards": 1,
@@ -853,7 +873,7 @@
     "buttons": 9,
     "inputs": 1,
     "columns": 12,
-    "cards": 6,
+    "cards": 7,
     "modals": 1,
     "icons": 12,
     "links": 1,
@@ -979,13 +999,23 @@
     "links": 0,
     "tabs": 0
   },
-  "src/components/screens/StoreThemeScreen.tsx": {
-    "buttons": 11,
-    "inputs": 24,
-    "columns": 15,
+  "src/components/screens/StoreSearchScreen.tsx": {
+    "buttons": 5,
+    "inputs": 6,
+    "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 9,
+    "icons": 7,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoreThemeScreen.tsx": {
+    "buttons": 13,
+    "inputs": 24,
+    "columns": 22,
+    "cards": 0,
+    "modals": 0,
+    "icons": 11,
     "links": 0,
     "tabs": 0
   },
@@ -1429,14 +1459,94 @@
     "links": 2,
     "tabs": 0
   },
-  "src/components/storefront/StorefrontShell.tsx": {
+  "src/components/storefront/CartLink.tsx": {
     "buttons": 0,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 3,
+    "icons": 0,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/storefront/CartView.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
     "links": 2,
+    "tabs": 0
+  },
+  "src/components/storefront/CategoryNav.tsx": {
+    "buttons": 0,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/storefront/CheckoutForm.tsx": {
+    "buttons": 1,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/storefront/FilterSheet.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/storefront/ProductCard.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/storefront/ShopNotFound.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/storefront/StorefrontShell.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/storefront/TrackForm.tsx": {
+    "buttons": 1,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
     "tabs": 0
   },
   "src/components/ui/Button.tsx": {
@@ -1619,6 +1729,16 @@
     "links": 3,
     "tabs": 0
   },
+  "src/app/(system)/not-found.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
+    "tabs": 0
+  },
   "src/app/(system)/register/page.tsx": {
     "buttons": 1,
     "inputs": 4,
@@ -1640,16 +1760,6 @@
     "tabs": 0
   },
   "src/app/forbidden.tsx": {
-    "buttons": 0,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 1,
-    "links": 1,
-    "tabs": 0
-  },
-  "src/app/not-found.tsx": {
     "buttons": 0,
     "inputs": 0,
     "columns": 0,

@@ -95,7 +95,48 @@ export async function deliveryWindows(scope: {
     const w = summariseDays(days);
     if (w) out.set(regionId, w);
   }
+
+  /**
+   * AND THE WHOLE COUNTRY, under `EVERYWHERE`.
+   *
+   * «إذا المحافظة مش معروفة، نطاق البلد». A visitor from a governorate
+   * this shop has not delivered to five times yet is still owed an
+   * answer, and the honest one is how long it takes in general — which
+   * is a wider claim, so it is made only when the whole set clears the
+   * same floor a single governorate has to clear.
+   *
+   * Computed from the rows already in hand: a second query over the same
+   * delivered orders would be the same numbers, worked out twice.
+   */
+  const everywhere = summariseDays([...byRegion.values()].flat());
+  if (everywhere) out.set(EVERYWHERE, everywhere);
+
   return out;
+}
+
+/**
+ * The key the country-wide window is filed under.
+ *
+ * A reserved word rather than a second map: every caller already looks a
+ * region up in this one, and a fallback that lived somewhere else would be
+ * a fallback half the callers forget.
+ */
+export const EVERYWHERE = '*';
+
+/**
+ * The window to quote this visitor: their own governorate, else the
+ * country, else nothing.
+ *
+ * Nothing is a real answer. A shop that has delivered four times has not
+ * learned how long it takes, and «يصل خلال يومين» from four deliveries is
+ * a promise made out of an anecdote — which the customer meets as a broken
+ * one, at their door, four days later.
+ */
+export function windowFor(
+  windows: Map<string, DeliveryWindow>,
+  regionId: string | null | undefined
+): DeliveryWindow | null {
+  return (regionId ? windows.get(regionId) : null) ?? windows.get(EVERYWHERE) ?? null;
 }
 
 /**

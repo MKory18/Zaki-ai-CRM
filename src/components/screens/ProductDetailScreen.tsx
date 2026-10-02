@@ -14,6 +14,7 @@ import { arDate } from '@/lib/format';
 import Link from 'next/link';
 import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
+import { ProductAttributes } from '@/components/products/ProductAttributes';
 import { ProductHeadline } from '@/components/products/ProductHeadline';
 import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
@@ -365,6 +366,14 @@ export function ProductDetailScreen() {
 
         {/* Stock, cost and the one door that adds more. */}
         <ProductStock productId={productId} canManage={!!canManage} />
+
+        {/* What kind of thing it is — the answers that become filters. */}
+        <Card>
+          <CardHeader title="الخصائص" />
+          <CardContent>
+            <ProductAttributes productId={productId} canManage={!!canManage} />
+          </CardContent>
+        </Card>
 
         {/* Offers — edited here, read everywhere. */}
         <ProductOffers

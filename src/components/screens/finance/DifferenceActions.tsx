@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { RiChat3Line, RiCheckLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
+import { RiCheckLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
 import { apiJson } from '@/lib/api-client';
-import { Modal } from '@/components/ui/Modal';
+import { OrderNotesPeek } from '@/components/orders/OrderNotesPeek';
 import { RESOLUTION_AR, RESOLUTION_MEANING, RESOLUTIONS, type Resolution } from '@/lib/settlement-difference';
 
 /**
@@ -36,13 +36,12 @@ interface Props {
   onResolved: () => void;
 }
 
-interface Note {
-  id: string;
-  kind: string;
-  body: string;
-  createdAt: string;
-  authorName: string | null;
-}
+/*
+ * INTERNAL ONLY. A note written to the customer is not evidence about a
+ * discount somebody agreed, and putting the two in one list would let a
+ * reader take one for the other.
+ */
+const INTERNAL_ONLY = ['internal'] as const;
 
 export function DifferenceActions({
   statementId,
@@ -55,8 +54,6 @@ export function DifferenceActions({
 }: Props) {
   const [busy, setBusy] = useState<Resolution | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [notes, setNotes] = useState<Note[] | null>(null);
 
   const resolve = async (choice: Resolution) => {
     setBusy(choice);
@@ -72,17 +69,6 @@ export function DifferenceActions({
       setError(e instanceof Error ? e.message : 'تعذّر الحفظ');
     } finally {
       setBusy(null);
-    }
-  };
-
-  const openNotes = async () => {
-    setNotesOpen(true);
-    if (notes || !orderId) return;
-    try {
-      const d = await apiJson<{ notes: Note[] }>(`/api/orders/${orderId}/notes`);
-      setNotes(d.notes);
-    } catch {
-      setNotes([]);
     }
   };
 
@@ -103,8 +89,14 @@ export function DifferenceActions({
           {known ? RESOLUTION_AR[resolution as Resolution] : resolution}
         </span>
         {resolutionNote && <span className="text-xs text-[var(--sys-muted-foreground)]">{resolutionNote}</span>}
-        {orderId && <NotesButton onClick={() => void openNotes()} />}
-        {notesOpen && <NotesModal orderNumber={orderNumber} notes={notes} onClose={() => setNotesOpen(false)} />}
+        {orderId && (
+          <OrderNotesPeek
+            orderId={orderId}
+            orderNumber={orderNumber}
+            kinds={INTERNAL_ONLY}
+            emptyText="لا تعليق داخليّ على هذا الطلب — فلا خصمَ مكتوبٌ يفسّر الفرق."
+          />
+        )}
       </span>
     );
   }
@@ -128,62 +120,15 @@ export function DifferenceActions({
           {RESOLUTION_AR[r]}
         </button>
       ))}
-      {orderId && <NotesButton onClick={() => void openNotes()} />}
-      {error && <span className="text-xs text-[var(--sys-destructive)]">{error}</span>}
-      {notesOpen && <NotesModal orderNumber={orderNumber} notes={notes} onClose={() => setNotesOpen(false)} />}
-    </span>
-  );
-}
-
-function NotesButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-h-11 md:min-h-0 inline-flex items-center gap-1 rounded-md border border-[var(--sys-border)] px-2 py-1 text-xs font-medium text-[var(--sys-muted-foreground)] transition-colors hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
-    >
-      <RiChat3Line className="h-4 w-4" />
-      التعليقات الداخلية
-    </button>
-  );
-}
-
-function NotesModal({
-  orderNumber,
-  notes,
-  onClose,
-}: {
-  orderNumber: string | null;
-  notes: Note[] | null;
-  onClose: () => void;
-}) {
-  // INTERNAL ONLY. A note written to the customer is not evidence about a
-  // discount somebody agreed, and putting the two in one list would let a
-  // reader take one for the other.
-  const internal = (notes ?? []).filter((n) => n.kind === 'internal');
-  return (
-    <Modal isOpen onClose={onClose} title={`التعليقات الداخلية${orderNumber ? ` — ${orderNumber}` : ''}`} maxWidth="sm">
-      {notes === null ? (
-        <p className="flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
-          <RiLoader4Line className="h-4 w-4 animate-spin" />
-          يقرأ التعليقات…
-        </p>
-      ) : internal.length === 0 ? (
-        <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          لا تعليق داخليّ على هذا الطلب — فلا خصمَ مكتوبٌ يفسّر الفرق.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {internal.map((n) => (
-            <li key={n.id} className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
-              <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">{n.body}</p>
-              <p className="mt-1 text-xs text-[var(--sys-muted)]">
-                {n.authorName ?? 'غير معروف'} · {String(n.createdAt).slice(0, 16).replace('T', ' ')}
-              </p>
-            </li>
-          ))}
-        </ul>
+      {orderId && (
+        <OrderNotesPeek
+          orderId={orderId}
+          orderNumber={orderNumber}
+          kinds={INTERNAL_ONLY}
+          emptyText="لا تعليق داخليّ على هذا الطلب — فلا خصمَ مكتوبٌ يفسّر الفرق."
+        />
       )}
-    </Modal>
+      {error && <span className="text-xs text-[var(--sys-destructive)]">{error}</span>}
+    </span>
   );
 }

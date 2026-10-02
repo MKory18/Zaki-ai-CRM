@@ -113,33 +113,50 @@ export const FONTS: {
    * trap unless the seller was told.
    */
   devOnly?: boolean;
+  /**
+   * True for a face a STORE TEMPLATE may be built on: it covers Arabic, its
+   * licence is an open one, and this site may serve it.
+   *
+   * A template ships to every shop that installs it, so its typeface is not
+   * a choice one seller makes for one page — it is a face we publish. That
+   * rules out `devOnly` faces, which vanish in a production build, and it
+   * rules out faces with no Arabic coverage, which would silently fall
+   * through to the system stack on the only script the shop is written in.
+   *
+   * The flag lives HERE and not in a second list beside the templates: a
+   * face added to this library is either usable by a template or it is not,
+   * and a list kept elsewhere is a list that falls behind. See
+   * `TEMPLATE_FONTS` in store-skin.ts, which is this filter and nothing
+   * more.
+   */
+  openArabic?: boolean;
   note: string;
 }[] = [
-  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@200;400;500;700;800', note: 'واضح ومحايد' },
-  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif", google: 'Cairo:wght@400;600;700;800', note: 'الأكثر استخداماً' },
-  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif", google: 'Almarai:wght@400;700;800', note: 'هادئ ومقروء' },
-  { key: 'ibm', label: 'IBM بلكس', stack: "'IBM Plex Sans Arabic', system-ui, sans-serif", google: 'IBM+Plex+Sans+Arabic:wght@400;500;600;700', note: 'رسمي ومرتّب' },
+  { key: 'tajawal', label: 'طجوال', stack: "'Tajawal', system-ui, sans-serif", google: 'Tajawal:wght@200;400;500;700;800', openArabic: true, note: 'واضح ومحايد' },
+  { key: 'cairo', label: 'القاهرة', stack: "'Cairo', system-ui, sans-serif", google: 'Cairo:wght@400;600;700;800', openArabic: true, note: 'الأكثر استخداماً' },
+  { key: 'almarai', label: 'المراعي', stack: "'Almarai', system-ui, sans-serif", google: 'Almarai:wght@400;700;800', openArabic: true, note: 'هادئ ومقروء' },
+  { key: 'ibm', label: 'IBM بلكس', stack: "'IBM Plex Sans Arabic', system-ui, sans-serif", google: 'IBM+Plex+Sans+Arabic:wght@400;500;600;700', openArabic: true, note: 'رسمي ومرتّب' },
   { key: 'rubik', label: 'روبيك', stack: "'Rubik', system-ui, sans-serif", google: 'Rubik:wght@400;500;700;800', note: 'ودود وعصري' },
-  { key: 'noto', label: 'نوتو كوفي', stack: "'Noto Kufi Arabic', system-ui, sans-serif", google: 'Noto+Kufi+Arabic:wght@400;600;700;800', note: 'كوفي متّزن' },
-  { key: 'changa', label: 'تشانغا', stack: "'Changa', system-ui, sans-serif", google: 'Changa:wght@400;600;700;800', note: 'عريض للعناوين' },
-  { key: 'reem', label: 'ريم كوفي', stack: "'Reem Kufi', system-ui, sans-serif", google: 'Reem+Kufi:wght@400;600;700', note: 'هندسي أنيق' },
-  { key: 'lalezar', label: 'لاله زار', stack: "'Lalezar', system-ui, cursive", google: 'Lalezar', note: 'صارخ وإعلاني' },
-  { key: 'marhey', label: 'مرحي', stack: "'Marhey', system-ui, cursive", google: 'Marhey:wght@400;600;700', note: 'مرِح وشبابي' },
-  { key: 'amiri', label: 'أميري', stack: "'Amiri', Georgia, serif", google: 'Amiri:wght@400;700', note: 'نسخ كلاسيكي' },
-  { key: 'aref', label: 'عارف رقعة', stack: "'Aref Ruqaa', Georgia, serif", google: 'Aref+Ruqaa:wght@400;700', note: 'رقعة فخم' },
-  { key: 'readex', label: 'ريدكس برو', stack: "'Readex Pro', system-ui, sans-serif", google: 'Readex+Pro:wght@300;400;500;600;700', note: 'حديث ومتوازن' },
-  { key: 'alexandria', label: 'الإسكندرية', stack: "'Alexandria', system-ui, sans-serif", google: 'Alexandria:wght@400;500;700;800', note: 'هندسي نظيف' },
-  { key: 'vazir', label: 'وزير', stack: "'Vazirmatn', system-ui, sans-serif", google: 'Vazirmatn:wght@400;500;700;800', note: 'مقروء على الشاشة' },
-  { key: 'mada', label: 'مدى', stack: "'Mada', system-ui, sans-serif", google: 'Mada:wght@400;500;700;900', note: 'بسيط وواسع' },
-  { key: 'messiri', label: 'المصيري', stack: "'El Messiri', system-ui, sans-serif", google: 'El+Messiri:wght@400;500;600;700', note: 'أنيق للعناوين' },
-  { key: 'baloo', label: 'بالو بهيجان', stack: "'Baloo Bhaijaan 2', system-ui, cursive", google: 'Baloo+Bhaijaan+2:wght@400;600;700;800', note: 'سميك ومستدير' },
-  { key: 'naskh', label: 'نوتو نسخ', stack: "'Noto Naskh Arabic', Georgia, serif", google: 'Noto+Naskh+Arabic:wght@400;500;600;700', note: 'نسخ للقراءة الطويلة' },
-  { key: 'scheherazade', label: 'شهرزاد', stack: "'Scheherazade New', Georgia, serif", google: 'Scheherazade+New:wght@400;700', note: 'نسخ تقليدي فخم' },
+  { key: 'noto', label: 'نوتو كوفي', stack: "'Noto Kufi Arabic', system-ui, sans-serif", google: 'Noto+Kufi+Arabic:wght@400;600;700;800', openArabic: true, note: 'كوفي متّزن' },
+  { key: 'changa', label: 'تشانغا', stack: "'Changa', system-ui, sans-serif", google: 'Changa:wght@400;600;700;800', openArabic: true, note: 'عريض للعناوين' },
+  { key: 'reem', label: 'ريم كوفي', stack: "'Reem Kufi', system-ui, sans-serif", google: 'Reem+Kufi:wght@400;600;700', openArabic: true, note: 'هندسي أنيق' },
+  { key: 'lalezar', label: 'لاله زار', stack: "'Lalezar', system-ui, cursive", google: 'Lalezar', openArabic: true, note: 'صارخ وإعلاني' },
+  { key: 'marhey', label: 'مرحي', stack: "'Marhey', system-ui, cursive", google: 'Marhey:wght@400;600;700', openArabic: true, note: 'مرِح وشبابي' },
+  { key: 'amiri', label: 'أميري', stack: "'Amiri', Georgia, serif", google: 'Amiri:wght@400;700', openArabic: true, note: 'نسخ كلاسيكي' },
+  { key: 'aref', label: 'عارف رقعة', stack: "'Aref Ruqaa', Georgia, serif", google: 'Aref+Ruqaa:wght@400;700', openArabic: true, note: 'رقعة فخم' },
+  { key: 'readex', label: 'ريدكس برو', stack: "'Readex Pro', system-ui, sans-serif", google: 'Readex+Pro:wght@300;400;500;600;700', openArabic: true, note: 'حديث ومتوازن' },
+  { key: 'alexandria', label: 'الإسكندرية', stack: "'Alexandria', system-ui, sans-serif", google: 'Alexandria:wght@400;500;700;800', openArabic: true, note: 'هندسي نظيف' },
+  { key: 'vazir', label: 'وزير', stack: "'Vazirmatn', system-ui, sans-serif", google: 'Vazirmatn:wght@400;500;700;800', openArabic: true, note: 'مقروء على الشاشة' },
+  { key: 'mada', label: 'مدى', stack: "'Mada', system-ui, sans-serif", google: 'Mada:wght@400;500;700;900', openArabic: true, note: 'بسيط وواسع' },
+  { key: 'messiri', label: 'المصيري', stack: "'El Messiri', system-ui, sans-serif", google: 'El+Messiri:wght@400;500;600;700', openArabic: true, note: 'أنيق للعناوين' },
+  { key: 'baloo', label: 'بالو بهيجان', stack: "'Baloo Bhaijaan 2', system-ui, cursive", google: 'Baloo+Bhaijaan+2:wght@400;600;700;800', openArabic: true, note: 'سميك ومستدير' },
+  { key: 'naskh', label: 'نوتو نسخ', stack: "'Noto Naskh Arabic', Georgia, serif", google: 'Noto+Naskh+Arabic:wght@400;500;600;700', openArabic: true, note: 'نسخ للقراءة الطويلة' },
+  { key: 'scheherazade', label: 'شهرزاد', stack: "'Scheherazade New', Georgia, serif", google: 'Scheherazade+New:wght@400;700', openArabic: true, note: 'نسخ تقليدي فخم' },
   // Served from /public/fonts rather than Google, because it is not on
   // Google — and because its licence (SIL OFL 1.1, stated inside the font
   // file itself) is one of the few that actually permits us to serve it.
   // public/fonts/kawkab-OFL.txt carries the notice the licence requires.
-  { key: 'kawkab', label: 'كوكب', stack: "'Kawkab Mono', ui-monospace, monospace", local: true, note: 'ثابت العرض — تقني' },
+  { key: 'kawkab', label: 'كوكب', stack: "'Kawkab Mono', ui-monospace, monospace", local: true, openArabic: true, note: 'ثابت العرض — تقني' },
   // ── Licensed for this machine, never published. See /api/dev-fonts. ──
   { key: 'thmanyah', label: 'ثمانية', stack: "'thmanyah sans', system-ui, sans-serif", devOnly: true, note: 'محلي — للفحص فقط' },
   { key: 'thmanyahtext', label: 'ثمانية نص', stack: "'thmanyah serif text', Georgia, serif", devOnly: true, note: 'محلي — للفحص فقط' },
@@ -181,7 +198,7 @@ export function stackFor(value: string | undefined | null): string {
   if (!value) return '';
   const known = FONTS.find((f) => f.key === value);
   if (known) return known.stack;
-  if (UPLOADED_FONT_RE.test(value)) return `var(--lp-uf-${value.slice(2)}, system-ui, sans-serif)`;
+  if (UPLOADED_FONT_RE.test(value)) return `var(--store-uf-${value.slice(2)}, system-ui, sans-serif)`;
   return '';
 }
 
@@ -281,6 +298,20 @@ function contrast(a: number, b: number): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/**
+ * Success, warning and danger — the three colours no palette derives.
+ *
+ * They are not the shop's to choose freely: green means it worked and red
+ * means it did not, in every shop. They were hex literals inside
+ * `storeThemeVars` and were about to be written a second time by the
+ * template contract; this is the one place they are decided.
+ */
+export const STATE_COLORS = Object.freeze({
+  success: '#00a651',
+  warning: '#f59e0b',
+  danger: '#fb323f',
+});
+
 const INK = '#121926';
 const PAPER = '#ffffff';
 
@@ -301,6 +332,79 @@ export function readableOn(hex: string): string {
   return onInk >= onPaper ? INK : PAPER;
 }
 
+/**
+ * WCAG contrast between two colours, 1–21.
+ *
+ * The maths was already here and already trusted — `readableOn` picks ink
+ * or paper by measuring it rather than by guessing at a lightness
+ * threshold. It was private, so the one thing that could not be done with
+ * it was the thing a template contract needs: to REFUSE a pair. A rule
+ * that cannot be called cannot be tested.
+ *
+ * An unparseable colour answers 1 — the worst possible ratio — so a
+ * malformed hex fails a contrast check instead of sailing through it.
+ */
+export function contrastRatio(a: string, b: string): number {
+  const ra = parseHex(a);
+  const rb = parseHex(b);
+  if (!ra || !rb) return 1;
+  return contrast(luminance(ra), luminance(rb));
+}
+
+/**
+ * THE NEAREST COLOUR THAT PASSES — because «مرفوض» is half an answer.
+ *
+ * «اللون الساقط بالتباين بينرفض مع أقرب لون ناجح». A seller who picks a
+ * colour and is told only that it fails has been given a locked door and
+ * no key: they will try a slightly different one, be refused again, and
+ * conclude the system does not want them to choose colours. A refusal that
+ * carries a working alternative is a refusal somebody can act on in one
+ * press.
+ *
+ * NEAREST MEANS NEAREST IN LIGHTNESS, AND THE HUE IS KEPT. The seller
+ * chose that hue; it is their brand, and a suggestion that changed it
+ * would be this system picking the colour. What fails a contrast check is
+ * almost always the lightness, and `atLightness` walks it in OKLab, where
+ * equal steps look equal — so the first passing step really is the nearest
+ * one a person would see.
+ *
+ * BOTH DIRECTIONS, AND THE CLOSER ONE WINS. A mid-grey text on a mid-grey
+ * card can be fixed by going darker or lighter, and which is nearer
+ * depends on the background. Walking outward from the colour's own
+ * lightness and taking the first hit answers that without deciding it in
+ * advance.
+ *
+ * It returns the colour itself when it already passes, and null when no
+ * lightness of this hue reaches the ratio — which is rare and real: on a
+ * mid-grey background there are hues where nothing works, and saying so is
+ * better than offering a colour that still fails.
+ */
+export function nearestPassing(colour: string, against: string, min = 4.5): string | null {
+  // AN EARLY EXIT, NOT A RULE. Removing this line changes no answer:
+  // `contrastRatio` reads an unparseable colour as 1:1 and
+  // `atLightness` hands it straight back, so the walk below runs two
+  // hundred times and returns null anyway. A mutation that deleted it
+  // was CAUGHT by nothing, and that is the honest reading — it is here
+  // for the two hundred iterations, and because a future `atLightness`
+  // that invented a colour for garbage would otherwise be believed.
+  if (!isValidHex(colour) || !isValidHex(against)) return null;
+  if (contrastRatio(colour, against) >= min) return colour;
+
+  const from = lightnessOf(colour);
+  // 1/200 of the lightness range: finer than a person can distinguish on a
+  // screen, so the answer is "the nearest one" and not "the nearest of
+  // twenty I happened to try".
+  const STEP = 0.005;
+  for (let d = STEP; d <= 1; d += STEP) {
+    for (const l of [from - d, from + d]) {
+      if (l < 0 || l > 1) continue;
+      const candidate = atLightness(colour, l);
+      if (contrastRatio(candidate, against) >= min) return candidate;
+    }
+  }
+  return null;
+}
+
 export function isValidHex(hex: string): boolean {
   return parseHex(hex) !== null;
 }
@@ -317,6 +421,17 @@ export interface Palette {
   accentBorder: string;
   pageBg: string;
   cardBg: string;
+  /**
+   * The third surface: a strip, a filter sheet, a quiet row behind a card.
+   *
+   * Two surfaces are enough for a landing page, which is one column of
+   * blocks on paper. A catalogue is not — a product grid on the page
+   * colour, a card on top of it, and a sort bar that has to read as
+   * neither, are three layers and the third had nowhere to come from. It
+   * is derived like the rest: a hair away from the page's own colour, in
+   * the page's own hue, so a warm shop stays warm.
+   */
+  surface2: string;
   text: string;
   muted: string;
   border: string;
@@ -350,6 +465,14 @@ export function paletteFor(theme: Partial<LandingTheme> | null | undefined): Pal
     accentTint: atLightness(accent, 0.96, 0.18),
     accentBorder: atLightness(accent, 0.86, 0.45),
     ...base,
+    // Toward the ink on paper, away from it on a dark page: a third surface
+    // has to be VISIBLE against the first, whichever direction that is.
+    surface2: atLightness(
+      base.pageBg,
+      lightnessOf(base.pageBg) > 0.5
+        ? Math.max(0, lightnessOf(base.pageBg) - 0.035)
+        : Math.min(1, lightnessOf(base.pageBg) + 0.05)
+    ),
     radius: t.corners === 'sharp' ? '4px' : '14px',
     fontStack,
     // The veil goes in the SAME background-image, above the photo: one
@@ -380,22 +503,23 @@ function backdropFor(image: string | undefined, veil: number | undefined, paper:
 /** The palette as CSS custom properties, for a style attribute. */
 export function paletteVars(palette: Palette): Record<string, string> {
   return {
-    '--lp-accent': palette.accent,
-    '--lp-accent-text': palette.accentText,
-    '--lp-accent-dark': palette.accentDark,
-    '--lp-accent-tint': palette.accentTint,
-    '--lp-accent-border': palette.accentBorder,
-    '--lp-page': palette.pageBg,
-    '--lp-card': palette.cardBg,
-    '--lp-text': palette.text,
-    '--lp-muted': palette.muted,
-    '--lp-border': palette.border,
-    '--lp-radius': palette.radius,
-    '--lp-font': palette.fontStack,
-    '--lp-heading-weight': String(palette.headingWeight),
+    '--store-accent': palette.accent,
+    '--store-accent-text': palette.accentText,
+    '--store-accent-dark': palette.accentDark,
+    '--store-accent-tint': palette.accentTint,
+    '--store-accent-border': palette.accentBorder,
+    '--store-page': palette.pageBg,
+    '--store-card': palette.cardBg,
+    '--store-surface-2': palette.surface2,
+    '--store-text': palette.text,
+    '--store-muted': palette.muted,
+    '--store-border': palette.border,
+    '--store-radius': palette.radius,
+    '--store-font': palette.fontStack,
+    '--store-heading-weight': String(palette.headingWeight),
     // `none` rather than omitting the variable: the stylesheet's fallback
     // then has nothing to guess, and turning the photograph off is one
     // value changing rather than a rule appearing and disappearing.
-    '--lp-page-image': palette.pageBackdrop || 'none',
+    '--store-page-image': palette.pageBackdrop || 'none',
   };
 }

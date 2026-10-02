@@ -43,7 +43,7 @@ const createSchema = z.object({
   productId: z.string().uuid().optional().nullable(),
   minOrders: z.number().int().min(0).max(100_000).optional().nullable(),
   effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  minSampleOrders: z.number().int().min(0).max(1000).default(30),
+
 });
 
 const endSchema = z.object({
@@ -162,8 +162,24 @@ export async function POST(req: Request) {
         period: input.period,
         tiers: input.tiers && input.tiers.length > 0 ? input.tiers : undefined,
         productId: input.productId ?? null,
-        minOrders: input.minOrders ?? null,
-        minSampleOrders: input.minSampleOrders,
+        /*
+         * THE SAMPLE FLOOR, AND THE CONTRACT'S NUMBER WHEN NOBODY TYPES ONE.
+         *
+         * «Delivery-rate tiers with a minimum sample of 30 orders.» There were
+         * TWO columns for this and they did not agree: `minSampleOrders`
+         * carried the 30 (defaulted here, shown in no screen) and was read by
+         * NOTHING, while `minOrders` — the one `earnedBy` actually checks
+         * against the sample — was optional and null on every rule in the
+         * database. So the floor the contract names was stored and ignored,
+         * and «100% out of two orders» cleared every band, which is the exact
+         * case `earnedBy`'s own comment warns about.
+         *
+         * One column now. A rate rule left blank takes the contract's 30
+         * rather than no floor at all; any other metric keeps «blank means no
+         * floor», because a count of confirmed orders is not a ratio and a
+         * small sample does not lie about it.
+         */
+        minOrders: input.minOrders ?? (input.metric === 'DELIVERY_RATE' ? 30 : null),
         effectiveFrom: new Date(`${input.effectiveFrom}T00:00:00.000Z`),
         createdById: user.id,
       },

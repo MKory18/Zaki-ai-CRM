@@ -115,8 +115,19 @@ export function LandingFormBridge({ offers, children, currency, product }: Bridg
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offers]);
 
+  /*
+   * NO ID ON THIS WRAPPER. `OrderForm` renders
+   * `<section id="zaki-order-form">`, and this div carried the same id — so
+   * every landing page and every product page served two elements with one
+   * id. `getElementById` returns the first, which is this empty div, and
+   * `#zaki-order-form` anchored to it; both happened to scroll to the same
+   * place, which is why it went unnoticed through every page this system
+   * has ever served.
+   *
+   * Scrolling here uses `wrapRef`, never the id.
+   */
   return (
-    <div ref={wrapRef} id="zaki-order-form">
+    <div ref={wrapRef}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child as React.ReactElement<{ externalSelectedOfferId?: string | null }>, {

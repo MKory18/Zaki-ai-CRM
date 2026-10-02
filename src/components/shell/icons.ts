@@ -24,7 +24,7 @@ import {
   RiStore2Fill, RiStore2Line, RiTimerFill, RiTimerLine,
   RiTruckFill, RiTruckLine, RiUserSettingsFill, RiUserSettingsLine,
   RiWallet3Fill, RiWallet3Line,
-  RiEBike2Fill, RiEBike2Line, RiFileTextFill, RiFileTextLine, RiGlobalFill, RiGlobalLine, RiLayoutFill, RiLayoutLine, RiPaletteFill, RiPaletteLine, RiShieldKeyholeFill, RiShieldKeyholeLine, RiSignpostFill, RiSignpostLine, RiTreeFill, RiTreeLine,
+  RiEBike2Fill, RiEBike2Line, RiSearchFill, RiSearchLine, RiFileTextFill, RiFileTextLine, RiGlobalFill, RiGlobalLine, RiLayoutFill, RiLayoutLine, RiPaletteFill, RiPaletteLine, RiShieldKeyholeFill, RiShieldKeyholeLine, RiSignpostFill, RiSignpostLine, RiTreeFill, RiTreeLine,
   RiShutDownFill, RiShutDownLine, RiSideBarFill, RiSideBarLine,
   type RemixiconComponentType,
 } from '@remixicon/react';
@@ -116,6 +116,7 @@ export const ICONS: Record<string, Pair> = {
   SignOut: pair(RiShutDownLine, RiShutDownFill),
   FileText: pair(RiFileTextLine, RiFileTextFill),
   Languages: pair(RiGlobalLine, RiGlobalFill),
+  Search: pair(RiSearchLine, RiSearchFill),
   Signpost: pair(RiSignpostLine, RiSignpostFill),
   Radio: pair(RiBroadcastLine, RiBroadcastFill),
 };

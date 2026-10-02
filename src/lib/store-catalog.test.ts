@@ -179,8 +179,23 @@ describe('the shop’s face', () => {
     // `?? ''` and not a bare `.trim()`: one row with a null name took the
     // whole shop page down with «Cannot read properties of undefined».
     expect(page).toMatch(/data-letter=\{\(it\.name \?\? ''\)\.trim\(\)\.charAt\(0\)/);
-    const front = stripComments(repoFile('src/app/s/[store]/page.tsx'));
-    expect(front).toMatch(/data-letter=\{\(p\.name \?\? ''\)\.trim\(\)\.charAt\(0\)/);
+    /**
+     * The storefront's card moved into `ProductCard` — it was written by
+     * hand in four places and three of them had already lost something.
+     * The rule did not move: the initial, and the `?? ''` under it.
+     */
+    const card = stripComments(repoFile('src/components/storefront/ProductCard.tsx'));
+    expect(card).toMatch(/data-letter=\{letter\}/);
+    expect(card).toMatch(/\(product\.name \?\? ''\)\.trim\(\)\.charAt\(0\)/);
+
+    /** And no page draws one of its own beside it. */
+    for (const page of [
+      'src/app/s/[store]/page.tsx',
+      'src/app/s/[store]/shop/page.tsx',
+      'src/components/storefront/RecentlyViewed.tsx',
+    ]) {
+      expect(stripComments(repoFile(page)), page).not.toMatch(/className="sf-card"/);
+    }
   });
 
   it('and a shop with no logo still has a mark', () => {

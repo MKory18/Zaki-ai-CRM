@@ -4,13 +4,16 @@ import { notFound, redirect } from 'next/navigation';
 import { LandingPageView } from '@/components/landing/LandingPageView';
 import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
+import { db } from '@/lib/db';
 import { getStorefront, storefrontCatalog, storefrontProducts } from '@/lib/storefront';
 import { parseSections } from '@/lib/landing-sections';
 import { paletteFor } from '@/lib/landing-theme';
 import { publicizeMedia } from '@/lib/public-media';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
-import { BLOCK_CSS } from '@/components/landing/blocks/styles';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
+import { ProductCard } from '@/components/storefront/ProductCard';
+import { CategoryNav } from '@/components/storefront/CategoryNav';
+import { layoutOf } from '@/lib/store-theme';
 import type { Metadata } from 'next';
 import { publicTitle, storeIcons } from '@/lib/public-metadata';
 
@@ -102,7 +105,13 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
     return (
       <StorefrontShell store={store}>
         <LandingTrackingPixels page="PUBLIC" pixels={pixelsForHome} viewContent={null} />
-        <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS }} />
+        {/*
+          The block stylesheet was inlined HERE as well, inside a
+          `StorefrontShell` that already inlines it — so any shop that had
+          actually built a home page served 25 KB of identical CSS twice,
+          on the one page that matters most for how fast the shop feels.
+          The shell is the owner; this was the copy.
+        */}
         <PageBlocks
           // Stored images are linked privately by the builder; a shopper has
           // no session, so they are made public for this render.
@@ -138,15 +147,53 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
 
   const products = await storefrontProducts(store.companyId, store.id);
 
-  const money = (n: number) =>
-    `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${store.currencyCode}`;
+  /**
+   * The country's own minor unit, for the one formatter.
+   *
+   * This page used to write prices with a `toLocaleString` of its own —
+   * a fifth way to spell an amount, two decimals wherever the country
+   * says otherwise. `ProductCard` goes through `moneyText` like every
+   * other surface.
+   */
+  // The categories this shop's own products carry — derived, like the
+  // catalogue block's, never a per-store table.
+  const categories = [
+    ...new Map(products.flatMap((p) => (p.category ? [[p.category.id, p.category] as const] : []))).values(),
+  ];
+
+  const minorUnit =
+    (await db.country.findUnique({ where: { id: store.countryId }, select: { minorUnit: true } }))
+      ?.minorUnit ?? 2;
+
   return (
     <StorefrontShell store={store}>
       <LandingTrackingPixels page="PUBLIC" pixels={pixelsForHome} viewContent={null} />
-      <section className="sf-hero">
-        <h1>{store.tagline || store.name}</h1>
-        {store.about && <p>{store.about}</p>}
-      </section>
+      {/*
+        THE FIRST SCREEN SHOWS SOMETHING TO BUY.
+        It was `<h1>{store.tagline || store.name}</h1>` — the shop's name,
+        alone, under a header already carrying the name and the tagline.
+        «اسم المتجر مكرر ثلاث مرات بأول شاشة؛ البطل ضايع على الاسم» and
+        «أول شاشة ما فيها منتج ولا عرض ولا فئة» are the brief's own words
+        for that screen.
+
+        The tagline stays when there IS one — it says what the shop sells,
+        which the name usually does not. The bare name never does: the
+        header has it, the tab title has it, and a third telling sells
+        nothing.
+      */}
+      {store.tagline && (
+        <section className="sf-hero">
+          <h1>{store.tagline}</h1>
+          {store.about && <p>{store.about}</p>}
+        </section>
+      )}
+
+      <CategoryNav
+        categories={categories}
+        activeId={null}
+        hrefFor={(id) => (id ? `/s/${store.slug}/shop?cat=${encodeURIComponent(id)}` : `/s/${store.slug}/shop`)}
+        variant={layoutOf(store.theme, 'categoryNav')}
+      />
 
       {products.length === 0 ? (
         <p className="sf-empty">لا منتجات معروضة حالياً.</p>
@@ -154,31 +201,14 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
         <div className="sf-grid-wrap">
           <div className="sf-grid">
             {products.map((p) => (
-              <Link key={p.id} href={`/s/${store.slug}/p/${p.sku}`} className="sf-card">
-                {p.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image} alt={p.name} className="sf-card-img" loading="lazy" />
-                ) : (
-                  // The product's initial in a wash of the shop's colour,
-                  // the same as the catalogue block's: «the picture goes
-                  // here», not «something is broken».
-                  // `?? ''`, because a name is not guaranteed: one row with
-                  // a null name took the whole shop page down with
-                  // «Cannot read properties of undefined». A missing letter
-                  // is a dash; a missing shop is an outage.
-                  <span className="sf-card-none" data-letter={(p.name ?? '').trim().charAt(0) || '—'} aria-hidden />
-                )}
-                <span className="sf-card-body">
-                  <span className="sf-card-name">{p.name}</span>
-                  <span className="sf-card-price" dir="ltr">
-                    {/* The cheapest per unit across its bundles — the number a
-                        shopper compares, computed from the offers the order
-                        path charges from. */}
-                    {p.fromPrice < p.basePrice && <small>من </small>}
-                    {money(p.fromPrice)}
-                  </span>
-                </span>
-              </Link>
+              <ProductCard
+                key={p.id}
+                slug={store.slug}
+                product={p}
+                currency={store.currencyCode}
+                minorUnit={minorUnit}
+                variant={layoutOf(store.theme, 'productCard')}
+              />
             ))}
           </div>
         </div>

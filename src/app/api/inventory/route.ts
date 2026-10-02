@@ -428,6 +428,9 @@ export async function POST(req: Request) {
       } else {
         await drawDownStock(tx, {
           companyId,
+          // The same shelf the surplus half writes to. Without it a stocktake
+          // in one store took its shortfall out of another store's batches.
+          storeId,
           productId: product.id,
           quantity: Math.abs(difference),
           allowNegative: false,

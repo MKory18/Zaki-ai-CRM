@@ -114,7 +114,7 @@ export function BlockBuilder(props: Props) {
     const seen = new Set<string>();
     const vars = storeFonts
       .filter((f) => !seen.has(f.key) && seen.add(f.key))
-      .map((f) => `--lp-uf-${f.key}: ${JSON.stringify(f.family)}, system-ui, sans-serif;`)
+      .map((f) => `--store-uf-${f.key}: ${JSON.stringify(f.family)}, system-ui, sans-serif;`)
       .join(' ');
     return `${faces}
 .lp-root, .zaki-font-panel { ${vars} }`;
@@ -1064,6 +1064,132 @@ function SectionFields({
                     ))}
                   </div>
                 </div>
+              </>
+            )}
+          />
+        </div>
+      );
+
+    /**
+     * «منتجنا / البدائل». There is no field for a competitor's name, and
+     * that absence is the rule: «ما في تشهير بعلامة منافسة بالاسم» cannot
+     * be broken from a panel that offers nowhere to write one.
+     */
+    case 'comparison':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="عمودك" value={s.oursLabel} onChange={(v) => patch({ oursLabel: v })} />
+            <Field label="العمود الآخر" value={s.theirsLabel} onChange={(v) => patch({ theirsLabel: v })} />
+          </div>
+          <Repeater
+            items={s.rows}
+            max={6}
+            blank={{ aspect: '', ours: '', theirs: '' }}
+            onChange={(rows) => patch({ rows })}
+            render={(row, set) => (
+              <>
+                <Field label="الفرق" value={row.aspect} onChange={(v) => set({ ...row, aspect: v })} />
+                <Field label="عندنا" value={row.ours} onChange={(v) => set({ ...row, ours: v })} />
+                <Field label="عند البدائل" value={row.theirs} onChange={(v) => set({ ...row, theirs: v })} />
+              </>
+            )}
+          />
+        </div>
+      );
+
+    case 'timeline':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <Repeater
+            items={s.points}
+            max={5}
+            blank={{ when: '', what: '' }}
+            onChange={(points) => patch({ points })}
+            render={(point, set) => (
+              <>
+                <Field label="متى" value={point.when} onChange={(v) => set({ ...point, when: v })} />
+                <Field label="ماذا يحدث" value={point.what} onChange={(v) => set({ ...point, what: v })} area />
+              </>
+            )}
+          />
+        </div>
+      );
+
+    /** Three at most — «ثلاث ضغطات كحد أقصى» is the whole design. */
+    case 'quiz':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <Repeater
+            items={s.questions}
+            max={3}
+            blank={{ ask: '', options: ['', ''] }}
+            onChange={(questions) => patch({ questions })}
+            render={(q, set) => (
+              <>
+                <Field label="السؤال" value={q.ask} onChange={(v) => set({ ...q, ask: v })} />
+                <Field
+                  label="الخيارات، مفصولة بفاصلة"
+                  value={q.options.join('، ')}
+                  onChange={(v) => set({ ...q, options: v.split('،').map((x) => x.trim()).filter(Boolean).slice(0, 4) })}
+                />
+              </>
+            )}
+          />
+          <Field label="ماذا تقول بعد الإجابة" value={s.result} onChange={(v) => patch({ result: v })} area />
+        </div>
+      );
+
+    case 'objections':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <Repeater
+            items={s.items}
+            max={6}
+            blank={{ doubt: '', answer: '' }}
+            onChange={(items) => patch({ items })}
+            render={(item, set) => (
+              <>
+                <Field label="الاعتراض" value={item.doubt} onChange={(v) => set({ ...item, doubt: v })} />
+                <Field label="الجواب" value={item.answer} onChange={(v) => set({ ...item, answer: v })} area />
+              </>
+            )}
+          />
+          <Field label="الضمان" value={s.guarantee} onChange={(v) => patch({ guarantee: v })} area />
+        </div>
+      );
+
+    /** No percentage field: a number here is a claim, and numbers come
+        from the facts engine. */
+    case 'mechanism':
+      return (
+        <div className="space-y-2.5">
+          <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          <Repeater
+            items={s.steps}
+            max={5}
+            blank={{ title: '', text: '' }}
+            onChange={(steps) => patch({ steps })}
+            render={(step, set) => (
+              <>
+                <Field label="الخطوة" value={step.title} onChange={(v) => set({ ...step, title: v })} />
+                <Field label="الشرح" value={step.text} onChange={(v) => set({ ...step, text: v })} area />
+              </>
+            )}
+          />
+          <Repeater
+            items={s.ingredients}
+            max={8}
+            blank={{ name: '', does: '' }}
+            onChange={(ingredients) => patch({ ingredients })}
+            render={(ing, set) => (
+              <>
+                <Field label="المكوّن" value={ing.name} onChange={(v) => set({ ...ing, name: v })} />
+                <Field label="ماذا يفعل" value={ing.does} onChange={(v) => set({ ...ing, does: v })} />
               </>
             )}
           />

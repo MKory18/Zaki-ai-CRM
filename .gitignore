@@ -15,6 +15,18 @@
 
 # next.js
 /.next/
+# A production build written beside a running dev server, for measuring the
+# performance budgets (NEXT_DIST_DIR in next.config.ts). It must be ignored:
+# Tailwind v4 scans the project for class names and skips whatever git
+# ignores, so while this directory was not listed it read the minified build
+# output, found mangled strings that look like class names, and emitted CSS
+# that would not parse — every page of the dev server answered 500.
+/.next-measure/
+# Any build made to MEASURE or VERIFY, never the one that is served. A build
+# directory left untracked is also a directory Tailwind will scan: the first
+# time this was forgotten it read minified CSS out of the output, produced an
+# unparseable stylesheet, and every page in the dev server answered 500.
+/.next-verify/
 /out/
 
 # production

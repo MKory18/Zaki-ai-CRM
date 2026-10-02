@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_STORE_THEME } from './store-theme';
+import { skinToStoreTheme } from './store-skin';
+import { STORE_TEMPLATES } from './store-templates';
+import { DEFAULT_STORE_THEME, type StoreTheme } from './store-theme';
 import {
   TEMPLATE_FILE_KIND,
   TEMPLATE_FILE_VERSION,
@@ -162,5 +164,86 @@ describe('the file a seller downloads', () => {
     const ascii = /filename="([^"]*)"/.exec(header)![1];
     expect(ascii.length).toBeGreaterThan(0);
     expect(() => new Headers({ 'Content-Disposition': header })).not.toThrow();
+  });
+});
+
+/**
+ * THE CUSTOMISED TEMPLATE TRAVELS WHOLE.
+ *
+ * «تصدير واستيراد القالب المخصّص كملف». A file that carried the colours
+ * and left the arrangement behind would hand somebody a shop that looks
+ * half right — and the half it drops is the half a seller spent the
+ * evening on.
+ *
+ * Nothing in the exporter names these fields: the file is typed by
+ * `storeThemeSchema`, so a field added to the theme is a field the file
+ * carries. This proves that is actually true rather than assumed.
+ */
+describe('a customised shop template, out and back', () => {
+  it('carries the arrangement, the colours and which template it came from', () => {
+    const skin = STORE_TEMPLATES.find((t) => t.id === 'pearl')!;
+    const customised: StoreTheme = {
+      ...DEFAULT_STORE_THEME,
+      ...skinToStoreTheme(skin),
+      template: skin.id,
+      // The seller's own touches on top of the template.
+      accent: '#7c3aed',
+      layout: { ...skinToStoreTheme(skin).layout, header: 'stacked', productCard: 'wide' },
+    } as StoreTheme;
+
+    const file = exportTemplate({ name: 'متجري', theme: customised, sections: [] });
+    const back = importTemplate(JSON.parse(JSON.stringify(file)));
+
+    expect(back.ok).toBe(true);
+    if (!back.ok) return;
+    expect(back.theme.accent).toBe('#7c3aed');
+    expect(back.theme.layout?.header).toBe('stacked');
+    expect(back.theme.layout?.productCard).toBe('wide');
+    expect(back.theme.template).toBe('pearl');
+    expect(back.theme.colors).toMatchObject(customised.colors ?? {});
+  });
+
+  it('and a file from a shop that never wore a template says so', () => {
+    const file = exportTemplate({ name: 'متجري', theme: DEFAULT_STORE_THEME, sections: [] });
+    const back = importTemplate(JSON.parse(JSON.stringify(file)));
+    expect(back.ok).toBe(true);
+    if (!back.ok) return;
+    // Absent, not invented. A shop painted by hand has worn none.
+    expect(back.theme.template).toBeUndefined();
+  });
+});
+
+describe('a colour named like an image', () => {
+  /**
+   * `background` is an uploaded picture on a block and a hex colour on the
+   * theme. The stripper matched the NAME at any depth, so every exported
+   * template came out with a blank where the page colour should be — and
+   * `storeThemeSchema` refuses a blank hex, which made every exported
+   * customised template a file that could not be imported.
+   */
+  it('survives the stripper, while a real image path does not', () => {
+    const value = stripImages({
+      colors: { background: '#fdf7f9' },
+      header: { background: '#ffffff' },
+      block: { background: '/api/public/media/a/b.webp' },
+      gallery: { images: ['/api/public/media/a/c.webp'] },
+      empty: { background: '' },
+    });
+    expect(value.colors.background).toBe('#fdf7f9');
+    expect(value.header.background).toBe('#ffffff');
+    expect(value.block.background).toBe('');
+    expect(value.gallery.images).toEqual([]);
+    expect(value.empty.background).toBe('');
+  });
+
+  it('and every shipped template exports to a file that imports back', () => {
+    // The ten are what a seller will actually customise and send on.
+    for (const skin of STORE_TEMPLATES) {
+      const theme = { ...DEFAULT_STORE_THEME, ...skinToStoreTheme(skin), template: skin.id } as StoreTheme;
+      const file = exportTemplate({ name: skin.name, theme, sections: [] });
+      const back = importTemplate(JSON.parse(JSON.stringify(file)));
+      expect(back.ok, skin.id).toBe(true);
+      if (back.ok) expect(back.theme.colors?.background, skin.id).toBe(theme.colors?.background);
+    }
   });
 });

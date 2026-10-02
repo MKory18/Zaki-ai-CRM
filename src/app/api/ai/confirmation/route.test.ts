@@ -13,12 +13,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * And what it returns is a suggestion. Nothing in this route writes.
  */
 
-const { db, requireContext, requirePermission, aiChat, customerRisk, AiNotConfigured } = vi.hoisted(() => ({
+const { db, requireContext, requirePermission, aiChat, customerRisk, customerHistory, AiNotConfigured } = vi.hoisted(() => ({
   db: { order: { findFirst: vi.fn(), findMany: vi.fn() } },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
   aiChat: vi.fn(),
   customerRisk: vi.fn(),
+  /*
+   * The person's previous orders are asked of `customer-risk.ts`, not built
+   * here — because «which orders are the same person's» is answered by the
+   * PHONE, and the rule this file guards is that THIS route never selects one.
+   * `Customer` is unique per store, so asking by id showed one shop's record
+   * of somebody the agent is about to call.
+   */
+  customerHistory: vi.fn(),
   AiNotConfigured: class AiNotConfigured extends Error {},
 }));
 
@@ -26,7 +34,10 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
 vi.mock('@/lib/ai-provider', () => ({ aiChat: (...a: unknown[]) => aiChat(...a), AiNotConfigured }));
-vi.mock('@/lib/customer-risk', () => ({ customerRisk: (...a: unknown[]) => customerRisk(...a) }));
+vi.mock('@/lib/customer-risk', () => ({
+  customerRisk: (...a: unknown[]) => customerRisk(...a),
+  customerHistory: (...a: unknown[]) => customerHistory(...a),
+}));
 
 import { POST } from './route';
 
@@ -56,6 +67,7 @@ beforeEach(() => {
   requirePermission.mockResolvedValue(undefined);
   db.order.findFirst.mockResolvedValue(order);
   db.order.findMany.mockResolvedValue([]);
+  customerHistory.mockResolvedValue([]);
   customerRisk.mockResolvedValue({
     tier: 'SAFE', returnRate: 0, orders: 3, returns: 0, windowDays: 182,
     recentReturns60d: 0, requiresPrepaymentOrApproval: false,
@@ -93,6 +105,33 @@ describe('what reaches the provider', () => {
   it('a clean history goes as numbers, so the model cannot invent a worry', async () => {
     const body = await (await ask()).json();
     expect(body.context.customer).toMatchObject({ orders: 3, returns: 0, tier: 'SAFE', previous: [] });
+  });
+
+  it('and a previous order travels as a STATE and a date, not as three columns', async () => {
+    /*
+     * The projection is this route's own work and nothing tested it: the
+     * three status columns are collapsed into the one derived state, in the
+     * operator's Arabic, and the timestamp is cut to a day. A model handed
+     * `shippingStatus: 'RETURNED', confirmationStatus: 'CONFIRMED'` is being
+     * asked to derive the state itself, which is the one thing the frontend
+     * and anything downstream must never do.
+     */
+    customerHistory.mockResolvedValue([
+      {
+        orderNumber: 'SY-0041',
+        confirmationStatus: 'CONFIRMED',
+        shippingStatus: 'RETURNED',
+        createdAt: new Date('2026-08-14T09:30:00.000Z'),
+        totalAmount: 800,
+      },
+    ]);
+    const body = await (await ask()).json();
+    expect(body.context.customer.previous).toEqual([
+      { number: 'SY-0041', state: 'مرتجع', total: 800, at: '2026-08-14' },
+    ]);
+    // And it is the SAME person's list, asked of the one module that may
+    // resolve that — this route never selects a phone.
+    expect(customerHistory).toHaveBeenCalledWith(db, 'c1', 'cust1', { exceptOrderId: ORDER_ID });
   });
 });
 

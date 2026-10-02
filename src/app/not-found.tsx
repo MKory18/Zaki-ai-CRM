@@ -1,26 +1,28 @@
-import Link from 'next/link';
-import { SystemFrame } from './(system)/SystemFrame';
-import { RiCompass3Line } from '@remixicon/react';
+import { PublicNotFound } from '@/components/public/PublicLayout';
 
-/** Anything outside the navigation contract resolves here. */
+/**
+ * AN ADDRESS THAT BELONGS TO NOBODY.
+ *
+ * This is the LAST 404 — the one for a URL that matched no segment at all.
+ * A shop has its own (`/s/[store]/not-found.tsx`), a landing page has its
+ * own, and the dashboard now has its own (`(system)/not-found.tsx`). What
+ * reaches here is a typo, a dead advert or a crawler, and the visitor is
+ * as likely to be a shopper as a seller.
+ *
+ * WHY IT MOVED. It used to render inside `SystemFrame`, which is the
+ * dashboard's frame and declares the dashboard's two font families. Next
+ * renders the root `not-found` into the tree of EVERY route, so that
+ * frame's stylesheet was linked into every storefront page and React
+ * preloaded its nine faces: 218 KB fetched at the highest priority a
+ * browser has, on pages that never applied a rule of it. Measured in a
+ * production build, on the shelf of a shop with twelve products.
+ *
+ * AND IT IS `PublicNotFound`, NOT A SECOND ONE. The first version of this
+ * file was a hand-written neutral page with its own hexes — a duplicate of
+ * a component that already existed for exactly this, under exactly this
+ * description («A public address with nothing behind it»). The palette
+ * guard caught the hexes, which is how the duplicate was noticed at all.
+ */
 export default function NotFound() {
-  return (
-    <SystemFrame>
-      <div className="min-h-screen bg-[var(--sys-surface)] flex items-center justify-center p-4" dir="rtl">
-        <div className="w-full max-w-md bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] p-8 text-center space-y-5">
-          <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-            <RiCompass3Line className="w-6 h-6 text-[var(--sys-muted-foreground)]" />
-          </div>
-          <h1 className="text-lg font-bold text-[var(--sys-heading)]">الصفحة غير موجودة</h1>
-          <p className="text-sm text-[var(--sys-muted-foreground)]">الرابط الذي فتحته ليس ضمن شاشات النظام.</p>
-          <Link
-            href="/"
-            className="inline-block px-5 py-2 text-sm font-medium rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
-          >
-            العودة إلى شاشتك الأولى
-          </Link>
-        </div>
-      </div>
-    </SystemFrame>
-  );
+  return <PublicNotFound />;
 }

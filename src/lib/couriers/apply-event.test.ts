@@ -6,6 +6,7 @@ vi.mock('../db', () => {
   const tx = {
     order: { update: vi.fn() },
     orderActivity: { create: vi.fn() },
+    orderChangeRequest: { updateMany: vi.fn() },
   };
   return {
     db: {
@@ -16,7 +17,14 @@ vi.mock('../db', () => {
 });
 
 const { db } = (await import('../db')) as unknown as {
-  db: { $transaction: ReturnType<typeof vi.fn>; __tx: { order: { update: ReturnType<typeof vi.fn> }; orderActivity: { create: ReturnType<typeof vi.fn> } } };
+  db: {
+    $transaction: ReturnType<typeof vi.fn>;
+    __tx: {
+      order: { update: ReturnType<typeof vi.fn> };
+      orderActivity: { create: ReturnType<typeof vi.fn> };
+      orderChangeRequest: { updateMany: ReturnType<typeof vi.fn> };
+    };
+  };
 };
 
 const order = { id: 'o1', companyId: 'c1', shippingStatus: 'SHIPPED' };
@@ -90,5 +98,40 @@ describe('applyCourierEvent — the one gate both the poll and the webhook pass'
     });
     expect(out).toBe('INVALID_TRANSITION');
     expect(db.__tx.order.update).not.toHaveBeenCalled();
+  });
+
+  /**
+   * CONTRACT INVARIANT 7, second half. A feed is never blocked by a change
+   * request — it tells on itself instead, so whoever decides the request
+   * knows the order moved under her.
+   */
+  describe('and it flags a request that was under review while it moved', () => {
+    it('flags every PENDING request on that order', async () => {
+      await applyCourierEvent({ order, event: event(), courierName: 'باشا', source: 'WEBHOOK' });
+      const call = db.__tx.orderChangeRequest.updateMany.mock.calls[0][0];
+      expect(call.data).toEqual({ changedDuringReview: true });
+      expect(call.where.orderId).toBe('o1');
+      expect(call.where.status).toBe('PENDING');
+      // Not `blocking: true`. A non-blocking request is the one that did NOT
+      // stop the pipeline, so it is the likelier to be overtaken.
+      expect(call.where.blocking).toBeUndefined();
+      // Already-flagged rows are excluded so a later event cannot bump
+      // `updatedAt` and reorder a human's worklist.
+      expect(call.where.changedDuringReview).toBe(false);
+    });
+
+    it('and does not flag anything when the parcel did not move', async () => {
+      for (const ev of [event({ status: 'SHIPPED' }), event({ status: null }), event({ status: 'DELIVERED' })]) {
+        await applyCourierEvent({ order, event: ev, courierName: 'باشا', source: 'WEBHOOK' });
+      }
+      expect(db.__tx.orderChangeRequest.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('and never reads a change request as a gate — the feed is not blocked', async () => {
+      // There is no `findFirst` on the mock at all: if the implementation
+      // ever reached for one to decide whether to proceed, this throws.
+      const out = await applyCourierEvent({ order, event: event(), courierName: 'باشا', source: 'WEBHOOK' });
+      expect(out).toBe('APPLIED');
+    });
   });
 });

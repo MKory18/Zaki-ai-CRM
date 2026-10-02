@@ -3,7 +3,7 @@
 /*
  * What EVERY page loads: the utility classes, and nothing that styles a
  * page by itself. The dashboard's own look is src/app/(system)/system.css;
- * a landing page's and a storefront's is their theme (--lp-*). A rule here
+ * a landing page's and a storefront's is their theme (--store-*). A rule here
  * that set a colour or a font would reach a seller's shop — which is how
  * the dashboard's heading colour came to beat a page's own theme.
  */

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
  * Every page used to render under the dashboard's stylesheet, fonts, title
  * and icon, so a seller's landing page wore the dashboard's heading colour
  * and grey background. The system's look now loads with the system's pages
- * only, its colours are --sys-*, and a store's are --lp-*. Asserted by
+ * only, its colours are --sys-*, and a store's are --store-*. Asserted by
  * reading the files, because the failure worth catching is a well-meant
  * import or variable that crosses the line.
  */
@@ -32,6 +32,15 @@ const STORE_FILES = [
   ...files('src/components/landing'),
   ...files('src/components/storefront'),
   ...files('src/components/public'),
+  // THE PUBLIC ROUTES THEMSELVES, not only the components they draw.
+  //
+  // This list held components and no routes, and the gap had a live
+  // consequence: `src/app/not-found.tsx` wears `SystemFrame` and the
+  // system's colours, and every `notFound()` under /s and /lp fell through
+  // to it — so a shopper who mistyped a product address was shown the
+  // seller's back office and told about «شاشات النظام».
+  ...files('src/app/s'),
+  ...files('src/app/lp'),
   'src/lib/landing-theme.ts',
   'src/lib/block-look.ts',
 ];
@@ -44,7 +53,39 @@ describe('the two variable families', () => {
   });
 
   it.each(SYSTEM_FILES)('%s uses no store variable', (file) => {
-    expect(code(file)).not.toMatch(/--lp-/);
+    expect(code(file)).not.toMatch(/--store-/);
+  });
+
+  /**
+   * AND THE OLD NAME IS GONE, EVERYWHERE.
+   *
+   * A store's family was `--lp-*`, after the landing page — the only thing
+   * that had a look when it was named. A catalogue engine is not a landing
+   * page, and a variable named after the one place it used to be read is
+   * one that will be misread. Twenty-eight names moved across nineteen
+   * files; a survivor would be a colour that silently falls back, which is
+   * the kind of thing a page renders without complaining about.
+   */
+  /**
+   * AND A SHOPPER'S DEAD END IS THE SHOP'S, NOT THE DASHBOARD'S.
+   *
+   * Next renders the nearest `not-found.tsx`; without one in a public
+   * segment every `notFound()` there reaches the root file, which imports
+   * `SystemFrame`. The two above are what stop that, and this is what stops
+   * somebody deleting them.
+   */
+  it.each(['src/app/s/[store]/not-found.tsx', 'src/app/lp/[slug]/not-found.tsx'])(
+    '%s exists and wears no part of the system',
+    (file) => {
+      const src = code(file);
+      expect(src).not.toMatch(/SystemFrame/);
+      expect(src).not.toMatch(/--sys-/);
+    }
+  );
+
+  it('no file anywhere still writes the old store prefix', () => {
+    const stragglers = files('src', /\.(tsx?|css)$/).filter((f) => read(f).includes('--lp-'));
+    expect(stragglers).toEqual([]);
   });
 });
 

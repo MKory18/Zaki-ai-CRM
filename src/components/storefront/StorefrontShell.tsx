@@ -1,10 +1,15 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Storefront } from '@/lib/storefront';
-import { storeThemeVars } from '@/lib/store-theme';
-import { BLOCK_CSS, fontHref } from '@/components/landing/blocks/styles';
-import { STOREFRONT_CSS } from './styles';
-import { RiArrowLeftSLine, RiPhoneLine } from '@remixicon/react';
+import { cartBarApplies, layoutOf, storeThemeVars } from '@/lib/store-theme';
+import { telHref, whatsappHref } from '@/lib/store-contact';
+import { fontHref } from '@/components/landing/blocks/styles';
+import { SHOP_SHEET } from './styles';
+// Six drawings from this shop's own file, not the package they came
+// from: a named import there still shipped 245 icons to a shopper.
+// See the note at the top of ./icons.
+import { RiArrowLeftSLine, RiPhoneLine, RiSearchLine, RiWhatsappLine } from './icons';
+import { CartLink } from './CartLink';
 
 /**
  * The frame every storefront page sits in.
@@ -14,6 +19,7 @@ import { RiArrowLeftSLine, RiPhoneLine } from '@remixicon/react';
  * landing page already knows this shop's controls, and a company selling
  * through both does not end up with two different-looking brands.
  */
+
 export function StorefrontShell({
   store,
   children,
@@ -43,16 +49,50 @@ export function StorefrontShell({
   // theme keeps only the copyright line. getStorefront has already dropped
   // the hidden items.
   const headerMenu = store.menus.HEADER ?? [];
+  // One owner for the shop's own contact links — see store-contact.ts on
+  // why this is not `ContactButtons`.
+  const contact = { whatsapp: whatsappHref(store.supportPhone), tel: telHref(store.supportPhone) };
   const footerMenu = store.menus.FOOTER ?? [];
 
   return (
     // The shop's own language and direction. This was written as rtl, so a
     // shop selling in English had its heading, price and arrows mirrored.
     <div dir={store.dir} lang={store.language} className="lp-root sf-root" style={vars as React.CSSProperties}>
-      {href && <link rel="stylesheet" href={href} />}
-      <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS + STOREFRONT_CSS }} />
+      {/*
+        THE HANDSHAKE, BEFORE THE FONT IS ASKED FOR.
 
-      <header className={header?.sticky === false ? 'sf-header' : 'sf-header sf-header-sticky'}>
+        The face is served from a second origin, so on a slow connection
+        the browser pays DNS, TCP and TLS to fonts.gstatic.com before the
+        first byte of the font is requested — and it does not learn that
+        the origin exists until it has parsed the stylesheet below, which
+        came from a THIRD origin it also had to reach first. That is two
+        round trips in front of the text, on the connection where a round
+        trip costs the most.
+
+        `crossOrigin` is required on the gstatic one: fonts are fetched in
+        CORS mode, and a preconnect without it opens a connection the font
+        request cannot reuse — the cost paid and nothing bought.
+      */}
+      {href && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="stylesheet" href={href} />
+        </>
+      )}
+      <style dangerouslySetInnerHTML={{ __html: SHOP_SHEET }} />
+
+      {/*
+        THE VARIANT IS AN ARRANGEMENT, NEVER A SUBTRACTION.
+        `data-header` moves these things around in CSS; it cannot remove
+        one. The search, the basket and the WhatsApp button are the locked
+        core — «أي تخصيص بيخرب عنصر منهم بينرفض مع السبب» — so they are
+        rendered unconditionally and the stylesheet only decides where.
+      */}
+      <header
+        data-header={layoutOf(store.theme, 'header')}
+        className={header?.sticky === false ? 'sf-header' : 'sf-header sf-header-sticky'}
+      >
         <div className="sf-header-inner">
           <Link href={home} className="sf-brand">
             {store.logo ? (
@@ -81,14 +121,81 @@ export function StorefrontShell({
             </nav>
           )}
 
-          {store.supportPhone && (
-            <a className="sf-phone" href={`tel:${store.supportPhone.replace(/[^\d+]/g, '')}`} dir="ltr">
-              <RiPhoneLine size={15} />
-              {store.supportPhone}
-            </a>
+          {/*
+            THE SEARCH. A plain GET form to the shelf: it works before any
+            script runs, which on a mid-range Android is the difference
+            between a search box and a dead field.
+          */}
+          <form className="sf-search" action={`/s/${store.slug}/shop`} method="get" role="search">
+            <label className="sr-only" htmlFor="sf-q">
+              ابحث في المتجر
+            </label>
+            <input id="sf-q" type="search" name="q" placeholder="ابحث في المتجر" maxLength={60} />
+            <button type="submit" aria-label="ابحث">
+              <RiSearchLine size={18} aria-hidden />
+            </button>
+          </form>
+
+          {/* A shop with one product has no basket — `cartBarApplies` is
+              the one place that is decided. */}
+          {cartBarApplies(store.type) && <CartLink slug={store.slug} />}
+
+          {contact.whatsapp && (
+            <>
+              {/*
+                A BUTTON, NOT A LINE OF TEXT. «رقم الهاتف نص، مش زر تواصل»
+                is on the brief's list of mistakes this engine does not
+                repeat: a customer deciding whether to trust a shop wants
+                to reach a person, and a number they have to copy is a
+                number they do not call.
+              */}
+              <a
+                className="sf-whatsapp"
+                href={contact.whatsapp}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <RiWhatsappLine size={18} aria-hidden />
+                <span>واتساب</span>
+              </a>
+              {contact.tel && (
+                <a className="sf-phone" href={contact.tel} dir="ltr">
+                  <RiPhoneLine size={15} />
+                  {store.supportPhone}
+                </a>
+              )}
+            </>
           )}
         </div>
+
+        {/*
+          THE REASSURANCE LINE, VISIBLE. The customer is deciding in
+          seconds whether to trust a shop they have never heard of, and
+          these are the two facts that answer that — so they are in the
+          header rather than somewhere they have to scroll to.
+        */}
+        <p className="sf-assure">الدفع عند الاستلام · توصيل لكل المحافظات</p>
       </header>
+
+      {/*
+        THE FLOATING WHATSAPP, AT A FIXED CORNER.
+        «زر واتساب عائم بزاوية ثابتة، ما بيغطي الشريط السفلي» — so it is
+        offset above the bottom bar's own height rather than pinned to
+        the bottom, and the offset is one variable both of them read. A
+        button that covers «إتمام الطلب» is a button that costs a sale
+        to save a tap.
+      */}
+      {contact.whatsapp && (
+        <a
+          className="sf-float-wa"
+          href={contact.whatsapp}
+          rel="noopener noreferrer"
+          target="_blank"
+          aria-label="تواصل عبر واتساب"
+        >
+          <RiWhatsappLine size={24} aria-hidden />
+        </a>
+      )}
 
       {back && (
         <nav className="sf-back">

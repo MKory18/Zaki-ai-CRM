@@ -8,7 +8,7 @@
  * they reach the system's pages and nothing else. They stay on body and the
  * headings, as before: a dialog portalled into <body> is still the system's.
  *
- * The system's colours are --sys-* variables. A store's are --lp-* (see
+ * The system's colours are --sys-* variables. A store's are --store-* (see
  * src/lib/landing-theme.ts), and neither family may appear in the other's
  * files — a system theme change must never reach a shop.
  */

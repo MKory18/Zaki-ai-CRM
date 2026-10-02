@@ -7,7 +7,7 @@ import { requireContext } from '@/lib/geo-context';
 import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { orderRefFields } from '@/lib/order-ref';
 import { resolveRegionId } from '@/lib/regions';
-import { computeCod } from '@/lib/money';
+import { computeCod, roundMinor } from '@/lib/money';
 import { productCost } from '@/lib/product-cost';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -207,7 +207,8 @@ export async function POST(req: Request) {
           totalAmount: money.cod,
           currency: country.currencyCode,
         moderatorId: assignedModeratorId,
-        estimatedCostOfGoods: Number((unitCost * qty).toFixed(2)),
+        // Rounded by the currency, like the total beside it.
+        estimatedCostOfGoods: roundMinor(unitCost * qty, country.minorUnit),
         productNameSnapshot: product.name,
         productImageSnapshot: product.image || null,
         status: 'NEW',
@@ -316,7 +317,7 @@ export async function POST(req: Request) {
       const offers = await activeOffersFor(db, companyId, match.id);
       const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
       if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
-        suggestedPrice = qtyOffer.sellingPrice;
+        suggestedPrice = qtyOffer.price;
         suggestedOfferName = qtyOffer.name;
       } else if (qtyOffer) {
         suggestedOfferName = qtyOffer.name;
