@@ -66,6 +66,39 @@ import os from 'node:os';
 import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+/*
+ * THE RULES ARE IMPORTED, NEVER RETYPED.
+ *
+ * This script used to carry its OWN copy of the settlement rule —
+ * `(collectedAmount ?? totalAmount) − deliveryFee`, written out by hand at
+ * stop 6. When `expectedAmountFor` changed shape the copy did not, and no
+ * compiler and no test suite reads this file, so the only end-to-end check
+ * in the repository spent its runs announcing a defect that had already been
+ * fixed: three `problem()` lines on a journey whose doors were all correct.
+ * A harness that cries wolf is worse than no harness, because the next real
+ * alarm is read as noise.
+ *
+ * So every rule the walk CHECKS is now called, not restated. Where the walk
+ * deliberately keeps its own arithmetic — `honestNet` at stop 6 — it is
+ * because the comparison would otherwise be `x === x`, and that is said at
+ * the spot in so many words.
+ */
+import { commissionAmount, isPerOrderRule, PROMOTABLE_BY_PAYOUT, ruleFor, type RuleLike } from '../src/lib/commission';
+import { roundMinor } from '../src/lib/money';
+import { expectedAmountFor, SETTLEMENT_ORDER_SELECT } from '../src/lib/settlement';
+
+/**
+ * ROUNDING IS THE LIBRARY'S, NOT THIS SCRIPT'S.
+ *
+ * The local copy was `Math.round(value * f + EPSILON) / f`, and it disagreed
+ * with `roundMinor` on exactly the figures the settlement rule can now
+ * produce: `Math.round` breaks a negative tie TOWARDS ZERO (−2.5 → −2) while
+ * `roundMinor` is half-away-from-zero (−2.5 → −3). A return fee larger than
+ * what the customer kept makes the expectation negative, so a walk comparing
+ * its own rounding against the rule's would have reported a one-minor-unit
+ * «defect» that is nothing but two different roundings of one number.
+ */
+const round = roundMinor;
 
 const db = new PrismaClient();
 const BASE = process.env.GOLDEN_BASE || 'http://localhost:3000';
@@ -222,6 +255,8 @@ interface Stage {
   cashWalletName: string;
   bankWalletName: string;
   userId: string;
+  /** The walking user's ROLE STRING — what `ruleFor` matches a role rule on. */
+  userRole: string;
   approverSession: string | null;
   discountOfferId: string | null;
 }
@@ -236,6 +271,10 @@ async function setUpStage(userId: string, roleId: string | null, companyId: stri
    * with no fee table, and then tracing a delivery fee of zero through
    * thirteen stops — the figure never moved because there was no figure.
    */
+  // The role STRING, which is a separate fact from the Role ROW the grants
+  // hang off — and the fact `ruleFor` matches a role-scoped rule on.
+  const walker = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { role: true } });
+
   const page = await db.landingPage.findFirst({
     where: { isPublished: true, productId: { not: null }, storeId: { not: null } },
     select: { slug: true, productId: true, storeId: true },
@@ -441,6 +480,7 @@ async function setUpStage(userId: string, roleId: string | null, companyId: stri
     bankWalletId: wallets[1].id,
     bankWalletName: wallets[1].name,
     userId,
+    userRole: walker.role,
     approverSession,
     discountOfferId: discountOffer?.id ?? null,
   };
@@ -521,16 +561,31 @@ const OFFER_FIELDS = {
   sellingPrice: true, discount: true, deliveryIncluded: true,
 } as const;
 
-/** The order as the database holds it right now — the figure after a stop. */
+/**
+ * The order as the database holds it right now — the figure after a stop.
+ *
+ * `SETTLEMENT_ORDER_SELECT` IS SPREAD, NOT COPIED, and its nested `items`
+ * select is spread inside this one. That is the whole guarantee: when the
+ * settlement rule grows a field, every `reread` on this walk selects it on
+ * the next run, and `expectedAmountFor(o, …)` keeps type-checking. Listing
+ * `totalAmount, deliveryFee, collectedAmount, …` by hand is how `items` and
+ * `returnReceipt` came to be missing here while the rule had started reading
+ * both.
+ */
 async function reread(id: string) {
   const o = await db.order.findUnique({
     where: { id },
     select: {
-      id: true, orderNumber: true, version: true, totalAmount: true, deliveryFee: true,
-      collectedAmount: true, priceIncludesDelivery: true, confirmationStatus: true,
-      shippingStatus: true, settlementStatus: true, estimatedCostOfGoods: true,
+      ...SETTLEMENT_ORDER_SELECT,
+      id: true, orderNumber: true, version: true, confirmationStatus: true,
+      settlementStatus: true, estimatedCostOfGoods: true,
       merchantRef: true, trackingNumber: true, discountAmount: true,
-      items: { select: { id: true, productId: true, quantity: true, freeQuantity: true, reservedQty: true, deliveredQty: true, unitPrice: true, discountShare: true } },
+      items: {
+        select: {
+          ...SETTLEMENT_ORDER_SELECT.items.select,
+          id: true, productId: true, reservedQty: true,
+        },
+      },
     },
   });
   if (!o) throw new Error('the order vanished mid-walk');
@@ -907,10 +962,30 @@ async function atTheDoor(stage: Stage, scenario: Scenario, order: Walked) {
    */
   if (scenario.door === 'SKIP') {
     const o = await reread(order.id);
-    const net = round(Number(o.totalAmount) - Number(o.deliveryFee ?? 0), stage.minorUnit);
+    /*
+     * HERE TOO THE RULE IS CALLED. This branch used to compute ONE figure,
+     * `totalAmount − deliveryFee`, and hand it back as BOTH answers — so the
+     * walk's loudest check (honest vs. system) was hard-wired to pass on
+     * this scenario whatever the rule said. The door's figure is the whole
+     * order, because nobody stood at the door and the customer is still
+     * expected to pay for all of it; the rule's figure comes from the rule,
+     * which reaches the same place by its own road (no line has a
+     * `deliveredQty`, so `collectedAtDoor` falls back to the order's total).
+     * The two agreeing is now a measurement rather than an assignment.
+     */
+    const doorAll = round(Number(o.totalAmount), stage.minorUnit);
+    const net = honestNetFor(o, doorAll, stage.minorUnit);
+    const ruleSays = expectedAmountFor(o, stage.minorUnit);
     record(`٥ · ${scenario.key}`, 'لم يُسجَّل تسليم يدوي', o.shippingStatus);
     record(`٦ · ${scenario.key}`, 'الصافي الصحيح من الباب', net, 'لا باب — القيمة كلُّها منتظرة');
-    record(`٦ · ${scenario.key}`, 'الصافي كما يحسبه النظام', net);
+    record(`٦ · ${scenario.key}`, 'الصافي كما تحسبه القاعدة', ruleSays);
+    if (net !== ruleSays) {
+      problem(
+        `٦ · ${scenario.key}: لا أحد وقف على الباب، فالمنتظر كامل الطلب ناقصاً الأجرة = ${net}، ` +
+          `و«expectedAmountFor» تقول ${ruleSays} — فرق ${round(ruleSays - net, stage.minorUnit)} على طلبٍ ` +
+          'لم يُسجَّل تسليمه يداً، وهو الطلب الذي الكشفُ وحده إثباتُ تسليمه.'
+      );
+    }
     /*
      * `doorExpected` is the whole order and not null: nobody stood at the
      * door, but the customer is still expected to pay for all of it. Leaving
@@ -920,10 +995,10 @@ async function atTheDoor(stage: Stage, scenario: Scenario, order: Walked) {
      */
     return {
       order: o,
-      doorExpected: round(Number(o.totalAmount), stage.minorUnit),
+      doorExpected: doorAll,
       screenExpected: null,
       honestNet: net,
-      systemExpects: net,
+      systemExpects: ruleSays,
     };
   }
 
@@ -977,8 +1052,15 @@ async function atTheDoor(stage: Stage, scenario: Scenario, order: Walked) {
   } else {
     screenExpected = row.expectedCollection === undefined || row.expectedCollection === null ? null : Number(row.expectedCollection);
     record(`٦ · ${scenario.key}`, 'ما تنتظره شاشة التحصيل', screenExpected ?? '— لم يُرسَل —');
+    /*
+     * THE SUPERSEDED FORMULA, written out ON PURPOSE and the one place in
+     * this file where that is right: it is not a live rule being restated,
+     * it is the DEAD one, kept so the walk can show the gap between what the
+     * strip used to print and what the screen prints now, on a real order.
+     * Nothing compares it against anything; it only feeds the observation.
+     */
     const oldFormula = Number(o.totalAmount) - Number(o.deliveryFee ?? 0);
-    record(`٦ · ${scenario.key}`, 'الصيغة القديمة للشريط', oldFormula);
+    record(`٦ · ${scenario.key}`, 'الصيغة القديمة المهجورة للشريط', oldFormula);
     if (screenExpected === null) {
       problem(`٦ · ${scenario.key}: شاشة التتبّع لا ترسل expectedCollection — والشاشة تحتاجه لتعرض الصافي`);
     } else if (screenExpected !== oldFormula) {
@@ -989,54 +1071,37 @@ async function atTheDoor(stage: Stage, scenario: Scenario, order: Walked) {
     }
   }
 
-  /*
-   * THE HONEST NET: what the courier should hand over for this parcel. It is
-   * `expectedAmountFor` in lib/settlement.ts, recomputed here from the same
-   * two columns so the file this script writes is the file an honest courier
-   * would write — and a mismatch at stop 10 is then OUR arithmetic, not the
-   * script's.
-   */
   const fee = Number(o.deliveryFee ?? 0);
-  const returned = o.shippingStatus === 'RETURNED' || o.shippingStatus === 'RETURN_REQUESTED';
 
   /*
    * TWO ANSWERS TO ONE QUESTION, and this is the stop the whole harness is
-   * for.
+   * for. They must come from TWO PLACES or the comparison proves nothing.
    *
-   * THE TRUTH is the door's: the customer handed over `collectedAmount` as
-   * the door computed it, the courier keeps its fee out of that, and the
-   * remainder is what reaches us. Under BOTH pricing modes the arithmetic is
-   * the same one expression — with delivery included the fee is already
-   * inside the price, with it excluded the door added it on — so the net is
-   * `doorCollected − fee` either way.
+   * THE TRUTH is the DOOR'S, and it is the one figure this script still
+   * computes itself (`honestNetFor`): the door's own HTTP answer said what
+   * the customer handed over, the courier keeps its fees out of that, and
+   * the remainder is what reaches us. It may not call `expectedAmountFor` —
+   * if it did, the next line would be `x === x` and stop 6 would be a check
+   * that can never fail.
    *
-   * THE SYSTEM'S ANSWER is `expectedAmountFor` in lib/settlement.ts, which
-   * is what matching compares against and what the collection screen prints:
-   * `(collectedAmount ?? totalAmount) − deliveryFee`. And the door
-   * deliberately does NOT write `collectedAmount` — that is the courier
-   * statement's to write — so for every parcel that has not been settled yet
-   * the `??` falls through to `totalAmount`, THE WHOLE ORDER.
-   *
-   * For a complete delivery the two agree, because the whole order IS what
-   * was taken. For a PARTIAL delivery they cannot: the customer took some
-   * lines and paid for those, and `totalAmount` is still the price of all of
-   * them.
+   * THE SYSTEM'S ANSWER is `expectedAmountFor` itself, CALLED, on the very
+   * row the matcher will read. It used to be retyped here as
+   * `(collectedAmount ?? totalAmount) − deliveryFee`; the rule outgrew that
+   * copy and the copy is what this walk then reported as a defect.
    */
-  const honestNet = returned ? 0 : round(Math.max(0, (doorExpected ?? Number(o.totalAmount)) - fee), stage.minorUnit);
-  const systemExpects = returned
-    ? 0
-    : round((o.collectedAmount === null ? Number(o.totalAmount) : Number(o.collectedAmount)) - fee, stage.minorUnit);
+  const honestNet = honestNetFor(o, doorExpected, stage.minorUnit);
+  const systemExpects = expectedAmountFor(o, stage.minorUnit);
   record(`٦ · ${scenario.key}`, 'الصافي الصحيح من الباب', honestNet);
-  record(`٦ · ${scenario.key}`, 'الصافي كما يحسبه النظام', systemExpects);
+  record(`٦ · ${scenario.key}`, 'الصافي كما تحسبه القاعدة', systemExpects);
 
   if (honestNet !== systemExpects) {
     problem(
       `٦ · ${scenario.key}: الطلب ${o.orderNumber} حالته ${o.shippingStatus}. الباب يقول إنّ العميل دفع ` +
-        `${doorExpected}، فالواصل إلينا ${honestNet} بعد أجرة ${fee}. و«expectedAmountFor» — وهي ما تقارن به ` +
+        `${doorExpected}، فالواصل إلينا ${honestNet} بعد أجرة ${fee} وأجرة إرجاع ` +
+        `${Number(o.returnReceipt?.courierFeeAmount ?? 0)}. و«expectedAmountFor» — وهي ما تقارن به ` +
         `المطابقة وما تطبعه شاشة التحصيل — تنتظر ${systemExpects}، أي الفرق ${round(systemExpects - honestNet, stage.minorUnit)}. ` +
-        'السبب: الباب لا يكتب collectedAmount عمداً (كشف الشركة يكتبه)، فالـ ?? يسقط إلى totalAmount، ' +
-        'وهو ثمن الطلب كلِّه لا ثمن ما استُلم. فكلُّ تسليمٍ جزئيٍّ يصل المطابقة بفرقٍ يُحمَّل على الشركة ' +
-        'وهي لم تخطئ.'
+        'والرقمان مأخوذان من مصدرين: الأول من جواب باب التسليم، والثاني من القاعدة على الصفّ نفسه. ' +
+        'فاختلافُهما يعني أنّ حساب الباب وحساب المطابقة افترقا على طلبٍ حقيقي.'
     );
   }
   if (screenExpected !== null && screenExpected !== honestNet) {
@@ -1049,9 +1114,55 @@ async function atTheDoor(stage: Stage, scenario: Scenario, order: Walked) {
   return { order: o, doorExpected, screenExpected, honestNet, systemExpects };
 }
 
-function round(value: number, minorUnit: number) {
-  const f = 10 ** minorUnit;
-  return Math.round(value * f + Number.EPSILON) / f;
+/**
+ * THE SCRIPT'S OWN ANSWER to "what should the courier hand over", derived
+ * from the DOOR's figure and nothing else. The one piece of settlement
+ * arithmetic this file is allowed to keep, because it is the other half of
+ * stop 6's comparison: the rule is called, this is computed, and they are
+ * held against each other. Calling the rule here too would delete the check.
+ *
+ * It is pinned to `expectedAmountFor` in three ways, all of them deliberate:
+ *
+ *   THE DELIVERY FEE comes out whatever was taken. The courier travelled to
+ *   that door. Under both pricing modes one expression covers it, because
+ *   the door already put the fee inside `collectedAmount` when the price
+ *   excludes delivery and left it inside the line prices when it includes
+ *   delivery.
+ *
+ *   THE RETURN FEE comes out too, read off `ReturnReceipt.courierFeeAmount`
+ *   — the same column the rule reads. Before this existed the script's
+ *   figure stopped at the delivery fee while the rule went on to the return
+ *   fee, so any scenario that charged one would have reported a difference
+ *   that was only the script being a version behind.
+ *
+ *   A RETURNED PARCEL IS ZERO on both sides, and the rule's own short-circuit
+ *   is what says so — asked here rather than re-tested, so a change to which
+ *   statuses count as returned cannot make the two disagree.
+ *
+ * AND IT IS NOT CLAMPED AT ZERO. The old line was
+ * `round(Math.max(0, doorExpected − fee))`, and the rule's comment now says
+ * in as many words that it returns a negative figure as it stands: a return
+ * fee bigger than the goods the customer kept means WE owe the courier, and
+ * rounding that up to zero hides a real debt. Clamping one side of a
+ * comparison is the defect this whole task is about, one layer down — the
+ * script would have been reporting a difference it created itself, and the
+ * only way to make it «pass» would have been to clamp the rule too, i.e. to
+ * silence the debt in the product so the harness would stop mentioning it.
+ * So the script asserts the SIGNED figure, matches the rule's sign, and a
+ * genuinely negative expectation flows through to stop 8 as a negative
+ * stated net — which is what an honest courier's file would say when they
+ * are owed money for the trip back.
+ */
+function honestNetFor(
+  order: { shippingStatus: string; totalAmount: unknown; returnReceipt: { courierFeeAmount: unknown } | null; deliveryFee: unknown },
+  doorExpected: number | null,
+  minorUnit: number
+): number {
+  if (order.shippingStatus === 'RETURNED' || order.shippingStatus === 'RETURN_REQUESTED') return 0;
+  const fee = round(Number(order.deliveryFee ?? 0), minorUnit);
+  const returnFee = round(Number(order.returnReceipt?.courierFeeAmount ?? 0), minorUnit);
+  const atDoor = doorExpected ?? Number(order.totalAmount);
+  return round(atDoor - fee - returnFee, minorUnit);
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -1155,6 +1266,34 @@ async function stopSevenReturns(stage: Stage, runs: Run[]) {
     record(`٧ · ${run.scenario.key}`, 'الحالة بعد الاستلام', after.shippingStatus);
     record(`٧ · ${run.scenario.key}`, 'حالة التسوية بعد الاستلام', after.settlementStatus);
     run.order = after;
+
+    /*
+     * AND THE EXPECTATION IS RE-ASKED, because this desk just changed one of
+     * its inputs. `expectedAmountFor` reads `ReturnReceipt.courierFeeAmount`,
+     * and that receipt did not exist when stop 6 measured. A figure captured
+     * at stop 6 and carried to stop 8 would write a courier file stating a
+     * net the rule no longer expects, and stop 10 would then report a
+     * difference that this script created by holding a stale number — the
+     * same class of fault as the hand-copied formula, one stop later.
+     *
+     * Both halves are re-derived, each from its own source: the rule from the
+     * refreshed row, the door's truth from the door's remembered figure plus
+     * the return fee now on the row. The gap between stop 6 and stop 7 is
+     * recorded rather than swallowed, so a return fee that moves the money is
+     * visible in the trace instead of showing up as a mismatch at stop 10.
+     */
+    const reExpected = expectedAmountFor(after, stage.minorUnit);
+    const reHonest = honestNetFor(after, run.doorExpected, stage.minorUnit);
+    if (reExpected !== run.systemExpects || reHonest !== run.honestNet) {
+      record(
+        `٧ · ${run.scenario.key}`,
+        'الصافي المنتظر بعد إيصال المرتجع',
+        `${run.honestNet} → ${reHonest} / ${run.systemExpects} → ${reExpected}`,
+        'أجرة الإرجاع دخلت الحساب'
+      );
+    }
+    run.honestNet = reHonest;
+    run.systemExpects = reExpected;
   }
 }
 
@@ -1376,6 +1515,29 @@ async function stopsEightToEleven(stage: Stage, runs: Run[], windowFrom: Date) {
      * named, because «mismatched» alone does not say whose fault it is.
      */
     const bent = run.scenario.statedDelta !== 0 || (run.scenario.feeDelta ?? 0) !== 0;
+    /*
+     * `ourFault` KEPT, AND IT IS NOT DEAD. It was reviewed as «always false
+     * once systemExpects comes from the rule», and that is half true: it is
+     * EXPECTED to be false, and its being false is the pass condition — but
+     * it is not structurally false, because its two sides come from two
+     * different producers. `honestNet` is derived from the HTTP answer the
+     * delivery door gave (partial-delivery.ts' arithmetic, over the wire);
+     * `systemExpects` is `expectedAmountFor` called on the database row.
+     * settlement.ts says those two are pinned to each other by a unit guard,
+     * «if they ever disagree, the screen's figure and the matcher's would
+     * too» — and a unit guard pins them on constructed objects. This is the
+     * only place they are held together on a REAL row that has been through
+     * every door, so deleting it would delete the end-to-end half of that
+     * pin.
+     *
+     * It is load-bearing besides. The file at stop 8 states `honestNet` and
+     * the matcher compares against `systemExpects`, so MATCHED is arithmetic-
+     * ally reachable only when the two agree. Dropping `ourFault` from
+     * `wanted` would make the walk demand MATCHED unconditionally and then
+     * report «matching said MISMATCHED» with no word on WHOSE arithmetic was
+     * wrong — which is exactly the diagnosis the second `problem()` below
+     * exists to give.
+     */
     const ourFault = run.systemExpects !== run.honestNet;
     const wanted = bent || ourFault ? 'MISMATCHED' : 'MATCHED';
     if (String(m.result) !== wanted) {
@@ -1779,14 +1941,24 @@ async function stopThirteen(
   for (const e of entries) made(`CommissionEntry ${e.id} — ${Number(e.amount)} ${e.status}`);
 
   /*
-   * THE BASE IS THE SALE, NOT THE COURIER'S FEE: `revenue = totalAmount −
-   * deliveryFee` in lib/commission.ts. Recomputed per order from the row, so
-   * a rate change never makes this check pass by accident.
+   * WHICH RULE GOVERNS, ASKED OF `ruleFor` — not of a WHERE clause.
+   *
+   * This used to be `findFirst({ appliesToUserId: stage.userId })`, which is
+   * a hand-written restatement of two exported rules at once: `isPerOrderRule`
+   * (a rule counting a DAY's confirmed orders cannot be answered from one
+   * order, and is accrued by a different file entirely) and `ruleFor`'s
+   * specificity-and-date ordering (a personal rule beats a role rule; the
+   * rule in force ON THE DELIVERY DAY beats today's). `findFirst` with no
+   * `orderBy` would have silently picked whichever row Postgres handed back
+   * first the day a second rule existed, and then blamed the accrual for the
+   * difference. So the whole active set is fetched and the library chooses.
    */
-  const rule = await db.commissionRule.findFirst({
-    where: { companyId: (await db.order.findUniqueOrThrow({ where: { id: runs[0].order.id }, select: { companyId: true } })).companyId, storeId: stage.storeId, appliesToUserId: stage.userId, isActive: true },
-    select: { type: true, value: true },
-  });
+  const companyId = (await db.order.findUniqueOrThrow({ where: { id: runs[0].order.id }, select: { companyId: true } })).companyId;
+  const storeRules = ((await db.commissionRule.findMany({
+    where: { companyId, storeId: stage.storeId, isActive: true },
+  })) as unknown as RuleLike[]).filter(isPerOrderRule);
+  const rule = ruleFor(storeRules, { userId: stage.userId, role: stage.userRole, at: new Date() });
+  record('١٣ · العمولة', 'القاعدة الحاكمة', rule ? `${rule.type} ${Number(rule.value)}` : '— لا قاعدة —', `من ${storeRules.length} قاعدة`);
   for (const run of runs) {
     const mine = entries.filter((e) => e.orderId === run.order.id);
     const base = round(Number(run.order.totalAmount) - Number(run.order.deliveryFee ?? 0), stage.minorUnit);
@@ -1799,11 +1971,24 @@ async function stopThirteen(
     if (run.order.shippingStatus === 'RETURNED' && mine.some((e) => e.status !== 'REVERSED' && Number(e.amount) > 0)) {
       problem(`١٣ · ${run.scenario.key}: طلب مرتجع يحمل عمولة موجبة — «المرتجع لا يولّد عمولة»`);
     }
-    if (rule && rule.type === 'PERCENT' && mine.length > 0) {
-      const earned = round(mine.filter((e) => e.status !== 'REVERSED').reduce((s, e) => s + Number(e.amount), 0), stage.minorUnit);
-      const want = round((base * Number(rule.value)) / 100, stage.minorUnit);
-      if (mine.filter((e) => e.status !== 'REVERSED').length > 0 && Math.abs(earned - want) > 10 ** -stage.minorUnit) {
-        problem(`١٣ · ${run.scenario.key}: العمولة ${earned} و${Number(rule.value)}% من ${base} هي ${want}`);
+    /*
+     * AND THE AMOUNT IS ASKED OF `commissionAmount`, not of `base * value /
+     * 100`. The hand-written percentage was already wrong in substance for
+     * any rule with TIERS: a per-order rule reads its tiers against the SALE
+     * VALUE ("an order over 200 pays more"), so a tiered PERCENT rule pays a
+     * rate the flat multiplication cannot produce. Restricting the check to
+     * `type === 'PERCENT'` also meant a FIXED rule's amount was never checked
+     * at all. Calling the library covers every rule shape and cannot drift.
+     */
+    const live = mine.filter((e) => e.status !== 'REVERSED');
+    if (rule && live.length > 0) {
+      const earned = round(live.reduce((s, e) => s + Number(e.amount), 0), stage.minorUnit);
+      const want = commissionAmount(rule, base, stage.minorUnit);
+      if (Math.abs(earned - want) > 10 ** -stage.minorUnit) {
+        problem(
+          `١٣ · ${run.scenario.key}: العمولة المقيَّدة ${earned} و«commissionAmount» على الأساس ${base} ` +
+            `بقاعدة ${rule.type} ${Number(rule.value)} تعطي ${want} — رقمان لقاعدةٍ واحدة`
+        );
       }
     }
   }
@@ -1833,15 +2018,48 @@ async function stopThirteen(
     if (!settled && statuses.includes('PAYABLE')) {
       problem(`١٣ · ${run.scenario.key}: عمولة صارت واجبة الدفع وتسوية الطلب ${run.order.settlementStatus} — والعقد يربطها بالاعتماد`);
     }
+    /*
+     * THE QUESTION IS REACHABILITY, NOT THE LABEL — and `ebda101` is what
+     * changed it.
+     *
+     * This check used to read: SETTLED order + ACCRUED entry = «فلا يمكن
+     * صرفه أبداً», it can never be paid. That was true when
+     * `markPayableForOrders` at statement approval was the only writer of
+     * PAYABLE: the accrual ran after the approval, so the one moment that
+     * could promote the entry had already passed and the entry sat at ACCRUED
+     * for ever. The ruling is now the opposite way round. An entry STAYS
+     * ACCRUED at rest and is promoted AT THE MOMENT OF PAYMENT, by the payout
+     * door, through the filter `PROMOTABLE_BY_PAYOUT`. So ACCRUED on a
+     * SETTLED order is the normal, correct resting state and the old sentence
+     * was false in substance while still true in letter — this walk performs
+     * no payout, so of course nothing promoted it.
+     *
+     * What is worth asking is whether the payout door can still REACH the
+     * entry. So the filter is handed to the database verbatim, scoped to this
+     * order's entries. Restating its conditions here is the defect this whole
+     * pass is about: the filter carries four of them (ACCRUED, no payoutId,
+     * not reversed, order SETTLED) and any copy would go stale the same way.
+     * A zero answer is the real P0 — an entry neither PAYABLE nor promotable
+     * is money owed that no door can pay.
+     */
     if (settled && statuses === 'ACCRUED') {
-      problem(
-        `١٣ · ${run.scenario.key}: الطلب ${run.order.orderNumber} مسوَّى (SETTLED) وقيدُ عمولته ما زال ` +
-          'ACCRUED، فلا يمكن صرفه أبداً. `markPayableForOrders` — وهي الكاتبُ الوحيد لحالة PAYABLE في ' +
-          'الشِّفرة كلِّها (src/lib/commission.ts:312) — تُنفَّذ لحظةَ اعتماد الكشف فقط، ولا شيء يمرّ على ' +
-          'القيود بعد ذلك. وبابُ الصرف يرفض بـ NOT_PAYABLE: «تصير مستحقة عند اعتماد كشف التحصيل» — ' +
-          'وهو اعتمادٌ قد مضى. وهذه ليست حالةً نادرة: الطلب الذي يُثبِت الكشفُ تسليمَه يصير DELIVERED ' +
-          'وSETTLED في اللحظة نفسها، فعمولتُه لا يمكن أن تكون قد استُحقّت قبلها بحالٍ.'
+      const reachable = await db.commissionEntry.count({
+        where: { ...PROMOTABLE_BY_PAYOUT, id: { in: mineHere.map((e) => e.id) } },
+      });
+      record(
+        `١٣ · ${run.scenario.key}`,
+        'يصل إليه بابُ الصرف',
+        `${reachable}/${mineHere.length}`,
+        'ACCRUED عند السكون، ويُرقّى لحظةَ الصرف'
       );
+      if (reachable === 0) {
+        problem(
+          `١٣ · ${run.scenario.key}: الطلب ${run.order.orderNumber} مسوَّى (SETTLED) وقيدُ عمولته ACCRUED ` +
+            'ولا يصل إليه بابُ الصرف: مُرشِّح `PROMOTABLE_BY_PAYOUT` في src/lib/commission.ts لا يختاره، ' +
+            'فلا هو واجبُ الدفع ولا هو قابلٌ للترقية عند الدفع. وهذا مالٌ مستحقٌّ لا بابَ له — ' +
+            'والشروط أربعة (ACCRUED، ولا payoutId، وغير معكوس، والطلب SETTLED) فليُنظر أيُّها سقط.'
+        );
+      }
     }
   }
 }

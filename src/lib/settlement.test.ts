@@ -13,7 +13,30 @@ const { db } = vi.hoisted(() => ({
 }));
 vi.mock('./db', () => ({ db }));
 
+import type { SettlementFacts } from './settlement';
 import { expectedAmountFor, fileHash, parseStatement, parseStatementRows, refFromNotes, receiptGap, runMatching } from './settlement';
+
+/**
+ * An order row as `SETTLEMENT_ORDER_SELECT` returns it.
+ *
+ * `expectedAmountFor` requires the delivered lines and the return receipt —
+ * a door that did not select them does not compile, and a mock that does not
+ * supply them is not a row the real query could ever produce. The default is
+ * one line nobody counted, which is a whole delivery recorded by a status
+ * change rather than at the door.
+ */
+const orderRow = (over: Record<string, unknown>) => ({
+  priceIncludesDelivery: false,
+  collectedAmount: null,
+  deliveryFee: 0,
+  returnReceipt: null,
+  addOns: [],
+  items: [{
+    quantity: 1, freeQuantity: 0, unitPrice: Number(over.totalAmount ?? 0),
+    discountShare: 0, lineTotal: Number(over.totalAmount ?? 0), deliveredQty: null,
+  }],
+  ...over,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -117,34 +140,102 @@ describe('refFromNotes', () => {
   });
 });
 
+/**
+ * A settlement fixture.
+ *
+ * Every field of `SettlementFacts` is required by design — a door that
+ * forgets to select the delivered lines must not compile — so a test that is
+ * about one field says so and the rest stand at their honest default: ONE
+ * LINE NOBODY COUNTED, which is exactly a whole delivery that a courier feed
+ * or a manual transition wrote with no units recorded against it.
+ */
+function facts(
+  over: Partial<SettlementFacts> & { shippingStatus: string; totalAmount: number }
+): SettlementFacts {
+  return {
+    collectedAmount: null,
+    deliveryFee: 0,
+    priceIncludesDelivery: false,
+    items: [
+      {
+        quantity: 1, freeQuantity: 0, unitPrice: over.totalAmount,
+        discountShare: 0, lineTotal: over.totalAmount, deliveredQty: null,
+      },
+    ],
+    addOns: [],
+    returnReceipt: null,
+    ...over,
+  };
+}
+
 describe('expected amount', () => {
-  it('is the collected amount once a partial delivery recorded one', () => {
-    expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: 60 })).toBe(60);
+  it('is the collected amount once the statement recorded one', () => {
+    expect(expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: 60 }), 3)).toBe(60);
   });
 
   it('measures a PARTIAL against what was actually collected, not the original total', () => {
     // Shipped 55 worth, the customer took 25 of it including the full fee.
     // Measured against 55 the courier would look short every single time.
     expect(
-      expectedAmountFor({
-        shippingStatus: 'PARTIALLY_DELIVERED',
-        totalAmount: 55,
-        collectedAmount: 25,
-        deliveryFee: 5,
-      })
+      expectedAmountFor(
+        facts({
+          shippingStatus: 'PARTIALLY_DELIVERED',
+          totalAmount: 55,
+          collectedAmount: 25,
+          deliveryFee: 5,
+        }),
+        3
+      )
     ).toBe(20); // 25 collected − 5 fee the courier keeps
   });
 
+  it('and when no statement has spoken, against the DELIVERED LINES', () => {
+    // Three at 12, the customer took two, the fee is 2.5 and charged in
+    // full. 24 goods + 2.5 at the door, less the 2.5 the courier keeps.
+    expect(
+      expectedAmountFor(
+        facts({
+          shippingStatus: 'PARTIALLY_DELIVERED',
+          totalAmount: 38.5,
+          collectedAmount: null,
+          deliveryFee: 2.5,
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 2 }],
+        }),
+        3
+      )
+    ).toBe(24);
+  });
+
   it('is zero for a returned order', () => {
-    expect(expectedAmountFor({ shippingStatus: 'RETURNED', totalAmount: 100 })).toBe(0);
+    expect(expectedAmountFor(facts({ shippingStatus: 'RETURNED', totalAmount: 100 }), 3)).toBe(0);
   });
 
   it('subtracts the courier fee — a statement states what they hand over', () => {
-    expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 })).toBe(17);
+    expect(expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 }), 3)).toBe(17);
+  });
+
+  it('and the return fee too, when the returns desk recorded one', () => {
+    expect(
+      expectedAmountFor(
+        facts({
+          shippingStatus: 'DELIVERED',
+          totalAmount: 20,
+          deliveryFee: 3,
+          returnReceipt: { courierFeeAmount: 1.5 },
+        }),
+        3
+      )
+    ).toBe(15.5);
   });
 
   it('is the order total otherwise', () => {
-    expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 100 })).toBe(100);
+    expect(expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 100 }), 3)).toBe(100);
+  });
+
+  it('refuses an order with no lines rather than guessing from the total', () => {
+    expect(() =>
+      expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 100, items: [] }), 3)
+    ).toThrow(/no lines/);
   });
 });
 
@@ -153,7 +244,7 @@ describe('runMatching', () => {
 
   it('matches on the courier BARCODE first — it is their identifier for the parcel', async () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: 'BC1', amount: 12 }]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -167,7 +258,7 @@ describe('runMatching', () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: 'BC-UNKNOWN', amount: 12 }]);
     db.order.findFirst
       .mockResolvedValueOnce(null) // by barcode
-      .mockResolvedValueOnce({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 }); // by reference
+      .mockResolvedValueOnce(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 })); // by reference
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -177,7 +268,7 @@ describe('runMatching', () => {
 
   it('matches a line that carries only a barcode — a مندوب or an API courier leaves no reference', async () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: null, barcode: 'BC1', amount: 12 }]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -198,7 +289,7 @@ describe('runMatching', () => {
 
   it('flags a difference as mismatched with the exact gap', async () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: null, amount: 10 }]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 12 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.mismatched).toBe(1);
@@ -209,7 +300,7 @@ describe('runMatching', () => {
 
   it('raises no exception for a partial delivery that matches the post-event amount', async () => {
     db.statementLine.findMany.mockResolvedValue([{ id: 'l1', merchantRef: 'ORD-1', barcode: null, amount: 60 }]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: 60 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: 60 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -223,7 +314,7 @@ describe('runMatching', () => {
     // one check whose whole job is to catch what they left out.
     db.statementLine.findMany.mockResolvedValue([]);
     db.order.findMany.mockResolvedValue([
-      { id: 'o8', shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 60, deliveryFee: 5 },
+      orderRow({ id: 'o8', shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 60, deliveryFee: 5 }),
     ]);
 
     const outcome = await runMatching(db as never, scope);
@@ -248,7 +339,7 @@ describe('runMatching', () => {
 
   it('lists a delivered order the courier never mentioned', async () => {
     db.statementLine.findMany.mockResolvedValue([]);
-    db.order.findMany.mockResolvedValue([{ id: 'o9', shippingStatus: 'DELIVERED', totalAmount: 20 }]);
+    db.order.findMany.mockResolvedValue([orderRow({ id: 'o9', shippingStatus: 'DELIVERED', totalAmount: 20 })]);
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.missingInStatement).toBe(1);
@@ -265,7 +356,7 @@ describe('the delivery fee is matched too', () => {
     db.statementLine.findMany.mockResolvedValue([
       { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: 22, fee: 5 },
     ]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(0);
@@ -281,7 +372,7 @@ describe('the delivery fee is matched too', () => {
     db.statementLine.findMany.mockResolvedValue([
       { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: 20, fee: 3 },
     ]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome).toMatchObject({ matched: 1, mismatched: 0, feeMismatched: 0 });
@@ -292,7 +383,7 @@ describe('the delivery fee is matched too', () => {
     db.statementLine.findMany.mockResolvedValue([
       { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 0, collected: 0, fee: 0 },
     ]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'RETURNED', totalAmount: 20, deliveryFee: 3 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'RETURNED', totalAmount: 20, deliveryFee: 3 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -303,7 +394,7 @@ describe('the delivery fee is matched too', () => {
     db.statementLine.findMany.mockResolvedValue([
       { id: 'l1', merchantRef: null, barcode: 'BC1', amount: 17, collected: null, fee: null },
     ]);
-    db.order.findFirst.mockResolvedValue({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 });
+    db.order.findFirst.mockResolvedValue(orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3 }));
 
     const outcome = await runMatching(db as never, scope);
     expect(outcome.matched).toBe(1);
@@ -397,7 +488,7 @@ describe('the sweep for parcels the courier left out', () => {
   it('does not flag a parcel that another statement lists', async () => {
     mentionedElsewhere('BC-OTHER');
     db.order.findMany.mockResolvedValue([
-      { id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-OTHER', merchantRef: null },
+      orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-OTHER', merchantRef: null }),
     ]);
     const outcome = await runMatching(db as never, scope);
     expect(outcome.missingInStatement).toBe(0);
@@ -407,7 +498,7 @@ describe('the sweep for parcels the courier left out', () => {
   it('and does flag one that no statement names anywhere', async () => {
     mentionedElsewhere(null);
     db.order.findMany.mockResolvedValue([
-      { id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-NOWHERE', merchantRef: null },
+      orderRow({ id: 'o1', shippingStatus: 'DELIVERED', totalAmount: 20, deliveryFee: 3, collectedAmount: null, trackingNumber: 'BC-NOWHERE', merchantRef: null }),
     ]);
     const outcome = await runMatching(db as never, scope);
     expect(outcome.missingInStatement).toBe(1);

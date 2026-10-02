@@ -651,7 +651,7 @@ describe('Ⅳ · 1 — the tracking screen’s «صافي» is not the settlemen
 
   it('and the row type declares it, which is why nobody saw it for so long', () => {
     const route = stripComments(repoFile('src/app/api/ops/tracking/route.ts'));
-    expect(route).toMatch(/expectedCollection: expectedAmountFor\(o\)/);
+    expect(route).toMatch(/expectedCollection: expectedAmountFor\(order, country\.minorUnit\)/);
     // The route always sent it. The screen's own `Row` did not declare it,
     // so the figure was on the wire and invisible in the editor.
     const src = stripComments(repoFile(SCREEN));
@@ -664,8 +664,12 @@ describe('Ⅳ · 1 — the tracking screen’s «صافي» is not the settlemen
      * so a partially delivered order is selectable on this bar. For one
      * where 23 of a 40 order was taken and the fee is 3:
      */
-    const order = { shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 40, collectedAmount: 23, deliveryFee: 3 };
-    const server = expectedAmountFor(order);
+    const order = {
+      shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 40, collectedAmount: 23, deliveryFee: 3,
+      priceIncludesDelivery: false, addOns: [], returnReceipt: null,
+      items: [{ quantity: 2, freeQuantity: 0, unitPrice: 20, discountShare: 0, lineTotal: 40, deliveredQty: 1 }],
+    };
+    const server = expectedAmountFor(order, 3);
     const screen = Number(order.totalAmount) - Number(order.deliveryFee);
     expect(server).toBe(20);
     expect(screen).toBe(37);
@@ -676,8 +680,12 @@ describe('Ⅳ · 1 — the tracking screen’s «صافي» is not the settlemen
   });
 
   it('and on a return the screen invents an amount out of nothing', () => {
-    const order = { shippingStatus: 'RETURNED', totalAmount: 40, deliveryFee: 3, collectedAmount: null };
-    expect(expectedAmountFor(order)).toBe(0);
+    const order = {
+      shippingStatus: 'RETURNED', totalAmount: 40, deliveryFee: 3, collectedAmount: null,
+      priceIncludesDelivery: false, addOns: [], returnReceipt: null,
+      items: [{ quantity: 2, freeQuantity: 0, unitPrice: 20, discountShare: 0, lineTotal: 40, deliveredQty: null }],
+    };
+    expect(expectedAmountFor(order, 3)).toBe(0);
     expect(Number(order.totalAmount) - Number(order.deliveryFee)).toBe(37);
   });
 
@@ -713,14 +721,81 @@ describe('Ⅳ · 2 — the deliver dialog is a second COD engine', () => {
     expect(src).toMatch(/<Money value=\{collected\} currency=\{order\.currency\} \/>/);
   });
 
-  it('and the server holds the same four, line for line', () => {
-    // `partial-delivery.ts` is the original. The dialog is a transcription
-    // of it with the rounding taken out.
-    const server = stripComments(repoFile('src/lib/partial-delivery.ts'));
-    expect(server).toMatch(/const discountPerUnit = item\.quantity > 0 \? Number\(item\.discountShare\) \/ item\.quantity : 0;/);
-    expect(server).toMatch(/deliveredValue \+= paidDelivered \* \(unit - discountPerUnit\);/);
-    expect(server).toMatch(/const chargedFee = nothingTaken \? 0 : fee;/);
-    expect(server).toMatch(/const collectedAmount = order\.priceIncludesDelivery/);
+  it('and the server’s copy of those four is GONE — they live in one place now', () => {
+    /*
+     * `partial-delivery.ts` used to hold the original, line for line, and
+     * this pinned the pair of them. On 2026-10-02 the server's copy went:
+     * the door calls `doorMoney` in `settlement.ts`, which is the function
+     * the settlement matcher itself calls, so the figure on the door's
+     * screen and the figure the matcher demands cannot disagree. Two copies
+     * pinned to each other is what let the add-on money go missing from
+     * both at once.
+     *
+     * Pinned at its new address, and pinned ABSENT at the old one, so a
+     * second server copy cannot grow back.
+     */
+    const door = stripComments(repoFile('src/lib/partial-delivery.ts'));
+    expect(door).toMatch(/const money = doorMoney\(/);
+    expect(door).not.toMatch(/deliveredValue \+=/);
+    expect(door).not.toMatch(/const discountPerUnit =/);
+
+    const rule = stripComments(repoFile('src/lib/settlement.ts'));
+    // The per-unit value, divided out of the line total the order was
+    // created with rather than multiplied back out of `unitPrice`.
+    expect(rule).toMatch(/return Number\(item\.lineTotal\) \/ item\.quantity;/);
+    /*
+     * And the fils-losing reconstruction is pinned ABSENT, not merely unused.
+     * A fallback reading `quantity × unitPrice − discountShare` stood here
+     * for a day, for rows that had not selected the column. It was the
+     * schema's own definition of `lineTotal` and still the wrong answer —
+     * `unitPrice` is `Decimal(12,2)` and the dinar has three places, so that
+     * branch returned 9.990 where the order says 10.000. A branch that
+     * silently gives the wrong figure to a caller who forgot one column is
+     * not a floor; it is this defect waiting behind an `if`. The type makes
+     * the omission a compile error instead, and the six test doubles that
+     * lacked the column were given it rather than accommodated.
+     */
+    expect(rule).not.toMatch(/Number\(item\.unitPrice\) - Number\(item\.discountShare\)/);
+    // Paid units only — the gift units are stock at zero price.
+    expect(rule).toMatch(/const paid = Math\.min\(taken, item\.quantity\);/);
+    // The fee rule and the COD branch, both now inside `computeCod`.
+    expect(rule).toMatch(/deliveryFee: anythingTaken \? fee : 0,/);
+    expect(rule).toMatch(/priceIncludesDelivery: order\.priceIncludesDelivery,/);
+  });
+
+  it('AND THE DIALOG IS NOW WRONG BY MORE THAN ROUNDING — two measured gaps', () => {
+    /*
+     * Ⅳ reports rather than fixes, and this report got worse on 2026-10-02.
+     * The browser's transcription predates both of the server's corrections
+     * of that day, and neither of them is a rounding difference.
+     *
+     *   THE UPSELL. `doorMoney` collects `OrderAddOn` money, which has no
+     *   `OrderItem` row at all. The dialog sums `items` and nothing else,
+     *   so on the measured order — 36 of lines, a 12 upsell, a 2.5 fee —
+     *   it prints 38.5 where the server expects 50.5, and the operator is
+     *   shown a figure twelve dinars under what the courier owes.
+     *
+     *   THE LINE TOTAL. `doorMoney` divides the stored `lineTotal`; the
+     *   dialog multiplies the stored `unitPrice`, which is `Decimal(12,2)`
+     *   in a currency with three places. On 3 units for 10.000 it prints
+     *   9.990 where the server says 10.000.
+     *
+     * NOT FIXED HERE, as with everything in Ⅳ: the dialog needs the two
+     * figures sent to it, which is the endpoint's change, not this file's.
+     */
+    const src = stripComments(repoFile(DIALOG));
+    // The dialog knows neither column exists.
+    expect(src).not.toMatch(/addOns/);
+    expect(src).not.toMatch(/lineTotal/);
+
+    // Gap one, as arithmetic: 36 of lines, a 12 upsell, a 2.5 fee.
+    const screenOnUpsold = 3 * 12 + 2.5;
+    expect(screenOnUpsold).toBe(38.5);
+    expect(screenOnUpsold + 12).toBe(50.5);
+
+    // Gap two: three units of a line that does not divide by its quantity.
+    expect(Number((3 * 3.33).toFixed(3))).toBe(9.99);
+    expect(10 - Number((3 * 3.33).toFixed(3))).toBeCloseTo(0.01, 5);
   });
 
   it('and the dialog already has the server’s answer in hand for the common case', () => {

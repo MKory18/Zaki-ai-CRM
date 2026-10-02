@@ -7,7 +7,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { transitStatus } from '@/lib/transit';
 import { normalizePhoneNumber } from '@/lib/phone';
-import { expectedAmountFor } from '@/lib/settlement';
+import { expectedAmountFor, SETTLEMENT_ORDER_SELECT } from '@/lib/settlement';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
@@ -60,8 +60,12 @@ export async function GET(req: Request) {
         // src/lib/tracking-alert.ts for why that is the one thing this
         // screen was not saying.
         confirmationStatus: true, updatedAt: true,
-        shippingStatus: true, settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
-        deliveryFailureReason: true, totalAmount: true, deliveryFee: true, priceIncludesDelivery: true, collectedAmount: true, currency: true, regionId: true,
+        // Everything the settlement rule reads, in one spread — including
+        // the delivered lines and the return receipt, which this screen does
+        // not show and cannot compute `expectedCollection` without.
+        ...SETTLEMENT_ORDER_SELECT,
+        settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
+        deliveryFailureReason: true, currency: true, regionId: true,
         deliveryProviderId: true,
         customer: { select: { fullName: true, phone: true, city: true } },
         region: { select: { id: true, name: true } },
@@ -121,7 +125,15 @@ export async function GET(req: Request) {
     });
     const thresholdOf = new Map(fees.map((f) => [`${f.deliveryProviderId}|${f.regionId}`, f.lateThresholdDays]));
 
-    const rows = orders.map((o) => {
+    const rows = orders.map((order) => {
+      // The lines, the add-ons and the return receipt are what the
+      // EXPECTATION is built from, not something this screen prints — so they
+      // feed the rule and stay off the wire. A row carrying every unit of
+      // every parcel would also be a lot of somebody's order history in a
+      // browser. `addOns` joined this list the day the rule started reading
+      // it: three fields selected for the rule, none of them stripped, is how
+      // a payload grows without anyone deciding it should.
+      const { items: _items, returnReceipt: _returnReceipt, addOns: _addOns, ...o } = order;
       const threshold = thresholdOf.get(`${o.deliveryProviderId}|${o.regionId}`) ?? 0;
       const transit = transitStatus(o.shippedAt, threshold);
       return {
@@ -142,8 +154,47 @@ export async function GET(req: Request) {
          * shortfall. The person then reads a total that accuses a rep of
          * keeping money he never received, and the server — which applies
          * the rule correctly — records a different figure.
+         *
+         * Rounded by the COUNTRY's minor unit inside the rule — JOD has
+         * three places — so the screen receives a figure it only prints.
+         *
+         * AND `null` FOR A ROW THE RULE CANNOT ANSWER, RATHER THAN NO SCREEN.
+         *
+         * `expectedAmountFor` throws on an order with no lines, on the sound
+         * ground that a caller who did not select `items` would otherwise
+         * get the old total-based answer by accident. This route DOES select
+         * them — `SETTLEMENT_ORDER_SELECT` is spread above — so an empty
+         * array here is not a programming mistake: it is an order the
+         * database really has no lines for.
+         *
+         * They exist. `confirmation/winback/route.ts:269` creates a real
+         * order and writes no `OrderItem` row at all; it is born `NOT_READY`
+         * and stays there, because `assertReadyToShip`
+         * (`order-state.ts:238`) refuses an order with no lines. Invisible
+         * on the default «قيد الشحن» filter, and reached the moment the
+         * operator picks «الكل» or «غير جاهز» — and then one such row threw
+         * an English message matching no branch in `api-error.ts`, so the
+         * answer was a 500 and the screen went blank, taking ~199 healthy
+         * rows with it.
+         *
+         * `null`, not 0: zero is the settled answer the rule gives a
+         * RETURNED parcel — «owes nothing» — and this row's collection is
+         * unknown, not nil. The browser already types the field as
+         * `number | null` and sums it with `?? 0`, so the bar is unmoved.
+         *
+         * The guard is HERE and not in the rule because the rule's throw is
+         * still right for every caller that forgot the select. If it should
+         * instead report «I cannot answer» itself, that is a change to
+         * `settlement.ts`, which this change does not touch.
+         *
+         * Written as two branches rather than a ternary so the call stays
+         * verbatim: `the-frontend-invariants.test.ts:654` pins this exact
+         * line as proof the route sends the RULE's figure and never a
+         * formula of its own, and that remains the whole point.
          */
-        expectedCollection: expectedAmountFor(o),
+        ...(order.items.length > 0
+          ? { expectedCollection: expectedAmountFor(order, country.minorUnit) }
+          : { expectedCollection: null }),
         /**
          * The one thing worth saying about this row, or null. A cancelled
          * order with no surviving status log still announces itself — its

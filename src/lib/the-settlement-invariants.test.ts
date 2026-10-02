@@ -1,7 +1,44 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+/**
+ * Section 7c runs one real parcel through the DOOR as well as the matcher,
+ * so the two arithmetics are pinned to each other rather than described as
+ * agreeing. That needs the door's writes mocked; nothing else in this file
+ * touches the database.
+ */
+const { doorDb, consumeOrderStock } = vi.hoisted(() => ({
+  consumeOrderStock: vi.fn(async (..._a: unknown[]) => ({ taken: 0, short: 0, alreadyDone: false })),
+  doorDb: {
+    order: { findFirst: vi.fn(), update: vi.fn() },
+    orderItem: { update: vi.fn() },
+    orderActivity: { create: vi.fn() },
+    orderNote: { create: vi.fn() },
+    customer: { update: vi.fn() },
+    deliveryAttempt: {
+      findFirst: vi.fn(async () => null),
+      create: vi.fn(async () => ({ id: 'attempt-1', attemptNumber: 1 })),
+    },
+  },
+}));
+vi.mock('./db', () => ({ db: doorDb }));
+vi.mock('./stock-consumption', () => ({ consumeOrderStock }));
+
 import { repoFile, stripComments } from './guard-source';
-import { expectedAmountFor, SWEEP_LIMIT } from './settlement';
+import { recordPartialDelivery } from './partial-delivery';
+import type { SettlementFacts } from './settlement';
+import { doorMoney, expectedAmountFor, SWEEP_LIMIT } from './settlement';
 import { approvalRefusal, rematchRefusal } from './settlement-gates';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  doorDb.order.update.mockResolvedValue({});
+  doorDb.orderItem.update.mockResolvedValue({});
+  doorDb.orderActivity.create.mockResolvedValue({});
+  doorDb.orderNote.create.mockResolvedValue({});
+  doorDb.customer.update.mockResolvedValue({});
+  doorDb.deliveryAttempt.findFirst.mockResolvedValue(null);
+  doorDb.deliveryAttempt.create.mockResolvedValue({ id: 'attempt-1', attemptNumber: 1 });
+});
 
 /**
  * تشطيب ١ — STAGE 1: THE COMMITMENTS LEDGER, settlement and collection.
@@ -245,57 +282,349 @@ describe('6 · the queues, and the actions on them', () => {
   });
 });
 
+/**
+ * A fixture for the rule. Every field of `SettlementFacts` is required —
+ * see section 7 — so a test about one of them names it and the rest stand
+ * at their honest default: one line nobody counted.
+ */
+function facts(
+  over: Partial<SettlementFacts> & { shippingStatus: string; totalAmount: number }
+): SettlementFacts {
+  return {
+    collectedAmount: null,
+    deliveryFee: 0,
+    priceIncludesDelivery: false,
+    items: [
+      {
+        quantity: 1, freeQuantity: 0, unitPrice: over.totalAmount,
+        discountShare: 0, lineTotal: over.totalAmount, deliveredQty: null,
+      },
+    ],
+    // No upsell unless a test says so — and a test about the upsell says so
+    // in the one place the money can come from.
+    addOns: [],
+    returnReceipt: null,
+    ...over,
+  };
+}
+
+/** JOD. Three decimal places, and nothing here rounds to any other number. */
+const JOD = 3;
+
 describe('7 · a partial delivery is measured against what actually happened', () => {
   it('uses the collected amount when one was recorded', () => {
-    const partial = expectedAmountFor({
-      shippingStatus: 'PARTIALLY_DELIVERED',
-      totalAmount: 100,
-      collectedAmount: 40,
-      deliveryFee: 5,
-    });
+    const partial = expectedAmountFor(
+      facts({
+        shippingStatus: 'PARTIALLY_DELIVERED',
+        totalAmount: 100,
+        collectedAmount: 40,
+        deliveryFee: 5,
+      }),
+      JOD
+    );
     // 40 collected, less the 5 the courier keeps.
     expect(partial).toBe(35);
   });
 
   /**
    * ─────────────────────────────────────────────────────────────────────
-   * AND THIS TEST WAS GREEN FOR THE WRONG REASON. Found by walking a real
-   * order through every door on 2026-10-02, which is the one thing no unit
-   * test here could do.
+   * THIS BLOCK USED TO PIN THE DEFECT. It said «but a REAL partial has no
+   * collected amount, and falls back to the total», and it was right: the
+   * rule was `(collectedAmount ?? totalAmount) − deliveryFee`, and nothing
+   * writes `collectedAmount` on a partial delivery. `partial-delivery.ts`
+   * leaves it null deliberately and correctly — «the money is the courier's
+   * statement's to write» — so the `??` fell through to the whole order on
+   * every partial in the database.
    *
-   * The fixture above passes `collectedAmount: 40` — and **nothing writes
-   * that column on a partial delivery**. `partial-delivery.ts` leaves it
-   * null deliberately and says why, at length and correctly: «the money is
-   * the courier's statement's to write», and a typed figure here used to
-   * remove the order from the very set the statement sweeps. The only
-   * writer is the statement import itself.
+   * Found by walking one real order through every door on 2026-10-02, which
+   * is the one thing no unit test here could do. FIXED the same day: the
+   * rule now reads `OrderItem.deliveredQty`, which is the fact the door
+   * DOES record, and `partial-delivery.ts`'s own claim that settlement
+   * «reads the delivered lines rather than the original total» became true
+   * instead of aspirational.
    *
-   * So on a real partial delivery `collectedAmount` IS null, this function
-   * falls through to `totalAmount`, and settlement expects the courier to
-   * hand over the WHOLE order. Measured end to end: 3 units at 12, two
-   * taken — the courier owes 24 and the system expects 36.
-   *
-   * The contract is explicit: «A partially delivered order is compared
-   * against the post-event expected amount, never the original total.»
-   * And `partial-delivery.ts` believes that is what happens — its own
-   * comment says this function «reads the delivered lines rather than the
-   * original total». It does not. Two files, each right on its own, and
-   * the gap between them is a systematic false mismatch on every partial.
-   *
-   * Pinned AS IT IS and reported. The fix is not one line: this function
-   * takes no items, and the matching door does not select any.
+   * What follows is the measured order, as a guard that the fix HOLDS. A
+   * ledger must not keep describing a defect that is gone.
    * ─────────────────────────────────────────────────────────────────────
    */
-  it('but a REAL partial has no collected amount, and falls back to the total', () => {
-    const asItArrives = expectedAmountFor({
+  describe('and the order this was measured on: 3 × 12, a 2.5 fee, two taken', () => {
+    /** The COD the customer was quoted: 36 goods + the 2.5 fee. */
+    const TOTAL = 38.5;
+    const measured = (over: Partial<SettlementFacts> = {}): SettlementFacts => ({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: TOTAL,
+      collectedAmount: null,
+      deliveryFee: 2.5,
+      priceIncludesDelivery: false,
+      items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 2 }],
+      // No upsell on the order this was measured on. The one that HAS an
+      // upsell is a block of its own, below.
+      addOns: [],
+      returnReceipt: null,
+      ...over,
+    });
+
+    it('the courier owes 24 — the two units taken, and the fee is his', () => {
+      // At the door: 24 goods + 2.5 fee = 26.5. He keeps the 2.5.
+      expect(expectedAmountFor(measured(), JOD)).toBe(24);
+    });
+
+    it('and the old rule demanded 36 — twelve he never had', () => {
+      const asItWas = Number(TOTAL) - 2.5;
+      expect(asItWas).toBe(36);
+      expect(expectedAmountFor(measured(), JOD)).not.toBe(asItWas);
+      // The exact figure the collection screen used to ask the operator to
+      // take off a rep, and the exact size of every false MISMATCHED.
+      expect(asItWas - expectedAmountFor(measured(), JOD)).toBe(12);
+    });
+
+    it('and the courier’s RETURN fee comes out too, when one was charged', () => {
+      // `ReturnReceipt.courierFeeAmount` was written by the returns desk and
+      // read by nothing, while the courier deducted it in reality — so a
+      // statement stated net of it read as short by exactly that fee.
+      // 26.5 at the door, less the 2.5 delivery fee, less the 1.5 return fee.
+      expect(
+        expectedAmountFor(measured({ returnReceipt: { courierFeeAmount: 1.5 } }), JOD)
+      ).toBe(22.5);
+    });
+
+    it('and the whole parcel taken is still its total less the fee', () => {
+      const whole = measured({
+        shippingStatus: 'DELIVERED',
+        items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 3 }],
+      });
+      // 36 goods + 2.5 at the door = the COD, and the fee is his: 36.
+      expect(expectedAmountFor(whole, JOD)).toBe(TOTAL - 2.5);
+      // AND THIS ASSERTION PROVES ALMOST NOTHING ON ITS OWN. `TOTAL` is
+      // 38.5, which is exactly 36 + 2.5, so «total − fee» and «the lines
+      // + the fee − the fee» are the same number here and the sentence is
+      // true by construction. The block below is the one that can fail.
+      expect(TOTAL - 2.5).toBe(36);
+    });
+
+    /*
+     * ─────────────────────────────────────────────────────────────────────
+     * AND A WHOLE DELIVERY WHOSE TOTAL IS **NOT** THE SUM OF ITS LINES.
+     *
+     * The guard above was the whole of the full-delivery case, and it was
+     * vacuous: 38.5 − 2.5 and 36 + 2.5 − 2.5 are both 36, so reading the
+     * total and reading the lines gave the same answer and nothing could
+     * tell them apart. Five dinars of upsell money went through it without
+     * a mark — measured on 2026-10-02, on a FULL delivery, after the
+     * partial-delivery fix above.
+     *
+     *   `Order.totalAmount` is not the sum of the lines. The thank-you-page
+     *   upsell increments it and writes an `OrderAddOn` row and ZERO
+     *   `OrderItem` rows, so a figure rebuilt from the lines alone cannot
+     *   contain it.
+     *
+     *     3 × 12 = 36 of lines, an upsell of 12, a 2.5 fee → total 50.5
+     *     the customer pays 50.5, the courier keeps 2.5    → he owes 48
+     *     the lines alone give 36 + 2.5 − 2.5              → 36
+     *
+     *   Twelve dinars written off in silence with `difference: 0`, the
+     *   order marked SETTLED, and an honest statement of 48 reported
+     *   MISMATCHED. The same defect, one door down, is
+     *   `src/app/api/ops/shipment-cod-addons.test.ts:3-12`.
+     *
+     * So this fixture's total is INDEPENDENT of its lines, and every wrong
+     * answer is a different number from the right one.
+     * ─────────────────────────────────────────────────────────────────────
+     */
+    describe('and an UPSOLD parcel, whose total no sum of lines can reach', () => {
+      /** 36 of lines, 12 of upsell, a 2.5 fee: the COD is 50.5. */
+      const upsold = (over: Partial<SettlementFacts> = {}): SettlementFacts =>
+        measured({
+          shippingStatus: 'DELIVERED',
+          totalAmount: 50.5,
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 3 }],
+          addOns: [{ quantity: 1, price: 12 }],
+          ...over,
+        });
+
+      it('the courier owes 48 — the lines, the upsell, and the fee is his', () => {
+        expect(expectedAmountFor(upsold(), JOD)).toBe(48);
+      });
+
+      it('and the order AS IT WAS MEASURED: a 5 upsell, 43.5 total, 41 owed', () => {
+        // The figures from the measurement itself, kept beside a fixture
+        // that can fail. 36 of lines, an upsell accepted at 5, a 2.5 fee.
+        const over = { totalAmount: 43.5, addOns: [{ quantity: 1, price: 5 }] };
+        expect(expectedAmountFor(upsold(over), JOD)).toBe(41);
+        expect(expectedAmountFor(upsold({ ...over, addOns: [] }), JOD)).toBe(36);
+        // The five dinars `collect/route.ts` recorded as a movement of 36
+        // with `difference: 0`, then marked SETTLED, on no screen at all.
+        expect(41 - 36).toBe(5);
+      });
+
+      it('and the lines alone say 36 — the twelve this guard exists to catch', () => {
+        const linesOnly = expectedAmountFor(upsold({ addOns: [] }), JOD);
+        expect(linesOnly).toBe(36);
+        expect(expectedAmountFor(upsold(), JOD) - linesOnly).toBe(12);
+      });
+
+      it('and the right answer is not reachable from the lines, so this can fail', () => {
+        // The shape this audit has caught seven times: a fixture whose
+        // total happens to equal its lines proves nothing. Here the three
+        // candidate answers are three different numbers.
+        expect(Number(upsold().totalAmount) - 2.5).toBe(48);
+        expect(36 + 2.5 - 2.5).toBe(36);
+        expect(expectedAmountFor(upsold(), JOD)).not.toBe(36);
+      });
+
+      it('and a PARTIAL of it keeps the upsell — the upsell has no line to refuse', () => {
+        // Two of three taken: 24 of lines, the whole 12 upsell, the whole
+        // 2.5 fee at the door, and the courier keeps the fee.
+        const partial = upsold({
+          shippingStatus: 'PARTIALLY_DELIVERED',
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 2 }],
+        });
+        expect(expectedAmountFor(partial, JOD)).toBe(36);
+      });
+
+      it('and nothing taken collects no upsell either — it goes back in the parcel', () => {
+        // Asserted on the door's own reconstruction rather than through
+        // the status, because RETURNED short-circuits at the top of the
+        // rule and would answer 0 whatever this branch did.
+        const door = doorMoney(
+          upsold({
+            items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 0 }],
+          }),
+          JOD
+        );
+        expect(door.anythingTaken).toBe(false);
+        expect(door.addOns).toBe(0);
+        expect(door.collected).toBe(0);
+      });
+
+      it('and a door that never spoke reads the total, which carries the upsell', () => {
+        // A courier feed wrote DELIVERED and counted no units. The total is
+        // the only fact there is, and it is the RIGHT one here — the old
+        // rule was never short on this branch.
+        const feed = upsold({
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: null }],
+        });
+        expect(expectedAmountFor(feed, JOD)).toBe(48);
+      });
+    });
+
+    /*
+     * ─────────────────────────────────────────────────────────────────────
+     * AND A LOST FILS, which the old rule did not have.
+     *
+     * `OrderItem.unitPrice`, `discountShare` and `lineTotal` are all
+     * `Decimal(12,2)` (`prisma/schema.prisma:1898-1900`) while JOD has
+     * minorUnit **3** (`prisma/seed.ts:435`), and `orders/route.ts:446`
+     * writes `unitPrice = lineTotal / quantity`.
+     *
+     *   one line, 3 units, line total 10.000 → `unitPrice` stored 3.33
+     *   3 × 3.33 = 9.990, and the customer paid 10.000
+     *
+     * Ten fils gone on every line that does not divide, and a false
+     * MISMATCHED for exactly that. `lineTotal` — the figure `computeCod`
+     * itself wrote — was sitting in the same row and was not selected.
+     * Reading `totalAmount` at full precision, as the rule used to, did not
+     * have this; reading the lines does unless it reads the right column.
+     * ─────────────────────────────────────────────────────────────────────
+     */
+    describe('and a line that does not divide by its quantity', () => {
+      /** 3 units for 10.000, a 2.5 fee: the COD is 12.5. */
+      const indivisible = (deliveredQty: number): SettlementFacts =>
+        measured({
+          shippingStatus: deliveredQty === 3 ? 'DELIVERED' : 'PARTIALLY_DELIVERED',
+          totalAmount: 12.5,
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 3.33, discountShare: 0, lineTotal: 10, deliveredQty }],
+        });
+
+      /** What multiplying the stored 2-place unit price back out gives. */
+      const fromUnitPrice = (units: number) => Number((units * 3.33).toFixed(JOD));
+
+      it('a whole delivery is 10.000, not the 9.990 the unit price would give', () => {
+        expect(expectedAmountFor(indivisible(3), JOD)).toBe(10);
+        expect(fromUnitPrice(3)).toBe(9.99);
+        expect(expectedAmountFor(indivisible(3), JOD)).not.toBe(fromUnitPrice(3));
+      });
+
+      it('and two of the three are 6.667, not 6.660', () => {
+        expect(expectedAmountFor(indivisible(2), JOD)).toBe(6.667);
+        expect(fromUnitPrice(2)).toBe(6.66);
+      });
+
+      it('and the fils is exactly what the false MISMATCHED was worth', () => {
+        // A courier who hands over the 10.000 he collected is reported
+        // short by this much, for ever, on every indivisible line.
+        expect(expectedAmountFor(indivisible(3), JOD) - fromUnitPrice(3)).toBeCloseTo(0.01, 5);
+      });
+    });
+
+    it('and a statement figure, once it lands, still wins over the lines', () => {
+      // The courier said 30 arrived. That is the fact to reconcile against,
+      // whatever the door counted — the difference is the thing to explain.
+      expect(expectedAmountFor(measured({ collectedAmount: 30 }), JOD)).toBe(27.5);
+    });
+  });
+
+  it('THE rule survives: the delivery fee is charged in full on a partial', () => {
+    // «The courier travelled to that door whether one line was taken or all
+    // of them.» Prorating it would make every partial quietly cheaper.
+    const oneOfThree = facts({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 38.5,
+      deliveryFee: 2.5,
+      items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 1 }],
+    });
+    // 12 goods + the WHOLE 2.5 at the door, and he keeps the 2.5.
+    expect(expectedAmountFor(oneOfThree, JOD)).toBe(12);
+  });
+
+  it('and a fee already inside the price is not charged a second time', () => {
+    const included = facts({
       shippingStatus: 'PARTIALLY_DELIVERED',
       totalAmount: 36,
-      collectedAmount: null,
-      deliveryFee: 0,
+      deliveryFee: 2.5,
+      priceIncludesDelivery: true,
+      items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: 2 }],
     });
-    expect(asItArrives).toBe(36);
-    // What the customer actually took, on the order this was measured on.
-    expect(2 * 12).toBe(24);
+    // 24 at the door, the 2.5 already inside it, and he keeps it: 21.5.
+    expect(expectedAmountFor(included, JOD)).toBe(21.5);
+  });
+
+  it('and gift units are stock, never money', () => {
+    const gift = facts({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 24,
+      deliveryFee: 0,
+      // Two paid at 12 and one gift; the customer took all three.
+      items: [{ quantity: 2, freeQuantity: 1, unitPrice: 12, discountShare: 0, lineTotal: 24, deliveredQty: 3 }],
+    });
+    expect(expectedAmountFor(gift, JOD)).toBe(24);
+  });
+
+  it('and the stored discount share is divided back out per unit', () => {
+    // «Discount is allocated across lines proportionally and STORED per
+    // line. Without this, partial returns refund the wrong amount.»
+    const discounted = facts({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 33,
+      deliveryFee: 0,
+      // 3 × 12 = 36 less a 3 share, so 11 a unit. Two taken: 22.
+      items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 3, lineTotal: 33, deliveredQty: 2 }],
+    });
+    expect(expectedAmountFor(discounted, JOD)).toBe(22);
+  });
+
+  it('and it rounds by the order’s own minor unit, never a global rule', () => {
+    // A third of a dinar a unit. JOD has three places; a currency with two
+    // must not be given the dinar's answer.
+    const thirds = facts({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 1,
+      deliveryFee: 0,
+      items: [{ quantity: 3, freeQuantity: 0, unitPrice: 1 / 3, discountShare: 0, lineTotal: 1, deliveredQty: 2 }],
+    });
+    expect(expectedAmountFor(thirds, JOD)).toBe(0.667);
+    expect(expectedAmountFor(thirds, 2)).toBe(0.67);
+    expect(expectedAmountFor(thirds, 0)).toBe(1);
   });
 
   it('and nothing but the statement import writes that column', () => {
@@ -310,19 +639,32 @@ describe('7 · a partial delivery is measured against what actually happened', (
     );
   });
 
-  it('and falls back to the total only when nothing was recorded', () => {
-    expect(expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 100, collectedAmount: null, deliveryFee: 5 })).toBe(95);
+  it('and falls back to the total only when the DOOR never spoke', () => {
+    // A courier feed or a manual transition writes DELIVERED and counts no
+    // units: `deliveredQty` is null on every line, and the order's own total
+    // is the only fact there is. Reading the lines here would say zero.
+    expect(
+      expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 100, deliveryFee: 5 }), JOD)
+    ).toBe(95);
   });
 
   it('and a zero collection is honoured, not treated as absent', () => {
     // `collectedAmount: 0` is a fact: the customer took the parcel and paid
     // nothing. A falsy check here would bill the courier the whole total.
-    expect(expectedAmountFor({ shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 0, deliveryFee: 0 })).toBe(0);
+    expect(
+      expectedAmountFor(
+        facts({ shippingStatus: 'PARTIALLY_DELIVERED', totalAmount: 100, collectedAmount: 0 }),
+        JOD
+      )
+    ).toBe(0);
   });
 
   it('and a returned parcel expects nothing at all', () => {
     for (const shippingStatus of ['RETURNED', 'RETURN_REQUESTED']) {
-      expect(expectedAmountFor({ shippingStatus, totalAmount: 100, collectedAmount: null, deliveryFee: 5 }), shippingStatus).toBe(0);
+      expect(
+        expectedAmountFor(facts({ shippingStatus, totalAmount: 100, deliveryFee: 5 }), JOD),
+        shippingStatus
+      ).toBe(0);
     }
   });
 
@@ -330,4 +672,209 @@ describe('7 · a partial delivery is measured against what actually happened', (
     const src = stripComments(repoFile('src/lib/settlement.ts'));
     expect(src).toMatch(/shippingStatus: \{ in: \['DELIVERED', 'PARTIALLY_DELIVERED'\] \}/);
   });
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+ * 7b · AND THE WRONG CALL CANNOT BE WRITTEN.
+ *
+ * The defect above was not an arithmetic slip. It was a SIGNATURE: the rule
+ * accepted an order with no lines, every field after the first optional, so
+ * three doors selected four columns each and all three got a plausible
+ * wrong number. Fixing the arithmetic without fixing the signature leaves
+ * the next door free to make the same mistake.
+ * ───────────────────────────────────────────────────────────────────── */
+describe('7b · the rule cannot be called without the facts it needs', () => {
+  it('no field of SettlementFacts is optional — a door that forgot does not compile', () => {
+    const src = repoFile('src/lib/settlement.ts');
+    const iface = src.slice(src.indexOf('export interface SettlementFacts {'));
+    const body = iface.slice(0, iface.indexOf('\n}'));
+    for (const field of [
+      'shippingStatus',
+      'totalAmount',
+      'collectedAmount',
+      'deliveryFee',
+      'priceIncludesDelivery',
+      'items',
+      // The upsell money. It was absent from the shape entirely, which is
+      // why a whole delivery of an upsold order came out five dinars short
+      // with nothing to compile against.
+      'addOns',
+      'returnReceipt',
+    ]) {
+      expect(body, field).toMatch(new RegExp(`\\n\\s*${field}:`));
+      // `items?:` is how the old shape let every caller skip the lines.
+      expect(body, `${field} must not be optional`).not.toMatch(new RegExp(`\\n\\s*${field}\\?:`));
+    }
+  });
+
+  it('and an empty items array throws instead of guessing from the total', () => {
+    // The one way left to get the old answer by accident: satisfy the
+    // compiler with `items: []` without asking the database for them.
+    expect(() =>
+      expectedAmountFor(facts({ shippingStatus: 'DELIVERED', totalAmount: 100, items: [] }), JOD)
+    ).toThrow(/no lines/);
+  });
+
+  it('and the minor unit is a parameter, so nothing rounds globally', () => {
+    const src = stripComments(repoFile('src/lib/settlement.ts'));
+    expect(src).toMatch(/export function expectedAmountFor\(order: SettlementFacts, minorUnit: number\): number/);
+    // The matcher no longer rounds the rule's answer a second time.
+    expect(src).not.toMatch(/roundMinor\(expectedAmountFor\(/);
+  });
+
+  it('and all three doors spread the ONE select, rather than listing columns', () => {
+    // Listing them by hand is how `items` came to be missing from all three
+    // at once. There is one select, and it is the shape of the facts.
+    for (const file of [
+      'src/lib/settlement.ts',
+      'src/app/api/ops/tracking/route.ts',
+      'src/app/api/ops/tracking/collect/route.ts',
+    ]) {
+      const src = stripComments(repoFile(file));
+      expect(src, file).toMatch(/\.\.\.SETTLEMENT_ORDER_SELECT/);
+    }
+    // And the select really does carry the lines and the return receipt.
+    const settlement = stripComments(repoFile('src/lib/settlement.ts'));
+    const sel = settlement.slice(settlement.indexOf('export const SETTLEMENT_ORDER_SELECT'));
+    const body = sel.slice(0, sel.indexOf('} as const'));
+    expect(body).toMatch(/deliveredQty: true/);
+    // `lineTotal` is the figure `computeCod` wrote. Without it the rule
+    // multiplies a 2-place `unitPrice` back out and loses a fils a line.
+    expect(body).toMatch(/lineTotal: true/);
+    // And the upsell, which has no `OrderItem` row at all.
+    expect(body).toMatch(/addOns: \{ select: \{ quantity: true, price: true \} \}/);
+    expect(body).toMatch(/returnReceipt: \{ select: \{ courierFeeAmount: true \} \}/);
+  });
+
+  it('and every matcher call site passes the minor unit it was given', () => {
+    const src = stripComments(repoFile('src/lib/settlement.ts'));
+    const calls = (src.match(/(?<!function )expectedAmountFor\([^)]*\)/g) ?? []).filter(
+      (c) => !c.includes('SettlementFacts')
+    );
+    // Two: the line match and the «they left it out» sweep.
+    expect(calls).toHaveLength(2);
+    for (const call of calls) expect(call).toMatch(/,\s*minorUnit\)$/);
+  });
+
+  it('and the two routes round by the COUNTRY’s minor unit, not by three', () => {
+    for (const file of ['src/app/api/ops/tracking/route.ts', 'src/app/api/ops/tracking/collect/route.ts']) {
+      const src = stripComments(repoFile(file));
+      expect(src, file).toMatch(/expectedAmountFor\([^)]*country\.minorUnit\)/);
+    }
+  });
+
+  it('and the tracking screen is sent the figure, not the lines to build it from', () => {
+    // The rule needs every unit of every parcel. The screen prints one
+    // number — so the lines feed the rule and stay off the wire.
+    //
+    // REPORTED, NOT FIXED: `addOns` joined the select on 2026-10-02 and is
+    // NOT in this destructure, so two fields a row — `quantity`, `price` —
+    // now reach the browser unread. That route is another agent's file this
+    // hour; the edit is one identifier, `addOns: _addOns,`, and the pattern
+    // below already accepts it.
+    const src = stripComments(repoFile('src/app/api/ops/tracking/route.ts'));
+    expect(src).toMatch(
+      /const \{ items: _items, returnReceipt: _returnReceipt,(?: addOns: _addOns,)? \.\.\.o \} = order;/
+    );
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+ * 7c · THE DOOR'S FIGURE AND THE MATCHER'S ARE THE SAME ARITHMETIC.
+ *
+ * `partial-delivery.ts` computes what the customer handed over and RETURNS
+ * it, for the screen to show as what we expect to be paid. `settlement.ts`
+ * computes the same quantity from the stored lines, for the matcher. Two
+ * computations of one fact, in two files, is how the first gap opened —
+ * each file was right on its own.
+ *
+ * So the same parcel is run through BOTH and the two answers are compared.
+ * If somebody changes one of them, this fails rather than a rep's wallet.
+ * ───────────────────────────────────────────────────────────────────── */
+describe('7c · the door and the matcher agree on what the customer paid', () => {
+  /** 3 × 12 with a 2.5 fee — the order this was all measured on. */
+  const doorOrder = {
+    id: 'o1',
+    orderNumber: 'JO-2026-0001',
+    shippingStatus: 'OUT_FOR_DELIVERY',
+    deliveryFee: 2.5,
+    priceIncludesDelivery: false,
+    customerId: 'cust1',
+    deliveredAt: null,
+    returnedAt: null,
+    deliveryProviderId: 'dp1',
+    settlementStatus: 'PENDING_COLLECTION',
+    addOns: [],
+    items: [{ id: 'i1', productId: 'p1', productName: 'كريم', quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36 }],
+  };
+
+  for (const taken of [0, 1, 2, 3]) {
+    it(`${taken} of 3 taken: the door's collectedAmount is the matcher's door figure`, async () => {
+      doorDb.order.findFirst.mockResolvedValue(doorOrder);
+
+      const outcome = await recordPartialDelivery(doorDb as never, {
+        companyId: 'c1', orderId: 'o1', lines: [{ itemId: 'i1', deliveredQty: taken }], minorUnit: JOD, userId: 'u1',
+      });
+
+      // The matcher reads the lines the door just wrote, and no statement
+      // has spoken yet — so its expectation is the door's figure, net of
+      // the fee the courier keeps.
+      const written = doorDb.orderItem.update.mock.calls.at(-1)?.[0]?.data?.deliveredQty;
+      expect(written).toBe(taken);
+
+      const expected = expectedAmountFor(
+        facts({
+          shippingStatus: outcome.status,
+          totalAmount: 38.5,
+          deliveryFee: 2.5,
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: written }],
+        }),
+        JOD
+      );
+
+      // Nothing taken is a return, and a return expects nothing — which is
+      // also what the door's own figure less the waived fee comes to.
+      const net = outcome.status === 'RETURNED' ? 0 : outcome.collectedAmount - 2.5;
+      expect(expected).toBe(net);
+    });
+  }
+
+  /**
+   * AND THE UPSELL, WHICH IS WHERE THE TWO CAME APART THE SECOND TIME.
+   *
+   * The door read the lines and the matcher read the lines, and they agreed
+   * — on a figure that was missing the thank-you-page money, because
+   * neither selected `OrderAddOn`. Two implementations agreeing is not the
+   * same as one implementation: they are the same function now, and this
+   * runs the upsold parcel through both ends anyway, because what the door
+   * WRITES still has to be what the matcher READS.
+   */
+  for (const taken of [1, 2, 3]) {
+    it(`${taken} of 3 taken with a 12 upsell: both doors carry the upsell`, async () => {
+      doorDb.order.findFirst.mockResolvedValue({ ...doorOrder, addOns: [{ quantity: 1, price: 12 }] });
+
+      const outcome = await recordPartialDelivery(doorDb as never, {
+        companyId: 'c1', orderId: 'o1', lines: [{ itemId: 'i1', deliveredQty: taken }], minorUnit: JOD, userId: 'u1',
+      });
+
+      // 12 a unit for what was taken, plus the whole 12 upsell, plus the
+      // whole 2.5 fee: the door's figure says so in two named parts.
+      expect(outcome.deliveredValue).toBe(taken * 12);
+      expect(outcome.addOnValue).toBe(12);
+      expect(outcome.collectedAmount).toBe(taken * 12 + 12 + 2.5);
+
+      const written = doorDb.orderItem.update.mock.calls.at(-1)?.[0]?.data?.deliveredQty;
+      const expected = expectedAmountFor(
+        facts({
+          shippingStatus: outcome.status,
+          totalAmount: 50.5,
+          deliveryFee: 2.5,
+          addOns: [{ quantity: 1, price: 12 }],
+          items: [{ quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: written }],
+        }),
+        JOD
+      );
+      expect(expected).toBe(outcome.collectedAmount - 2.5);
+    });
+  }
 });

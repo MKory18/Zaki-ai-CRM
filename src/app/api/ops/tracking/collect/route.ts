@@ -9,7 +9,7 @@ import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
 import { roundMinor } from '@/lib/money';
 import { zodMessage } from '@/lib/zod-message';
-import { expectedAmountFor } from '@/lib/settlement';
+import { expectedAmountFor, SETTLEMENT_ORDER_SELECT } from '@/lib/settlement';
 
 /**
  * POST /api/ops/tracking/collect — settle by hand.
@@ -53,8 +53,12 @@ export async function POST(req: Request) {
     const orders = await db.order.findMany({
       where: { id: { in: parsed.data.orderIds }, companyId, storeId },
       select: {
-        id: true, orderNumber: true, currency: true, shippingStatus: true, settlementStatus: true,
-        totalAmount: true, deliveryFee: true, collectedAmount: true,
+        id: true, orderNumber: true, currency: true, settlementStatus: true,
+        // Everything the settlement rule reads, in one spread. The delivered
+        // lines are part of it: without them a partial delivery's expected
+        // net falls back to the whole order and this dialog asks the operator
+        // to take money the courier never collected.
+        ...SETTLEMENT_ORDER_SELECT,
         deliveryProvider: { select: { id: true, name: true, kind: true } },
       },
     });
@@ -75,11 +79,17 @@ export async function POST(req: Request) {
     // one still in transit has not been collected yet.
     //
     // A PARTIAL delivery owes too, and this refused it. The customer took
-    // some lines and paid for them at the door — `collectedAmount` holds the
-    // exact figure, and the agent-custody report already counts it among
-    // what the courier is holding. But the money could never be recorded as
-    // arrived: the one endpoint that takes cash in refused the order, so it
-    // sat in the courier's owing list for ever with no way to clear it.
+    // some lines and paid for them at the door, and the agent-custody report
+    // already counts that among what the courier is holding. But the money
+    // could never be recorded as arrived: the one endpoint that takes cash
+    // in refused the order, so it sat in the courier's owing list for ever
+    // with no way to clear it.
+    //
+    // This comment used to say `collectedAmount` holds the exact figure. It
+    // does not: the door deliberately leaves that column NULL — the money is
+    // the courier's statement's to write — so the expectation below is
+    // rebuilt from the DELIVERED LINES. The statement's figure wins only
+    // once a statement exists.
     const DELIVERED = ['DELIVERED', 'PARTIALLY_DELIVERED'];
     const notDelivered = orders.filter((o) => !DELIVERED.includes(o.shippingStatus));
     if (notDelivered.length > 0) {
@@ -110,15 +120,102 @@ export async function POST(req: Request) {
     const expected = roundMinor(
       // `expectedAmountFor` is the settlement matcher's own rule, reused
       // rather than restated: what the customer actually handed over, net of
-      // the courier's fee. On a PARTIAL delivery that is `collectedAmount`,
-      // not the order's full value — computing it from `totalAmount` would
-      // make every partial look like the courier came up short, and accuse
-      // him of a shortfall that only exists in the arithmetic.
-      orders.reduce((sum, o) => sum + expectedAmountFor(o), 0),
+      // the courier's fee and of any return fee they charged. On a PARTIAL
+      // delivery that comes from the DELIVERED LINES — computing it from
+      // `totalAmount` would make every partial look like the courier came up
+      // short, and accuse him of a shortfall that only exists in the
+      // arithmetic. Each order is rounded by the country's minor unit before
+      // the sum, so the total is a sum of real per-order figures.
+      orders.reduce((sum, o) => sum + expectedAmountFor(o, country.minorUnit), 0),
       country.minorUnit
     );
     const amount = roundMinor(parsed.data.amount ?? expected, country.minorUnit);
     const difference = roundMinor(amount - expected, country.minorUnit);
+
+    /**
+     * A COLLECTION DOOR CAN ONLY TAKE MONEY IN.
+     *
+     * `expectedAmountFor` subtracts the courier's fee AND the return fee the
+     * returns desk charged him, and returns a negative answer as it stands —
+     * deliberately, because rounding a real debt up to zero would hide it.
+     * Measured on 2026-10-02: 3 units at 1.000 with a 2.5 fee, the customer
+     * took one, the returns desk charged 2.5 to carry the rest back. At the
+     * door 1.000 + 2.5 = 3.5, and 3.5 − 2.5 − 2.5 = −1.5.
+     *
+     * That 2.5 came from `fee.returnFee || fee.fee`, which turned a row
+     * configuring 0 into the whole outbound fee; `2aa703a` deleted the
+     * fallback, so `returns/route.ts:230` now charges the row's `returnFee`
+     * as written and THAT route to a negative sum is closed. A configured
+     * return fee still reaches one: 12 of the 25 active fee rows hold 1.5,
+     * and the same parcel against one of them is 3.5 − 2.5 − 1.5 = −0.5.
+     *
+     * That figure went straight to `recordMovement`, which refuses anything
+     * at or below zero (`wallets.ts:83`) with an English sentence no branch
+     * in `api-error.ts` matches — so the operator read a 500
+     * «حدث خطأ داخلي», and could not correct it by hand either: the schema
+     * above is `positive()` and the dialog's field carries `min="0.001"`.
+     * The order could be closed by NO amount at all, which is the very
+     * failure this route was changed to prevent.
+     *
+     * So the refusal is named and says which way the money runs. Whether to
+     * open a real negative movement — paying the courier from this screen —
+     * is a product decision and is NOT taken here.
+     *
+     * The test is the BATCH total, not each order: a courier settles a
+     * handful of parcels in one handover, and −1.5 on one against 17 on
+     * another is 15.5 in the hand. Netting is what a settlement is.
+     */
+    if (expected < 0) {
+      const owed = roundMinor(-expected, country.minorUnit);
+      return NextResponse.json(
+        {
+          error:
+            `لا يوجد مبلغ لقبضه: الحساب معكوس، فنحن ندفع للمندوب ${owed} ${wallet.currencyCode} ` +
+            `عن ${orders.length} طلب ولا نقبض منه. السبب أن أجرة الإرجاع أكبر مما استلمه العميل. ` +
+            `هذا الباب يقبض المال فقط — سجّل الدفعة للمندوب من باب المصروفات، ` +
+            `أو صحّح أجرة الإرجاع في سند الإرجاع إن كانت خطأً، ` +
+            `أو اجمع هذا الطلب مع طلبات أخرى في تحصيل واحد.`,
+          code: 'OWED_TO_COURIER',
+          expected,
+          currency: wallet.currencyCode,
+        },
+        { status: 409 }
+      );
+    }
+    if (expected === 0) {
+      return NextResponse.json(
+        {
+          error:
+            `لا يوجد مبلغ لقبضه: المتوقَّع من المندوب 0 ${wallet.currencyCode} عن ${orders.length} طلب. ` +
+            `أجرة التوصيل وأجرة الإرجاع تساوي ما استلمه العميل، فلا يبقى شيء يُسلَّم. ` +
+            `إن كان قد استلم مبلغاً فعلاً فصحّح الكميات المسلَّمة أو الأجرة، ثم أعد المحاولة.`,
+          code: 'NOTHING_TO_COLLECT',
+          expected,
+          currency: wallet.currencyCode,
+        },
+        { status: 409 }
+      );
+    }
+    /*
+     * The second road to the same wall: `positive()` accepts 0.004, and
+     * rounding it by the country's minor unit leaves 0 — a figure the wallet
+     * refuses. Named rather than 500-ed, and the sentence says the amount
+     * the empty field would have recorded.
+     */
+    if (amount <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            `المبلغ المُدخَل (${parsed.data.amount}) أصغر من أصغر وحدة في ${wallet.currencyCode}، ` +
+            `فيُقرَّب إلى صفر ولا يمكن تسجيله. أدخل مبلغاً أكبر، ` +
+            `أو اترك الحقل فارغاً ليُسجَّل المتوقَّع (${expected}).`,
+          code: 'AMOUNT_TOO_SMALL',
+          expected,
+          currency: wallet.currencyCode,
+        },
+        { status: 409 }
+      );
+    }
 
     const party = orders[0].deliveryProvider?.name ?? 'تحصيل يدوي';
 

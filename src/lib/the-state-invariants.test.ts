@@ -70,8 +70,14 @@ describe('5 · a partial delivery carries the FULL delivery fee', () => {
   it('because the courier travelled', () => {
     const partial = repoFile('src/lib/partial-delivery.ts');
     expect(partial).toMatch(/the delivery fee is charged IN FULL/);
-    const src = stripComments(partial);
-    expect(src).toMatch(/roundMinor\(Number\(order\.deliveryFee \?\? 0\), input\.minorUnit\)/);
+    // The arithmetic moved on 2026-10-02: the door calls `doorMoney` in
+    // `settlement.ts`, which is the settlement matcher's own rule, so there
+    // is no second copy of the fee rule to drift. Pinned where it lives.
+    expect(stripComments(partial)).toMatch(/const money = doorMoney\(/);
+    const src = stripComments(repoFile('src/lib/settlement.ts'));
+    expect(src).toMatch(/roundMinor\(Number\(order\.deliveryFee \?\? 0\), minorUnit\)/);
+    // In full whatever was taken, and zero only when nothing was.
+    expect(src).toMatch(/deliveryFee: anythingTaken \? fee : 0,/);
   });
 });
 

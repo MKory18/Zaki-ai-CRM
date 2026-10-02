@@ -1,6 +1,9 @@
 import crypto from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
+// The ONE money function, reached through the helper that already takes an
+// order's add-ons. The expectation is not allowed a formula of its own.
+import { codForOrder, type OrderLineLike } from './delivery-fees';
 import { roundMinor } from './money';
 import { receiptsInStatementCurrency } from './receipt-conversion';
 import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
@@ -204,31 +207,348 @@ export function parseStatement(
 /** @deprecated Use parseStatement — it reads .xlsx too. */
 export const parseStatementCsv = parseStatement;
 
-/**
- * What we expect the courier to hand over for one order. A partially
- * delivered order is compared against the POST-EVENT amount (what was
- * actually delivered and collected), never the original total.
- */
-export function expectedAmountFor(order: {
-  shippingStatus: string;
-  totalAmount: number | Prisma.Decimal;
-  // Set once partial delivery ships (Stage 9); until then it is null.
-  collectedAmount?: number | Prisma.Decimal | null;
+/* ─────────────────────────────────────────────────────────────────────
+ * WHAT THE COURIER OWES US FOR ONE ORDER.
+ *
+ * Measured end to end on a real order on 2026-10-02, and it was wrong on
+ * every partial delivery in the database.
+ *
+ * The rule was `(collectedAmount ?? totalAmount) − deliveryFee`, and
+ * `collectedAmount` is NULL on every partial delivery that exists.
+ * `partial-delivery.ts` leaves it null deliberately, and its reason is
+ * correct and written at length at the top of that file: the money is the
+ * courier's statement's to write, and a figure typed at the door used to
+ * remove the order from the very set the statement sweeps. The only writer
+ * of that column is the statement import.
+ *
+ * So the `??` fell through to the FULL total of a parcel the customer only
+ * partly took. Three units at 12 with a 2.5 fee, two taken:
+ *
+ *   paid at the door   24 goods + 2.5 fee  = 26.5
+ *   the courier owes   26.5 − 2.5          = 24
+ *   the system expected 38.5 − 2.5         = 36
+ *
+ * Twelve dinars the courier never had, demanded on the collection screen,
+ * and a false MISMATCHED on every partial in the matching queues. Two
+ * files, each right on its own — `partial-delivery.ts`'s own comment
+ * already CLAIMED this function «reads the delivered lines rather than the
+ * original total» — and the gap between them was the defect.
+ *
+ * So it reads the delivered lines, which is the fact the door DOES record:
+ * `OrderItem.deliveredQty`, per line, written in the same transaction as
+ * the status. And it subtracts the courier's RETURN fee when a return
+ * receipt charged one — `ReturnReceipt.courierFeeAmount` was written by the
+ * returns desk and read by nothing, while the courier deducts it in reality.
+ *
+ * AND THE WRONG CALL CANNOT BE WRITTEN. Every field is REQUIRED, including
+ * `items` and `returnReceipt`: a caller that selected neither does not
+ * compile, instead of silently getting the old total-based answer. An empty
+ * `items` is the same mistake with the compiler talked round, so it throws.
+ * `SETTLEMENT_ORDER_SELECT` is the one select that satisfies the shape, and
+ * all three doors spread it rather than listing columns.
+ *
+ * AND READING THE LINES BROKE THE WHOLE DELIVERY, measured on 2026-10-02.
+ *
+ * `Order.totalAmount` is not the sum of the lines: the thank-you-page
+ * upsell increments it and writes an `OrderAddOn` row with NO `OrderItem`
+ * row at all. So the fix above, which stopped reading the total, dropped
+ * the upsell money — on a FULL delivery, where the old rule had been right.
+ *
+ *   3 × 12 = 36 goods, fee 2.5, upsell accepted at 5 → total 43.5
+ *   the customer pays 43.5, the courier keeps 2.5   → he owes 41
+ *   the lines alone gave 36 + 2.5 − 2.5             → 36
+ *
+ * Five dinars short, `difference: 0`, the order marked SETTLED, nothing on
+ * any screen, and an honest statement of 41 reported MISMATCHED. The same
+ * defect had already been found and fixed one door down — see
+ * `src/app/api/ops/shipment-cod-addons.test.ts:3-12`. So the reconstruction
+ * goes through `codForOrder`, which already takes an order's add-ons, and
+ * the add-ons are part of the required facts and of the one select.
+ *
+ * AND A LOST FILS, which the old rule did not have because it read
+ * `totalAmount` at full precision. `OrderItem.unitPrice` is
+ * `Decimal(12,2)`; JOD has minorUnit 3; `orders/route.ts:446` writes
+ * `unitPrice = lineTotal / quantity`. A line of 3 for 10.000 stores 3.33,
+ * and 3 × 3.33 is 9.990. `OrderItem.lineTotal` — the figure `computeCod`
+ * itself wrote — was in the same row and unselected, so the rule reads that
+ * and divides it per unit instead.
+ * ───────────────────────────────────────────────────────────────────── */
+
+/** One order line, as the settlement rule reads it. Any OrderItem row fits. */
+export interface SettlementLine {
+  /** Paid units shipped on this line. */
+  quantity: number;
+  /** Gift units: real stock, zero price — never part of the money. */
+  freeQuantity: number;
+  unitPrice: number | Prisma.Decimal;
+  /** This line's share of the order discount, allocated at creation. */
+  discountShare: number | Prisma.Decimal;
   /**
-   * The courier keeps this out of what they collected. Pass it to compare
-   * against a statement stated in NET terms — which is how a courier states
-   * what they are actually handing over.
+   * `quantity × unitPrice − discountShare`, AS `computeCod` WROTE IT.
+   *
+   * Read in preference to multiplying `unitPrice` back out, and the reason
+   * is a lost fils. `OrderItem.unitPrice` is `Decimal(12,2)` while JOD has
+   * minorUnit **3**, and `orders/route.ts` writes `unitPrice = lineTotal /
+   * quantity`. Measured: one line of 3 units for 10.000 JOD stores
+   * `unitPrice` 3.33, and `3 × 3.33` is 9.990 — ten fils under what the
+   * customer was quoted, on every line whose total does not divide by its
+   * quantity, plus a false MISMATCHED for exactly that gap. `lineTotal`
+   * was in the same row, holding 10.00, and was not being selected.
+   *
+   * `lineTotal` is `Decimal(12,2)` too, so it is still two places — but
+   * 10.00 and 10.000 are the same number. The loss came from DIVIDING a
+   * 2-place figure and multiplying it back, which this does not do.
    */
-  deliveryFee?: number | Prisma.Decimal | null;
-}): number {
+  lineTotal: number | Prisma.Decimal;
+  /**
+   * Units the customer kept at the door. NULL until the door spoke — and
+   * null on every line is what separates «the customer took two of three»
+   * from «a status feed said DELIVERED and nobody counted anything».
+   */
+  deliveredQty: number | null;
+}
+
+/**
+ * ONE THANK-YOU-PAGE UPSELL — money on the order with NO `OrderItem` row.
+ *
+ * See `addOns` on `SettlementFacts` for why this had to become part of the
+ * rule. `price` is the unit price snapshotted when the customer accepted it.
+ */
+export interface SettlementAddOn {
+  quantity: number;
+  price: number | Prisma.Decimal;
+}
+
+/**
+ * Everything the expectation is computed from. No field is optional: the
+ * caller must have asked the database for all of it.
+ */
+export interface SettlementFacts {
+  shippingStatus: string;
+  /**
+   * The COD: goods less discount, PLUS THE ADD-ONS, plus the fee unless it
+   * is in the price. It is not the sum of the lines — see `addOns`.
+   */
+  totalAmount: number | Prisma.Decimal;
+  /** What the courier's STATEMENT said they collected. Null until it lands. */
+  collectedAmount: number | Prisma.Decimal | null;
+  /** The fee the courier keeps out of what they collected. */
+  deliveryFee: number | Prisma.Decimal | null;
+  /** When true the fee is already inside the line prices. */
+  priceIncludesDelivery: boolean;
+  items: SettlementLine[];
+  /**
+   * THE UPSELL MONEY, WHICH IS NOT A LINE — and the regression that reading
+   * the lines introduced, in FULL delivery rather than partial.
+   *
+   * The thank-you-page upsell does `totalAmount: { increment: addTotal }`,
+   * creates an `OrderAddOn` row and creates **zero `OrderItem` rows**. So
+   * the moment this rule stopped reading `totalAmount` and started reading
+   * the lines, the upsell money left the expectation entirely.
+   *
+   * Measured, JOD (minorUnit 3): 3 units × 12 = 36, fee 2.5, upsell
+   * accepted at 5 → `totalAmount` 43.5. The customer pays 43.5, the courier
+   * keeps the 2.5, so he owes **41**. The lines alone gave
+   * 36 + 2.5 − 2.5 = **36**: five dinars written off in silence on a WHOLE
+   * delivery, with `difference: 0`, the order marked SETTLED, and an honest
+   * statement of 41 reported MISMATCHED.
+   *
+   * The same defect was found and fixed one door down — see
+   * `src/app/api/ops/shipment-cod-addons.test.ts:3-12`, «12 of 32 on every
+   * upsold order, 37%». One order's money with two readers, so it is read
+   * through `codForOrder`, which already takes add-ons and says in words
+   * what omitting them does.
+   */
+  addOns: SettlementAddOn[];
+  /** The returns desk's receipt, when the refused units have come back. */
+  returnReceipt: { courierFeeAmount: number | Prisma.Decimal } | null;
+}
+
+/**
+ * THE ONE SELECT THAT SATISFIES `SettlementFacts`.
+ *
+ * Spread into every `order.findMany`/`findFirst` whose rows are handed to
+ * `expectedAmountFor` — and into the door's own select in
+ * `partial-delivery.ts`, so the two cannot drift by a column. Listing the
+ * columns by hand is how `items` came to be missing from all three doors at
+ * once, and then how `addOns` and `lineTotal` came to be missing from the
+ * select written to replace them.
+ */
+export const SETTLEMENT_ORDER_SELECT = {
+  shippingStatus: true,
+  totalAmount: true,
+  collectedAmount: true,
+  deliveryFee: true,
+  priceIncludesDelivery: true,
+  items: {
+    select: {
+      quantity: true,
+      freeQuantity: true,
+      unitPrice: true,
+      discountShare: true,
+      // The figure `computeCod` wrote. Recomputing it from `unitPrice`
+      // loses a fils per indivisible line — see `SettlementLine.lineTotal`.
+      lineTotal: true,
+      deliveredQty: true,
+    },
+  },
+  // Money on the order with no line of its own. Without it a WHOLE delivery
+  // of an upsold order was five dinars short, written off on no screen.
+  addOns: { select: { quantity: true, price: true } },
+  returnReceipt: { select: { courierFeeAmount: true } },
+} as const satisfies Prisma.OrderSelect;
+
+/** What the door's money is built from: the lines it settled, and the order. */
+export interface DoorFacts {
+  items: SettlementLine[];
+  addOns: SettlementAddOn[];
+  priceIncludesDelivery: boolean;
+  deliveryFee: number | Prisma.Decimal | null;
+}
+
+export interface DoorMoney {
+  /** The order's own lines, delivered units only, discount already out. */
+  goods: number;
+  /** The upsell, which has no line and so cannot be refused at the door. */
+  addOns: number;
+  /** The fee charged: in full whatever was taken, zero when nothing was. */
+  fee: number;
+  /** Goods + add-ons + fee, as `computeCod` assembles them. */
+  collected: number;
+  /** Did the customer keep anything at all — a gift unit counts. */
+  anythingTaken: boolean;
+  /** Did the door speak at all? Null on every line means it did not. */
+  recorded: boolean;
+}
+
+/**
+ * This line's value per PAID unit, at full precision.
+ *
+ * `lineTotal` is the figure `computeCod` wrote for the whole line, so the
+ * per-unit price is that figure divided by the line's quantity rather than
+ * the 2-place `unitPrice` column — see `SettlementLine.lineTotal` for the
+ * ten fils that costs.
+ *
+ * THERE IS NO FALLBACK, DELIBERATELY. One stood here for a day, reading
+ * `quantity × unitPrice − discountShare` when the column was absent — the
+ * schema's own definition of `lineTotal`, and the only honest reconstruction
+ * available. It was removed because it was also the arithmetic that loses
+ * the fils: a branch that silently returns the WRONG answer for a row that
+ * forgot one column is not a floor, it is the defect this function exists to
+ * fix, waiting behind an `if`. The type makes a real caller's omission a
+ * compile error, and the two test doubles that lacked the column were given
+ * it instead of being accommodated.
+ */
+function perUnit(item: SettlementLine): number {
+  return Number(item.lineTotal) / item.quantity;
+}
+
+/**
+ * WHAT THE CUSTOMER HANDED OVER AT THE DOOR, from the lines the door wrote.
+ *
+ * ONE function, called by both sides. `partial-delivery.ts` returns this as
+ * `collectedAmount` for the screen to show as what we expect to be paid;
+ * this file measures the courier's statement against it. They were the same
+ * arithmetic written twice, which is how the first gap opened — each file
+ * right on its own — so the second copy is gone and the door calls this.
+ *
+ * The assembly is `codForOrder`, which is `computeCod`: goods less discount,
+ * PLUS THE ADD-ONS, plus the fee unless the price already contains it. A
+ * third copy of that sum is precisely what left the upsell money on no
+ * screen and five dinars written off per upsold order.
+ *
+ * The rules it keeps:
+ *   · gift units are stock at zero price — `Math.min(delivered, quantity)`;
+ *   · the fee is charged IN FULL whatever was taken, because the courier
+ *     travelled to that door, and waived only when nothing was taken at all;
+ *   · a fee already inside the line prices is not added a second time;
+ *   · the add-ons ride with the parcel. They have no line, so nobody at the
+ *     door can refuse one — they are collected when anything was.
+ */
+export function doorMoney(order: DoorFacts, minorUnit: number): DoorMoney {
+  const fee = roundMinor(Number(order.deliveryFee ?? 0), minorUnit);
+  const recorded = order.items.some((i) => i.deliveredQty != null);
+
+  const delivered: OrderLineLike[] = [];
+  let anythingTaken = false;
+  for (const item of order.items) {
+    const taken = item.deliveredQty ?? 0;
+    if (taken <= 0) continue;
+    // A unit left in the customer's hands is a delivery even when it is a
+    // gift worth nothing: the courier travelled, and still holds the fee.
+    anythingTaken = true;
+    // Charge for paid units only; gift units are real stock at zero price.
+    const paid = Math.min(taken, item.quantity);
+    if (paid <= 0) continue;
+    delivered.push({ quantity: paid, unitPrice: perUnit(item), discountShare: 0 });
+  }
+
+  const breakdown = codForOrder({
+    lines: delivered,
+    addOns: anythingTaken ? order.addOns ?? [] : [],
+    deliveryFee: anythingTaken ? fee : 0,
+    priceIncludesDelivery: order.priceIncludesDelivery,
+    minorUnit,
+  });
+
+  return {
+    // The discount is already out of `perUnit`, so the subtotal IS the net
+    // goods and nothing is discounted twice.
+    goods: breakdown.subtotal,
+    addOns: breakdown.addOns,
+    fee: anythingTaken ? fee : 0,
+    collected: breakdown.cod,
+    anythingTaken,
+    recorded,
+  };
+}
+/**
+ * What we expect the courier to hand over for one order, NET — rounded by
+ * the order's own currency minor unit, never a global rule.
+ *
+ * The statement's own figure wins when it exists; until then the expectation
+ * is built from what the door recorded. A negative answer is returned as it
+ * stands: a return fee larger than the goods the customer kept means we owe
+ * the courier, and rounding that up to zero would hide a real debt.
+ */
+export function expectedAmountFor(order: SettlementFacts, minorUnit: number): number {
   if (order.shippingStatus === 'RETURNED' || order.shippingStatus === 'RETURN_REQUESTED') return 0;
 
+  // An order has lines by construction. An empty array here is a caller who
+  // satisfied the compiler without asking the database — the one way left to
+  // get the old total-based answer by accident, so it is not available.
+  if (order.items.length === 0) {
+    throw new Error(
+      'expectedAmountFor: order has no lines — spread SETTLEMENT_ORDER_SELECT so `items` is selected'
+    );
+  }
+
+  const fee = roundMinor(Number(order.deliveryFee ?? 0), minorUnit);
+  /**
+   * THE RETURN LEG. The returns desk records what the courier charged to
+   * carry the refused units back, and the courier deducts it from what they
+   * remit. Nothing read this column, so a statement stated net of a return
+   * fee read as short by exactly that fee.
+   */
+  const returnFee = roundMinor(Number(order.returnReceipt?.courierFeeAmount ?? 0), minorUnit);
+
+  /**
+   * THE DOOR'S OWN FIGURE, or the order's total when the door never spoke.
+   *
+   * Null `deliveredQty` on every line is a courier feed or a manual
+   * transition that wrote DELIVERED and counted nothing. The order's total
+   * is then the only fact there is — and it carries the add-on money, which
+   * is why that branch was never the short one.
+   */
+  const door = doorMoney(order, minorUnit);
   const collected =
     order.collectedAmount !== null && order.collectedAmount !== undefined
-      ? Number(order.collectedAmount)
-      : Number(order.totalAmount);
+      ? roundMinor(Number(order.collectedAmount), minorUnit)
+      : door.recorded
+        ? door.collected
+        : roundMinor(Number(order.totalAmount), minorUnit);
 
-  return collected - Number(order.deliveryFee ?? 0);
+  return roundMinor(collected - fee - returnFee, minorUnit);
 }
 
 export interface MatchOutcome {
@@ -313,7 +633,7 @@ export async function runMatching(
             deliveryProviderId: statement.deliveryProviderId,
             trackingNumber: line.barcode,
           },
-          select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
+          select: { id: true, ...SETTLEMENT_ORDER_SELECT },
         })
       : null;
     const matchedByBarcode = byBarcode !== null;
@@ -323,7 +643,7 @@ export async function runMatching(
       (line.merchantRef
         ? await tx.order.findFirst({
             where: { companyId, storeId, merchantRef: line.merchantRef },
-            select: { id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true },
+            select: { id: true, ...SETTLEMENT_ORDER_SELECT },
           })
         : null);
 
@@ -340,7 +660,9 @@ export async function runMatching(
     }
 
     matchedOrderIds.add(order.id);
-    const expected = roundMinor(expectedAmountFor(order), minorUnit);
+    // Rounded by the minor unit inside the rule itself, so the matcher and
+    // the screen cannot round the same figure two different ways.
+    const expected = expectedAmountFor(order, minorUnit);
     const stated = roundMinor(Number(line.amount), minorUnit);
     const difference = roundMinor(stated - expected, minorUnit);
 
@@ -382,7 +704,7 @@ export async function runMatching(
   // Orders we delivered in the period that the courier did not list at all.
   //
   // PARTIALLY_DELIVERED counts as delivered here. It is money: the customer
-  // took some lines and paid for them, and `collectedAmount` holds exactly
+  // took some lines and paid for them, and the delivered lines say exactly
   // what was handed over. Sweeping only the full deliveries meant a courier
   // could leave every partial off their statement and nothing would say so
   // — the one check whose whole job is to catch what they did not mention.
@@ -402,7 +724,8 @@ export async function runMatching(
         : {}),
     },
     select: {
-      id: true, shippingStatus: true, totalAmount: true, deliveryFee: true, collectedAmount: true,
+      id: true,
+      ...SETTLEMENT_ORDER_SELECT,
       // How a courier names this parcel — needed to ask whether ANY of their
       // statements mentions it.
       trackingNumber: true, merchantRef: true,
@@ -457,7 +780,7 @@ export async function runMatching(
       data: {
         companyId, statementId, orderId: order.id,
         result: 'MISSING_IN_STATEMENT',
-        expectedAmount: roundMinor(expectedAmountFor(order), minorUnit),
+        expectedAmount: expectedAmountFor(order, minorUnit),
         note: 'طلب مسلَّم لم يرد في كشف الشركة',
       },
     });

@@ -320,10 +320,18 @@ export function TrackingScreen() {
    * This used to be `totalAmount − deliveryFee`, summed here. That is not
    * the settlement expectation and the two disagree TODAY, not someday:
    * `canCollect` includes PARTIALLY_DELIVERED, and `expectedAmountFor`
-   * answers 0 for a returned parcel and uses `collectedAmount` for a
-   * partial one. For 23 taken of a 40 order with a fee of 3 the server
-   * says 20 and this bar printed 37 — then `CollectDialog`, which sums
+   * answers 0 for a returned parcel and, for a partial one, rebuilds the
+   * figure from the DELIVERED LINES — net of the courier's fee and of any
+   * return fee the returns desk charged him. (This comment used to say it
+   * reads `collectedAmount`; it reads that column only once a statement
+   * has written it, and the door deliberately leaves it NULL.) For 23
+   * collected on a 40 order with a fee of 3 the server says 20 and this
+   * bar printed 37 — then `CollectDialog`, which sums
    * `expectedCollection`, said 20 seconds later on the same selection.
+   *
+   * `?? 0` is the row the rule cannot answer: the route sends `null` for an
+   * order with no lines rather than 500-ing the whole screen, and such a
+   * row is never collectable anyway — `canCollect` wants DELIVERED.
    *
    * `CollectDialog` already carries the scar of exactly this bug in its own
    * comment; the fix landed on the dialog and missed the screen that opens

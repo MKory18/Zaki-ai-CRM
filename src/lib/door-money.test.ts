@@ -41,10 +41,19 @@ describe('the door records the event, not the money', () => {
     expect(write).toContain('deliveredAt:');
   });
 
-  /** The figure is still computed — the screen shows what we expect to be paid. */
+  /**
+   * The figure is still computed — the screen shows what we expect to be paid.
+   *
+   * It is no longer computed HERE. Since 2026-10-02 the door calls
+   * `doorMoney` in `settlement.ts`, the settlement matcher's own rule, so
+   * what this screen shows and what the courier is later measured against
+   * are one function rather than two that agreed. The division is unchanged:
+   * the door RETURNS the figure and still writes no amount onto the order.
+   */
   it('but still returns it, as an expectation', () => {
     const src = door();
-    expect(src).toMatch(/const collectedAmount = order\.priceIncludesDelivery/);
+    expect(src).toMatch(/const money = doorMoney\(/);
+    expect(src).toMatch(/const collectedAmount = money\.collected;/);
     expect(src).toContain('expectedCollection: collectedAmount');
   });
 

@@ -1,6 +1,13 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
+/**
+ * The money this door shows is the MATCHER'S OWN RULE, called. `doorMoney`
+ * is the one reconstruction of what the customer handed over, and
+ * `SETTLEMENT_ORDER_SELECT` is the one select that feeds it — spread into
+ * the query below so this file cannot drift from it by a column.
+ */
+import { doorMoney, SETTLEMENT_ORDER_SELECT, type SettlementLine } from './settlement';
 import { consumeOrderStock } from './stock-consumption';
 import { appendDeliveryAttempt } from './delivery-attempts';
 
@@ -39,6 +46,44 @@ type Tx = Prisma.TransactionClient | typeof db;
  * Settlement compares the statement against `expectedAmountFor`, which reads
  * the delivered lines rather than the original total, so a partial delivery
  * is still measured against what was actually handed over.
+ *
+ * THAT SENTENCE WAS ASPIRATIONAL UNTIL 2026-10-02, and it is worth saying so
+ * where it was written. `expectedAmountFor` took the collected amount, OR
+ * ELSE the order's whole total, and subtracted the delivery fee — and this
+ * file leaves `collectedAmount` null on purpose, so that «or else» fell
+ * through to the whole of a parcel the customer only partly took. (The
+ * column is not named here on purpose: `every-money-writer-is-known.test.ts`
+ * sweeps raw source, comments included.) Measured on one real
+ * order: 3 units at 12 with a 2.5 fee and two taken, the courier owed 24 and
+ * the matcher demanded 36. Every partial delivery was a false MISMATCHED and
+ * the collection screen asked the operator to take twelve dinars off a rep
+ * who had never held them. Two files, each right on its own.
+ *
+ * It now reads `OrderItem.deliveredQty` — the fact this file DOES write, in
+ * the same transaction as the status — and subtracts the return fee the
+ * returns desk recorded. The division is unchanged and still the honest one:
+ * the door writes what happened, the statement writes the money.
+ *
+ * The `collectedAmount` this function RETURNS and the figure the matcher
+ * rebuilds from those lines are the same arithmetic in two places, which is
+ * how the first gap opened. They are pinned to each other now: section 7c of
+ * `the-settlement-invariants.test.ts` runs one parcel through both doors at
+ * 0, 1, 2 and 3 units taken and fails if they ever disagree.
+ *
+ * AND THEN THE SECOND COPY WENT. Two implementations pinned by a test still
+ * drift the moment somebody edits one and reads the failure as a stale
+ * fixture — which is how the add-on money came to be missing from both. So
+ * this file no longer computes the figure at all: it calls `doorMoney` in
+ * `settlement.ts`, the same function the matcher calls, and the agreement
+ * is by construction rather than by assertion. Section 7c stays, because it
+ * still proves that what this file WRITES is what that rule then READS.
+ *
+ * What the second pass added, measured on a full delivery and not a partial:
+ * the thank-you-page upsell is money on the order with no `OrderItem` row,
+ * so a figure built from the lines alone left it out — 36 where the customer
+ * paid 43.5 and the courier owed 41. It is in the figure now, and it is in
+ * it on exactly one condition: something was taken. An add-on has no line,
+ * so nobody at the door can refuse one.
  */
 
 export interface DeliveredLine {
@@ -50,10 +95,17 @@ export interface DeliveredLine {
 
 export interface PartialOutcome {
   status: 'DELIVERED' | 'PARTIALLY_DELIVERED' | 'RETURNED';
-  /** What the customer paid: delivered goods + the full delivery fee. */
+  /** What the customer paid: delivered goods + add-ons + the full fee. */
   collectedAmount: number;
-  /** Goods only, before the fee. */
+  /** The order's own lines, delivered units only, before the fee. */
   deliveredValue: number;
+  /**
+   * The thank-you-page upsell, which has no `OrderItem` row and so cannot be
+   * refused at the door. Separate from `deliveredValue` because it is money
+   * nobody here counted units for — and reported, because leaving it out of
+   * the sum silently is the defect this field exists to make visible.
+   */
+  addOnValue: number;
   deliveryFee: number;
   /** Units to put back on the shelf, once counted and inspected. */
   returnedUnits: { itemId: string; productId: string; productName: string; quantity: number }[];
@@ -121,9 +173,15 @@ export async function recordPartialDelivery(
       items: {
         select: {
           id: true, productId: true, productName: true,
-          quantity: true, freeQuantity: true, unitPrice: true, discountShare: true,
+          // Every column the money rule reads, from the select that DEFINES
+          // what it reads — including `lineTotal`, whose absence cost a fils
+          // a line, and `deliveredQty`, which this transaction overwrites.
+          ...SETTLEMENT_ORDER_SELECT.items.select,
         },
       },
+      // The upsell: money on this order with no line of its own. Leaving it
+      // out of the door's figure understated every upsold parcel.
+      addOns: SETTLEMENT_ORDER_SELECT.addOns,
     },
   });
   if (!order) throw new PartialDeliveryRefused('NOT_FOUND', 'الطلب غير موجود');
@@ -169,25 +227,25 @@ export async function recordPartialDelivery(
   }
 
   // A line not mentioned was not delivered.
-  let deliveredValue = 0;
   let linesDelivered = 0;
   let linesReturned = 0;
   const returnedUnits: PartialOutcome['returnedUnits'] = [];
   const updates: { id: string; deliveredQty: number; returnedQty: number }[] = [];
+  /**
+   * The lines AS THIS TRANSACTION IS ABOUT TO WRITE THEM.
+   *
+   * Built here rather than re-read after the updates, so the figure the
+   * screen is handed is the figure that was stored — and so the money rule
+   * sees exactly the rows the matcher will read later.
+   */
+  const settled: SettlementLine[] = [];
 
   for (const item of order.items) {
     const shipped = item.quantity + item.freeQuantity;
     const delivered = given.get(item.id) ?? 0;
     const returned = shipped - delivered;
 
-    if (delivered > 0) {
-      linesDelivered++;
-      // Charge for paid units only; gift units are real stock at zero price.
-      const paidDelivered = Math.min(delivered, item.quantity);
-      const unit = Number(item.unitPrice);
-      const discountPerUnit = item.quantity > 0 ? Number(item.discountShare) / item.quantity : 0;
-      deliveredValue += paidDelivered * (unit - discountPerUnit);
-    }
+    if (delivered > 0) linesDelivered++;
     if (returned > 0) {
       linesReturned++;
       returnedUnits.push({
@@ -198,23 +256,37 @@ export async function recordPartialDelivery(
       });
     }
 
+    settled.push({ ...item, deliveredQty: delivered });
     updates.push({ id: item.id, deliveredQty: delivered, returnedQty: returned });
   }
 
-  deliveredValue = roundMinor(Math.max(0, deliveredValue), input.minorUnit);
-
-  // THE rule: the fee is charged in full, whatever was taken. The courier
-  // travelled. It is only waived when nothing at all was delivered, because
-  // then the trip ends as a return and the return fee is its own question.
-  const fee = roundMinor(Number(order.deliveryFee ?? 0), input.minorUnit);
-  const nothingTaken = linesDelivered === 0;
-  const chargedFee = nothingTaken ? 0 : fee;
-
-  // With the price including delivery the fee is already inside the line
-  // prices, so adding it again would charge it twice.
-  const collectedAmount = order.priceIncludesDelivery
-    ? deliveredValue
-    : roundMinor(deliveredValue + chargedFee, input.minorUnit);
+  /**
+   * AND THE MONEY IS NOT COMPUTED HERE.
+   *
+   * `doorMoney` is the settlement matcher's own reconstruction, and it
+   * carries every rule this file used to restate: the fee IN FULL whatever
+   * was taken (the courier travelled), waived only when nothing at all was
+   * taken, never added twice when it is already inside the line prices,
+   * gift units counted as stock at zero price, the stored discount share
+   * divided back out per unit, and the thank-you-page upsell — which has no
+   * line and so cannot be refused at this door — collected with the rest.
+   *
+   * Two copies of that sum is how the upsell came to be missing from both.
+   */
+  const money = doorMoney(
+    {
+      items: settled,
+      addOns: order.addOns,
+      priceIncludesDelivery: order.priceIncludesDelivery,
+      deliveryFee: order.deliveryFee,
+    },
+    input.minorUnit
+  );
+  const deliveredValue = money.goods;
+  const addOnValue = money.addOns;
+  const chargedFee = money.fee;
+  const collectedAmount = money.collected;
+  const nothingTaken = !money.anythingTaken;
 
   const status: PartialOutcome['status'] = nothingTaken
     ? 'RETURNED'
@@ -352,6 +424,9 @@ export async function recordPartialDelivery(
         // that lands on the order comes from their statement.
         expectedCollection: collectedAmount,
         deliveredValue,
+        // Named, so an upsold parcel's figure can be read back apart from
+        // the lines somebody actually counted at the door.
+        addOnValue,
         deliveryFee: chargedFee,
         feeChargedInFull: !nothingTaken,
         linesDelivered,
@@ -368,6 +443,7 @@ export async function recordPartialDelivery(
     status,
     collectedAmount,
     deliveredValue,
+    addOnValue,
     deliveryFee: chargedFee,
     returnedUnits,
     linesDelivered,

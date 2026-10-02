@@ -51,8 +51,8 @@ const order = (over: Record<string, unknown> = {}) => ({
   priceIncludesDelivery: false,
   collectedAmount: null,
   items: [
-    { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 2, freeQuantity: 0, unitPrice: 10, discountShare: 0 },
-    { id: 'i2', productId: 'p2', productName: 'قطرة', quantity: 1, freeQuantity: 0, unitPrice: 30, discountShare: 0 },
+    { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 2, freeQuantity: 0, unitPrice: 10, lineTotal: 20, discountShare: 0 },
+    { id: 'i2', productId: 'p2', productName: 'قطرة', quantity: 1, freeQuantity: 0, unitPrice: 30, lineTotal: 30, discountShare: 0 },
   ],
   ...over,
 });
@@ -140,7 +140,7 @@ describe('gift units', () => {
     db.order.findFirst.mockResolvedValue(
       order({
         items: [
-          { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 1, freeQuantity: 1, unitPrice: 10, discountShare: 0 },
+          { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 1, freeQuantity: 1, unitPrice: 10, lineTotal: 10, discountShare: 0 },
         ],
       })
     );
@@ -156,7 +156,7 @@ describe('the discount follows the line', () => {
     db.order.findFirst.mockResolvedValue(
       order({
         items: [
-          { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 2, freeQuantity: 0, unitPrice: 10, discountShare: 4 },
+          { id: 'i1', productId: 'p1', productName: 'كريم', quantity: 2, freeQuantity: 0, unitPrice: 10, lineTotal: 16, discountShare: 4 },
         ],
       })
     );

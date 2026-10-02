@@ -205,17 +205,24 @@ describe('what the courier owes', () => {
     expect(route).toContain('expectedCollection');
   });
 
-  it('the rule still treats a partial delivery as what was collected', async () => {
-    // The behaviour both sides now share, asserted where it lives.
+  it('the rule still treats a partial delivery as what was DELIVERED', async () => {
+    // The behaviour both sides now share, asserted where it lives. Ten units
+    // at 450 with a 500 fee; the whole parcel, then four of the ten taken.
     const { expectedAmountFor } = await import('./settlement');
-    const whole = expectedAmountFor({ shippingStatus: 'DELIVERED', totalAmount: 5000, deliveryFee: 500 });
-    const partial = expectedAmountFor({
-      shippingStatus: 'PARTIALLY_DELIVERED',
-      totalAmount: 5000,
-      collectedAmount: 2000,
-      deliveryFee: 500,
-    });
+    const line = (deliveredQty: number | null) => [
+      { quantity: 10, freeQuantity: 0, unitPrice: 450, discountShare: 0, lineTotal: 4500, deliveredQty },
+    ];
+    const parcel = {
+      totalAmount: 5000, collectedAmount: null, deliveryFee: 500,
+      priceIncludesDelivery: false, addOns: [], returnReceipt: null,
+    };
+
+    const whole = expectedAmountFor({ ...parcel, shippingStatus: 'DELIVERED', items: line(10) }, 3);
+    const partial = expectedAmountFor({ ...parcel, shippingStatus: 'PARTIALLY_DELIVERED', items: line(4) }, 3);
+
     expect(whole).toBe(4500);
+    // 1800 of goods, plus the full fee at the door, less the fee he keeps.
+    expect(partial).toBe(1800);
     // Not 4500: the customer took part of it, and the courier owes that.
     expect(partial).toBeLessThan(whole);
   });
