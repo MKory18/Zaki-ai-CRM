@@ -113,8 +113,31 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
         productId: l.productId,
         offerId: null,
         quantity: l.quantity,
-        // The editor works in line totals, as the API does.
-        price: Number(l.lineTotal) || Number(l.unitPrice) * l.quantity,
+        /*
+         * The editor works in line totals, as the API does — and it opens on
+         * THE STORED TOTAL, never on a reconstruction of it.
+         *
+         * `OrderItem.lineTotal` is `numeric NOT NULL` with no default, so a
+         * line always has a total. `Number()` is only the parse of the
+         * string a Prisma `Decimal` becomes on the wire (this route converts
+         * `commission` and nothing else), which means the only falsy value
+         * it can produce is a REAL 0 — a giveaway line, or a line an order
+         * discount took to zero. `allocateDiscount` clamps the discount to
+         * the subtotal, so a `discountAmount` that meets a one-line order's
+         * subtotal writes `lineTotal` 0; and `items[].unitPrice` on the
+         * PATCH schema is `min(0)` with the price box `min={0}`, so a clerk
+         * can type 0 outright. There was never anything to fall back TO.
+         *
+         * `|| Number(l.unitPrice) * l.quantity` did not merely mis-display
+         * those lines: `save()` posts this figure as `unitPrice`, so opening
+         * the editor on a 3 × 14 line worth 0 and pressing حفظ wrote 42 onto
+         * the order. And the multiplication had to go on its own account
+         * too — a line total is money, money is computed in `computeCod`
+         * alone, and the stored `unitPrice` is itself `lineTotal / quantity`
+         * rounded to two places (see `settlement.ts`), so the product is not
+         * even a faithful copy: 3 × 16.67 reads 50.01 against a stored 50.
+         */
+        price: Number(l.lineTotal),
       }))
     );
     setError(null);

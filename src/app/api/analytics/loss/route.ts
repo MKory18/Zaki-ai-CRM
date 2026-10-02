@@ -19,10 +19,9 @@ import { summariseLoss, type LossRow } from '@/lib/loss-analysis';
  *   is what was agreed for that parcel and not what the table says today;
  *
  *   plus the courier's return fee for bringing it back, which lives per
- *   (courier, region) in `delivery_fees`. Read the same way the returns
- *   screen reads it — `returnFee || fee`, because a courier who charges
- *   nothing extra for a return still charged the outbound leg — so the two
- *   never disagree about one invoice;
+ *   (courier, region) in `delivery_fees`. The row's own `returnFee`, read
+ *   the same way the returns desk reads it — as written, with nothing
+ *   behind it — so the two never disagree about one invoice;
  *
  *   plus the goods themselves when the parcel comes back damaged, which is
  *   the only case where the product does not go back on the shelf.
@@ -82,9 +81,32 @@ export async function GET(req: Request) {
       }),
     ]);
 
-    // «this courier, this region» — the same key the row itself means.
+    /**
+     * «this courier, this region» — the same key the row itself means — and
+     * THE ROW'S OWN `returnFee`, with nothing behind it.
+     *
+     * `delivery_fees.returnFee` is `numeric NOT NULL DEFAULT 0` in the
+     * schema, in the migration and in the live database, and the settings
+     * form posts 0 when the box is left empty. So by the time `Number()` has
+     * run this is a finite number that is never absent, and the only falsy
+     * value it can hold is a REAL, configured 0: «we charge nothing to carry
+     * goods back». Measured on the live database 2026-10-03: of 25 active
+     * rows, 13 hold returnFee 0 against a fee of 3, 4 or 5, 12 hold 1.5,
+     * and none hold NULL.
+     *
+     * It used to read `returnFee || fee`, which billed each of those 13 the
+     * whole OUTBOUND leg a second time — the delivery fee counted once as
+     * `outbound` and again as the cost of bringing the parcel back. The
+     * returns desk charged the same way until `2aa703a`, and that commit did
+     * not swap the operator: `??` on a value that is never nullish is a
+     * fallback that reads as live policy and cannot fire once. So the
+     * fallback is gone here too rather than re-operatored.
+     *
+     * Absence is a MISSING ROW, not a value in one, and that case is handled
+     * where it actually arises — `?? 0` on the lookup below.
+     */
     const returnFeeOf = new Map(
-      fees.map((f) => [`${f.deliveryProviderId}:${f.regionId}`, Number(f.returnFee) || Number(f.fee)])
+      fees.map((f) => [`${f.deliveryProviderId}:${f.regionId}`, Number(f.returnFee)])
     );
 
     const rows: LossRow[] = [];

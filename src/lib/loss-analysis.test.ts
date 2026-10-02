@@ -231,8 +231,23 @@ describe('the money on the report is an invoice, not an estimate', () => {
     );
   });
 
-  it('reads the return fee the way the returns screen reads it', () => {
-    expect(route()).toContain('Number(f.returnFee) || Number(f.fee)');
+  /**
+   * THE ROW'S RETURN FEE AS WRITTEN — the same reading the returns desk
+   * uses since `2aa703a`, which deleted `returnFee || fee` there.
+   *
+   * `delivery_fees.returnFee` is `numeric NOT NULL DEFAULT 0`, so a falsy
+   * value is a configured 0 and not an unset field; `||` billed those rows
+   * the whole OUTBOUND fee twice — once as `outbound` and again as the cost
+   * of carrying the parcel back. Measured 2026-10-03: 13 of 25 active rows
+   * hold 0 against a fee of 3, 4 or 5.
+   *
+   * The arithmetic itself is guarded by number in
+   * `src/app/api/analytics/loss/loss-return-fee.test.ts`; this pins the
+   * shape so the fallback cannot come back in either operator.
+   */
+  it('reads the return fee the way the returns desk reads it — as written', () => {
+    expect(route()).toContain('Number(f.returnFee)');
+    expect(route(), 'عاد الاحتياطُ إلى أجرةِ الإرجاع').not.toMatch(/Number\(f\.returnFee\)\s*(\|\||\?\?)/);
     // Per courier per region — the key the row itself means.
     expect(route()).toContain('${f.deliveryProviderId}:${f.regionId}');
   });

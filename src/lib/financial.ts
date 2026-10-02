@@ -19,6 +19,15 @@
 
 export interface RealProfitInput {
   deliveredOrders: Array<{
+    /**
+     * NOT READ. Revenue is `totalAmount`, which is never absent.
+     *
+     * It was the second half of `totalAmount || sellingPrice`, which counted
+     * a delivered order worth 0 at its selling price. The field stays only
+     * because the one live caller passes it as an object literal, so
+     * removing it from this type turns `analytics.ts` into a compile error —
+     * and that file is not this change's to edit. Reported for its own line.
+     */
     sellingPrice: number;
     totalAmount: number;
     quantity: number;
@@ -54,10 +63,31 @@ export interface ProfitBreakdown {
  * and with what anyone would actually be paid.
  */
 export function calculateRealProfit(input: RealProfitInput): ProfitBreakdown {
-  const deliveredRevenue = input.deliveredOrders.reduce(
-    (sum, o) => sum + (o.totalAmount || o.sellingPrice || 0),
-    0
-  );
+  /*
+   * `totalAmount` IS THE REVENUE. NOTHING STANDS BEHIND IT.
+   *
+   * It is a required `number` on this input and `orders.totalAmount` is
+   * `double precision NOT NULL` with no default (0 of 56 rows NULL on the
+   * live database, 2026-10-03), so it is never absent: `|| 0` could not
+   * fire, and `?? 0` would be the same dead branch wearing a different
+   * operator — the shape this audit keeps catching.
+   *
+   * What `|| o.sellingPrice` DID do was swap in a different column whenever
+   * a delivered order was genuinely worth 0, counting revenue that nobody
+   * collected and that no invoice backs. The one live caller
+   * (`analytics.ts`) hardcodes `sellingPrice: 0`, so the branch cannot
+   * change an answer today — `0 || 0 || 0` and `0` are both 0, and any
+   * non-zero `totalAmount` won under the old expression too. That makes
+   * deleting it a provable no-op now and the only moment it is free.
+   *
+   * Deleted rather than pinned by a test, for the reason the note at the top
+   * of this file already gives about the second cost calculator that used to
+   * live here: an exported function in a file called «Financial Calculation
+   * Engine» that is merely wrong-when-used is a loaded gun, and a guard
+   * asserting `totalAmount: 0` yields `sellingPrice` would have written the
+   * wrong number into the suite instead of out of the code.
+   */
+  const deliveredRevenue = input.deliveredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
 
   const costOfGoodsSold = input.deliveredOrders.reduce(
     (sum, o) => sum + (o.estimatedCostOfGoods || 0),

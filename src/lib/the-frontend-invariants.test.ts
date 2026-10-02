@@ -150,7 +150,28 @@ const FIGURE =
  * across all 312 `.tsx` files in the tree.
  */
 const OP = '(?:\\s[-+*/]\\s|\\s[-+*/]|[-+*/]\\s)';
-const FIGURE_THEN_OP = new RegExp(`\\b${FIGURE}\\b[\\s)\\]]*${OP}`);
+/*
+ * A FIGURE MAY PASS THROUGH ONE `?? <literal>` ON ITS WAY TO THE OPERATOR.
+ *
+ * Found on 2026-10-03, and it had been hiding a real division the whole
+ * time: `OrderLinesCard.tsx:92` is
+ * `(order.sellingPrice ?? 0) / Math.max(1, order.quantity ?? 1)` — money
+ * divided in a browser — and the sweep could not see it, because between
+ * `sellingPrice` and the `/` sat `?? 0)`, and `[\s)\]]*` matches neither
+ * `?` nor `0`. The file stayed in the sweep only on the strength of a
+ * SECOND violation beside it; when that one was deleted the file dropped
+ * out of the sweep entirely and its entry below became a ghost — a guard
+ * reporting itself clean while the thing it guards against was still there.
+ *
+ * The widening is deliberately this narrow: the coalesce must be followed by
+ * an operator. A bare `deliveryFee ?? 0` still does not match, which is why
+ * this costs nothing — measured across every component file, it adds exactly
+ * ONE line, the one above. Widening `OP` to treat `??` itself as arithmetic
+ * was the other option and would have flooded both lists with every
+ * `?? 0` in the tree.
+ */
+const COALESCE = '(?:\\?\\?\\s*[\\w.-]+[\\s)\\]]*)?';
+const FIGURE_THEN_OP = new RegExp(`\\b${FIGURE}\\b[\\s)\\]]*${COALESCE}${OP}`);
 const OP_THEN_FIGURE = new RegExp(`${OP}[\\s(]*(?:Number\\(|String\\()?[\\s(]*[\\w.?]*\\b${FIGURE}\\b`);
 
 /**
@@ -207,8 +228,6 @@ const RENDERS_ONLY: Record<string, string> = {
     'وفَّرْتَ كذا — فرقٌ بين سعر القطعة المفرد وسعر العرض، إعلانٌ لا يصل طلباً، والإجمالي يأتي من newTotal من الخادم',
   'src/components/orders/CustomerHistory.tsx':
     'الدرجةُ والنسبةُ من الخادم؛ الضربُ في مئة تحويلُ كسرٍ إلى بالمئة لا حسابُ خطر',
-  'src/components/orders/OrderLinesCard.tsx':
-    'سطرٌ واحدٌ مُصطنَعٌ لطلبٍ قديمٍ بلا items، ومجموعُ السطور إدخالُ المحرِّر — وحساب العميل من cod الذي يرسله الخادم',
   'src/components/performance/LandingAnalyticsTab.tsx':
     'نِسَبُ التحويل والتسليم من الخادم؛ ×1000÷10 كتابةُ كسرٍ بخانةٍ عشرية',
   'src/components/products/ProductOffers.tsx':
@@ -236,6 +255,32 @@ const RENDERS_ONLY: Record<string, string> = {
 const DIVERGED: Record<string, string> = {
   'src/components/screens/tracking/DeliverDialog.tsx':
     'يعيد كتابة قاعدة COD وتوزيع الخصم وأجرة التسليم الجزئي التي في partial-delivery.ts',
+  /*
+   * MOVED HERE FROM `RENDERS_ONLY` ON 2026-10-03, and the move is the point.
+   *
+   * Its old entry read «a single synthetic line for a legacy order with no
+   * items, and the line sum is the editor's own input» — two halves. The
+   * second half, `Number(l.lineTotal) || Number(l.unitPrice) * l.quantity`,
+   * was deleted that day: it opened a line whose stored total is a real 0
+   * at an invented price, and `save()` then wrote that price onto the order.
+   *
+   * What is left is the FIRST half, and it was never a render. It derives a
+   * unit price the server already derives — the server's `unitPrice` is
+   * `lineTotal / quantity` rounded to two places (`settlement.ts`), this is
+   * `sellingPrice / quantity` rounded by nothing — so the two disagree
+   * wherever a line does not divide evenly. Measured in
+   * `replacement-order.ts`: 3 units, `lineTotal` 50, server unit price
+   * 16.67; this reads the order back as 50.01.
+   *
+   * Unreachable today — 0 of 56 orders have no `items`, `assertReadyToShip`
+   * refuses a lineless order, and `e92df25` closed the last door that made
+   * one. So it is a second copy that cannot currently be reached, which is
+   * exactly what this list is for: named, with its disagreement measured,
+   * and not dressed up as legitimate. The remedy is to delete the branch,
+   * not to re-justify it.
+   */
+  'src/components/orders/OrderLinesCard.tsx':
+    'يشتقّ سعرَ الوحدة من sellingPrice ÷ quantity بلا تقريبٍ، والخادمُ يشتقّه من lineTotal ÷ quantity بمنزلتَين — فيَقرأُ ٥٠٫٠١ عن سطرٍ كتبَه الخادمُ ٥٠. فرعٌ لا يُطالُ اليوم: لا طلبَ بلا أسطر',
 };
 
 describe('Ⅰ · every screen that does arithmetic on one of the eleven figures is classified', () => {
