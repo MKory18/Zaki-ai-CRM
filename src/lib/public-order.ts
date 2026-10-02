@@ -54,6 +54,19 @@ export interface ResolvedLine {
   quantity: number;
   freeQuantity: number;
   unitPrice: number;
+  /**
+   * THE OFFER'S OWN REDUCTION — an ABSOLUTE amount in the store's currency,
+   * never a percentage. `allocateDiscount` clamps it with
+   * `Math.min(discount, subtotal)` and spreads it by line value; a
+   * percentage clamped against a subtotal would be nonsense, and the admin
+   * form validates it with `money(1_000_000)`, not a 0–100 range.
+   *
+   * It is not on `OfferView`. That view is what a BROWSER is handed, and
+   * `activeOffersFor` does not select this column — so it is read here,
+   * server-side, for the offers the basket actually chose. 0 for a line
+   * sold at the product's base price, which has no offer to reduce.
+   */
+  offerDiscount: number;
 }
 
 /** What a basket asked for, before anything has been priced. */
@@ -120,10 +133,78 @@ export async function resolvePublicLines(
       quantity: unitsPerPick * want.count,
       freeQuantity: (offer ? offer.freeQuantity : 0) * want.count,
       unitPrice,
+      // Filled below, in ONE query for the whole basket.
+      offerDiscount: 0,
     });
   }
 
+  /**
+   * THE DISCOUNTS, in one query for the whole basket.
+   *
+   * One read, not one per product: the ids are already settled by the loop
+   * above, and every one of them came out of `activeOffersFor` for THIS
+   * company and THIS product — so they are live, they are ours, and the
+   * `companyId` here is belt-and-braces rather than the check that matters.
+   *
+   * This is a second touch of the offer table, and it is deliberate.
+   * `activeOffersFor` returns the VIEW a browser is shown and does not
+   * carry this column; widening it would put a money figure into the shape
+   * four public surfaces render. Cheaper to ask again, once.
+   */
+  const offerIds = [...new Set(lines.map((l) => l.offer?.id).filter((id): id is string => !!id))];
+  if (offerIds.length > 0) {
+    const rows = await db.offer.findMany({
+      where: { companyId, id: { in: offerIds } },
+      select: { id: true, discount: true },
+    });
+    const byOffer = new Map(rows.map((r) => [r.id, r.discount ?? 0]));
+    for (const line of lines) {
+      if (line.offer) line.offerDiscount = byOffer.get(line.offer.id) ?? 0;
+    }
+  }
+
   return { ok: true, lines };
+}
+
+/**
+ * WHAT THIS BASKET'S DISCOUNT IS — the one number `computeCod` is given.
+ *
+ * THE DEFECT THIS EXISTS FOR. Two doors create orders and both call the
+ * same `computeCod`. The manual door (`/api/orders`) passed
+ * `discount: offer?.discount ?? 0`; this one passed no discount at all. So
+ * an offer of 25 with a discount of 3 was 22 by phone and 25 from the
+ * landing page — the waybill carried 25 and the courier collected 25. The
+ * owner's ruling: pass it, exactly as the manual door does.
+ *
+ * ONCE PER OFFER, NOT ONCE PER PICK. The manual door applies the offer's
+ * discount flat — one order, one offer, one reduction, whatever the
+ * quantity — and that is the behaviour being matched. Counting it per pick
+ * would be a new pricing rule and the owner's to make, not this
+ * function's. Deduplicating by offer id is what makes «the same bundle
+ * twice as two cart lines» and «the same bundle at count 2» agree; without
+ * it a browser could split one bundle across two lines and claim the
+ * reduction twice.
+ *
+ * SUMMED ACROSS DISTINCT OFFERS, though. A basket may hold two different
+ * bundles, each advertising its own reduction, and the manual door has no
+ * opinion because it only ever knows one offer. Honouring only one of them
+ * would break a promise printed on the other — the same reasoning
+ * `deliveryIncluded` already settles below.
+ *
+ * `computeCod` clamps the result to the subtotal and allocates it across
+ * the lines, so a discount larger than the basket cannot make a negative
+ * total and the per-line `discountShare` always adds back up to the whole.
+ */
+export function basketDiscount(lines: ResolvedLine[]): number {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const line of lines) {
+    const id = line.offer?.id;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    total += Math.max(0, line.offerDiscount);
+  }
+  return total;
 }
 
 export interface SellingSurface {
@@ -331,12 +412,19 @@ export async function createPublicOrder(
   // ONE COD function (contract PART 5). The offer price is the total for its
   // quantity; free units are real lines at zero price, so they never enter
   // the money maths — only stock and COGS.
+  //
+  // `discount` IS NOT OPTIONAL HERE, whatever its type says. Leaving it off
+  // was this door's defect: the manual door passed the offer's discount and
+  // this one did not, so the same offer cost two different amounts
+  // depending on which door the customer came through, and the courier
+  // collected the undiscounted figure. See `basketDiscount`.
   const money = computeCod({
     lines: lines.map((l) => ({
       quantity: l.quantity,
       unitPrice: l.unitPrice,
       freeQuantity: l.freeQuantity,
     })),
+    discount: basketDiscount(lines),
     minorUnit: store.country.minorUnit,
   });
   const totalAmount = money.cod;
