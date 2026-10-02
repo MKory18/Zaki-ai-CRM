@@ -246,7 +246,7 @@ describe('6 · the queues, and the actions on them', () => {
 });
 
 describe('7 · a partial delivery is measured against what actually happened', () => {
-  it('uses the collected amount, never the original total', () => {
+  it('uses the collected amount when one was recorded', () => {
     const partial = expectedAmountFor({
       shippingStatus: 'PARTIALLY_DELIVERED',
       totalAmount: 100,
@@ -255,6 +255,59 @@ describe('7 · a partial delivery is measured against what actually happened', (
     });
     // 40 collected, less the 5 the courier keeps.
     expect(partial).toBe(35);
+  });
+
+  /**
+   * ─────────────────────────────────────────────────────────────────────
+   * AND THIS TEST WAS GREEN FOR THE WRONG REASON. Found by walking a real
+   * order through every door on 2026-10-02, which is the one thing no unit
+   * test here could do.
+   *
+   * The fixture above passes `collectedAmount: 40` — and **nothing writes
+   * that column on a partial delivery**. `partial-delivery.ts` leaves it
+   * null deliberately and says why, at length and correctly: «the money is
+   * the courier's statement's to write», and a typed figure here used to
+   * remove the order from the very set the statement sweeps. The only
+   * writer is the statement import itself.
+   *
+   * So on a real partial delivery `collectedAmount` IS null, this function
+   * falls through to `totalAmount`, and settlement expects the courier to
+   * hand over the WHOLE order. Measured end to end: 3 units at 12, two
+   * taken — the courier owes 24 and the system expects 36.
+   *
+   * The contract is explicit: «A partially delivered order is compared
+   * against the post-event expected amount, never the original total.»
+   * And `partial-delivery.ts` believes that is what happens — its own
+   * comment says this function «reads the delivered lines rather than the
+   * original total». It does not. Two files, each right on its own, and
+   * the gap between them is a systematic false mismatch on every partial.
+   *
+   * Pinned AS IT IS and reported. The fix is not one line: this function
+   * takes no items, and the matching door does not select any.
+   * ─────────────────────────────────────────────────────────────────────
+   */
+  it('but a REAL partial has no collected amount, and falls back to the total', () => {
+    const asItArrives = expectedAmountFor({
+      shippingStatus: 'PARTIALLY_DELIVERED',
+      totalAmount: 36,
+      collectedAmount: null,
+      deliveryFee: 0,
+    });
+    expect(asItArrives).toBe(36);
+    // What the customer actually took, on the order this was measured on.
+    expect(2 * 12).toBe(24);
+  });
+
+  it('and nothing but the statement import writes that column', () => {
+    const pd = repoFile('src/lib/partial-delivery.ts');
+    expect(pd).toMatch(/NOT collectedAmount\. See the note at the top of this file/);
+    const route = stripComments(repoFile('src/app/api/ops/tracking/deliver/route.ts'));
+    // The door records it in the AUDIT LOG only — never on the order.
+    const update = route.slice(route.indexOf('logAudit('));
+    expect(update).toMatch(/collectedAmount: outcome\.collectedAmount/);
+    expect(stripComments(repoFile('src/app/api/finance/statements/[id]/route.ts'))).toMatch(
+      /data: \{ collectedAmount: collected, version: \{ increment: 1 \} \}/
+    );
   });
 
   it('and falls back to the total only when nothing was recorded', () => {
