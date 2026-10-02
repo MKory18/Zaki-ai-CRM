@@ -198,7 +198,36 @@ export async function POST(req: Request) {
         regionId: order.regionId,
         minorUnit: country.minorUnit,
       });
-      courierFeeAmount = roundMinor(fee.returnFee || fee.fee, country.minorUnit);
+      /**
+       * A CONFIGURED ZERO IS A ZERO.
+       *
+       * This was `fee.returnFee || fee.fee`. By the time the value reaches
+       * this line it is a plain `number` and nothing else: `ResolvedFee`
+       * declares `returnFee: number`, `delivery_fees.returnFee` is NOT NULL
+       * DEFAULT 0, and `resolveDeliveryFee` hands back
+       * `roundMinor(Number(row.returnFee), minorUnit)`. So the ONLY falsy
+       * value it can hold is a real, configured 0 — «we charge nothing to
+       * carry goods back» — and `||` read that as «absent» and billed the
+       * courier the whole OUTBOUND fee instead.
+       *
+       * Measured on the live database, 2026-10-02: 13 of 25 active fee rows
+       * hold returnFee 0 with fee > 0, and 0 rows hold NULL. Every return on
+       * those 13 charged 3–5 instead of 0; on a partial delivery the
+       * collection door then refused the whole handover as OWED_TO_COURIER
+       * (tracking/collect/route.ts) because 1.000 + 2.5 − 2.5 − 2.5 = −1.5.
+       *
+       * AND IT IS NOT `??` EITHER. A number is never nullish, so `??` here
+       * would be a fallback that reads as live policy and can never fire —
+       * the shape of guard this audit keeps catching. Absence is not a value
+       * in this table, it is `source: 'NONE'`, and that case already returns
+       * 0 for BOTH figures, so it charges nothing and always did.
+       *
+       * What a courier should be charged when NOBODY has set a return fee is
+       * a policy question, and the table cannot express «nobody set it»
+       * (the column defaults to 0 and the form posts 0). Reported to the
+       * owner rather than decided here.
+       */
+      courierFeeAmount = roundMinor(fee.returnFee, country.minorUnit);
     }
 
     const receipt = await db.$transaction(async (tx) => {
