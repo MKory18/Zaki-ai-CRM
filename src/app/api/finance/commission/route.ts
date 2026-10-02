@@ -5,7 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { accrueForOrder, periodOf } from '@/lib/commission';
+import { PROMOTABLE_BY_PAYOUT, accrueForOrder, periodOf } from '@/lib/commission';
 import {
   calendarReadiness,
   fairnessFor,
@@ -101,7 +101,10 @@ async function fairnessBlocks(companyId: string, storeId: string | null, period:
  *
  * Accrual happens on DELIVERED and is idempotent, so running it twice pays
  * nobody twice. Entries become PAYABLE only when the settlement that covers
- * their order is approved.
+ * their order is approved — at the statement's moment if the entry already
+ * existed, and otherwise at the payout door, which promotes what is already
+ * settled. So the «مستحقة» column is NOT the PAYABLE label: it is what the
+ * door would pay, asked of the door. See the comment inside GET.
  */
 const accrueSchema = z.object({
   orderIds: z.array(z.string().uuid()).max(500).optional(),
@@ -120,6 +123,53 @@ export async function GET(req: Request) {
       take: 1000,
       include: { order: { select: { orderNumber: true, merchantRef: true, deliveredAt: true } } },
     });
+
+    /**
+     * ── WHAT THE PAYOUT DOOR WOULD ACTUALLY PAY, asked of the door ──
+     *
+     * The «مستحقة» column used to be the status string: `status === 'PAYABLE'`
+     * and nothing else. But PAYABLE is no longer the whole of what is owed.
+     * Since the payout door promotes what is already settled
+     * (`PROMOTABLE_BY_PAYOUT` in commission.ts), an entry on a SETTLED order
+     * sits at ACCRUED at rest and is turned into money the moment somebody
+     * pays it. The payout dialog, the payslip and the performance card all
+     * read `owedTo`, which counts both arms — so they said «300 owed, ready
+     * to pay» while this screen said «300 محتسبة, 0 مستحقة». One of those two
+     * numbers is wrong, and it is this one: the money IS payable.
+     *
+     * And it was not merely a mislabel. The «صرف» button on this table is
+     * drawn on `payable > 0`, so a zero here hid the only way to pay.
+     *
+     * THE CONDITION IS NOT RESTATED HERE. `PROMOTABLE_BY_PAYOUT` is a Prisma
+     * filter — a reversal reached through a relation, an order's
+     * `settlementStatus` reached through another — and re-deciding it over
+     * in-memory rows would mean a SECOND copy of it in JavaScript, free to
+     * drift from the one the door uses by exactly the amount that makes the
+     * screen lie again. So the question is put to the database, with the
+     * door's own where-clause, over the very rows this screen is about: the
+     * answer is the door's answer because it is the door's filter, evaluated
+     * by the same engine, and the `OR` is written as `owedTo` writes it.
+     *
+     * This is also why the big query above needs no extra `select`: nothing
+     * here reads `payoutId`, `reversedBy` or the order's `settlementStatus`
+     * off a row, so no omitted field can silently become `undefined` and
+     * bucket somebody's money into the wrong column.
+     */
+    const payableNow = new Set<string>(
+      entries.length === 0
+        ? []
+        : (
+            await db.commissionEntry.findMany({
+              where: {
+                companyId,
+                id: { in: entries.map((e) => e.id) },
+                payoutId: null,
+                OR: [{ status: 'PAYABLE' }, PROMOTABLE_BY_PAYOUT],
+              },
+              select: { id: true },
+            })
+          ).map((e) => e.id)
+    );
 
     const fairness = await fairnessBlocks(companyId, storeId, period);
 
@@ -146,7 +196,13 @@ export async function GET(req: Request) {
         accrued: 0, payable: 0, paid: 0, reversed: 0,
       };
       const amount = Number(entry.amount);
-      if (entry.status === 'ACCRUED') row.accrued += amount;
+      // Owed first, by the door's answer rather than by the label: an ACCRUED
+      // entry on a settled order belongs in «مستحقة» because that is what
+      // pressing «صرف» would pay. A PAYABLE row the door would refuse — one
+      // that somehow already carries a `payoutId` — keeps its old column
+      // rather than vanishing from the table.
+      if (payableNow.has(entry.id)) row.payable += amount;
+      else if (entry.status === 'ACCRUED') row.accrued += amount;
       else if (entry.status === 'PAYABLE') row.payable += amount;
       else if (entry.status === 'PAID') row.paid += amount;
       else row.reversed += amount;
@@ -164,6 +220,12 @@ export async function GET(req: Request) {
         ...e,
         amount: Number(e.amount),
         userName: nameOf.get(e.userId) ?? null,
+        /**
+         * Would the payout door pay this row today? Shipped beside `status`
+         * so a reader of this list never has to work it out from the label —
+         * which is the mistake the totals above used to make.
+         */
+        payableNow: payableNow.has(e.id),
       })),
       /**
        * WHETHER THE VOLUME TABLE ABOVE IS FAIR.
