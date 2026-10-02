@@ -70,8 +70,24 @@ export function WhatsAppInboxScreen() {
   const canAssign = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.assign');
   const canView = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.view');
 
+  /*
+   * Which conversation is open, readable from a callback that outlived the
+   * render that created it: the 5-second poll and the guard that runs after
+   * `loadMessages` awaits the network both need the CURRENT selection, not
+   * the one that was open when their closure was built.
+   *
+   * The write lives in an effect. Assigned in the render body it was a write
+   * a discarded render performed too — React may render this screen for a
+   * selection it never commits, and the post-await guard would then throw
+   * away the messages of the conversation that IS on screen, or keep the
+   * messages of one that is not. After-commit is the only moment at which
+   * this ref is allowed to mean "what the agent is looking at", and the
+   * reads are all post-paint, so nothing about the timing changes.
+   */
   const selectedIdRef = useRef<string | null>(null);
-  selectedIdRef.current = selectedId;
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
   const inFlightRef = useRef(false);
 
   const loadConnection = useCallback(async () => {

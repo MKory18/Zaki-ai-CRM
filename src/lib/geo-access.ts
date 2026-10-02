@@ -44,9 +44,30 @@ export async function currentGeoAccess(userId: string): Promise<GeoAccessSelecti
   return { countryIds: countries.map((c) => c.countryId), storeIds: stores.map((s) => s.storeId) };
 }
 
+/**
+ * The two tables this function is allowed to touch, and nothing else.
+ *
+ * This was four `Function`s, which accepts a function-like value of ANY
+ * shape — so `deleteMany()` with no `where` would have type-checked and
+ * emptied every user's access in the company, and a `createMany` fed the
+ * wrong key would have failed only at runtime inside a transaction. Spelling
+ * out the argument of each one is what makes the mistake unwriteable.
+ *
+ * The return is `Promise<unknown>`: the counts Prisma hands back are of no
+ * interest here, and naming them would tie this file to Prisma's generated
+ * batch-payload type for nothing. Both call sites pass a real transaction
+ * client (`tx as never`), so this shape is a contract for the body below,
+ * not a bound on what a caller may supply.
+ */
 type Tx = {
-  userCountryAccess: { deleteMany: Function; createMany: Function };
-  userStoreAccess: { deleteMany: Function; createMany: Function };
+  userCountryAccess: {
+    deleteMany: (args: { where: { userId: string } }) => Promise<unknown>;
+    createMany: (args: { data: { userId: string; countryId: string }[] }) => Promise<unknown>;
+  };
+  userStoreAccess: {
+    deleteMany: (args: { where: { userId: string } }) => Promise<unknown>;
+    createMany: (args: { data: { userId: string; storeId: string }[] }) => Promise<unknown>;
+  };
 };
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, Image as ImageIcon, Italic,
   Loader2, Minus, Palette, Plus, Trash2, Type, Upload, MousePointerClick } from 'lucide-react';
@@ -90,9 +90,20 @@ export function LookControls({
    * otherwise both start from the same old value, and the first would be
    * quietly undone. The person sees one of their two choices ignored and
    * has no way to tell which.
+   *
+   * The ref is filled from an effect, not from the render body. A write
+   * during render is a write a discarded render also performs — React may
+   * render this panel for a `look` it never commits (StrictMode's double
+   * pass, a concurrent retry it throws away), and the next click would then
+   * patch a value that was never on screen, which is the very bug this ref
+   * exists to prevent. An effect runs only after a render is committed, so
+   * `latest.current` is always the look the seller is actually looking at;
+   * handlers fire after paint, so they see exactly what they saw before.
    */
   const latest = useRef(look);
-  latest.current = look;
+  useEffect(() => {
+    latest.current = look;
+  }, [look]);
 
   const set = (patch: Partial<BlockLook>) => onChange({ ...latest.current, ...patch });
   const setBg = (patch: Partial<BlockLook['background']>) =>

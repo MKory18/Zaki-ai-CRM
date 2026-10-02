@@ -35,6 +35,24 @@ export function ConfirmationPostponedScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  // Named, because handing an order to the pool has to reload the list it
+  // just left — an inline effect body cannot be called a second time.
+  //
+  // Declared ABOVE `toQueue`, which calls it. The other way round, `toQueue`
+  // closed over a `const` that was still in its temporal dead zone at the
+  // point of the reference, and React Compiler would not reorder the two to
+  // find out whether that was safe — it gave up on the whole component
+  // ("Compilation Skipped: existing memoization could not be preserved"),
+  // so every row of this screen lost memoization to a declaration order
+  // that was never meaningful.
+  const load = useCallback(
+    () =>
+      apiJson<{ leadDays: number; orders: Row[] }>('/api/confirmation/postponed')
+        .then(setData)
+        .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل')),
+    []
+  );
+
   /** Hands it to the pool, still postponed. The list reloads without it. */
   const toQueue = async (o: Row) => {
     setBusyId(o.id);
@@ -54,16 +72,6 @@ export function ConfirmationPostponedScreen() {
       setBusyId(null);
     }
   };
-
-  // Named, because handing an order to the pool has to reload the list it
-  // just left — an inline effect body cannot be called a second time.
-  const load = useCallback(
-    () =>
-      apiJson<{ leadDays: number; orders: Row[] }>('/api/confirmation/postponed')
-        .then(setData)
-        .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل')),
-    []
-  );
 
   useEffect(() => {
     void load();

@@ -43,9 +43,6 @@ export function LandingFormBridge({ offers, children, currency, product }: Bridg
   const [externalOfferId, setExternalOfferId] = useState<string | null>(null);
   const { trackEvent } = useTracking();
 
-  const offerIdsRef = useRef<Set<string>>(new Set());
-  offerIdsRef.current = new Set(offers.map((o) => o.id));
-
   // InitiateCheckout dedup: once per page session (per actual page load);
   // the central engine dedupes per-pixel on top of this.
   const checkoutFiredRef = useRef(false);
@@ -69,6 +66,25 @@ export function LandingFormBridge({ offers, children, currency, product }: Bridg
   }
 
   useEffect(() => {
+    /*
+     * The allowlist is built here, inside the effect, and not into a ref
+     * assigned while rendering.
+     *
+     * It used to be `offerIdsRef.current = new Set(...)` in the render body —
+     * a write to a ref during render, which React forbids because a render
+     * that is never committed (a concurrent retry, StrictMode's second pass)
+     * would still have replaced the allowlist the live listener reads. For a
+     * security allowlist that is the wrong direction of failure: the set a
+     * message is checked against must be the set that belongs to the page
+     * currently mounted, nothing else.
+     *
+     * The ref bought nothing anyway. This effect already re-subscribes
+     * whenever `offers` changes, and the body below reads `offers` straight
+     * out of the closure for `offers.find`, so the closure was always the
+     * fresher of the two.
+     */
+    const offerIds = new Set(offers.map((o) => o.id));
+
     function onMessage(ev: MessageEvent) {
       const d = ev.data;
       if (!d || typeof d !== 'object') return;
@@ -82,7 +98,7 @@ export function LandingFormBridge({ offers, children, currency, product }: Bridg
         }
         if (d.action === 'select-offer' && typeof d.offerId === 'string') {
           // allowlist: only offers of THIS landing page (from DB props)
-          if (offerIdsRef.current.has(d.offerId)) {
+          if (offerIds.has(d.offerId)) {
             const dbOffer = offers.find((o) => o.id === d.offerId);
             trackInitiateCheckout(dbOffer);
             setExternalOfferId(d.offerId);
@@ -100,7 +116,7 @@ export function LandingFormBridge({ offers, children, currency, product }: Bridg
         return;
       }
       if (d.type === 'zaki:offer' && typeof d.offerId === 'string') {
-        if (offerIdsRef.current.has(d.offerId)) {
+        if (offerIds.has(d.offerId)) {
           const dbOffer = offers.find((o) => o.id === d.offerId);
           trackInitiateCheckout(dbOffer);
           setExternalOfferId(d.offerId);

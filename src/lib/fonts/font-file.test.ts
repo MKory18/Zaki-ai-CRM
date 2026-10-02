@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readFontFacts, detectFontFormat, looksRestricted } from './font-file';
 import { describeFont, fontKey, weightFromFileName, familyFromFileName, fontFaceCss, MAX_FONT_BYTES } from './store-fonts';
@@ -66,7 +66,6 @@ describe('describing an upload', () => {
   it('reads family, weight and licence out of an uncompressed file', () => {
     // Any otf/ttf in fonts-local will do; skip when the folder is empty.
     if (!existsSync(LOCAL)) return;
-    const { readdirSync } = require('node:fs') as typeof import('node:fs');
     const file = readdirSync(LOCAL).find((n) => /\.(otf|ttf)$/i.test(n));
     if (!file) return;
     const f = describeFont(readFileSync(join(LOCAL, file)), file);

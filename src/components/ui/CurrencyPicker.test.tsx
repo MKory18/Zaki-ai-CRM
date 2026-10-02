@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from './CurrencyPicker';
@@ -16,7 +16,17 @@ let last: CurrencyChoice = { code: '', minorUnit: null };
 
 function Harness({ initial }: { initial: CurrencyChoice }) {
   const [value, setValue] = useState(initial);
-  last = value;
+  // The spy writes from an effect, not from the render body. Writing to a
+  // module variable while rendering is the side effect React forbids: a
+  // render that is thrown away (StrictMode's double render, a concurrent
+  // retry) still leaves its value in `last`, so the assertions below would
+  // be reading a value the component never actually showed. The effect runs
+  // only on a committed render, and `render`/`fireEvent` already flush
+  // effects inside `act`, so every `expect(last)` here still sees the value
+  // that is on screen at that moment.
+  useEffect(() => {
+    last = value;
+  }, [value]);
   return <CurrencyPicker value={value} onChange={setValue} />;
 }
 

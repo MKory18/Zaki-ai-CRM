@@ -81,7 +81,9 @@ const metaAdapter: TrackingAdapter = {
     const w = window as any;
     if (!w.fbq) {
       const n: QueueFn = (w.fbq = function (...args: any[]) {
-        n.callMethod ? n.callMethod.apply(n, args) : n.queue!.push(args);
+        // Called as a method on `n`, so `this` is still `n` — the same
+        // binding `.apply(n, args)` spelled out by hand, minus the array.
+        n.callMethod ? n.callMethod(...args) : n.queue!.push(args);
       }) as QueueFn;
       if (!w._fbq) w._fbq = n;
       n.push = n;
@@ -194,7 +196,9 @@ const snapAdapter: TrackingAdapter = {
     const w = window as any;
     if (!w.snaptr) {
       const n: QueueFn = (w.snaptr = function (...args: any[]) {
-        n.handleRequest ? n.handleRequest.apply(n, args) : n.queue!.push(args);
+        // As with fbq above: a method call on `n` binds `this` to `n`, so
+        // dropping `.apply` changes nothing the Snap script can observe.
+        n.handleRequest ? n.handleRequest(...args) : n.queue!.push(args);
       }) as QueueFn;
       n.queue = [];
       loadScript(SNAP_SCRIPT_SRC);

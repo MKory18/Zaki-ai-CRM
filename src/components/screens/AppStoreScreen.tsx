@@ -286,7 +286,7 @@ function RegisterApp({
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-[var(--sys-foreground)]">
             احفظه الآن. يوقّع كل ويبهوك بترويسة <code dir="ltr">RiCloseLine-Zaki-Signature</code> بصيغة
-            {' '}<code dir="ltr">sha256=HMAC(secret, "&lt;timestamp&gt;.&lt;body&gt;")</code>؛
+            {' '}<code dir="ltr">sha256=HMAC(secret, &quot;&lt;timestamp&gt;.&lt;body&gt;&quot;)</code>؛
             الوقت داخل النصّ الموقَّع حتى لا يُعاد إرسال طلب مُلتقَط بعد أسبوع بنفس التوقيع.
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
