@@ -41,7 +41,17 @@ function sources(dir: string): string[] {
   return out;
 }
 
-const FILES = [...sources('src'), ...sources('tests')];
+/*
+ * `src` and `scripts`, not `tests`.
+ *
+ * The sweep used to include a `tests/` folder of 25 ad-hoc scripts — none a
+ * vitest file, twelve of them writing to the database — which was removed on
+ * 2026-10-02 as the release brief asks. `scripts/` takes its place in this
+ * sweep and is the better subject anyway: those are the files somebody still
+ * RUNS, so a second cost calculator hiding in one of them is a live hazard,
+ * where the deleted folder was only a historical one.
+ */
+const FILES = [...sources('src'), ...sources('scripts')];
 const read = (rel: string) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
 
 describe('a batch costs what one function says it costs', () => {
