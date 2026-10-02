@@ -341,29 +341,36 @@ describe('editing an offer obeys the same rule', () => {
   });
 
   /**
-   * DROPPING THE PRICE UNDER A STORED DISCOUNT — AND WHAT REALLY HAPPENS.
+   * DROPPING THE PRICE UNDER A STORED DISCOUNT.
    *
-   * `{ sellingPrice: 2 }` alone would be a violation if the stored
-   * discount of 3 survived the edit. MEASURED: it does not. Zod keeps a
-   * field's `.default()` through `.partial()`, so `discount` arrives as 0
-   * and the route writes that 0 — the row that lands is 2 with no
-   * reduction, and there is nothing left for the rule to refuse.
+   * `{ sellingPrice: 2 }` alone leaves the stored discount of 3 standing,
+   * so the row it would land is 2 with a reduction of 3 — the exact thing
+   * the rule exists to refuse, arriving from the other direction.
    *
-   * The silent wipe is a defect of the EDIT DOOR, not of this rule, and it
-   * predates it (the route parsed `offerInputSchema.partial()` before this
-   * rule existed, with the same defaults). It is reported, not fixed here.
-   * What this pins is the half that is about money: a stored row can never
-   * end up with a discount at or above its price, by either direction of
-   * edit.
+   * This used to PASS, and the test that stood here recorded why: zod kept
+   * each field's `.default()` through `.partial()`, so the omitted discount
+   * arrived as 0, the route wrote that 0, and the row that landed had no
+   * reduction left to measure. The default-wipe is fixed — see
+   * `omittedMeansOmitted` in offers.ts — so the omitted discount is now
+   * genuinely absent, the stored 3 is what the rule reads, and the edit is
+   * refused.
    */
-  it('cannot leave a row whose discount reaches its price', () => {
+  it('refuses a price dropped under the discount the row already has', () => {
     const lowered = offerPatchSchema(stored).safeParse({ sellingPrice: 2 });
-    expect(lowered.success).toBe(true);
-    if (lowered.success) expect(lowered.data.discount).toBe(0);
+    expect(lowered.success).toBe(false);
+    if (!lowered.success) {
+      expect(lowered.error.issues[0].path).toEqual(['discount']);
+      // The stored discount, not a default of 0, is the number in the message.
+      expect(lowered.error.issues[0].message).toContain('3');
+    }
     // And both numbers together — which is what the offers screen sends —
     // is refused when they disagree.
     expect(offerPatchSchema(stored).safeParse({ sellingPrice: 2, discount: 3 }).success).toBe(
       false
+    );
+    // Dropping the price AND the discount together is a legal edit.
+    expect(offerPatchSchema(stored).safeParse({ sellingPrice: 2, discount: 1 }).success).toBe(
+      true
     );
   });
 
@@ -385,17 +392,89 @@ describe('editing an offer obeys the same rule', () => {
     expect(offerPatchSchema(stored).safeParse({ isDefault: true }).success).toBe(true);
   });
 
-  it('demands nothing the editor did not send — but zod supplies the defaults', () => {
+  it('demands nothing the editor did not send, and invents nothing either', () => {
     const r = offerPatchSchema(stored).safeParse({});
     expect(r.success).toBe(true);
     if (!r.success) return;
-    // MEASURED, AND REPORTED AS A FINDING: `.partial()` keeps every
-    // `.default()`, so an empty edit still parses to a whole default row
-    // and the route writes it — moving an offer up the list resets its
-    // quantity, its status, its default flag and its discount. Pinned here
-    // because it is the reason the rule reads the price from the stored row
-    // rather than trusting what a patch leaves out.
-    expect(r.data).toEqual({
+    // An empty edit is an empty edit. This used to parse to a whole default
+    // row — `{ quantity: 1, freeQuantity: 0, discount: 0,
+    // deliveryIncluded: true, isDefault: false, sortOrder: 0,
+    // status: 'ACTIVE' }` — because `.partial()` keeps every `.default()`,
+    // and the route wrote all of it.
+    expect(r.data).toEqual({});
+    expect(Object.keys(r.data)).toEqual([]);
+  });
+
+  /**
+   * THE EDIT THE OFFERS SCREEN SENDS ON ITS OWN, AND WHAT IT MAY TOUCH.
+   *
+   * Dragging a bundle up the list is `PATCH { sortOrder: 1 }`. It used to
+   * come back out of the schema as a whole row of defaults, and the route
+   * wrote every one of them: «قطعتان بحسم ٣» — quantity 2, discount 3, the
+   * preselected bundle — came back one piece, no discount, not the default
+   * and forced ACTIVE. Measured, on the stored row below.
+   */
+  it('a reorder carries the new position and NOT a single other field', () => {
+    const row = { sellingPrice: 25, discount: 3, quantity: 2, isDefault: true, sortOrder: 5 };
+    const r = offerPatchSchema(row).safeParse({ sortOrder: 1 });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data).toEqual({ sortOrder: 1 });
+    // Static as well as measured: stripping the defaults must not have cost
+    // the output its types, or the route would be writing `unknown` into
+    // every column. This line does not compile if it did.
+    const typed: { sortOrder?: number; quantity?: number; status?: 'ACTIVE' | 'INACTIVE' } = r.data;
+    expect(typed.sortOrder).toBe(1);
+    // Named one by one, because each is a column the route would have
+    // written: the quantity, the discount, the preselection, the status.
+    expect('quantity' in r.data).toBe(false);
+    expect('discount' in r.data).toBe(false);
+    expect('isDefault' in r.data).toBe(false);
+    expect('status' in r.data).toBe(false);
+    expect('freeQuantity' in r.data).toBe(false);
+    expect('deliveryIncluded' in r.data).toBe(false);
+  });
+
+  /**
+   * THE SAME GUARANTEE FOR A FIELD NOBODY HAS WRITTEN YET.
+   *
+   * The fix is not «these seven fields had their defaults removed», it is
+   * «this schema cannot produce a value the caller did not send». So the
+   * guard walks the schema's own shape rather than a list copied out of it:
+   * add a field to `offerFields` tomorrow with a `.default()`, a
+   * `.prefault()` or a `.catch()`, and this fails here instead of wiping a
+   * seller's configuration in production.
+   */
+  it('no field of the patch schema — present or future — makes a value out of nothing', () => {
+    const shape = offerPatchSchema(stored).shape;
+    const fields = Object.keys(shape);
+    // The shape really was read: every field of the create door is here.
+    expect(fields.sort()).toEqual(
+      [
+        'compareAtPrice', 'deliveryIncluded', 'discount', 'endsAt', 'freeQuantity',
+        'isDefault', 'name', 'quantity', 'sellingPrice', 'sortOrder', 'status',
+      ].sort()
+    );
+    for (const field of fields) {
+      const r = shape[field as keyof typeof shape].safeParse(undefined);
+      // Reported as a triple so a failure names the offending field.
+      expect([field, r.success, r.success ? r.data : 'refused']).toEqual([field, true, undefined]);
+    }
+  });
+
+  /**
+   * AND THE CREATE DOOR STILL FILLS A ROW IN.
+   *
+   * The defaults are right on POST — an unstated quantity on a new bundle
+   * really is 1 — so stripping them for the edit door must not have
+   * stripped them there. If this ever passes while the guards above pass,
+   * the fix was applied to the wrong schema.
+   */
+  it('leaves the create door applying every default', () => {
+    const created = offerInputSchema.parse({ name: 'قطعة', sellingPrice: 25 });
+    expect(created).toEqual({
+      name: 'قطعة',
+      sellingPrice: 25,
       quantity: 1,
       freeQuantity: 0,
       discount: 0,
@@ -404,9 +483,5 @@ describe('editing an offer obeys the same rule', () => {
       sortOrder: 0,
       status: 'ACTIVE',
     });
-    // `sellingPrice` has no default, so it is genuinely absent and the
-    // route leaves the stored price alone — which is exactly why the rule
-    // has to read that price from the row being edited.
-    expect('sellingPrice' in r.data).toBe(false);
   });
 });

@@ -42,21 +42,33 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
     const input = parsed.data;
 
+    /**
+     * WHAT THE EDITOR SENT, AND NOTHING ELSE.
+     *
+     * `offerPatchSchema` now hands back exactly the fields the request
+     * carried — it strips the `.default()` that `.partial()` keeps, which is
+     * what used to make a reorder overwrite the quantity, the discount and
+     * the default flag. So the keys of `input` ARE the edit, and spreading
+     * them is the whole merge.
+     *
+     * Spread rather than a field-by-field list on purpose, and it closes the
+     * opposite hole too: the list had eleven lines, one per column, so a
+     * field added to the schema was silently NOT writable here until
+     * somebody remembered a twelfth. Three fields still need a line of their
+     * own because the column wants something the schema does not say:
+     * a trimmed name, and `null` rather than `undefined` for the two
+     * nullable columns.
+     */
+    const { name, compareAtPrice, endsAt, ...columns } = input;
+
     const offer = await db.$transaction(async (tx) => {
       const updated = await tx.offer.update({
         where: { id: existing.id },
         data: {
-          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-          ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
-          ...(input.freeQuantity !== undefined ? { freeQuantity: input.freeQuantity } : {}),
-          ...(input.sellingPrice !== undefined ? { sellingPrice: input.sellingPrice } : {}),
-          ...(input.compareAtPrice !== undefined ? { compareAtPrice: input.compareAtPrice ?? null } : {}),
-          ...(input.endsAt !== undefined ? { endsAt: input.endsAt ?? null } : {}),
-          ...(input.discount !== undefined ? { discount: input.discount } : {}),
-          ...(input.deliveryIncluded !== undefined ? { deliveryIncluded: input.deliveryIncluded } : {}),
-          ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
-          ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
-          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...columns,
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...('compareAtPrice' in input ? { compareAtPrice: compareAtPrice ?? null } : {}),
+          ...('endsAt' in input ? { endsAt: endsAt ?? null } : {}),
         },
       });
       await clearOtherDefaults(tx, updated);

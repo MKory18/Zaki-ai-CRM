@@ -96,7 +96,72 @@ export const offerInputSchema = offerFields.superRefine((o, ctx) =>
 );
 
 /**
- * THE SAME RULE FOR AN EDIT, MEASURED AGAINST THE ROW BEING EDITED.
+ * AN EDIT THAT DID NOT MENTION A FIELD USED TO OVERWRITE IT ANYWAY.
+ *
+ * `.partial()` makes a field optional. It does NOT remove the field's
+ * `.default()` — so in zod 4 every defaulted field came back PRESENT,
+ * carrying its default instead of the stored value. MEASURED on an offer
+ * stored as `quantity: 2, discount: 3, isDefault: true, sortOrder: 5`:
+ *
+ *     offerFields.partial().safeParse({ sortOrder: 1 })
+ *       → { sortOrder: 1, quantity: 1, freeQuantity: 0, discount: 0,
+ *           deliveryIncluded: true, isDefault: false, status: 'ACTIVE' }
+ *
+ * `PATCH /api/offers/[id]` writes `input.x !== undefined ? { x } : {}`, and
+ * every one of those defaults is `!== undefined`. So dragging a bundle up
+ * the list — `PATCH { sortOrder: 1 }`, the one edit the offers screen sends
+ * alone — turned «قطعتان بحسم ٣» into one piece at no discount, no longer
+ * the default, forced back to ACTIVE. No error, and nothing in the request
+ * asked for any of it.
+ *
+ * THE DEFAULTS ARE REMOVED HERE RATHER THAN THE MERGE PATCHED THERE. A
+ * route that compares against `undefined` is correct the moment «omitted»
+ * actually arrives omitted, and this schema is the one place every door
+ * reads — the edit route today and any caller written later. Patching the
+ * route would hand the next reader of `offerPatchSchema` the same loaded
+ * gun.
+ *
+ * AND IT IS DONE OVER THE SHAPE, NOT FIELD BY FIELD. A field added to
+ * `offerFields` tomorrow with a `.default()` is stripped without anybody
+ * remembering to strip it, which is the only version of this fix that
+ * cannot rot. `offers.test.ts` walks every field of the patch schema and
+ * refuses any that invents a value out of `undefined`, so a zod wrapper
+ * this helper does not know about fails the suite instead of shipping.
+ *
+ * The create door keeps every default, which is right there: `POST` is the
+ * row being written whole, and an unstated quantity really is 1.
+ */
+type NoDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
+type Omitted<Shape extends z.ZodRawShape> = {
+  [K in keyof Shape]: z.ZodOptional<NoDefault<Shape[K]>>;
+};
+
+/**
+ * One field, as it arrives when the caller did not send it: absent.
+ *
+ * A shape's values are typed as zod's CORE base, which carries neither
+ * `.optional()` nor the inner type of a `.default()` — `unwrap()` there
+ * returns the base again. The two annotations say what the runtime already
+ * guarantees; `Omitted` above is what the parse output is typed from, so
+ * nothing downstream is loosened by them.
+ */
+function sentOrAbsent(field: unknown): z.ZodTypeAny {
+  const schema = field as z.ZodTypeAny;
+  const sent = schema instanceof z.ZodDefault ? (schema.unwrap() as z.ZodTypeAny) : schema;
+  return sent.optional();
+}
+
+function omittedMeansOmitted<Shape extends z.ZodRawShape>(shape: Shape): Omitted<Shape> {
+  const out: Record<string, z.ZodTypeAny> = {};
+  for (const [key, field] of Object.entries(shape)) out[key] = sentOrAbsent(field);
+  return out as Omitted<Shape>;
+}
+
+/** Every offer field, optional, and silent when the caller was silent. */
+const offerPatchFields = z.object(omittedMeansOmitted(offerFields.shape));
+
+/**
+ * THE SAME DISCOUNT RULE FOR AN EDIT, MEASURED AGAINST THE ROW BEING EDITED.
  *
  * A PATCH may carry the discount on its own, and `{ discount: 30 }` says
  * nothing about the price it has to stay under — so the stored row supplies
@@ -105,15 +170,11 @@ export const offerInputSchema = offerFields.superRefine((o, ctx) =>
  * would shut the create door and leave the edit door open, which is exactly
  * how a rule becomes decoration.
  *
- * WHICH SIDE THE FALLBACK ACTUALLY SERVES, measured rather than assumed:
- * `sellingPrice` has no default, so a patch that omits it leaves the stored
- * price in force — and that fallback is what makes `{ discount: 30 }`
- * refusable at all. `discount` DOES have a default, and zod keeps it through
- * `.partial()`, so an omitted discount arrives as 0 and the route writes
- * that 0; the fallback on that side is a safety net for the day that is
- * fixed, not a live branch. The route's silent overwrite of every defaulted
- * field on a partial edit is a defect of its own, older than this rule, and
- * reported rather than changed here.
+ * BOTH FALLBACKS ARE LIVE NOW, which they were not before the defaults were
+ * stripped: an omitted `discount` used to arrive as 0 and the route wrote
+ * that 0, so `{ sellingPrice: 2 }` against a stored discount of 3 parsed
+ * clean and landed a row with no reduction at all. It is refused now,
+ * because the row it would leave is 2 with a discount of 3.
  *
  * A function rather than a schema for two reasons: the stored row is not
  * known until the route has read it, and zod refuses to `.partial()` an
@@ -121,7 +182,7 @@ export const offerInputSchema = offerFields.superRefine((o, ctx) =>
  * dropping the rule, so `offerInputSchema.partial()` is not an option.
  */
 export function offerPatchSchema(existing: { sellingPrice: number; discount: number }) {
-  return offerFields.partial().superRefine((o, ctx) =>
+  return offerPatchFields.superRefine((o, ctx) =>
     discountBelowPrice(
       o.sellingPrice ?? existing.sellingPrice,
       o.discount ?? existing.discount,

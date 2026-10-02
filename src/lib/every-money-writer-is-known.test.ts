@@ -112,7 +112,16 @@ const READS_ONLY: Record<string, string> = {
   'src/app/api/growth/storefronts/route.ts': 'إيراد كل واجهة — قراءة',
   'src/app/api/moderators/route.ts': 'مبيعات كل موظّفة — قراءة',
   'src/app/api/offers/route.ts': 'سعر العرض نفسه، وهو إدخال البائع لا حساب',
-  'src/app/api/offers/[id]/route.ts': 'سعر العرض نفسه، وهو إدخال البائع لا حساب',
+  /*
+   * `src/app/api/offers/[id]/route.ts` was here, for the same reason as the
+   * POST door above it. It left the sweep on 2026-10-02: the PATCH used to
+   * name each column it writes — `input.sellingPrice !== undefined ? …` —
+   * and it now spreads the fields the request actually carried, so nothing
+   * in it spells a money field any more. It never wrote an ORDER's money,
+   * so the sweep loses no coverage of that; and if a money field is ever
+   * named in it again it reappears as an unclassified stranger, which is
+   * the net doing its work. The name went with the reason.
+   */
   'src/app/api/ops/tracking/collect/route.ts': 'يحصّل نقداً إلى محفظة، ولا يغيّر إجمالي الطلب',
   'src/app/api/ops/tracking/write-off/route.ts': 'يقرأ الإجمالي ليعرضه ويشطب الشحنة',
   'src/app/api/orders/[id]/change-requests/route.ts': 'يسجّل طلب تعديل؛ التطبيق يمرّ بمسار الطلب',
