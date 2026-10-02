@@ -128,9 +128,28 @@ export const PERMISSION_MODULES: CatalogModule[] = [
     items: [
       { key: 'settings.view', ar: 'عرض الإعدادات', en: 'View settings' },
       { key: 'settings.edit', ar: 'تعديل إعدادات النظام', en: 'Edit system settings' },
-      // Enforced on /api/admin/jobs but was missing here, so nobody could be
-      // granted it through the screen.
-      { key: 'settings.manage', ar: 'تشغيل المهام المجدولة', en: 'Run scheduled jobs' },
+      /*
+       * THE LABEL IS WHAT SOMEBODY GRANTS BY, so it has to name the whole
+       * authority — not the first door it was written for.
+       *
+       * It said «تشغيل المهام المجدولة» / «Run scheduled jobs», which is one
+       * of ELEVEN routes it gates. The other ten include the ones that
+       * matter most: a courier's API credentials (read and test), the ad
+       * accounts, and the AI provider settings — all of them keys. A manager
+       * handing an operations person what the screen calls "run scheduled
+       * jobs" was handing them the company's courier and ad-account
+       * credentials, and nothing on the screen said so.
+       *
+       * Found on 2026-10-02 while auditing the launch-flag work, which uses
+       * `settings.edit` for its own flip precisely because this one did not
+       * read like what it is. Guarded in `permission-labels.test.ts`: the
+       * label must still name the keys for as long as it gates them.
+       */
+      {
+        key: 'settings.manage',
+        ar: 'إعدادات النظام الحسّاسة — مفاتيح شركات الشحن والإعلانات والذكاء، وتشغيل المهام المجدولة',
+        en: 'Sensitive system settings — courier, ad-account and AI credentials, and running scheduled jobs',
+      },
     ],
   },
   {
