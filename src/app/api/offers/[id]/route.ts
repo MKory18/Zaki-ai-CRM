@@ -4,7 +4,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { offerInputSchema, clearOtherDefaults } from '@/lib/offers';
+import { offerPatchSchema, clearOtherDefaults } from '@/lib/offers';
 import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
@@ -29,7 +29,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const existing = await db.offer.findFirst({ where: { id, companyId, product: { storeId: storeId ?? '' } } });
     if (!existing) return NextResponse.json({ error: 'العرض غير موجود' }, { status: 404 });
 
-    const parsed = offerInputSchema.partial().safeParse(await req.json().catch(() => null));
+    // The stored row, so a partial edit is measured against the offer it
+    // WILL be: `{ discount: 30 }` alone says nothing about the price it has
+    // to stay under, and a rule that only sees what was sent would shut the
+    // create door and leave this one open. See `offerPatchSchema`.
+    const parsed = offerPatchSchema(existing).safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json(
         { error: zodMessage(parsed.error) },

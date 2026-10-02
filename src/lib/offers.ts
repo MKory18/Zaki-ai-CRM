@@ -19,7 +19,9 @@ import type { db } from './db';
  *                            only, and shown only as far as real delivered
  *                            orders support it — see price-honesty.ts
  *   endsAt                 — when this bundle stops being for sale
- *   discount               — a real reduction, and the only one computeCod sees
+ *   discount               — a real reduction, the only one computeCod sees, and an
+ *                            ABSOLUTE amount of money. It must stay below the
+ *                            selling price it reduces — see the rule under the schema
  *   deliveryIncluded       — whether the price already carries the fee
  *
  * The separation between compareAtPrice and discount is deliberate. One is a
@@ -27,7 +29,7 @@ import type { db } from './db';
  * them would let a display decision change what a customer is charged.
  */
 
-export const offerInputSchema = z.object({
+const offerFields = z.object({
   name: z.string().min(1, 'اسم العرض مطلوب').max(120),
   quantity: count(999, 1).default(1),
   freeQuantity: count(999).default(0),
@@ -50,6 +52,83 @@ export const offerInputSchema = z.object({
   sortOrder: count(9999).default(0),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
+
+/**
+ * A DISCOUNT THAT SWALLOWS ITS OWN PRICE IS A TYPO, AND EVERY DOOR GUESSED.
+ *
+ * `discount` is an absolute amount of money, and it used to be bounded only
+ * by a million — never by the price it reduces. So `sellingPrice: 25,
+ * discount: 30` was accepted and stored, and the doors then disagreed about
+ * what that bundle costs:
+ *
+ *   landing-page order (createPublicOrder)    0   allocateDiscount clamps to the subtotal
+ *   cart quote                                0   the same clamp
+ *   AI intake’s suggestion                    0   the same clamp
+ *   AI intake’s WRITE                        99   `p.finalPrice || product.basePrice`
+ *                                                 reads that clamped 0 as «absent»
+ *                                                 and charges the base price
+ *
+ * One slip of the keyboard: three doors give the bundle away and a fourth
+ * charges full base price. There is no reading that makes them agree,
+ * because nobody designs a free bundle by writing a discount larger than
+ * the price — they write `sellingPrice: 0`. So the row is refused where it
+ * enters instead of being reinterpreted four times downstream.
+ *
+ * ONLY A POSITIVE DISCOUNT IS MEASURED. `discount: 0` means «no reduction
+ * at all» and stays legal at any price, a price of 0 included: a free
+ * bundle is a pricing decision, and refusing it here would be this rule
+ * quietly making a different one than the one it was asked to make.
+ */
+function discountBelowPrice(sellingPrice: number, discount: number, ctx: z.RefinementCtx) {
+  if (discount > 0 && discount >= sellingPrice) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        `الخصم (${discount}) يساوي سعر العرض (${sellingPrice}) أو يزيد عليه — ` +
+        `اكتب خصماً أقلّ من ${sellingPrice}`,
+      path: ['discount'],
+    });
+  }
+}
+
+export const offerInputSchema = offerFields.superRefine((o, ctx) =>
+  discountBelowPrice(o.sellingPrice, o.discount, ctx)
+);
+
+/**
+ * THE SAME RULE FOR AN EDIT, MEASURED AGAINST THE ROW BEING EDITED.
+ *
+ * A PATCH may carry the discount on its own, and `{ discount: 30 }` says
+ * nothing about the price it has to stay under — so the stored row supplies
+ * whatever the request leaves out and the rule reads the values the offer
+ * WILL have once the update lands. Checking only the fields that were sent
+ * would shut the create door and leave the edit door open, which is exactly
+ * how a rule becomes decoration.
+ *
+ * WHICH SIDE THE FALLBACK ACTUALLY SERVES, measured rather than assumed:
+ * `sellingPrice` has no default, so a patch that omits it leaves the stored
+ * price in force — and that fallback is what makes `{ discount: 30 }`
+ * refusable at all. `discount` DOES have a default, and zod keeps it through
+ * `.partial()`, so an omitted discount arrives as 0 and the route writes
+ * that 0; the fallback on that side is a safety net for the day that is
+ * fixed, not a live branch. The route's silent overwrite of every defaulted
+ * field on a partial edit is a defect of its own, older than this rule, and
+ * reported rather than changed here.
+ *
+ * A function rather than a schema for two reasons: the stored row is not
+ * known until the route has read it, and zod refuses to `.partial()` an
+ * object that already carries a refinement — it throws rather than silently
+ * dropping the rule, so `offerInputSchema.partial()` is not an option.
+ */
+export function offerPatchSchema(existing: { sellingPrice: number; discount: number }) {
+  return offerFields.partial().superRefine((o, ctx) =>
+    discountBelowPrice(
+      o.sellingPrice ?? existing.sellingPrice,
+      o.discount ?? existing.discount,
+      ctx
+    )
+  );
+}
 
 export type OfferInput = z.infer<typeof offerInputSchema>;
 
