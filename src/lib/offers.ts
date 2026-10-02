@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { count, money } from './numeric-input';
+import { omittedMeansOmitted } from './zod-patch';
 import { evidencedWasPrices, struckThroughPrice } from './price-honesty';
 import type { Prisma } from '@prisma/client';
 import type { db } from './db';
@@ -130,32 +131,14 @@ export const offerInputSchema = offerFields.superRefine((o, ctx) =>
  *
  * The create door keeps every default, which is right there: `POST` is the
  * row being written whole, and an unstated quantity really is 1.
- */
-type NoDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
-type Omitted<Shape extends z.ZodRawShape> = {
-  [K in keyof Shape]: z.ZodOptional<NoDefault<Shape[K]>>;
-};
-
-/**
- * One field, as it arrives when the caller did not send it: absent.
  *
- * A shape's values are typed as zod's CORE base, which carries neither
- * `.optional()` nor the inner type of a `.default()` — `unwrap()` there
- * returns the base again. The two annotations say what the runtime already
- * guarantees; `Omitted` above is what the parse output is typed from, so
- * nothing downstream is loosened by them.
+ * THE HELPER ITSELF NOW LIVES IN `zod-patch.ts`, NOT HERE. Three more doors
+ * were found carrying the same defect — a campaign's spend, a store page's
+ * text, a redirect's 301 — and this file is the wrong home for the answer
+ * to all four: it is a domain module that knows about Prisma, while
+ * `store-pages.ts` must stay client-safe. One implementation, no domain
+ * attached, beside `zod-message.ts`.
  */
-function sentOrAbsent(field: unknown): z.ZodTypeAny {
-  const schema = field as z.ZodTypeAny;
-  const sent = schema instanceof z.ZodDefault ? (schema.unwrap() as z.ZodTypeAny) : schema;
-  return sent.optional();
-}
-
-function omittedMeansOmitted<Shape extends z.ZodRawShape>(shape: Shape): Omitted<Shape> {
-  const out: Record<string, z.ZodTypeAny> = {};
-  for (const [key, field] of Object.entries(shape)) out[key] = sentOrAbsent(field);
-  return out as Omitted<Shape>;
-}
 
 /** Every offer field, optional, and silent when the caller was silent. */
 const offerPatchFields = z.object(omittedMeansOmitted(offerFields.shape));

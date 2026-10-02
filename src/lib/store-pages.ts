@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { omittedMeansOmitted } from './zod-patch';
 
 /**
  * THE SHOP'S OWN PAGES.
@@ -166,7 +167,45 @@ export const storePageCreateSchema = z.object({
   sortOrder: z.number().int().min(0).max(999).default(0),
 });
 
-export const storePageUpdateSchema = storePageCreateSchema.partial().strict();
+/**
+ * AN EDIT TO A PAGE MAY ONLY WRITE WHAT THE SELLER SENT.
+ *
+ * This was `storePageCreateSchema.partial().strict()`, and the route writes
+ * `parsed.data` whole. `.partial()` in zod 4 keeps every `.default()`, so
+ * every edit arrived as a whole row. MEASURED:
+ *
+ *     storePageCreateSchema.partial().strict()
+ *       .safeParse({ isPublished: true })
+ *       → { body: '', kind: 'CUSTOM', isPublished: true, sortOrder: 0 }
+ *     ...        .safeParse({ title: 'الخصوصية' })
+ *       → { title: '…', body: '', kind: 'CUSTOM', isPublished: false, sortOrder: 0 }
+ *
+ * Two losses in one, and the second is the worse:
+ *
+ *  - PUBLISHING A PAGE ERASED ITS ENTIRE TEXT. The seller presses «انشر» on
+ *    the privacy policy they just spent twenty minutes writing and the
+ *    policy goes live empty.
+ *  - `kind` arrived as `'CUSTOM'` on EVERY patch, so the route's own
+ *    `KIND_IMMUTABLE` check — `kind !== undefined && kind !== before.kind`
+ *    → 409 — fired for every page that is not CUSTOM. The PRIVACY, TERMS
+ *    and REFUND pages an ad review requires could not be edited or
+ *    published through this door at all. The seeded three arrive as drafts
+ *    on purpose, so that was every shop's legal pages, unreachable.
+ *
+ * And a retitle alone carried `isPublished: false`: renaming a published
+ * page took it offline.
+ *
+ * The check itself was never wrong. It was written for a world where
+ * `kind` only arrives if somebody sent it, and that is the world this
+ * restores: sending the same kind is still not a change, sending a
+ * different one is still a 409, and sending none is now silence.
+ *
+ * `.strict()` is kept. A body carrying a field no page has is refused
+ * rather than quietly dropped, so a form that sends one finds out.
+ */
+export const storePageUpdateSchema = z
+  .object(omittedMeansOmitted(storePageCreateSchema.shape))
+  .strict();
 
 /** Text into paragraphs, for rendering. Blank lines separate; nothing else. */
 export function paragraphsOf(body: string): string[] {

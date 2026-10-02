@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { AttributionRow } from './attribution-performance';
 import { publicPath } from './public-address';
+import { omittedMeansOmitted } from './zod-patch';
 
 /**
  * WHAT AN AD COST, AND WHAT IT BROUGHT BACK.
@@ -76,6 +77,37 @@ export const campaignInputSchema = z.object({
 });
 
 export type CampaignInput = z.infer<typeof campaignInputSchema>;
+
+/**
+ * EDITING A CAMPAIGN MAY ONLY WRITE WHAT THE SELLER TYPED.
+ *
+ * `PATCH /api/growth/campaigns/:id` read
+ * `campaignInputSchema.omit({ code: true }).partial()` and merged on
+ * `!== undefined`. `.partial()` in zod 4 keeps every `.default()`, so a
+ * rename arrived as a whole row. MEASURED:
+ *
+ *     campaignInputSchema.omit({ code: true }).partial()
+ *       .safeParse({ name: 'new name' })
+ *       → { name: 'new name', platform: 'META', status: 'ACTIVE', spend: 0 }
+ *
+ * So renaming a campaign reset its platform, re-activated an ENDED or
+ * PAUSED one, and wiped its recorded ad spend to 0 — and the audit entry
+ * recorded the loss as though it were the edit the seller asked for,
+ * because `spend` is exactly what that entry carries. Money that left for
+ * Meta, typed in by the person who paid it, erased by a rename.
+ *
+ * The link branch a few lines above the merge says unlinking «does not
+ * erase what was pulled, which was real money». The branch below it erased
+ * precisely that.
+ *
+ * `code` stays out: it is stamped on every order the campaign brought, so
+ * a campaign needing a new code is a new campaign.
+ */
+export const campaignPatchSchema = z.object(
+  omittedMeansOmitted(campaignInputSchema.omit({ code: true }).shape)
+);
+
+export type CampaignPatch = z.infer<typeof campaignPatchSchema>;
 
 /** A campaign cannot end before it starts. */
 export function datesMakeSense(start: Date, end: Date | null | undefined): boolean {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { db } from './db';
+import { omittedMeansOmitted } from './zod-patch';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -57,7 +58,35 @@ export const redirectCreateSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const redirectUpdateSchema = redirectCreateSchema.partial().strict();
+/**
+ * AN EDIT TO A REDIRECT MAY ONLY WRITE WHAT THE SELLER SENT.
+ *
+ * This was `redirectCreateSchema.partial().strict()`, and the route spreads
+ * `{ ...parsed.data }`. `.partial()` in zod 4 keeps every `.default()`.
+ * MEASURED:
+ *
+ *     redirectCreateSchema.partial().strict().safeParse({ to: '/b' })
+ *       → { to: '/b', kind: 302, isActive: true }
+ *
+ * So changing only the destination silently turned a permanent 301 into a
+ * temporary 302, and switched back on a redirect somebody had deliberately
+ * disabled. Both defaults are the right answer for a NEW redirect and the
+ * wrong answer for an edit — see the file header on why 302 is the default
+ * at all: a 301 the seller did not mean is close to unrecoverable on the
+ * machines that cached it, and this door was handing out the reverse
+ * mistake, quietly discarding a 301 the seller did mean.
+ *
+ * `isActive: true` mattered twice over, because `standDownRedirectsTo`
+ * deactivates a redirect when a live page claims its address. A seller
+ * editing the destination of one of those re-pointed it AND re-armed it
+ * past a page that now exists.
+ *
+ * `.strict()` is kept: the route strips `accept` itself before parsing, so
+ * anything else unknown in the body is still a 400.
+ */
+export const redirectUpdateSchema = z
+  .object(omittedMeansOmitted(redirectCreateSchema.shape))
+  .strict();
 
 /**
  * A redirect that would send somebody straight back where they came from.

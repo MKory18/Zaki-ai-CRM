@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
-import { campaignInputSchema, datesMakeSense } from '@/lib/campaigns';
+import { campaignPatchSchema, datesMakeSense } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
 import { z } from 'zod';
 
@@ -72,7 +72,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return NextResponse.json({ success: true, linked });
     }
 
-    const parsed = campaignInputSchema.omit({ code: true }).partial().safeParse(body);
+    // `campaignPatchSchema`, not `campaignInputSchema...partial()`: the
+    // merge below is correct code and was being fed a schema that lied. A
+    // field omitted by the caller now arrives omitted, so `!== undefined`
+    // means what it says. See the schema for the measurement.
+    const parsed = campaignPatchSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
