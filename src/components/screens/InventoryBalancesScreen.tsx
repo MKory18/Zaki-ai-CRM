@@ -58,6 +58,8 @@ interface StockRow {
   produced: number;
   sold: number;
   remaining: number;
+  /** Held for open orders — the server's own figure, not a subtraction. */
+  reserved: number;
   health: StockHealth;
 }
 
@@ -322,7 +324,7 @@ export function InventoryBalancesScreen() {
                     <Figure label="على الرف" value={s.remaining} hint="ما تحمله دفعات هذا المستودع فعلاً." />
                     <Figure
                       label="محجوز"
-                      value={s.remaining - h.available}
+                      value={s.reserved}
                       hint="موعودٌ به لطلبات مفتوحة — لا يُوعَد به مرّتين."
                     />
                     <Figure label="متاح" value={h.available} strong hint="ما يمكن أن يأخذه طلبٌ جديد." />

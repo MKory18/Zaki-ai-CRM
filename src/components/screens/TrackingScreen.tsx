@@ -52,6 +52,12 @@ interface Row {
   deliveryFee?: number | null;
   priceIncludesDelivery?: boolean;
   collectedAmount?: number | null;
+  /**
+   * What the courier owes for this parcel, from `expectedAmountFor` on the
+   * server. The route has always sent it; this type did not declare it, so
+   * the selection bar derived its own figure and printed a different one.
+   */
+  expectedCollection?: number | null;
   settlementStatus?: string;
   _count?: { deliveryAttempts: number; notes: number };
   /** Cancelled while the parcel moves, or changed after it left. */
@@ -308,9 +314,28 @@ export function TrackingScreen() {
   const visible = (openTask === 'all' ? all : all.filter(MATCHES[openTask])).slice().sort(byUrgency);
   const collectable = visible.filter(canCollect);
   const chosen = collectable.filter((o) => selected[o.id]);
-  const netOfChosen = Number(
-    chosen.reduce((sum, o) => sum + (Number(o.totalAmount) - Number(o.deliveryFee ?? 0)), 0).toFixed(3)
-  );
+  /*
+   * THE SERVER'S FIGURE, which was in the row all along and unread.
+   *
+   * This used to be `totalAmount − deliveryFee`, summed here. That is not
+   * the settlement expectation and the two disagree TODAY, not someday:
+   * `canCollect` includes PARTIALLY_DELIVERED, and `expectedAmountFor`
+   * answers 0 for a returned parcel and uses `collectedAmount` for a
+   * partial one. For 23 taken of a 40 order with a fee of 3 the server
+   * says 20 and this bar printed 37 — then `CollectDialog`, which sums
+   * `expectedCollection`, said 20 seconds later on the same selection.
+   *
+   * `CollectDialog` already carries the scar of exactly this bug in its own
+   * comment; the fix landed on the dialog and missed the screen that opens
+   * it. The route sends `expectedCollection` at
+   * `api/ops/tracking/route.ts`, and the `Row` type did not even declare
+   * it, which is why nobody noticed.
+   *
+   * The `.toFixed(3)` went with it: three places is a global rule on a
+   * screen whose rows each know their own currency, and the server rounds
+   * by the minor unit before sending.
+   */
+  const netOfChosen = chosen.reduce((sum, o) => sum + Number(o.expectedCollection ?? 0), 0);
 
   return (
     <div className="max-w-6xl space-y-3">

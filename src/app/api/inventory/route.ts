@@ -204,6 +204,21 @@ export async function GET() {
         produced,
         sold,
         remaining,
+        /*
+         * HELD FOR OPEN ORDERS, sent rather than left to be recovered.
+         *
+         * It was computed exactly here (from `reservedElsewhere`) and fed
+         * into `stockHealth`, and then left out of this row — so the screen
+         * printed «محجوز» as `remaining − health.available`. That identity
+         * holds only while this row's `remaining` is the very expression
+         * passed in as `facts.onHand`; with a store-wide `remaining` of 12
+         * against an on-hand 8 and 5 reserved, the card printed 9.
+         *
+         * The screen's own header says «NOT ONE WORD OF THE VERDICT IS
+         * DECIDED HERE». That was true of the verdict and not of the third
+         * tile on every card.
+         */
+        reserved: reserved.get(p.id) ?? 0,
         batchesCount: p.batches.length,
         lastUnitCost,
         /** Batches whose cost is zero — every unit out of them reads as pure profit. */

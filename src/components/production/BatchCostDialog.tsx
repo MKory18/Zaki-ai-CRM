@@ -1,5 +1,6 @@
 'use client';
 
+import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -70,12 +71,29 @@ export function BatchCostDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const total =
-    Object.values(buckets).reduce((s, v) => s + (Number(v) || 0), 0) +
-    lines.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  /*
+   * THE TWO FUNCTIONS THE SERVER USES, not a second copy of them.
+   *
+   * This added the buckets and the lines by hand and divided, both
+   * unrounded, while `/api/production` and `/api/production/[id]` record
+   * four places. So `0.1 + 0.2` was 0.30000000000000004 here and 0.3 there,
+   * and `10 / 3` was 3.3333333333333335 against a stored 3.3333.
+   *
+   * The CREATE form for these same two figures — `ManufacturingScreen` —
+   * was corrected to call them and its comment records the defect: «the
+   * unit cost somebody watched while typing could differ from the one
+   * written down». This is the EDIT form for the same two figures and it
+   * still did it the old way; the fix landed on one of a pair.
+   *
+   * It matters past the display: line 186 compares `perUnit` against the
+   * stored four-place `costPerUnit` with `> 0.005` to decide whether a
+   * «(كانت …)» chip appears, so an unrounded figure made that chip a
+   * function of float noise.
+   */
+  const { total } = batchTotal({ ...buckets, costLines: lines });
   // Over what was PRODUCED, never over what was sold: dividing by the sold
   // count would price the remaining stock at several times its cost.
-  const perUnit = batch.quantityProduced > 0 ? total / batch.quantityProduced : 0;
+  const perUnit = batchUnitCost(total, batch.quantityProduced);
 
   const save = async () => {
     setBusy(true);
