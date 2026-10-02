@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { db } from './db';
 import { roundMinor } from './money';
 import { checkWallet, recordSpend } from './pay-from-wallet';
+import { PROMOTABLE_BY_PAYOUT, promoteSettledToPayable } from './commission';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -92,6 +93,37 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
   if (input.entryIds.length === 0) throw new PayoutRefused('NO_ENTRIES');
   if (!(input.exchangeRate > 0)) throw new PayoutRefused('BAD_RATE');
 
+  /**
+   * ── FIRST, PROMOTE WHAT IS ALREADY SETTLED ──
+   *
+   * Statement approval promotes in a MOMENT, and on the normal path the
+   * entry is accrued hours AFTER that moment: an order the statement
+   * delivered becomes DELIVERED and SETTLED in one transaction, and the
+   * accrual job writes its entry that night. The entry is then ACCRUED with
+   * its money already in the wallet, and the only writer of PAYABLE has
+   * already run — so this door used to refuse it for ever, with a message
+   * naming an approval months past. The whole reasoning is beside
+   * `PROMOTABLE_BY_PAYOUT` in commission.ts; the rule is that a moment
+   * cannot catch what arrives after it, so the door asks the STATE.
+   *
+   * BEFORE the read, so what is read below is already true, and the four
+   * guards underneath keep their full force over it: nothing here loosens
+   * them, it only lets an entry whose money is in reach them. An entry whose
+   * order is NOT settled is not promoted, is refused by those guards, and
+   * NOT_PAYABLE then says something true — the statement really has not been
+   * approved yet.
+   *
+   * Inside the caller's transaction, which is where everything in this
+   * function belongs: if any guard below refuses, or the wallet has not got
+   * the money, the promotion rolls back with the payment. Nothing is left
+   * promoted by a payout that did not happen.
+   */
+  await promoteSettledToPayable(tx, {
+    companyId: input.companyId,
+    userId: input.userId,
+    entryIds: input.entryIds,
+  });
+
   const entries = await tx.commissionEntry.findMany({
     where: { id: { in: input.entryIds }, companyId: input.companyId },
     select: { id: true, userId: true, status: true, amount: true, currencyCode: true, payoutId: true },
@@ -99,7 +131,8 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
 
   if (entries.length !== input.entryIds.length) throw new PayoutRefused('NO_ENTRIES');
   if (entries.some((e) => e.userId !== input.userId)) throw new PayoutRefused('WRONG_PERSON');
-  // Only what a settlement has already made payable, and never twice.
+  // Only what a settlement has already made payable — whether that was the
+  // statement's own moment or the promotion above — and never twice.
   if (entries.some((e) => e.status !== 'PAYABLE' || e.payoutId)) throw new PayoutRefused('NOT_PAYABLE');
 
   const currency = entries[0].currencyCode;
@@ -138,10 +171,34 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
     },
   });
 
-  await tx.commissionEntry.updateMany({
-    where: { id: { in: input.entryIds } },
+  /**
+   * ── AND THE CLAIM THAT MAKES IT UNREPEATABLE ──
+   *
+   * `status: 'PAYABLE', payoutId: null` is in the WHERE, not only in the
+   * check above. The check reads, and a read is a photograph: two payouts
+   * started at once both photograph PAYABLE, both create a payout row, and
+   * an unconditional `updateMany` by id lets the second overwrite the first
+   * one's `payoutId` — one person paid twice, with the second payment's
+   * movement sitting in the wallet and only one payout reachable from the
+   * entry. With the condition in the WHERE this becomes a claim: Postgres
+   * makes the second transaction wait on the row lock, and when it looks
+   * again the status is PAID, so it matches nothing.
+   *
+   * Hence the count. Matching fewer rows than we are paying for means
+   * somebody else claimed them between the read and here, and the whole
+   * transaction — payout row, wallet movement and all — must go, which is
+   * what throwing inside the caller's transaction does.
+   */
+  const claimed = await tx.commissionEntry.updateMany({
+    where: {
+      id: { in: input.entryIds },
+      companyId: input.companyId,
+      status: 'PAYABLE',
+      payoutId: null,
+    },
     data: { status: 'PAID', payoutId: payout.id },
   });
+  if (claimed.count !== input.entryIds.length) throw new PayoutRefused('NOT_PAYABLE');
 
   const person = await tx.user.findFirst({ where: { id: input.userId }, select: { name: true } });
 
@@ -180,13 +237,29 @@ export async function payCommission(tx: Tx, input: PayoutInput): Promise<PayoutR
  *
  * Grouped by currency on purpose: a person whose currency changed mid-year
  * has two balances, and adding them would invent a number in neither.
+ *
+ * AND IT COUNTS WHAT THE PAYOUT WOULD PROMOTE, not only what carries the
+ * PAYABLE label today. This is the same list the dialog ticks and sends
+ * back as `entryIds`, so a figure read here that the door would not accept —
+ * or an entry the door would gladly pay that never appears here — is a
+ * balance nobody can ever collect. An order the statement delivered is
+ * settled with its money in the wallet and its entry still ACCRUED; it is
+ * owed, the person is told it is owed on their performance card and their
+ * payslip, and leaving it out of this one query was what made it
+ * unreachable rather than merely mislabelled. The two arms are the only two
+ * things a payout accepts, written where the payout defines them.
  */
 export async function owedTo(
   tx: Tx,
   params: { companyId: string; userId: string }
 ): Promise<{ currencyCode: string; amount: number; entries: string[] }[]> {
   const entries = await tx.commissionEntry.findMany({
-    where: { companyId: params.companyId, userId: params.userId, status: 'PAYABLE', payoutId: null },
+    where: {
+      companyId: params.companyId,
+      userId: params.userId,
+      payoutId: null,
+      OR: [{ status: 'PAYABLE' }, PROMOTABLE_BY_PAYOUT],
+    },
     select: { id: true, amount: true, currencyCode: true },
   });
 

@@ -80,8 +80,13 @@ describe('paying a person in a currency no wallet holds', () => {
 
   it('marks the entries paid and points them at the payment', async () => {
     await pay();
+    // The condition rides in the WHERE and not only in the read above: two
+    // payouts can photograph the same PAYABLE row, and an unconditional
+    // update by id lets the second overwrite the first one's payoutId.
+    // Behaviour under a real concurrent claim is in
+    // commission-settled-promotion.test.ts.
     expect(db.commissionEntry.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['e1', 'e2'] } },
+      where: { id: { in: ['e1', 'e2'] }, companyId: 'c1', status: 'PAYABLE', payoutId: null },
       data: { status: 'PAID', payoutId: 'p1' },
     });
   });
@@ -159,8 +164,22 @@ describe('what a person is owed', () => {
   it('counts only what is payable and unpaid', async () => {
     db.commissionEntry.findMany.mockResolvedValue([]);
     await owedTo(db as never, { companyId: 'c1', userId: 'u1' });
+    // Unpaid, this person's — and PAYABLE *or* what the payout door would
+    // promote on the spot, because an order the statement delivered is
+    // settled with its entry still ACCRUED. A balance the door would not
+    // accept is a balance nobody can collect; the two arms are asserted
+    // against real rows in commission-settled-promotion.test.ts.
     expect(db.commissionEntry.findMany.mock.calls[0][0].where).toMatchObject({
-      status: 'PAYABLE', payoutId: null, userId: 'u1',
+      payoutId: null, userId: 'u1', companyId: 'c1',
     });
+    expect(db.commissionEntry.findMany.mock.calls[0][0].where.OR).toEqual([
+      { status: 'PAYABLE' },
+      {
+        status: 'ACCRUED',
+        payoutId: null,
+        reversedBy: { is: null },
+        order: { settlementStatus: 'SETTLED' },
+      },
+    ]);
   });
 });

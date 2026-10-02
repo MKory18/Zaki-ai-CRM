@@ -313,3 +313,116 @@ export async function markPayableForOrders(tx: Tx, companyId: string, orderIds: 
   });
   return res.count;
 }
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * AND THE PAYOUT DOOR PROMOTES WHAT IS ALREADY SETTLED.
+ *
+ * `markPayableForOrders` above is a MOMENT. It runs once, inside the
+ * transaction that approves a statement, over the orders that statement
+ * matched. The condition it stands for — "the money for this order is in" —
+ * is a STATE: the order is settled, and it stays settled for ever.
+ *
+ * A MOMENT CANNOT CATCH WHAT ARRIVES AFTER IT. And on the normal path the
+ * entry arrives after it:
+ *
+ *   statement approval — ONE transaction, in this order:
+ *     markPayableForOrders(matched orders)   ← no entry exists yet: 0 promoted
+ *     the orders become DELIVERED and SETTLED
+ *     (delivery is what the statement proves; the accrual is not here)
+ *   the nightly accrual job, hours later, or somebody pressing the button:
+ *     accrueForOrder creates the entry — status ACCRUED
+ *
+ * The entry is now ACCRUED for ever. Its order is SETTLED, the cash is in
+ * the wallet, and the only writer of PAYABLE already ran. The payout door
+ * then refuses it with NOT_PAYABLE and tells the owner it «becomes payable
+ * when the collection statement is approved» — an approval already months
+ * past. Two orders on the golden-path walk ended exactly there, and it is
+ * not an edge case: it is every order the statement delivers, which is
+ * every order nobody ticked by hand.
+ *
+ * Re-ordering the statement transaction would not fix it either. The accrual
+ * does not happen in that transaction at all, and making it happen there
+ * would put the most delicate transaction in the system in charge of
+ * commission rules, tiers and currencies. The moment is in the wrong place
+ * for a reason that cannot be moved.
+ *
+ * So the door asks the STATE instead of trusting that the moment caught it.
+ * This is the where-clause it asks with — a filter and not a boolean, on
+ * purpose: a read, a decision in JavaScript, and then a write would let two
+ * payouts both see ACCRUED and both pay. One conditional UPDATE cannot.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+export const PROMOTABLE_BY_PAYOUT: Prisma.CommissionEntryWhereInput = {
+  // ACCRUED and nothing else. Not PAYABLE — that one needs no promoting.
+  // Not PAID — the money already left. Not REVERSED — that row IS the
+  // negative correction, and promoting it would make the business "owe" a
+  // negative amount it would then try to pay out.
+  status: 'ACCRUED',
+  // Never one already attached to a payment. Status and payout are two
+  // facts, and an entry whose status was dragged backwards by hand while a
+  // payoutId still hung off it would otherwise be paid a second time.
+  payoutId: null,
+  /**
+   * NEVER AN ENTRY THAT HAS BEEN REVERSED.
+   *
+   * A reversal does not touch the entry it cancels. `reverseForOrder` writes
+   * a SECOND, negative entry pointing back at the first through
+   * `reversalOfId` — so the original of a returned order is still sitting at
+   * ACCRUED, untouched, looking exactly like an entry waiting to be paid.
+   *
+   * And its order can perfectly well be SETTLED: delivered, settled, the
+   * money collected, and only then returned. Nothing un-settles an order
+   * that came back. Promote that entry and the business pays commission on
+   * goods sitting back on its own shelf. The negative entry nets it out of
+   * the profit line and the leaderboard — and does not net it out of the
+   * wallet, because nothing pays a negative entry.
+   */
+  reversedBy: { is: null },
+  /**
+   * THE STATE THE MOMENT STOOD FOR, asked directly.
+   *
+   * SETTLED only. Not PARTIALLY_SETTLED and not COLLECTED: the invariant is
+   * that no commission is payable before the settlement that covers it is
+   * approved, and a partial settlement is money still outstanding.
+   *
+   * A null `orderId` — a PERIOD entry, earned over a span rather than on one
+   * order ("150 confirmed in a day") — has no order to be settled, and this
+   * filter excludes it because Prisma reads a relation filter on a nullable
+   * relation as "the related row exists AND matches". That is the right
+   * answer and not an accident: no statement covers a period entry, so
+   * there is no settlement for the door to find. See the report below.
+   */
+  order: { settlementStatus: 'SETTLED' },
+};
+
+/**
+ * Promote the entries a payout is about to pay, if their money is already in.
+ *
+ * Scoped to the exact entries being paid, to this company and to this one
+ * person: a payout for Sara must not quietly make Omar's commission payable
+ * as a side effect, because the figure he was shown a second earlier would
+ * then be a different figure from the one in the database.
+ *
+ * Idempotent by construction. `status: 'ACCRUED'` is in the WHERE, so a
+ * second call promotes nothing — and under Postgres' row locks a concurrent
+ * payout blocks here, re-reads the committed row, finds PAYABLE instead of
+ * ACCRUED, and promotes nothing either. The promotion can never run twice on
+ * one entry, so it can never be the thing that lets one entry be paid twice.
+ */
+export async function promoteSettledToPayable(
+  tx: Tx,
+  params: { companyId: string; userId: string; entryIds: string[] }
+): Promise<number> {
+  if (params.entryIds.length === 0) return 0;
+  const res = await tx.commissionEntry.updateMany({
+    where: {
+      ...PROMOTABLE_BY_PAYOUT,
+      id: { in: params.entryIds },
+      companyId: params.companyId,
+      userId: params.userId,
+    },
+    data: { status: 'PAYABLE' },
+  });
+  return res.count;
+}
