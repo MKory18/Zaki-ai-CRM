@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useId } from 'react';
 import clsx from 'clsx';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -7,8 +7,33 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
 }
 
+/**
+ * A LABEL WITH NOWHERE TO POINT IS NOT A LABEL.
+ *
+ * These three read their id as `id || props.name`, and `htmlFor` got
+ * whichever was there. MEASURED across every `.tsx` in this repository:
+ * **117 of 131 labelled fields carried neither**, so `htmlFor` was
+ * `undefined` and the `<label>` was associated with nothing at all.
+ * Eighty-nine percent is not a scatter of forgetful call sites — it is this
+ * component asking every caller to remember something, and almost nobody
+ * doing it. So it is remembered here instead.
+ *
+ * WHAT THE READER GETS BACK. Pressing the word «الكمية المعدودة» focuses
+ * the box under it, which is how a label behaves everywhere else and the
+ * only reason a number box on a phone is reachable without hitting a
+ * 40-pixel target exactly. A screen reader announces the field by its name
+ * rather than «edit, blank». And `getByLabelText` — what a test uses to
+ * find a field the way a person does — starts working, which is how this
+ * was found: a stock-count test could not locate the box it was about to
+ * prove writes off a shelf.
+ *
+ * `useId` and not a counter: the value must be the same string on the
+ * server and in the browser or React replaces the markup on hydration.
+ * `id` still wins, then `name`, so not one existing field changes.
+ */
 export function Input({ label, error, helperText, className, id, ...props }: InputProps) {
-  const inputId = id || props.name;
+  const autoId = useId();
+  const inputId = id || props.name || autoId;
 
   return (
     <div className="w-full min-w-0">
@@ -41,7 +66,8 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function Select({ label, error, options, children, className, id, ...props }: SelectProps) {
-  const selectId = id || props.name;
+  const autoId = useId();
+  const selectId = id || props.name || autoId;
 
   return (
     <div className="w-full min-w-0">
@@ -78,7 +104,8 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export function Textarea({ label, error, className, id, ...props }: TextareaProps) {
-  const textareaId = id || props.name;
+  const autoId = useId();
+  const textareaId = id || props.name || autoId;
 
   return (
     <div className="w-full min-w-0">

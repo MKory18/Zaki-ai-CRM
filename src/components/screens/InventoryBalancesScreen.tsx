@@ -21,6 +21,7 @@ import {
   type StockState,
 } from '@/lib/stock-health';
 import { ProductPicker } from '@/components/ui/ProductPicker';
+import { onTheWire, typedNumber } from '@/lib/typed-box';
 
 /**
  * WHAT IS LEFT — AND WHETHER THAT IS TOO MUCH, TOO LITTLE, OR RIGHT.
@@ -102,7 +103,23 @@ export function InventoryBalancesScreen() {
   // Typing a difference means doing the subtraction in your head at the one
   // moment you are already unsure of the number.
   const [productId, setProductId] = useState('');
-  const [countedQuantity, setCountedQuantity] = useState(0);
+  /*
+   * THE BOX HOLDS CHARACTERS, AND AN EMPTY ONE COUNTS NOTHING.
+   *
+   * This was `useState(0)` read by `parseInt(e.target.value, 10) || 0`, and
+   * on this screen the number that invents is a WRITE-OFF. The form opens
+   * with the first product already chosen — `loadData` does that — so a
+   * balance of 480 sat beside a counted quantity of 0 nobody had typed,
+   * `difference` was −480, and the only thing between that and the wire
+   * was three characters of reason. 480 units off the shelf, FIFO-costed
+   * out of the oldest batch, logged as «عُدّ 0 والنظام 480».
+   *
+   * The door cannot tell the two apart and should not have to:
+   * `countedQuantity: count(1_000_000)` has a minimum of zero because an
+   * empty shelf is a real count. Here is the only place where «I counted
+   * zero» and «I typed nothing» are still two statements.
+   */
+  const [countedTyped, setCountedTyped] = useState('');
   const [reason, setReason] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [countError, setCountError] = useState<string | null>(null);
@@ -147,12 +164,24 @@ export function InventoryBalancesScreen() {
       const res = await fetch('/api/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'recount', productId, countedQuantity, reason }),
+        /*
+         * THE CHARACTERS, or nothing at all. `onTheWire` returns
+         * `undefined` for an empty box and `JSON.stringify` drops the key,
+         * so the door sees an absent field and refuses it by name — rather
+         * than a zero this component invented on a person's behalf.
+         */
+        body: JSON.stringify({
+          action: 'recount',
+          productId,
+          countedQuantity: onTheWire(countedTyped),
+          reason,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'تعذر تسجيل الجرد');
       setAdjustModalOpen(false);
       setReason('');
+      setCountedTyped('');
       loadData();
     } catch (e: any) {
       setCountError(e.message || 'تعذر تسجيل الجرد');
@@ -183,7 +212,9 @@ export function InventoryBalancesScreen() {
 
   const selected = stockSummary.find((s) => s.id === productId);
   const systemQty = selected?.remaining ?? 0;
-  const difference = countedQuantity - systemQty;
+  /** No arithmetic on a box that says nothing — `null`, not a zero. */
+  const counted = typedNumber(countedTyped);
+  const difference = typeof counted === 'number' ? counted - systemQty : null;
 
   return (
     <>
@@ -439,7 +470,7 @@ export function InventoryBalancesScreen() {
             <ProductPicker
               products={stockSummary.map((s) => ({ id: s.id, name: s.name, sku: s.sku }))}
               value={productId}
-              onChange={(id) => { setProductId(id); setCountedQuantity(0); }}
+              onChange={(id) => { setProductId(id); setCountedTyped(''); }}
             />
           </div>
 
@@ -455,8 +486,8 @@ export function InventoryBalancesScreen() {
               type="number"
               min="0"
               dir="ltr"
-              value={countedQuantity}
-              onChange={(e) => setCountedQuantity(parseInt(e.target.value, 10) || 0)}
+              value={countedTyped}
+              onChange={(e) => setCountedTyped(e.target.value)}
               required
             />
           </div>
@@ -465,7 +496,7 @@ export function InventoryBalancesScreen() {
               actually be written, so it should be read before it is. */}
           <div
             className={`rounded-lg border p-3 text-center ${
-              difference === 0
+              difference === null || difference === 0
                 ? 'border-[var(--sys-border)] bg-[var(--sys-surface)]'
                 : difference > 0
                   ? 'border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)]'
@@ -475,14 +506,20 @@ export function InventoryBalancesScreen() {
             <p className="text-xs font-medium text-[var(--sys-muted-foreground)]">الفرق الذي سيُسجَّل</p>
             <p
               className={`mt-0.5 text-lg font-black tabular-nums ${
-                difference === 0 ? 'text-[var(--sys-muted-foreground)]' : difference > 0 ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'
+                difference === null || difference === 0
+                  ? 'text-[var(--sys-muted-foreground)]'
+                  : difference > 0
+                    ? 'text-[var(--sys-success)]'
+                    : 'text-[var(--sys-destructive)]'
               }`}
               dir="ltr"
             >
-              {difference > 0 ? `+${difference}` : difference}
+              {difference === null ? '—' : difference > 0 ? `+${difference}` : difference}
             </p>
             <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-              {difference === 0
+              {difference === null
+                ? 'اكتب الكمية المعدودة ليظهر الفرق.'
+                : difference === 0
                 ? 'الجرد مطابق — لن يُسجَّل شيء.'
                 : difference > 0
                   ? 'وُجد أكثر مما يعرفه النظام — يدخل بتكلفة المخزون الحالي لا بصفر.'
@@ -511,7 +548,7 @@ export function InventoryBalancesScreen() {
             <Button type="button" variant="outline" onClick={() => setAdjustModalOpen(false)}>
               {t.cancel}
             </Button>
-            <Button type="submit" loading={modalLoading} disabled={difference === 0 || reason.trim().length < 3}>
+            <Button type="submit" loading={modalLoading} disabled={difference === null || difference === 0 || reason.trim().length < 3}>
               سجّل الجرد
             </Button>
           </div>
