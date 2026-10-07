@@ -688,20 +688,144 @@ function coercedFields(source: string): Finding[] {
  * pattern refuses a preceding dot and takes only a bare identifier inside
  * the brackets, and the property reads fall out.
  *
- * WHAT IT THEREFORE DOES NOT SEE, stated rather than left to be found: a
- * read whose argument is an EXPRESSION. `order-import.ts`'s
- * `Number(String(rawPrice).replace(…))` is invisible to this pattern, and
- * it is the worse of that file's two defects. A pattern that matched
- * arbitrary expressions would match every arithmetic line in the tree; the
- * honest answer is that this detector finds the identifier form, and the
- * expression form is found by a person reading the file the identifier form
- * led them to — which is exactly how `order-import.ts` was found.
+ * WHAT IT THEREFORE DOES NOT SEE is a read whose argument is an EXPRESSION,
+ * and that gap is no longer left for a person to walk into.
+ * `order-import.ts`'s `Number(String(rawPrice).replace(…))` was invisible to
+ * this pattern — it was the worse of that file's two defects and it was
+ * found by hand. The objection to closing it was that a pattern matching
+ * arbitrary expressions would match every arithmetic line in the tree, and
+ * that objection is answered by `rewrittenNumberReads` below: not «any
+ * expression», but the one SHAPE that turns a refusal into a rewrite.
  */
 function bareNumberReads(source: string): Finding[] {
   const src = blankComments(source);
   const re = /(?<![.\w])(?:Number|parseFloat|parseInt)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,)]/g;
   return [...src.matchAll(re)]
     .filter((m) => isMoneyOrCount(m[1]!))
+    .map((m) => ({ field: m[1]!, text: m[0]! }));
+}
+
+/**
+ * A MONEY-OR-COUNT VALUE THAT IS REWRITTEN ON ITS WAY INTO A NUMBER.
+ *
+ * `order-import.ts` read a price out of a spreadsheet as
+ *
+ *     Number(String(rawPrice).replace(/[^\d.-]/g, ''))
+ *
+ * and no detector in this file could see it, because the argument is an
+ * expression rather than an identifier. The reason it mattered is not that
+ * `Number` is loose. It is that **a strip does not refuse — it REWRITES**.
+ * `/[^\d.-]/` deletes what it does not recognise and reads what is left, and
+ * what is left always passes a finiteness check, so there is no value of the
+ * cell that produces an error. Measured on that file before it was fixed:
+ * «٣٥٠٠» became a price of ZERO and «3,5» became 35.
+ *
+ * SO THE DETECTOR IS NOT «ANY EXPRESSION», which would match every
+ * arithmetic line in the tree and force an exemption list. It is one shape:
+ *
+ *     a reader — `Number`, `parseFloat`, `parseInt` —
+ *     whose argument contains a REWRITING call — `.replace`, `.replaceAll`,
+ *       `.normalize` —
+ *     and whose argument or assignment target NAMES money or a count.
+ *
+ * All three legs generate rather than list. The readers are the same three
+ * the law already names; the rewriters are the three methods in JavaScript
+ * that return a different string; and «names money or a count» is the schema
+ * plus the morphology above, so a column added to `schema.prisma` tomorrow
+ * is in this law the moment it is added.
+ *
+ * THE ASSIGNMENT TARGET IS READ AS WELL AS THE ARGUMENT, and it is not
+ * decoration: `const price = parseFloat(value.replace(',', '.'))` names
+ * money on the LEFT and nothing on the right, and it is a real site in this
+ * tree. Scanned by hand with balanced brackets, because a regular
+ * expression cannot count parentheses and the argument here is precisely
+ * the thing that has them.
+ */
+const REWRITERS = ['.replace(', '.replaceAll(', '.normalize('];
+const READERS = ['Number', 'parseFloat', 'parseInt'];
+
+function rewrittenNumberReads(source: string): Finding[] {
+  const src = blankComments(source);
+  const out: Finding[] = [];
+
+  for (let i = 0; i < src.length; i++) {
+    const name = READERS.find((r) => src.startsWith(r, i));
+    if (!name) continue;
+    // The same one-character distinction law two makes: `x.Number(` and
+    // `myNumber(` are not this.
+    const before = i === 0 ? '' : src[i - 1]!;
+    if (before && /[.\w$]/.test(before)) continue;
+
+    const start = i;
+    let open = start + name.length;
+    while (open < src.length && /\s/.test(src[open]!)) open++;
+    if (src[open] !== '(') continue;
+
+    let depth = 0;
+    let close = open;
+    for (; close < src.length; close++) {
+      if (src[close] === '(') depth++;
+      else if (src[close] === ')') {
+        depth--;
+        if (depth === 0) break;
+      }
+    }
+    i = close;
+
+    const argument = src.slice(open + 1, close);
+    if (!REWRITERS.some((r) => argument.includes(r))) continue;
+
+    // The head is what stands before the READER, which is where an
+    // assignment target can be — not before the closing bracket.
+    const target = /([A-Za-z_][A-Za-z0-9_]*)\s*(?::|=)\s*$/.exec(
+      src.slice(Math.max(0, start - 120), start)
+    );
+    const names = [
+      ...[...argument.matchAll(/[A-Za-z_][A-Za-z0-9_]*/g)].map((m) => m[0]!),
+      ...(target ? [target[1]!] : []),
+    ];
+    const field = names.find(isMoneyOrCount);
+    if (field) out.push({ field, text: `${name}(${argument.replace(/\s+/g, ' ')})` });
+  }
+
+  return out;
+}
+
+/**
+ * THE SAME STRIP, IN TWO STEPS — a local assigned from a rewrite, read as a
+ * number later.
+ *
+ * The detector above only sees the rewrite when it is INSIDE the reader's
+ * brackets, and the identical defect written over two lines is invisible to
+ * it:
+ *
+ *     const cleaned = String(value ?? '').replace(/[^\d.-]/g, '');
+ *     const n = Number(cleaned);
+ *
+ * That is `settlement.ts`, the courier statement reader — the file that
+ * writes what a courier says it collected — and it was found by a grep after
+ * the one-step law was already written and passing. A law whose own author
+ * then finds a second instance by hand has not finished generating.
+ *
+ * AND THIS ONE CARRIES NO MONEY-NAME FILTER, which is a measurement and not
+ * a preference. `cleaned` is not money, `value` is not money, and the
+ * money-ness of that function lives entirely in its CALLERS (`net`,
+ * `collected`, `fee`). Filtering by name here would have hidden the one site
+ * that matters. It can go unfiltered because the shape is rare: TWO in the
+ * whole tree, so every one of them can be named with a reason, which is the
+ * one thing a list may be used for.
+ */
+function strippedThenReadNumbers(source: string): Finding[] {
+  const src = blankComments(source);
+  const stripped = new Set<string>();
+  for (const m of src.matchAll(
+    /(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;\n]*(?:\.replace\(|\.replaceAll\(|\.normalize\()[^;\n]*)/g
+  )) {
+    stripped.add(m[1]!);
+  }
+  if (stripped.size === 0) return [];
+  return [...src.matchAll(/(?<![.\w])(?:Number|parseFloat|parseInt)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,)]/g)]
+    .filter((m) => stripped.has(m[1]!))
     .map((m) => ({ field: m[1]!, text: m[0]! }));
 }
 
@@ -823,6 +947,90 @@ describe('the detectors that carry the law find the law’s own history', () => 
   it('and leaves a field that is neither money nor a count alone', () => {
     expect(coercedFields('sortOrder: z.coerce.number().int().min(0).max(999)')).toEqual([]);
     expect(coercedFields('companyId: z.coerce.number().int().min(1)')).toEqual([]);
+  });
+
+  /**
+   * THE IMPORTER'S PRICE READER, AS IT WAS WRITTEN, in one fixture.
+   *
+   * `order-import.ts` is fixed, so the tree no longer contains this line —
+   * and a detector written for a defect that is gone is a detector nobody
+   * can tell apart from one that sees nothing. These are the two lines the
+   * importer carried at `1774a43`, beside the shapes that are NOT this
+   * hazard, so the third law cannot quietly die.
+   */
+  const IMPORT_AS_IT_WAS = [
+    '  const quantity = rawQty ? Number(rawQty) : 1;',
+    "  const sellingPrice = rawPrice ? Number(String(rawPrice).replace(/[^\\d.-]/g, '')) : null;",
+    "  result.price = parseFloat(value.replace(',', '.')) || null;",
+    // And the shapes that are not the hazard: a rewrite with no reader, a
+    // reader with no rewrite, and a rewrite on something that is not money.
+    "  const label = name.replace(/\\s+/g, ' ');",
+    '  const total = Number(order.totalAmount);',
+    "  const slug = Number(title.replace(/[^0-9]/g, ''));",
+  ].join('\n');
+
+  it('finds a price read through a strip, which no identifier pattern could see', () => {
+    const found = rewrittenNumberReads(IMPORT_AS_IT_WAS);
+    // `value` and not `price` on the second: `CommissionRule.value` is a
+    // `Decimal` column, so the schema leg names that one before the
+    // assignment target is reached. Which name is reported hardly matters —
+    // that the site is SEEN is the law. The target leg has its own test
+    // below, on an argument that names nothing.
+    expect(found.map((h) => h.field)).toEqual(['rawPrice', 'value']);
+    // Law two is blind to exactly this, which is why law three exists.
+    expect(
+      bareNumberReads(IMPORT_AS_IT_WAS).map((h) => h.text),
+      'النمطُ المُعرَّفُ بالاسمِ رأى تعبيراً — فقد تغيّر معناه'
+    ).toEqual(['Number(rawQty)']);
+  });
+
+  it('and it is the REWRITE it keys on, not the brackets', () => {
+    // A reader whose argument is an expression but rewrites nothing is
+    // arithmetic, and arithmetic is not this law's business.
+    expect(rewrittenNumberReads('const amount = Number(a.price * b.quantity);')).toEqual([]);
+    expect(rewrittenNumberReads("const label = sku.replace('-', '');")).toEqual([]);
+    expect(rewrittenNumberReads("const slug = Number(title.replace('x', ''));")).toEqual([]);
+  });
+
+  it('and it reads the assignment target as well as the argument', () => {
+    // Nothing on the right names money; `price` on the left does. This is a
+    // real site in the tree and a pattern that only looked right misses it.
+    expect(rewrittenNumberReads("price = parseFloat(v.replace(',', '.'))").map((h) => h.field)).toEqual([
+      'price',
+    ]);
+    expect(rewrittenNumberReads("unitCost: Number(c.replace('x',''))").map((h) => h.field)).toEqual([
+      'unitCost',
+    ]);
+  });
+
+  it('and all three of its legs are generated, not listed', () => {
+    // A column invented here is in the law at once, because the vocabulary
+    // is the schema — this one is a real column and not a name chosen to
+    // suit the test.
+    expect(VOCAB.money, 'العمودُ لم يُقرأْ من المخطَّط').toContain('shippingCost');
+    expect(rewrittenNumberReads("x = Number(shippingCost.replace('a',''))")).toHaveLength(1);
+    // Morphology, for a field that is money and is no column at all.
+    expect(VOCAB.all).not.toContain('finalPrice');
+    expect(rewrittenNumberReads("x = Number(finalPrice.replace('a',''))")).toHaveLength(1);
+    // And each of the three rewriters, so none of them is a dead string.
+    for (const rewriter of ['replace', 'replaceAll', 'normalize']) {
+      expect(
+        rewrittenNumberReads(`x = Number(sellingPrice.${rewriter}('a',''))`),
+        rewriter + ' لا يُرى'
+      ).toHaveLength(1);
+    }
+  });
+
+  it('and it is not fooled by a docblock quoting the line it was written for', () => {
+    const quoted = [
+      '/**',
+      " * It read Number(String(rawPrice).replace(/[^d.-]/g, '')) and that",
+      ' * is the defect being described, not committed.',
+      ' */',
+      "// const price = parseFloat(amount.replace(',', '.'));",
+      'const clean = 1;',
+    ].join('\n');
+    expect(rewrittenNumberReads(quoted)).toEqual([]);
   });
 
   it('finds the finance door’s bare reads, and none of its property reads', () => {
@@ -952,33 +1160,26 @@ const BARE_READS_WITH_A_REASON: Record<string, string> = {
 /**
  * FOUND BY THIS LAW, MEASURED, AND STILL OPEN — not «acceptable».
  *
- * `src/lib/order-import.ts` parses an uploaded CSV or Excel sheet of orders
- * and `ImportOrdersDialog.tsx` posts the figures it produced to
- * `POST /api/orders`. So the create door's strict reader CANNOT help: the
- * mis-reading happens in the browser's round trip, before the request.
- * Measured against the file as it stands:
+ * EMPTY, AND THE MECHANISM STAYS. It held one entry:
+ * `src/lib/order-import.ts`, whose quantity read `Number(rawQty)` so «0x10»
+ * imported as sixteen units, and whose price read
+ * `Number(String(rawPrice).replace(…))` so «3,5» imported as 35 and «٣٥٠٠»
+ * — three thousand five hundred typed on an Arabic keypad — imported as a
+ * price of ZERO. The create door could not help, because the screen posts
+ * the figure the importer already produced.
  *
- *     quantity, `rawQty ? Number(rawQty) : 1` then `Number.isInteger`
- *       '0x10' → 16 units, accepted      '0b11' → 3       '0o17' → 15
+ * It reads through `readTypedFigure` now, a cell it cannot read refuses its
+ * own row with the cell quoted back, and an Arabic-Indic figure is ACCEPTED
+ * rather than stripped. The entry is gone because the site is fixed, which
+ * is the only reason an entry may leave this list — the two tests below
+ * enforce that in both directions, so a name cannot linger after a fix and a
+ * fix cannot be claimed while the read is still there.
  *
- *     price, `Number(String(rawPrice).replace(/[^\d.-]/g, ''))` — the strip
- *     does not refuse, it REWRITES, and every one of these then passes the
- *     finiteness check below it:
- *       '3,5'    → 35      an Arabic decimal comma, ten times the price
- *       '1e400'  → 1400
- *       '0x10'   → 10
- *       '12abc'  → 12
- *       '١٢'     → 0       Arabic-Indic digits: a free order
- *
- * The last is the one that matters most in an Arabic-facing product. The
- * file is outside this change's ownership, so it is named here with its
- * figures instead of being fixed — and naming it keeps the sweep passing
- * without the entry reading as approval.
+ * The figures and the whole import path are measured in
+ * `an-unreadable-cell-is-not-a-price-of-zero.test.ts` and
+ * `an-import-row-reaches-the-door.test.ts`.
  */
-const FOUND_AND_STILL_OPEN: Record<string, string> = {
-  'src/lib/order-import.ts':
-    'عطبٌ مفتوحٌ لا استثناء: مستوردُ الجداول يَقرأُ الكميّةَ بـNumber() فتَمُرُّ «0x10» ستّةَ عشرَ، ويَقرأُ السعرَ بـNumber(String(x).replace(…)) فتُصبِحُ «3,5» خمسةً وثلاثين و«١٢» صفراً — والواجهةُ تُرسِلُ الناتجَ إلى باب الإنشاء، فقارئُه الصارمُ لا يَراه. خارجُ ملكيّةِ هذا التغيير ومُبلَّغٌ عنه',
-};
+const FOUND_AND_STILL_OPEN: Record<string, string> = {};
 
 describe('every bare Number() on money or a count is accounted for', () => {
   const swept = SWEPT_FILES.filter(isServerSide).filter(
@@ -1022,30 +1223,25 @@ describe('every bare Number() on money or a count is accounted for', () => {
   });
 
   /**
-   * THE FIGURES ON THE OPEN LIST ARE MEASURED HERE, so the entry above is a
-   * fact and not a recollection — and so that the day somebody fixes that
-   * file, this fails and the entry has to go.
+   * AND THE ONE ENTRY THIS LIST EVER HELD IS GONE BECAUSE THE SITE IS.
+   *
+   * This test used to measure the importer's figures so the entry was a fact
+   * and not a recollection, and it was written so that the day somebody
+   * fixed that file it would fail and force the entry out. That day came.
+   * What stands in its place is the same demand pointed the other way: the
+   * two reads are not in the file, and the file reaches the shared reader —
+   * asserted on the CALL and not on the import line, because an import line
+   * has satisfied a guard in this repository four times while the thing it
+   * named was gone.
    */
-  it('and the open entry’s figures are what that code really produces', () => {
-    const importedQuantity = (raw: string) => {
-      const q = raw ? Number(raw) : 1;
-      return Number.isInteger(q) && q >= 1 ? q : 'REFUSED';
-    };
-    const importedPrice = (raw: string) => {
-      const p = raw ? Number(String(raw).replace(/[^\d.-]/g, '')) : null;
-      return p !== null && Number.isFinite(p) && p >= 0 ? p : 'REFUSED';
-    };
-    expect(importedQuantity('0x10')).toBe(16);
-    expect(importedQuantity('0b11')).toBe(3);
-    expect(importedQuantity('0o17')).toBe(15);
-    expect(importedPrice('3,5'), 'فاصلةٌ عشريّةٌ عربيّةٌ تُصبِحُ خمسةً وثلاثين').toBe(35);
-    expect(importedPrice('1e400')).toBe(1400);
-    expect(importedPrice('0x10')).toBe(10);
-    expect(importedPrice('١٢'), 'سعرٌ بأرقامٍ عربيّةٍ يُصبِحُ طلباً مجّانيّاً').toBe(0);
-    // And the two lines are still spelled that way in the file named above.
-    const src = blankComments(sourceOf('src/lib/order-import.ts'));
-    expect(src).toMatch(/Number\(rawQty\)/);
-    expect(src).toMatch(/Number\(String\(rawPrice\)\.replace\(/);
+  it('and the importer, the one entry it ever held, reads through numeric-input now', () => {
+    const rel = 'src/lib/order-import.ts';
+    const src = blankComments(sourceOf(rel));
+    expect(src, 'الكميّةُ عادت إلى Number() عارية').not.toMatch(/Number\(rawQty\)/);
+    expect(src, 'الحشوُ عاد').not.toMatch(/Number\(String\(rawPrice\)\.replace\(/);
+    expect(bareNumberReads(src).map((h) => h.text), rel).toEqual([]);
+    expect(rewrittenNumberReads(src).map((h) => h.text), rel).toEqual([]);
+    expect(src, rel + ': لا يَصِلُ القارئَ المشترك').toMatch(/readTypedFigure\(\s*raw/);
   });
 
   /**
@@ -1059,6 +1255,152 @@ describe('every bare Number() on money or a count is accounted for', () => {
     // because an import line has satisfied a guard here four times while the
     // thing it named was gone.
     expect(blankComments(sourceOf(rel))).toMatch(/moneyInput\(\s*[0-9_]/);
+  });
+
+  /* ─────────────────────────── law three ──────────────────────────────── */
+
+  /**
+   * NO MONEY OR COUNT IS REWRITTEN ON ITS WAY INTO A NUMBER.
+   *
+   * The whole tree, components included — and components are IN this sweep
+   * although law two excludes them, because the hazard is a different one. A
+   * screen doing arithmetic on its own input cannot write a column, which is
+   * why law two lets it be; a screen that STRIPS a cell and posts the result
+   * hands the door a well-formed number and the door has nothing to refuse.
+   * That is precisely how the importer's defect reached Prisma, and the
+   * directory a file sits in does not change it.
+   */
+  const rewritten = SWEPT_FILES.flatMap((rel) =>
+    rewrittenNumberReads(sourceOf(rel)).map((hit) => `${rel}: ${hit.text}`)
+  );
+
+  /**
+   * THE ONE SITE THE SWEEP FINDS, CLASSIFIED WITH ITS REASON — and
+   * classified on the LINE, not the file, so a second rewrite added to the
+   * same file is a stranger.
+   *
+   * `order-parser.ts` reads a price out of a pasted order message with
+   * `parseFloat(value.replace(',', '.'))`, and `value` is the capture of
+   * `/([0-9]+(?:[.,][0-9]+)?)/`. The replace therefore CANNOT delete
+   * anything: the only characters in the string are ASCII digits and one
+   * separator, and swapping that separator for a point is a translation of
+   * an already-checked shape rather than a strip of an unknown one. Which is
+   * the exact difference from the importer: there the class deleted
+   * characters nobody had checked for, and Arabic-Indic digits were among
+   * them.
+   */
+  const REWRITES_WITH_A_REASON: Record<string, string> = {
+    "src/lib/order-parser.ts: parseFloat(value.replace(',', '.'))":
+      'الخليّةُ فُحِصَت قبلَ الاستبدال: value هو التقاطُ ‎/([0-9]+(?:[.,][0-9]+)?)/‎ فلا يحوي إلّا أرقاماً لاتينيّةً وفاصلاً واحداً، واستبدالُ الفاصلِ بنقطةٍ ترجمةُ شكلٍ مُتحقَّقٍ منه لا حشوُ شكلٍ مجهول — ولا يمكنه حذفَ محرفٍ واحدٍ لأنّ ما عداه لم يُلتَقَطْ أصلاً',
+  };
+
+  it('and the sweep over the whole tree holds no unclassified rewrite', () => {
+    const strangers = rewritten.filter((hit) => !(hit in REWRITES_WITH_A_REASON));
+    expect(
+      strangers,
+      'مالٌ أو كمّيةٌ تُعادُ كتابتُها قبلَ قراءتِها رقماً — والحشوُ لا يَرفُضُ بل يُنتِجُ رقماً آخرَ يَمُرُّ بكلِّ فحصٍ بعدَه. اقرأْ بـnumeric-input، أو قُلْ لماذا الشكلُ مُتحقَّقٌ منه سلفاً'
+    ).toEqual([]);
+  });
+
+  it('and the reason given has not gone stale on a line that no longer exists', () => {
+    const live = new Set(rewritten);
+    const ghosts = Object.keys(REWRITES_WITH_A_REASON).filter((hit) => !live.has(hit));
+    expect(ghosts, 'سببٌ لسطرٍ لم يَعُدْ موجوداً').toEqual([]);
+  });
+
+  it('and the importer is not on it, under any spelling', () => {
+    expect(rewritten.filter((h) => h.startsWith('src/lib/order-import.ts'))).toEqual([]);
+    expect(Object.keys(REWRITES_WITH_A_REASON).join(' ')).not.toContain('order-import');
+  });
+
+  /* ───────────── law three, second leg: the strip over two lines ───────── */
+
+  const twoStep = SWEPT_FILES.flatMap((rel) =>
+    strippedThenReadNumbers(sourceOf(rel)).map((hit) => `${rel}: ${hit.text}`)
+  );
+
+  /**
+   * BOTH SITES, CLASSIFIED — and one of them is OPEN, with its figures.
+   *
+   * `settlement.ts` is the courier statement reader: `toNumber` is what
+   * turns the `net`, `collected` and `fee` columns of a courier's own CSV
+   * into the money this system settles against. It carries the identical
+   * strip the order importer carried, and MEASURED on it:
+   *
+   *     '٣٥٠٠'    -> null    REFUSED — the empty result is caught, which is
+   *                          the one guard the order importer did not have
+   *     '3,5'     -> 35      ten times, exactly as the importer did
+   *     '3,500'   -> 3500    right, by accident of the same strip
+   *     '1e400'   -> 1400       '0x10' -> 10       '12abc' -> 12
+   *     '(50)'    -> 50      AN ACCOUNTING NEGATIVE LOSES ITS SIGN — a
+   *                          deduction on a statement becomes a credit
+   *     '50-'     -> null       '12 345' -> 12345
+   *
+   * It is OPEN and outside this change: `settlement.ts` is not owned here,
+   * and `STATEMENT_IMPORTED` rows exist in this database, so the path has
+   * run on real data and the fix is a ruling about courier files rather than
+   * a line. Recorded with its figures so it cannot be lost again — it was
+   * missed by the one-step law and found by a grep.
+   */
+  const TWO_STEP_CLASSIFIED: Record<string, string> = {
+    'src/lib/order-parser.ts: parseInt(value,':
+      'الاستبدالُ هنا يُزيلُ قوسين محيطين فقط من التقاطِ ‎/([0-9]+)/‎ — شكلٌ فُحِصَ قبلَه فلا يُحذَفُ منه محرفٌ ذو معنى، وما يُنتِجُه يَمُرُّ بمخطَّطِ باب ai-intake قبل الكتابة',
+    'src/lib/settlement.ts: Number(cleaned)':
+      'عطبٌ مفتوحٌ لا استثناء: قارئُ كشفِ المندوبِ يَحشو الخليّةَ بالصنفِ نفسِه الذي كان في مستوردِ الطلبات، فتُصبِحُ «3,5» خمسةً وثلاثين و«(50)» موجبةً بعدَ أن كانت خصماً. الأرقامُ العربيّةُ تُرفَضُ هنا بالمصادفةِ لأنّ الناتجَ الفارغَ مُلتقَطٌ. خارجُ ملكيّةِ هذا التغيير ومُبلَّغٌ عنه بأرقامِه',
+  };
+
+  it('and every two-step strip in the tree is named, with its reason', () => {
+    const strangers = twoStep.filter((hit) => !(hit in TWO_STEP_CLASSIFIED));
+    expect(
+      strangers,
+      'نصٌّ يُحشى في سطرٍ ويُقرَأُ رقماً في سطرٍ آخرَ ولم يُصنَّف — وهو الحشوُ نفسُه موزَّعاً على سطرين'
+    ).toEqual([]);
+  });
+
+  it('and neither name has gone stale', () => {
+    const live = new Set(twoStep);
+    expect(
+      Object.keys(TWO_STEP_CLASSIFIED).filter((hit) => !live.has(hit)),
+      'سببٌ لسطرٍ لم يَعُدْ موجوداً'
+    ).toEqual([]);
+  });
+
+  /** And the detector bites: the deleted line, and the shapes that are not it. */
+  it('and the two-step detector finds the statement reader as it stands', () => {
+    const fixture = [
+      "  const cleaned = String(value ?? '').replace(/[^\\d.-]/g, '');",
+      '  const n = Number(cleaned);',
+      // Not this: a rewrite whose result is never read as a number.
+      "  const label = name.replace('-', ' ');",
+      // Nor this: a read of a local that was never rewritten.
+      '  const plain = Number(raw);',
+    ].join('\n');
+    expect(strippedThenReadNumbers(fixture).map((h) => h.text)).toEqual(['Number(cleaned)']);
+    expect(strippedThenReadNumbers('const n = Number(raw);')).toEqual([]);
+    expect(strippedThenReadNumbers("const c = s.replace('a','');")).toEqual([]);
+  });
+
+  /**
+   * AND THE FIGURES OF THE OPEN ONE ARE COMPUTED HERE, from a copy of that
+   * function, so the record above is a fact — and so that the day somebody
+   * fixes it, this fails and the entry has to go.
+   */
+  it('and the open entry’s figures are what that code really produces', () => {
+    const asItIs = (value: unknown) => {
+      const cleaned = String(value ?? '').replace(/[^\d.-]/g, '');
+      if (!cleaned) return null;
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : null;
+    };
+    expect(asItIs('3,5'), 'فاصلةٌ عشريّةٌ في كشفِ مندوبٍ تُصبِحُ عشرةَ أضعاف').toBe(35);
+    expect(asItIs('(50)'), 'خصمٌ بين قوسين يُصبِحُ دائناً').toBe(50);
+    expect(asItIs('1e400')).toBe(1400);
+    expect(asItIs('0x10')).toBe(10);
+    expect(asItIs('12abc')).toBe(12);
+    expect(asItIs('٣٥٠٠'), 'الأرقامُ العربيّةُ مرفوضةٌ هنا لا مُصفَّرة').toBeNull();
+    // And the function is still spelled that way in the file named above.
+    const src = blankComments(sourceOf('src/lib/settlement.ts'));
+    expect(src).toMatch(/replace\(\/\[\^\\d\.-\]\/g, ''\)/);
   });
 
   it('and so do the other four doors on these columns', () => {

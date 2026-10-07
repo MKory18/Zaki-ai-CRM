@@ -37,7 +37,8 @@ interface Row {
   line: number;
   values: Record<string, string>;
   phone: string | null;
-  quantity: number;
+  /** `null` when the cell held something the parser would not guess at. */
+  quantity: number | null;
   sellingPrice: number | null;
   problems: Problem[];
   duplicateOfLine: number | null;
@@ -104,6 +105,20 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
     let made = 0;
 
     for (const r of chosen) {
+      /**
+       * A ROW WITH NOTHING TO SEND IS REFUSED HERE, NOT GUESSED AT.
+       *
+       * The tick for such a row is disabled above, so this is unreachable
+       * through the screen — which is the reason it is three lines rather
+       * than a dialog. What it buys is that there is no path, reachable or
+       * not, that turns an unreadable quantity into a quantity of one on
+       * its way to the order door.
+       */
+      if (!r.productId || r.quantity === null) {
+        bad.push({ line: r.line, why: 'صفٌّ ناقص — لا يُنشأ' });
+        setProgress({ done: made + bad.length, total: chosen.length });
+        continue;
+      }
       try {
         await apiJson('/api/orders', {
           method: 'POST',
@@ -232,7 +247,7 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
                       {r.values.customerName || '—'} · <span dir="ltr">{r.values.customerPhone || '—'}</span>
                     </p>
                     <p className="truncate text-xs text-[var(--sys-muted-foreground)]">
-                      {r.productLabel || r.values.productName || '—'} × {r.quantity} · {r.values.customerCity || r.values.customerAddress || '—'}
+                      {r.productLabel || r.values.productName || '—'} × {r.quantity ?? `«${r.values.quantity}»`} · {r.values.customerCity || r.values.customerAddress || '—'}
                     </p>
                     {r.problems.map((p) => (
                       <p key={p.field} className="text-xs text-[var(--sys-destructive)]">

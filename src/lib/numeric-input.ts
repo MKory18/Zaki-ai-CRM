@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toLatinDigits } from './latin-digits';
 
 /**
  * A NUMBER THAT ARRIVED FROM OUTSIDE — READ STRICTLY.
@@ -131,4 +132,50 @@ function whole(raw: string | null, fallback: number, min: number, max: number): 
   const value = read(raw);
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return Math.min(Math.max(Math.trunc(value), min), max);
+}
+
+/**
+ * A FIGURE A PERSON TYPED, READ OR REFUSED — NEVER REWRITTEN.
+ *
+ * Everything above is a zod preprocessor, and a preprocessor belongs to a
+ * door: the door answers 400 and the error names the field. A SPREADSHEET
+ * HAS NO DOOR. The order importer reads a thousand cells and has to say,
+ * cell by cell, «this one I could not read», so it needs the same grammar
+ * as a plain function that returns `null` rather than a schema that throws.
+ *
+ * It is the same grammar and not a second one: `NUMERIC` above is the only
+ * statement in this repository of «written the way a number is written», and
+ * this applies it unchanged. What it adds is ONE thing, and that one thing
+ * is the whole reason this function exists rather than a regex at the call
+ * site:
+ *
+ *     THE DIGITS MAY BE ARABIC-INDIC. `toLatinDigits` first, then the very
+ *     same test. `Number('١٢٣')` is `NaN`, so without this an Arabic-facing
+ *     importer must either refuse every price typed on an Arabic keypad or
+ *     strip the unknown characters out — and stripping is exactly what made
+ *     «٣٥٠٠» a price of ZERO: `/[^d.-]/` does not refuse, it REWRITES.
+ *
+ * The conversion is a change of SCRIPT, not of notation. `toLatinDigits`
+ * maps a digit to a digit and touches nothing else, so «3,5», «0x10»,
+ * «1e400», «12abc» and «3,500» are refused here exactly as the doors refuse
+ * them — a decimal comma and a thousands separator are the same character
+ * read two opposite ways, and a cell cannot say which it meant.
+ *
+ * THE DOORS ARE DELIBERATELY NOT GIVEN THIS. A JSON body from our own
+ * screens carries Latin digits by law (`western-digits.test.ts`), so an
+ * Arabic numeral arriving at an API is an anomaly rather than a person
+ * typing, and `money()` and `count()` go on refusing it.
+ *
+ * `Infinity` is refused although `NUMERIC` admits `1e400`: a door hands its
+ * value to `.max()` one line later and the bound catches it, while this
+ * returns to a caller that has no bound. A reader that can return
+ * `Infinity` is a reader whose every caller must remember to check.
+ */
+export function readTypedFigure(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  if (typeof raw !== 'string') return null;
+  const latin = toLatinDigits(raw).trim();
+  if (latin === '' || !NUMERIC.test(latin)) return null;
+  const value = Number(latin);
+  return Number.isFinite(value) ? value : null;
 }

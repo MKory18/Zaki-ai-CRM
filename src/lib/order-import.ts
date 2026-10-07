@@ -1,6 +1,7 @@
 import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
 import { splitCsvLine } from './settlement';
 import { normalizePhoneNumber } from './phone';
+import { readTypedFigure } from './numeric-input';
 
 /**
  * A SHEET OF ORDERS SOMEBODY TYPED SOMEWHERE ELSE.
@@ -83,7 +84,23 @@ export interface ParsedRow {
   values: Record<string, string>;
   /** The phone in the one form everything else matches on. */
   phone: string | null;
-  quantity: number;
+  /**
+   * How many units — `null` when the cell held something unreadable.
+   *
+   * It used to be `number`, with 1 written in whenever the cell could not
+   * be read. But 1 is also what an EMPTY cell means, so the screen printed
+   * «× 1» over a cell that said «0x10» and the two were indistinguishable
+   * at a glance. An unreadable cell is `null` AND carries a `BAD_QUANTITY`
+   * problem; an empty one is 1 and carries nothing.
+   */
+  quantity: number | null;
+  /**
+   * The price in the sheet, or `null` — and `null` means two different
+   * things that `problems` tells apart. With no `BAD_PRICE` beside it the
+   * cell was EMPTY and the product own price applies; with one, the cell
+   * held something this parser refused to guess at and the row cannot be
+   * imported at all.
+   */
   sellingPrice: number | null;
   problems: { field: string; kind: RowProblem; ar: string }[];
   /** Another row in THIS file has the same phone. Never a refusal. */
@@ -152,16 +169,85 @@ export function parseOrderSheet(content: string | Buffer | Uint8Array): ParsedIm
       problems.push({ field: 'customerPhone', kind: 'BAD_PHONE', ar: 'رقم الهاتف غير صالح' });
     }
 
+    /**
+     * THE TWO FIGURES, READ BY THE SHARED READER OR REFUSED BY NAME.
+     *
+     * This is where the file was worst, and the defect was not that the
+     * reader was loose. It was that the reader REWROTE the cell before it
+     * read it: a character class of the things it recognised, and every
+     * other character deleted. A strip does not refuse — it produces a
+     * different number and hands it on, and what is left always passes a
+     * finiteness check. Measured on this file as it stood:
+     *
+     *     «٣٥٠٠» — three thousand five hundred typed on an Arabic keypad,
+     *               in an Arabic-facing product — a price of ZERO, because
+     *               Arabic-Indic digits are not in the class
+     *     «3,5»   — 35, ten times the price
+     *     «1e400» — 1400      «0x10» — 10      «12abc» — 12
+     *
+     * and the quantity beside it read «0x10» as SIXTEEN UNITS. Not one of
+     * them was reported.
+     *
+     * AND NO DOOR COULD CATCH IT. `ImportOrdersDialog` posts the figure
+     * THIS FILE produced to `POST /api/orders`, which then sees a clean,
+     * well-formed number and has nothing to refuse. The mis-reading
+     * happens before the request exists, so every hardening of that door
+     * is upstream of nothing here.
+     *
+     * SO A CELL IS READ BY THE ONE SHARED READER OR IT IS REFUSED — per
+     * row, with the cell quoted back, which is the shape this file
+     * already uses for a phone number three digits short. Refusing the
+     * whole FILE would send somebody back to fix ninety-eight good rows
+     * blind in Excel. Importing the row FLAGGED would put a figure nobody
+     * typed into an order, and a zero in a price column cannot be told
+     * afterwards from a zero somebody meant. A thousand rows refused with
+     * a reason is a Tuesday; a thousand rows silently zeroed is the
+     * defect.
+     *
+     * `readTypedFigure` accepts Arabic-Indic digits — a change of SCRIPT,
+     * in one named place, never a regex at a call site — and refuses
+     * every other notation. So «٣٥٠٠» is the 3500 the person meant, and
+     * «3,5» is refused rather than guessed at: a comma is a decimal point
+     * and a thousands separator at once, and the cell cannot say which.
+     */
     const rawQty = values.quantity;
-    const quantity = rawQty ? Number(rawQty) : 1;
-    if (rawQty && (!Number.isInteger(quantity) || quantity < 1)) {
-      problems.push({ field: 'quantity', kind: 'BAD_QUANTITY', ar: 'الكمية يجب أن تكون عدداً صحيحاً أكبر من صفر' });
+    const readQty = rawQty === '' ? 1 : readTypedFigure(rawQty);
+    const quantity = readQty !== null && Number.isInteger(readQty) && readQty >= 1 ? readQty : null;
+    if (quantity === null) {
+      problems.push({
+        field: 'quantity',
+        kind: 'BAD_QUANTITY',
+        ar:
+          readQty === null
+            ? `الكمية «${rawQty}» غير مقروءة — اكتبها بالأرقام وحدها`
+            : `الكمية «${rawQty}» ليست عدداً صحيحاً أكبر من صفر`,
+      });
     }
 
     const rawPrice = values.sellingPrice;
-    const sellingPrice = rawPrice ? Number(String(rawPrice).replace(/[^\d.-]/g, '')) : null;
-    if (rawPrice && (sellingPrice === null || !Number.isFinite(sellingPrice) || sellingPrice < 0)) {
-      problems.push({ field: 'sellingPrice', kind: 'BAD_PRICE', ar: 'السعر غير صالح' });
+    const readPrice = rawPrice === '' ? null : readTypedFigure(rawPrice);
+    const unreadablePrice = rawPrice !== '' && readPrice === null;
+    const negativePrice = readPrice !== null && readPrice < 0;
+    const sellingPrice = unreadablePrice || negativePrice ? null : readPrice;
+    if (unreadablePrice || negativePrice) {
+      problems.push({
+        field: 'sellingPrice',
+        kind: 'BAD_PRICE',
+        /**
+         * AND THE MESSAGE SAYS NOTHING ABOUT AN EMPTY CELL, which the first
+         * draft of it did: «or leave it empty to take the product's price».
+         * That was measured and it is FALSE. `POST /api/orders` builds its
+         * line with `unitPrice: sellingPrice ?? 0` and reads `basePrice`
+         * nowhere, so a blank price cell stores a price of 0 whatever the
+         * product costs in the catalogue. It is the same silent zero this file
+         * was fixed for, arriving by a different road, and it is recorded
+         * with its figures in `an-import-row-reaches-the-door.test.ts`
+         * rather than papered over by a sentence that is not true.
+         */
+        ar: unreadablePrice
+          ? `السعر «${rawPrice}» غير مقروء — اكتبه بالأرقام وحدها`
+          : `السعر «${rawPrice}» سالب`,
+      });
     }
 
     /**
@@ -183,8 +269,8 @@ export function parseOrderSheet(content: string | Buffer | Uint8Array): ParsedIm
       line,
       values,
       phone,
-      quantity: Number.isInteger(quantity) && quantity >= 1 ? quantity : 1,
-      sellingPrice: sellingPrice !== null && Number.isFinite(sellingPrice) && sellingPrice >= 0 ? sellingPrice : null,
+      quantity,
+      sellingPrice,
       problems,
       duplicateOfLine,
     });
