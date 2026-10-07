@@ -14,6 +14,7 @@ import { canConferRole } from '@/lib/user-permissions';
 import { geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 import { can } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
+import { commissionRateField } from '@/lib/user-commission-rate';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -22,7 +23,11 @@ const createUserSchema = z.object({
   role: z.enum(ASSIGNABLE_ROLES as [UserRole, ...UserRole[]]).default('MODERATOR'),
   roleId: z.string().uuid().optional(),
   phone: z.string().trim().max(25).optional(),
-  commissionRate: z.number().min(0).max(50).optional(),
+  // The rule for this column lives in `user-commission-rate.ts`, because
+  // `POST /api/moderators` writes the same column and used to write it by a
+  // rule of its own — an unvalidated `|| 5.0` that turned a typed zero into
+  // five percent. One column, one rule, one file.
+  commissionRate: commissionRateField,
   // Where this employee works. An account with no country reaches no screen
   // that needs a context, so the assignment belongs to the creation form and
   // not to a second trip through the geo-access editor.
@@ -115,7 +120,9 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
           status: 'ACTIVE',
           assignedById: admin.id,
           assignedAt: new Date(),
-          commissionRate: commissionRate ?? 0,
+          // No fallback: the schema's own `.default(0)` already turned
+          // «nothing typed» into zero, so a `?? 0` here could never fire.
+          commissionRate,
           lastLoginAt: null,
         },
         select: { id: true, name: true, email: true, role: true, status: true },

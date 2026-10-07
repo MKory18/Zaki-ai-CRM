@@ -6,6 +6,7 @@ import { requireCompanyTenant, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { commissionByUserForOrders } from '@/lib/commission';
+import { COMMISSION_RATE_REFUSAL, readCommissionRate } from '@/lib/user-commission-rate';
 
 export async function GET() {
   try {
@@ -124,6 +125,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Name and Email are required', errorAr: 'الاسم والبريد مطلوبان.' }, { status: 400 });
     }
 
+    /**
+     * THE RATE IS READ BY THE RULE THE OTHER DOOR USES — ONCE, HERE.
+     *
+     * This used to be `parseFloat(commissionRate) || 5.0` down in the
+     * `create` block, with nothing validating it above: an empty box, a
+     * non-numeric box, and a moderator somebody deliberately set to **0**
+     * all stored five percent. `/api/users` has always validated the same
+     * column properly, so one column had two doors and two rules, and the
+     * 5.0 was written in neither the schema nor the other door.
+     *
+     * Refused HERE rather than at the write: nothing is looked up and no
+     * password is hashed for a request that was never going to be stored.
+     */
+    const rate = readCommissionRate(commissionRate);
+    if (rate === null) {
+      return NextResponse.json({ error: COMMISSION_RATE_REFUSAL }, { status: 400 });
+    }
+
     const existing = await db.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
@@ -145,7 +164,8 @@ export async function POST(req: Request) {
         email: email.toLowerCase().trim(),
         phone: phone?.trim() || null,
         role: 'MODERATOR',
-        commissionRate: parseFloat(commissionRate) || 5.0,
+        // The validated number, as typed. A zero stays a zero.
+        commissionRate: rate,
         passwordHash: pwdHash,
         status: 'ACTIVE',
       },

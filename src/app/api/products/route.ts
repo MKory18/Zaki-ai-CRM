@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { productCosts } from '@/lib/product-cost';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { maySeeCost, withoutCost } from '@/lib/cost-visibility';
+import { BASE_PRICE_NOT_A_NUMBER, readBasePrice } from '@/lib/product-base-price';
 
 export async function GET(req: Request) {
   try {
@@ -188,6 +189,30 @@ export async function POST(req: Request) {
     }
 
     /**
+     * A PRICE THAT IS NOT A NUMBER IS AN ERROR, NOT A FREE PRODUCT.
+     *
+     * This used to be `parseFloat(basePrice) || 0` inside the `create`
+     * block. A price box holding anything non-numeric stored a product at
+     * **zero** and answered 200 — and `basePrice` is what the landing page
+     * shows a shopper, what the AI intake falls back to, and what the offer
+     * ladder multiplies.
+     *
+     * Absent is its own case and stays allowed: the column's default is
+     * `0.0` and a catalogue entry may legitimately be priced later. What is
+     * refused is a value that WAS sent and is not a price. The reader is
+     * shared with the edit door so the two cannot drift — see
+     * `product-base-price.ts`.
+     */
+    let resolvedBasePrice = 0;
+    if (basePrice !== undefined) {
+      const read = readBasePrice(basePrice);
+      if (read === null) {
+        return NextResponse.json({ error: BASE_PRICE_NOT_A_NUMBER }, { status: 400 });
+      }
+      resolvedBasePrice = read;
+    }
+
+    /**
      * AND A SHELF TO FILE IT ON.
      *
      * Measured before this: 114 products, and not one of them categorised.
@@ -248,7 +273,8 @@ export async function POST(req: Request) {
       descriptionEn: descriptionEn?.trim() || null,
         sku: sku.trim().toUpperCase(),
         description: description?.trim(),
-        basePrice: parseFloat(basePrice) || 0,
+        // Read and refused above. A typed zero is stored as a zero.
+        basePrice: resolvedBasePrice,
         // Which door this product's stock comes in through. Both write the
         // same ledger; this only decides which form you are shown, and a
         // ready-made good entered as a "production run" corrupts the

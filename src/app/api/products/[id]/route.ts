@@ -9,6 +9,7 @@ import { parseCategoryAttributes, parseProductAttributes } from '@/lib/product-a
 import { parseHistory, rememberSlug, slugify, uniqueSlug } from '@/lib/slug';
 import { can, authorize } from '@/lib/authorization';
 import { requireContext } from '@/lib/geo-context';
+import { BASE_PRICE_NOT_A_NUMBER, readBasePrice } from '@/lib/product-base-price';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -81,8 +82,35 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Forbidden: missing required permission products.edit', errorAr: forbiddenAr('Forbidden: missing required permission products.edit') }, { status: 403 });
     }
 
+    /**
+     * WHAT WAS TYPED IN THE PRICE BOX, OR A 400.
+     *
+     * This door used to write `parseFloat(basePrice) || 0`, so editing a
+     * product and leaving anything non-numeric in the price box turned it
+     * into a **free product** and answered 200 — the audit log even recorded
+     * the old price next to the new zero, and nobody reads an audit log to
+     * find out that a price was lost.
+     *
+     * Read once, here, by the same reader the create door uses
+     * (`product-base-price.ts`), and used for BOTH the price-authority check
+     * below and the write. `Number(basePrice)` was computed separately for
+     * that check, so a garbage price was `NaN !== existing` — it demanded
+     * the price permission and then wrote a zero.
+     *
+     * Absent still leaves the stored price alone: a PATCH that renamed the
+     * product must not touch its price.
+     */
+    let nextBasePrice: number | undefined;
+    if (basePrice !== undefined) {
+      const read = readBasePrice(basePrice);
+      if (read === null) {
+        return NextResponse.json({ error: BASE_PRICE_NOT_A_NUMBER }, { status: 400 });
+      }
+      nextBasePrice = read;
+    }
+
     // Price changes are a separate authority (products.change_price)
-    if (basePrice !== undefined && Number(basePrice) !== existing.basePrice) {
+    if (nextBasePrice !== undefined && nextBasePrice !== existing.basePrice) {
       const priceAuth = authorize(user, 'products.change_price', existing);
       if (!priceAuth.allowed) {
         return NextResponse.json({ error: 'Forbidden: products.change_price', errorAr: 'تغيير السعر ليس من صلاحيّاتك. اطلبها من مدير النظام إن كانت من عملك.' }, { status: 403 });
@@ -189,7 +217,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               ),
             }
           : {}),
-        ...(basePrice !== undefined ? { basePrice: parseFloat(basePrice) || 0 } : {}),
+        // Read and refused above; a typed zero is stored as a zero.
+        ...(nextBasePrice !== undefined ? { basePrice: nextBasePrice } : {}),
         ...(status ? { status } : {}),
         ...addressing,
       },
