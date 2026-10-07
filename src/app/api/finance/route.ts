@@ -8,6 +8,67 @@ import { requirePermission } from '@/lib/authorization';
 import { commissionCostForOrders } from '@/lib/commission';
 import { getCompanyAnalytics, getDateRange, previousRange } from '@/lib/analytics';
 import { gradeExpenseTypes, ledgerTrust, type ExpenseTypeInput } from '@/lib/expense-grade';
+import { z } from 'zod';
+import { numeric } from '@/lib/numeric-input';
+import { zodMessage } from '@/lib/zod-message';
+
+/**
+ * ─── HOW MUCH MONEY LEFT: READ BY THE ONE STRICT READER, NOT BY `parseFloat` ───
+ *
+ * This line was `const value = parseFloat(amount)`, and this file is the one
+ * every other numeric fix in this audit was told to copy — so the weakness
+ * was being copied with it. `parseFloat` STOPS at the first character it
+ * cannot read and returns what it got:
+ *
+ *     parseFloat('2,500')  →  2       an Arabic-keyboard decimal comma
+ *     parseFloat('12abc')  →  12
+ *     parseFloat('1e5')    →  100000  (fine, but by accident)
+ *
+ * So an API client sending `'2,500'` recorded an expense of **2** — and
+ * wrote a wallet movement OUT of 2 beside it, in the same transaction, so
+ * the books and the ledger agreed on the wrong number. Nobody is told. The
+ * old guard below it (`!Number.isFinite(value) || value <= 0`) could not see
+ * it either: 2 is finite and positive.
+ *
+ * `numeric()` is `numeric-input.ts`'s reader, which this repository already
+ * uses on every door that moves money or stock. It is stricter than
+ * `Number()` as well as `parseFloat`: it refuses `'2,500'`, `'12abc'`, `''`,
+ * `'   '`, `null`, `[]`, `{}`, `true` and — the one a hand-rolled `Number()`
+ * reader still lets through — `'0x10'`, which `Number` reads as **16**.
+ * Reusing it rather than writing a fourth reader is the point: the rule has
+ * one home.
+ *
+ * ─── AND A ZERO IS REFUSED. THE REASON IS THE COLUMN, NOT TASTE. ───
+ *
+ * `readBasePrice` deliberately ALLOWS a typed 0, so the two doors differ and
+ * the difference is argued from the schema:
+ *
+ *   · `Product.basePrice` is `@default(0.0)`. The column itself says zero is
+ *     a value — a sample, a gift, a price not set yet.
+ *   · `Expense.amount` is `Float` with **no default**. Nothing in the schema
+ *     nominates 0, and the row does not stand alone: this door writes a
+ *     paired `WalletMovement` of the same amount in the same transaction,
+ *     and the *other* door onto that table
+ *     (`finance/wallets/[id]/movements`) declares `z.number().positive()`.
+ *     A 0 expense would therefore mint a 0 movement that the only other way
+ *     of making a movement refuses by name — one rule, two answers.
+ *
+ * An expense of nothing is not an expense: no money left the wallet, so
+ * there is nothing to subtract from profit and nothing to tie to a drawer.
+ * The refusal says so in words rather than through a falsy check.
+ */
+const EXPENSE_AMOUNT_MAX = 1_000_000_000;
+
+const amountBody = z.object({
+  /*
+   * Wrapped in an object SO THAT THE PATH NAMES THE FIELD. `zodMessage`
+   * reads `issue.path` to print «المبلغ: …»; a bare schema has an empty
+   * path and the reader gets «اكتب رقماً بالأرقام» with no field in it.
+   */
+  amount: numeric()
+    .refine((v) => v > 0, { message: 'المبلغ أكبر من صفر — مصروفٌ بصفرٍ ليس مصروفاً' })
+    .refine((v) => v <= EXPENSE_AMOUNT_MAX, { message: `المبلغ ${EXPENSE_AMOUNT_MAX} على الأكثر` }),
+});
 
 export async function GET(req: Request) {
   try {
@@ -197,14 +258,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, category, amount, expenseDate, notes, walletId } = body;
 
-    if (!title || !category || !amount) {
-      return NextResponse.json({ error: 'العنوان والفئة والمبلغ مطلوبة' }, { status: 400 });
+    /*
+     * `!amount` IS GONE FROM THIS LINE, AND THAT IS A FIX, NOT A LOOSENING.
+     *
+     * It read `!title || !category || !amount`: a falsy check on a NUMBER,
+     * the family this audit has been clearing. It did shield the column — a
+     * cleared box arriving as `0` got a 400 rather than a silent zero row —
+     * but it shielded it by accident and with the wrong sentence: an amount
+     * that ARRIVED as a deliberate 0 was told «المبلغ مطلوب», which sends
+     * the reader looking for an empty box they had just filled in.
+     *
+     * The amount is now read below, by name, with «لم يُكتَب» and «كُتِب
+     * خطأً» as two different sentences — the distinction `zod-message.ts`
+     * carries. Zero is still refused; it is refused for its own reason.
+     */
+    if (!title || !category) {
+      return NextResponse.json({ error: 'العنوان والفئة مطلوبان' }, { status: 400 });
     }
 
-    const value = parseFloat(amount);
-    if (!Number.isFinite(value) || value <= 0) {
-      return NextResponse.json({ error: 'المبلغ رقم موجب' }, { status: 400 });
+    const amountRead = amountBody.safeParse({ amount });
+    if (!amountRead.success) {
+      return NextResponse.json({ error: zodMessage(amountRead.error) }, { status: 400 });
     }
+    const value = amountRead.data.amount;
 
     /**
      * WHICH WALLET THE MONEY LEFT.

@@ -12,22 +12,29 @@
  * `ProductOffers` multiplies it to propose the offer ladder. A zero written
  * by a typo propagates into all three.
  *
- * The shape is the one `finance/route.ts` already uses for an expense
- * amount — parse, then refuse what is not a finite number instead of coping
- * with it downstream (`57eb1d6`: a bad value is refused at the door it
- * enters by).
+ * The shape is the one `finance/route.ts` uses for an expense amount —
+ * parse, then refuse what is not a finite number instead of coping with it
+ * downstream (`57eb1d6`: a bad value is refused at the door it enters by).
  *
- * TWO DELIBERATE DIFFERENCES FROM THAT DOOR, both about a price:
+ * ONE DELIBERATE DIFFERENCE FROM THAT DOOR, and it is about a price:
  *
- *   · **Zero is allowed.** An expense of 0 is not an expense; a product at 0
- *     is a sample, a gift or a price not set yet, and the column's own
- *     default is `0.0`. A typed zero is a real value, so it is stored as
- *     typed — never replaced by a fallback.
- *   · **`Number`, not `parseFloat`.** `parseFloat('3,5')` is `3`, and
- *     `parseFloat('12abc')` is `12` — a price box holding a decimal comma
- *     would silently store a wrong price, which is the same defect wearing
- *     the other shoe. `Number('3,5')` is `NaN` and is refused, which is the
- *     answer a person can act on.
+ *   · **Zero is allowed.** An expense of 0 is not an expense — the expense
+ *     door refuses it by name, and `Expense.amount` has no `@default` to
+ *     nominate it. A product at 0 is a sample, a gift or a price not set
+ *     yet, and the column's own default IS `0.0`. A typed zero is a real
+ *     value here, so it is stored as typed — never replaced by a fallback.
+ *
+ * `Number` RATHER THAN `parseFloat` WAS THE SECOND DIFFERENCE AND IS NOT
+ * ONE ANY MORE. `parseFloat('3,5')` is `3` and `parseFloat('12abc')` is
+ * `12`, so a decimal comma from an Arabic keyboard stored a wrong price
+ * silently; `Number('3,5')` is `NaN` and is refused, which is an answer a
+ * person can act on. `finance/route.ts` carried the `parseFloat` weakness
+ * until it was closed there too — it now reads its amount through
+ * `numeric-input.ts`, which is stricter than `Number` as well: it refuses
+ * `'0x10'`, which `Number` reads as **16**. THIS READER STILL DOES NOT, and
+ * that is a known gap recorded here rather than a decision — see
+ * `a-column-has-one-rule.test.ts`, where `'0x10'` is the one hostile string
+ * the price tests do not list.
  */
 
 /** What the person is told when what they typed is not a price. */

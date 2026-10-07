@@ -59,6 +59,39 @@ const DIRECTION_AR: Record<SpendDirection, { label: string; cls: string }> = {
   UNKNOWN: { label: 'لا يكفي', cls: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]' },
 };
 
+/**
+ * WHAT THE AMOUNT BOX PUTS ON THE WIRE: its characters, or nothing at all.
+ *
+ * The same reader `ManufacturingScreen` and `ProductsScreen` send their
+ * money boxes with, for the same defect. This screen's box was
+ *
+ *     const [amount, setAmount] = useState(100);
+ *     onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+ *
+ * — two faults sitting on top of each other, both about money LEAVING:
+ *
+ *   · THE 100 EXISTS NOWHERE ON THE SERVER. `Expense.amount` is `Float`
+ *     with no default; the seed writes no expense at all; the door invents
+ *     nothing. It was a browser-only number, and the dialog opened with it
+ *     already filled in — so typing a title, choosing a wallet and pressing
+ *     «احفظ المصروف» recorded an expense of 100 that nobody entered, and
+ *     expenses subtract from net profit.
+ *   · A CLEARED BOX WAS A TYPED ZERO. `parseFloat('') || 0` is `0`, the box
+ *     redrew as `0`, and the door's own refusal was unreachable from the
+ *     only screen that uses it — the browser answered the door's question
+ *     before the door could.
+ *
+ * `undefined` is the third answer and `JSON.stringify` DROPS an `undefined`
+ * property, so an EMPTY BOX IS ABSENT ON THE WIRE and the door decides what
+ * absent means. And what is sent for a filled box is the CHARACTERS, not a
+ * number this component re-derived: `numeric-input.ts` is stricter than
+ * `Number()`, so handing it the characters is the only way its refusal can
+ * be about what a person actually typed.
+ */
+function onTheWire(raw: string): string | undefined {
+  return raw.trim() === '' ? undefined : raw;
+}
+
 function SpendByType({
   spend,
   currency,
@@ -172,7 +205,12 @@ export function FinanceProfitScreen() {
   // Expense Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('MARKETING');
-  const [amount, setAmount] = useState(100);
+  // EMPTY, AND THERE IS NO DEFAULT AMOUNT ANYWHERE — not here, not in
+  // `schema.prisma` (`Expense.amount Float`, no `@default`), not in the
+  // door, not in the seed. An expense has no default amount: nobody can
+  // guess what a thing cost. See `onTheWire` above for the 100 that sat
+  // here, and for what a cleared box used to send.
+  const [amount, setAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
@@ -219,11 +257,15 @@ export function FinanceProfitScreen() {
       const res = await fetch('/api/finance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, category, amount, expenseDate, notes, walletId }),
+        body: JSON.stringify({ title, category, amount: onTheWire(amount), expenseDate, notes, walletId }),
       });
       if (res.ok) {
         setExpenseModalOpen(false);
         setTitle('');
+        // CLEARED TOO. It was not, so the amount of the expense just saved
+        // stayed in the box for the next one — which is the same defect the
+        // 100 was, only with a number that had at least been typed once.
+        setAmount('');
         setNotes('');
         setExpenseError(null);
         loadFinance();
@@ -455,7 +497,7 @@ export function FinanceProfitScreen() {
               type="number"
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setAmount(e.target.value)}
               required
             />
           </div>
