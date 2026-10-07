@@ -13,6 +13,7 @@ import { newSection } from '@/lib/landing-sections';
 import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { skinToLandingTheme } from '@/lib/store-skin';
 import { zodMessage } from '@/lib/zod-message';
+import { readLimit, readPage } from '@/lib/numeric-input';
 
 export async function GET(req: Request) {
   try {
@@ -20,9 +21,29 @@ export async function GET(req: Request) {
     await requirePermission('landing_pages.view');
 
     const { searchParams } = new URL(req.url);
-    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
-    const parsedLimit = parseInt(searchParams.get('limit') || '50', 10);
-    const limit = Math.min(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 100);
+    /*
+     * `0aea050` NAMED THIS DOOR AS ONE THAT «ALREADY GOT IT RIGHT». IT HALF DID.
+     *
+     * The page number was clamped and the `NaN` was caught, but the page SIZE
+     * had no lower bound, and the two combine. Measured against this database:
+     *
+     *   · `?limit=0`         → `take: 0`, which Prisma accepts: an empty list
+     *     of landing pages where 44 exist, and `totalPages: Math.ceil(44/0)`
+     *     = **Infinity** published beside it — the very figure `0aea050`
+     *     removed from five other paths;
+     *   · `?limit=-5`        → `take: -5`, which Prisma ALSO accepts and
+     *     reads as «the last five», so page one showed the five oldest pages
+     *     in reverse order;
+     *   · `?page=2&limit=-5` → `skip: -5`, and that one Prisma refuses:
+     *     «Invalid value for skip argument: Value can only be positive,
+     *     found: -5» → `PrismaClientUnknownRequestError` → **HTTP 500
+     *     «حدث خطأ داخلي»**, the same crash a bad page number used to cause.
+     *
+     * So this is not the third semantic `products/route.ts` has — it is the
+     * same semantic, read incompletely. It shares the reader now.
+     */
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 50, 100);
 
     const [total, pages] = await Promise.all([
       db.landingPage.count({ where: { companyId, storeId } }),

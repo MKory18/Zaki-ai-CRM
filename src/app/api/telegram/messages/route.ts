@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { readLimit } from '@/lib/numeric-input';
 
 const STATUSES = ['PENDING', 'PROCESSED', 'IGNORED', 'NEEDS_REVIEW', 'FAILED'] as const;
 
@@ -17,8 +18,13 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status')?.trim();
-    const parsedLimit = parseInt(searchParams.get('limit') || '50', 10);
-    const limit = Math.min(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 100);
+    /*
+     * This spelling caught `NaN` and nothing else: there was no lower clamp,
+     * so `?limit=0` was `take: 0` — an empty inbox for a door that had
+     * messages — and `?limit=-5` was `take: -5`, which Prisma accepts as
+     * «the last five», i.e. the OLDEST five in reverse.
+     */
+    const limit = readLimit(searchParams, 50, 100);
 
     const messages = await db.telegramMessage.findMany({
       where: {

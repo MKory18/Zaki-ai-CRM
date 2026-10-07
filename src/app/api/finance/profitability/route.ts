@@ -3,6 +3,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { getCompanyAnalytics } from '@/lib/analytics';
+import { readLimit } from '@/lib/numeric-input';
 
 /**
  * GET /api/finance/profitability?from=&to=&limit=
@@ -28,7 +29,22 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('from') || undefined;
     const endDate = searchParams.get('to') || undefined;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10) || 20, 100);
+    /*
+     * HOW MANY PRODUCTS THE REPORT SHOWS — THE SHARED READER, NOT A HAND.
+     *
+     * It read `Math.min(parseInt(get('limit') || '20', 10) || 20, 100)`, which
+     * had the two faults `0aea050` named and this endpoint was left out of:
+     *
+     *   · `|| 20` is a falsy guard, so **`?limit=0` silently became 20** —
+     *     the one request that asks for nothing answered with the default;
+     *   · there was NO LOWER CLAMP, so **`?limit=-5` reached `.slice(0, -5)`
+     *     and dropped the last five products from a profit report** — no
+     *     crash, no write, a quietly wrong answer.
+     *
+     * Clamped rather than refused, by the rule `0aea050` settled: the number
+     * is written nowhere and only selects which rows are looked at.
+     */
+    const limit = readLimit(searchParams, 20, 100);
 
     const analytics = await getCompanyAnalytics(
       { companyId, storeId },

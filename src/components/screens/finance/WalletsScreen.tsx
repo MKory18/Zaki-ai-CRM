@@ -779,6 +779,30 @@ function ReverseDialog({
 }
 
 /**
+ * A TYPED NUMBER, OR «NOTHING» — AND A TYPED `0` IS A NUMBER.
+ *
+ * `JSON.stringify` DROPS an `undefined` property, so an empty box leaves the
+ * field ABSENT on the wire and the door decides what absent means. That is
+ * the pattern `17cbe93` and `509306a` established (`CourierFees`'s
+ * `typedNumber`, `ManufacturingScreen`'s `onTheWire`), and the reason there
+ * is no `0` left in this file: the default lives in `prisma/schema.prisma`
+ * (`openingBalance Decimal @default(0)`) and in the door's zod
+ * (`wallets/route.ts` `.default(0)`), and a third copy here is a third place
+ * to change it.
+ *
+ * `Number('abc')` is `NaN`, and `JSON.stringify` writes `NaN` as `null` —
+ * which the door's `z.number()` REFUSES by name. That is deliberate: the
+ * unparseable value is not folded into «empty», because folding it into
+ * «empty» is how a silent zero gets written. A `type="number"` box reports
+ * `''` for unparseable input, so that branch is unreachable from this form
+ * and reachable from any other client.
+ */
+function typedNumber(raw: string): number | undefined {
+  if (raw.trim() === '') return undefined;
+  return Number(raw);
+}
+
+/**
  * Creating a wallet.
  *
  * It belongs to a COUNTRY and carries its own currency, which need not be
@@ -833,7 +857,9 @@ function CreateWalletDialog({
                 countryId,
                 name: name.trim(),
                 currencyCode: currency.trim().toUpperCase(),
-                openingBalance: opening ? Number(opening) : 0,
+                // Absent when the box is empty; the door's `.default(0)` and
+                // the column's `@default(0)` decide, not this component.
+                openingBalance: typedNumber(opening),
               }),
             });
             onSaved(`أُنشئت المحفظة ${name.trim()}`);

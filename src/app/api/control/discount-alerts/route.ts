@@ -4,6 +4,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { roundMinor } from '@/lib/money';
+import { numeric } from '@/lib/numeric-input';
 
 /**
  * GET /api/control/discount-alerts — what was given away, and by whom.
@@ -29,7 +30,32 @@ export async function GET(req: Request) {
     await requirePermission('control.discount_alerts');
 
     const q = new URL(req.url).searchParams;
-    const days = Math.min(Math.max(Number(q.get('days') ?? 30), 1), 365);
+    /*
+     * HOW FAR BACK TO LOOK — AND `Math.max(NaN, 1)` IS `NaN`.
+     *
+     * This read `Math.min(Math.max(Number(q.get('days') ?? 30), 1), 365)`.
+     * Both clamps pass `NaN` straight through, so `?days=abc` made
+     * `new Date(Date.now() - NaN)` — an Invalid Date — and handed it to
+     * Prisma as `createdAt: { gte: … }`. MEASURED against this database:
+     *
+     *     PrismaClientValidationError  → api-error.ts may not echo a Prisma
+     *                                    message → **HTTP 500 «حدث خطأ داخلي»**
+     *
+     * The same one-bad-character-takes-the-screen-down failure `0aea050`
+     * measured for `?page=abc`, by a different road. `Number()` is also the
+     * loose reader: `?days=0x10` was sixteen days.
+     *
+     * `numeric()` is the door's own strict reader, so anything not written
+     * the way a number is written falls to the default rather than becoming
+     * `NaN` or a hex figure; the bounds then clamp, because a window is
+     * written nowhere and only selects which rows are read.
+     *
+     * THE SHARED READER SHOULD OWN THE CLAMP, not this route — see the
+     * `readWhole` edit proposed for `src/lib/numeric-input.ts`, which would
+     * make these three lines one.
+     */
+    const asked = numeric().safeParse(q.get('days') ?? 30);
+    const days = asked.success ? Math.min(Math.max(Math.trunc(asked.data), 1), 365) : 30;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const orders = await db.order.findMany({

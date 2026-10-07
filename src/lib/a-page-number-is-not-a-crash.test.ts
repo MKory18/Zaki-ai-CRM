@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readLimit, readPage } from './numeric-input';
 
@@ -99,36 +99,177 @@ describe('a page size is bounded, and the bound is not optional', () => {
   });
 });
 
-describe('and every list endpoint that paged by hand now shares the reader', () => {
-  const FILES = [
-    'src/app/api/orders/route.ts',
-    'src/app/api/orders/follow-ups/route.ts',
-    'src/app/api/orders/shipping/route.ts',
-    'src/app/api/shipping-batches/route.ts',
-    'src/app/api/users/route.ts',
-    'src/app/api/finance/wallets/[id]/movements/route.ts',
-    'src/app/api/inventory/movements/route.ts',
-  ];
+/**
+ * THE GUARD NAMED SEVEN FILES, AND A LIST IS HOW THIS ROTS.
+ *
+ * `0aea050` converted seven doors and listed those seven here. Three doors
+ * with the identical fault were never in the list and were therefore never
+ * checked — `finance/profitability`, `apps/deliveries`, `telegram/messages` —
+ * and a fourth, `landing-pages`, was named in this very file as one that
+ * «already got it right» when it had no lower bound on the page size at all.
+ * The list did not go stale: it was incomplete on the day it was written.
+ *
+ * So this no longer names files. It WALKS `src/app/api/**` and asks each
+ * route handler one question: does it turn the text of a query parameter
+ * into a number with its own hands? Every door that does must either be the
+ * shared reader's, or be named below WITH A REASON — and a named door that
+ * stops tripping the detector fails this suite, so the exceptions cannot
+ * outlive the thing they excuse.
+ */
+describe('and every limited door in the API is found by walking, not by a list', () => {
+  const API = join(process.cwd(), 'src/app/api');
 
-  const read = (rel: string) =>
-    readFileSync(join(process.cwd(), rel), 'utf8')
+  /** Source with comments blanked, so prose about `parseInt` is not a hit. */
+  const strip = (src: string) =>
+    src
       .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
       .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
-  it('imports it, and no longer parses a page or a limit itself', () => {
-    for (const f of FILES) {
-      const src = read(f);
-      expect(src, `${f}: لا يستورد قارئ الصفحات المشترك`).toMatch(/from '@\/lib\/numeric-input'/);
-      expect(src, `${f}: ما زال يقرأ رقم الصفحة بيده`).not.toMatch(/parseInt\(\s*(?:searchParams|q|url\.searchParams)[^\n]*get\('(?:page|limit)'\)/);
-      expect(src, `${f}: ما زال يقرأ الحدّ بـNumber`).not.toMatch(/Number\(\s*(?:q|searchParams|new URL\(req\.url\)\.searchParams)\.get\('limit'\)/);
+  const read = (rel: string) => strip(readFileSync(join(process.cwd(), rel), 'utf8'));
+
+  /** Every `route.ts` under `src/app/api`, found rather than listed. */
+  const ROUTES = readdirSync(API, { recursive: true, encoding: 'utf8' })
+    .filter((p) => /(^|[\\/])route\.ts$/.test(p))
+    .map((p) => join('src/app/api', p).replace(/\\/g, '/'))
+    .sort();
+
+  /**
+   * WHAT THE QUERY STRING IS CALLED IN THIS FILE.
+   *
+   * `searchParams` is the usual name, and it is not the only one:
+   * `control/discount-alerts/route.ts` reads
+   * `const q = new URL(req.url).searchParams;` and then `q.get('days')`. A
+   * detector that only knew the word `searchParams` found nothing in that
+   * file — and that file was reaching Prisma with an Invalid Date. The
+   * blind spot was in the detector, so it is closed here rather than
+   * papered over with another name in a list.
+   */
+  const bags = (src: string) => {
+    const names = new Set<string>(['searchParams']);
+    for (const m of src.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*[^;\n]*\.searchParams\b/g)) {
+      names.add(m[1]);
+    }
+    return [...names];
+  };
+
+  /** `searchParams.get(` / `q.get(` / … as this file spells it. */
+  const getCall = (src: string) => new RegExp(`\\b(?:${bags(src).join('|')})\\.get\\(`);
+
+  /**
+   * Names in this file that hold the RAW TEXT of a query parameter, so the
+   * two-step form (`const raw = …get('limit'); parseInt(raw, 10)`) is caught
+   * as well as the one-liner. `products/route.ts` is written that way.
+   */
+  const rawParamNames = (src: string) => {
+    const names = new Set<string>();
+    const re = new RegExp(`(?:const|let|var)\\s+(\\w+)\\s*=\\s*[^;\\n]*?(?:${bags(src).join('|')})\\.get\\(`, 'g');
+    for (const m of src.matchAll(re)) names.add(m[1]);
+    return names;
+  };
+
+  /**
+   * The text inside a call's parentheses, scanned with a depth counter
+   * rather than `[^)]*`. The lazy version missed
+   * `Number(new URL(req.url).searchParams.get('w'))` — it stopped at the
+   * first `)` — which is a blind spot in the detector itself, not a quirk
+   * of one file.
+   */
+  const callArgs = (src: string, openParen: number): string => {
+    let depth = 0;
+    for (let i = openParen; i < src.length; i++) {
+      if (src[i] === '(') depth++;
+      else if (src[i] === ')') {
+        depth--;
+        if (depth === 0) return src.slice(openParen + 1, i);
+      }
+    }
+    return src.slice(openParen + 1);
+  };
+
+  /** Every place this file converts a query parameter into a number itself. */
+  const handRolled = (src: string): string[] => {
+    const names = rawParamNames(src);
+    const reads = getCall(src);
+    const hits: string[] = [];
+    const re = /\b(?:Number\.parseInt|Number\.parseFloat|parseInt|parseFloat|Number)\s*\(/g;
+    for (const m of src.matchAll(re)) {
+      const arg = callArgs(src, m.index + m[0].length - 1);
+      const named = [...names].some((n) => new RegExp(`\\b${n}\\b`).test(arg));
+      if (reads.test(arg) || named) {
+        hits.push(`${m[0]}${arg.replace(/\s+/g, ' ').trim()})`);
+      }
+    }
+    // `+searchParams.get('limit')` is the same thing in two characters.
+    for (const b of bags(src)) {
+      for (const m of src.matchAll(new RegExp(`\\+\\s*${b}\\.get\\(`, 'g'))) hits.push(m[0].trim());
+    }
+    return hits;
+  };
+
+  /**
+   * The doors that read a query parameter numerically BY HAND on purpose.
+   * The reason is asserted to be true of the file, not just written here.
+   */
+  const ALLOWED: Record<string, { why: string; still: RegExp }> = {
+    // `undefined` means «no limit at all» — a third semantic this reader does
+    // not express, and `0aea050` deliberately left it. It clamps both ends.
+    'src/app/api/products/route.ts': {
+      why: 'الغياب يعني «بلا حدٍّ أصلاً» — معنًى ثالثٌ لا يُعبِّر عنه القارئ المشترك',
+      still: /Math\.min\(Math\.max\(/,
+    },
+    // The number is checked for MEMBERSHIP in a fixed list of widths. There
+    // is nothing to clamp: a width that is not on the list falls through to
+    // the original file, which is the whole point of the branch.
+    'src/app/api/public/media/[...parts]/route.ts': {
+      why: 'العدد يُطابَق على قائمةِ عروضٍ ثابتة؛ ما ليس فيها يسقط إلى الأصل',
+      still: /IMAGE_WIDTHS as readonly number\[\]\)\.includes\(/,
+    },
+  };
+
+  it('finds the route files at all — a sweep that finds nothing proves nothing', () => {
+    expect(ROUTES.length).toBeGreaterThan(150);
+    expect(ROUTES).toContain('src/app/api/finance/profitability/route.ts');
+    expect(ROUTES).toContain('src/app/api/finance/wallets/[id]/movements/route.ts');
+  });
+
+  it('and no door reads a query parameter as a number by hand, except the named ones', () => {
+    const offenders: string[] = [];
+    for (const rel of ROUTES) {
+      if (rel in ALLOWED) continue;
+      const hits = handRolled(read(rel));
+      if (hits.length) offenders.push(`${rel} → ${hits.join(' · ')}`);
+    }
+    expect(offenders, `أبوابٌ تقرأ رقماً من عنوان الطلب بيدها:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('and every named exception is still an exception — a fixed one must leave the list', () => {
+    for (const [rel, { why, still }] of Object.entries(ALLOWED)) {
+      const src = read(rel);
+      expect(handRolled(src).length, `${rel}: لم يعد يقرأ بيده — احذفه من قائمة الاستثناءات (${why})`).toBeGreaterThan(0);
+      expect(src, `${rel}: السببُ المكتوبُ لم يَعُد وصفاً للملف — ${why}`).toMatch(still);
     }
   });
 
-  it('and the two that already clamped are named, so the list is not mistaken for all of them', () => {
-    // These two got it right before this change and are deliberately NOT
-    // converted: `products` uses `undefined` to mean «no limit at all»,
-    // which is a third semantic and not this reader's.
-    expect(read('src/app/api/products/route.ts')).toMatch(/Math\.min\(Math\.max\(/);
-    expect(read('src/app/api/landing-pages/route.ts')).toMatch(/Number\.isNaN\(parsedLimit\)/);
+  it('and every door that reads a page or a limit imports the shared reader', () => {
+    const missing: string[] = [];
+    for (const rel of ROUTES) {
+      if (rel in ALLOWED) continue;
+      const src = read(rel);
+      const asksForOne = new RegExp(`\\b(?:${bags(src).join('|')})\\.get\\('(?:page|limit|offset|perPage|pageSize)'\\)`);
+      if (!asksForOne.test(src)) continue;
+      if (!/from '@\/lib\/numeric-input'/.test(src)) missing.push(rel);
+    }
+    expect(missing, `أبوابُ ترقيمٍ لا تستورد القارئ المشترك:\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  it('and the doors the first sweep converted are among the ones found', () => {
+    // Not a list to be maintained — a floor under the walk, so a detector
+    // that silently stopped matching anything cannot pass this suite.
+    const paged = ROUTES.filter((rel) => /from '@\/lib\/numeric-input'/.test(read(rel)));
+    expect(paged).toContain('src/app/api/orders/route.ts');
+    expect(paged).toContain('src/app/api/users/route.ts');
+    expect(paged).toContain('src/app/api/finance/profitability/route.ts');
+    expect(paged).toContain('src/app/api/landing-pages/route.ts');
+    expect(paged.length).toBeGreaterThanOrEqual(11);
   });
 });

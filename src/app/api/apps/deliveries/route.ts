@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
+import { readLimit } from '@/lib/numeric-input';
 
 /**
  * GET /api/apps/deliveries — what each app was told, and whether it heard.
@@ -23,7 +24,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const appCode = searchParams.get('appCode')?.trim().toUpperCase() || undefined;
     const status = searchParams.get('status')?.trim().toUpperCase() || undefined;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 200);
+    /*
+     * The same two faults the profitability door had, and measured against
+     * this database rather than assumed: `?limit=0` silently became 50, and
+     * `?limit=-5` reached Prisma as `take: -5`, which Prisma ACCEPTS and
+     * reads as «the last five» — so a page asking for five deliveries got
+     * the five OLDEST ones, in reverse, with nothing on the screen saying so.
+     */
+    const limit = readLimit(searchParams, 50, 200);
 
     const deliveries = await db.appDelivery.findMany({
       where: {

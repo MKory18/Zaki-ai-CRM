@@ -128,7 +128,25 @@ export async function POST(req: Request) {
     }
 
     const sameCurrency = from.currencyCode === to.currencyCode;
-    if (!sameCurrency && !input.exchangeRate) {
+    /*
+     * «WAS A RATE GIVEN» IS A QUESTION ABOUT PRESENCE, NOT ABOUT TRUTH.
+     *
+     * This read `!input.exchangeRate`, and it was correct only by the luck of
+     * the line above: the schema says `.positive()`, so by here the value is
+     * `undefined` or greater than zero and `!x` happens to coincide with
+     * `x === undefined`. Loosen the schema to `.min(0)` one day and a rate of
+     * **0** — a number somebody typed — is answered «يتطلب سعر صرف», which
+     * sends the reader looking for an empty box they have just filled in. The
+     * same conflation `c119e31` removed from the expense door.
+     *
+     * AND THE `.positive()` IS RIGHT, from the column and the arithmetic:
+     * `exchangeRate` is `Decimal(14,6)` and NOT NULL, `amountIn` is
+     * `amountOut * rate`, and `recordMovement` refuses an amount of zero —
+     * so a rate of 0 can never produce a transfer that is written. There is
+     * no legitimate rate of zero: it would mean money left one wallet and
+     * none arrived in the other.
+     */
+    if (!sameCurrency && input.exchangeRate === undefined) {
       return NextResponse.json(
         {
           error: `التحويل من ${from.currencyCode} إلى ${to.currencyCode} يتطلب سعر صرف`,
@@ -141,6 +159,27 @@ export async function POST(req: Request) {
     const rate = sameCurrency ? 1 : (input.exchangeRate as number);
     const amountIn = roundMinor(input.amountOut * rate, to.country.minorUnit);
     const amountOut = roundMinor(input.amountOut, from.country.minorUnit);
+
+    /*
+     * A RATE SMALL ENOUGH TO ROUND THE ARRIVING AMOUNT TO NOTHING IS REFUSED
+     * HERE, WITH A 400 — because `recordMovement`'s own guard
+     * (`amount <= 0` → `throw`) fires inside the transaction and comes back
+     * as the generic **500 «حدث خطأ داخلي»**, which tells the person to call
+     * the administrator about a rate they can fix themselves. Measured:
+     * `.positive()` admits `0.000001`, and 100 at that rate into a 3-decimal
+     * currency is `roundMinor(0.0001, 3) === 0`. Nothing was ever written
+     * wrongly — the transaction rolls back — but the sentence was wrong, and
+     * `0aea050`'s rule for a bad money value is a 400 that names it.
+     */
+    if (amountIn <= 0) {
+      return NextResponse.json(
+        {
+          error: `سعر الصرف ${rate} يجعل المبلغ الواصل إلى ${to.name} صفراً. راجع سعر الصرف.`,
+          code: 'EXCHANGE_RATE_TOO_SMALL',
+        },
+        { status: 400 }
+      );
+    }
 
     const transfer = await db.$transaction(async (tx) => {
       const created = await tx.walletTransfer.create({
