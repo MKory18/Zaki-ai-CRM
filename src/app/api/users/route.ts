@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { manageableUsersWhere } from '@/lib/manageable-user';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { z } from 'zod';
@@ -169,8 +170,8 @@ export async function GET(req: Request) {
     const status = searchParams.get('status')?.trim();
     const dateFrom = searchParams.get('from');
     const dateTo = searchParams.get('to');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '25', 10);
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 25, 200);
 
     // The one rule, in its list shape — see manageable-user.ts. Written by
     // hand here it leaned on Prisma dropping an undefined key to let a

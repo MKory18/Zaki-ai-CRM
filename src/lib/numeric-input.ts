@@ -55,3 +55,80 @@ export const count = (max: number, min = 0) => z.preprocess(read, z.number().int
 
 /** An amount of money: never negative, bounded so a typo cannot be a fortune. */
 export const money = (max: number) => z.preprocess(read, z.number().min(0).max(max));
+
+/**
+ * A PAGE OF RESULTS, READ FROM A QUERY STRING — ONE READER FOR ALL OF THEM.
+ *
+ * Seven list endpoints read their paging as
+ *
+ *     const page = parseInt(searchParams.get('page') || '1', 10);
+ *     … skip: (page - 1) * limit
+ *
+ * and `parseInt('abc', 10)` is `NaN`, so `skip` was `NaN`. MEASURED against
+ * this database rather than guessed, because the three plausible outcomes
+ * are very different and only one of them is harmless:
+ *
+ *     db.order.findMany({ skip: NaN, take: 25 })
+ *       → PrismaClientValidationError: Argument `take` is missing.
+ *
+ * It is not a silent full scan and it is not an empty page. Prisma refuses
+ * `NaN` in the client, before any SQL — so nothing is read wrongly and
+ * nothing is written — and the error is a `PrismaClientValidationError`,
+ * which `api-error.ts` deliberately does not echo (it carries the server's
+ * absolute source path). It therefore falls to the last branch: **HTTP 500,
+ * «حدث خطأ داخلي»**. A typo in a URL, a stale bookmark, or a client that
+ * interpolated an `undefined` into `?page=` takes the whole screen down and
+ * tells the operator to call the administrator.
+ *
+ * CLAMPED, NOT REFUSED — and the difference from the money rule is the
+ * point, not an exception to it. A bad price must be refused because it
+ * gets WRITTEN and is then invisible: nobody can see that the 0 in the
+ * column is not the 0 somebody meant. A bad page number is written nowhere.
+ * It selects which rows to look at, and a person looking at the first page
+ * can see that they are on the first page — the response says
+ * `pagination.page`, so the clamped value is reported, not hidden. The two
+ * doors in this repository that already got this right
+ * (`products/route.ts`, `landing-pages/route.ts`) both clamp, so clamping
+ * is also the answer that leaves one rule instead of two.
+ */
+/**
+ * Which page was asked for: a whole number, at least 1.
+ *
+ * The ceiling is not cosmetic. `skip` is a Prisma `Int`, so an unbounded
+ * page number puts a value past 2³¹ into `(page - 1) * limit` and the 500
+ * comes back by the other road. A million pages of the largest page size
+ * this repository allows is five hundred million rows — past anything the
+ * system holds, and inside Int.
+ */
+export function readPage(params: URLSearchParams): number {
+  return whole(params.get('page'), 1, 1, 1_000_000);
+}
+
+/**
+ * How many rows per page: a whole number in `[1, max]`.
+ *
+ * `max` is the caller's, because what one screen can render is the screen's
+ * business — but it is NOT optional, and that is deliberate.
+ * `users/route.ts` had no ceiling at all, so `?limit=100000` asked Postgres
+ * for a hundred thousand users and the browser to draw them.
+ */
+export function readLimit(params: URLSearchParams, fallback: number, max: number): number {
+  return whole(params.get('limit'), fallback, 1, max);
+}
+
+/**
+ * The query parameter as a whole number inside `[min, max]`, or the
+ * fallback when it is absent or is not written the way a number is written.
+ *
+ * `read` is the same strict reader the schemas above use, so `'abc'`,
+ * `'0x10'`, `''` and `'1e400'` all fall to the fallback rather than
+ * becoming `NaN`, `16`, `0` or `Infinity`. `Math.trunc` rather than
+ * `Math.round`: `?limit=25.7` asks for twenty-five rows and a half, and
+ * twenty-five is the honest reading of it.
+ */
+function whole(raw: string | null, fallback: number, min: number, max: number): number {
+  if (raw === null) return fallback;
+  const value = read(raw);
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.trunc(value), min), max);
+}

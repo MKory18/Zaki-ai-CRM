@@ -1,4 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { count, money as moneyInput } from '@/lib/numeric-input';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
@@ -6,6 +8,7 @@ import { requireContext } from '@/lib/geo-context';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
+import { zodMessage } from '@/lib/zod-message';
 
 export async function GET(req: Request) {
   try {
@@ -41,30 +44,105 @@ export async function GET(req: Request) {
   }
 }
 
+/**
+ * THE CREATE DOOR READS ITS NUMBERS THE WAY THE EDIT DOOR DOES.
+ *
+ * `PATCH /api/production/[id]` — the door that CORRECTS the same four
+ * buckets and the same cost lines — has validated them with
+ * `numeric-input` since it was written, and `numeric-input.test.ts` names
+ * it among «the doors that move money or stock». This door, the one that
+ * creates the batch in the first place, validated nothing. The same
+ * failure as every other sibling-door miss in this audit: the rule landed
+ * on one of a pair.
+ *
+ * WHAT THE OLD DOOR DID, MEASURED:
+ *
+ *   · `!quantityProduced || quantityProduced <= 0` is not a number guard.
+ *     On the STRING `'abc'`, `'abc' <= 0` is `false` and `!'abc'` is
+ *     `false`, so it passed — and `parseInt('abc', 10)` is `NaN`. Prisma
+ *     refuses `NaN` for an `Int` column (`PrismaClientValidationError`),
+ *     so nothing was stored; what the operator got was a 500 «حدث خطأ
+ *     داخلي» where a 400 naming the field was waiting.
+ *   · The silent ones are worse, because they DID store. `'5abc'` → 5.
+ *     `'3,5'` from an Arabic keyboard → 3. `'1e3'` typed for a thousand →
+ *     **1**. And `'0x10'` → 0, so a run with real costs was recorded with
+ *     zero units and `costPerUnit` 0 — past a guard whose whole text says
+ *     the quantity must be above zero.
+ *   · `parseFloat(manufacturingCost) || 0` stored **0** for anything that
+ *     is not a number, and that zero is not visible anywhere: it flows
+ *     through `batchTotal` into `totalProductionCost` and `costPerUnit`,
+ *     and out into every COGS and production-cost report. Same defect as
+ *     `82ecac3`'s free product, on the cost side.
+ *   · A free-form cost line was `Math.max(0, Number(l?.amount) || 0)`: a
+ *     non-numeric amount became 0, and a NEGATIVE amount was silently
+ *     CLAMPED to 0. It is refused now, not clamped. A clamp keeps the
+ *     batch's own total wrong — understated by exactly what was typed —
+ *     and says nothing, so the operator reads a unit cost that is not the
+ *     one their input implies. And the four buckets beside it are refused
+ *     for a negative, so a clamp here would be one screen with two rules
+ *     for the same kind of number, which is what `a-column-has-one-rule`
+ *     exists to stop.
+ *
+ * A ZERO IS STILL STORABLE, everywhere a zero is a real answer: a run with
+ * no packaging cost, and a named line whose amount is genuinely nothing.
+ * Every column's own default is `0.0`, and that default is declared here
+ * once — not re-applied at the write site, which is where `82ecac3` found
+ * the eighth vacuous guard.
+ *
+ * WHAT IS REFUSED THAT USED TO BE ACCEPTED SILENTLY: a blank cost-line
+ * label (it was dropped, taking its amount with it), a 31st cost line (it
+ * was truncated), and a label past 80 characters (it was cut). The edit
+ * door refuses all three. The screen filters blank labels before it sends,
+ * so no live caller changes behaviour.
+ */
+const money = moneyInput(100_000_000);
+
+const createSchema = z.object({
+  productId: z.string().min(10).max(64),
+  batchNumber: z.string().trim().min(1).max(60),
+  /** Whole, and at least one: a run of nothing is not a run. */
+  quantityProduced: count(1_000_000, 1),
+  manufacturingCost: money.default(0),
+  packagingCost: money.default(0),
+  rawMaterialCost: money.default(0),
+  otherCosts: money.default(0),
+  /**
+   * Free-form cost lines — "قالب", "أجرة عامل", "شحن المواد". Four fixed
+   * buckets never matched a real run; they matched whatever fitted into
+   * four words. The buckets stay for the batches that use them, and the
+   * total is the buckets plus the lines.
+   *
+   * The same shape the edit door declares, so the two cannot disagree about
+   * what a cost line is.
+   */
+  costLines: z
+    .array(z.object({ label: z.string().trim().min(1).max(80), amount: money }))
+    .max(30)
+    .default([]),
+  /**
+   * `new Date('abc')` is an Invalid Date, and Prisma refuses it — another
+   * 500 where a sentence belongs. Refused here instead.
+   */
+  productionDate: z
+    .string()
+    .trim()
+    .min(1)
+    .refine((s) => Number.isFinite(new Date(s).getTime()), 'تاريخ الإنتاج غير صالح')
+    .optional()
+    .nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+});
+
 export async function POST(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
     await requirePermission('production.manage');
 
-    const body = await req.json();
-    const {
-      productId,
-      batchNumber,
-      quantityProduced,
-      manufacturingCost,
-      packagingCost,
-      rawMaterialCost,
-      otherCosts,
-      productionDate,
-      notes,
-    } = body;
-
-    if (!productId || !batchNumber || !quantityProduced || quantityProduced <= 0) {
-      return NextResponse.json(
-        { error: 'Product, Batch Number, and Quantity Produced (> 0) are required', errorAr: 'المنتج ورقم التشغيلة والكمية المنتجة مطلوبة، والكمية أكبر من صفر.' },
-        { status: 400 }
-      );
+    const parsed = createSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
+    const { productId, batchNumber, productionDate, notes } = parsed.data;
 
     // Check duplicate batch number
     const existing = await db.productionBatch.findUnique({
@@ -83,25 +161,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const qty = parseInt(quantityProduced, 10);
-    const mfg = parseFloat(manufacturingCost) || 0;
-    const pack = parseFloat(packagingCost) || 0;
-    const raw = parseFloat(rawMaterialCost) || 0;
-    const other = parseFloat(otherCosts) || 0;
-
-    // Free-form cost lines — "قالب", "أجرة عامل", "شحن المواد". Four fixed
-    // buckets never matched a real run; they matched whatever fitted into
-    // four words. The buckets stay for the batches that use them, and the
-    // total is the buckets plus the lines.
-    const costLines: { label: string; amount: number }[] = Array.isArray(body.costLines)
-      ? body.costLines
-          .map((l: { label?: unknown; amount?: unknown }) => ({
-            label: String(l?.label ?? '').trim().slice(0, 80),
-            amount: Math.max(0, Number(l?.amount) || 0),
-          }))
-          .filter((l: { label: string; amount: number }) => l.label.length > 0)
-          .slice(0, 30)
-      : [];
+    // Already numbers, already bounded, already non-negative — the schema
+    // did that. No fallback here: a fallback at the write site is a second
+    // rule for the column, and the default that belongs to an absent cost
+    // is declared once, in the schema, where it can be read.
+    const { quantityProduced: qty, manufacturingCost: mfg, packagingCost: pack,
+      rawMaterialCost: raw, otherCosts: other, costLines } = parsed.data;
 
     const { total: totalProductionCost } = batchTotal({
       manufacturingCost: mfg,

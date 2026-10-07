@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -19,8 +20,8 @@ export async function GET(req: Request) {
     const { user, companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
     const bucket = searchParams.get('bucket') || 'today';
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 50, 100);
 
     const now = new Date();
     const startOfToday = new Date(now);

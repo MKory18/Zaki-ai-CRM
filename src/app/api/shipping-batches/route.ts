@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 
@@ -15,8 +16,8 @@ export async function GET(req: Request) {
   try {
     const { companyId, storeId } = await requireContext();
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 50, 100);
 
     const [total, batches] = await Promise.all([
       db.shippingBatch.count({ where: { companyId, storeId } }),

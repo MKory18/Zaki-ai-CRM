@@ -1,4 +1,5 @@
 import { whereDelivered } from '@/lib/order-state';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -20,8 +21,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const queue = searchParams.get('queue') || 'all';
     const providerId = searchParams.get('providerId')?.trim();
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 50, 100);
 
     // Canonical keys only — view_assigned is a legacy alias for orders.view
     const mayViewShipping =

@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { money as moneyInput } from '@/lib/numeric-input';
+import { zodMessage } from '@/lib/zod-message';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { notify } from '@/lib/notify';
 import { db } from '@/lib/db';
@@ -58,6 +61,20 @@ const CONFIRMATION_AR: Record<string, string> = CONFIRMATION_STATUS_AR;
  * it called PACKING «قيد التجهيز» — which is the core state PREPARING. */
 const SHIPPING_AR: Record<string, string> = SHIPPING_STATUS_AR;
 
+/**
+ * The strict reader every door that moves money uses, wrapped in an object
+ * so the refusal can NAME the field — `zodMessage` reads the field out of
+ * the issue's path, and a bare value has no path.
+ *
+ * The ceiling is deliberately loose. It is there to catch a typo with an
+ * extra five digits on it, not to express a fee policy: this system runs
+ * Syrian pounds and Iraqi dinars beside dollars, so any tight number would
+ * refuse a legitimate fee in the weaker currency. (The orders door's
+ * `shippingCost: amount(1000)` is the tight one, and that is a separate
+ * question about that door, not a precedent to copy here.)
+ */
+const DELIVERY_FEE = z.object({ deliveryFee: moneyInput(1_000_000) });
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -103,7 +120,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       deliveryFailureReason, returnReason, expectedVersion,
     } = body as {
       action?: string; to?: string; deliveryProviderId?: string; shippingBatchId?: string;
-      trackingNumber?: string; shippingReference?: string; deliveryFee?: number; shippingNote?: string;
+      // `unknown`, not `number`: this is a parsed request body and the
+      // annotation was a wish. Calling it `number` is what let
+      // `Number(deliveryFee) || 0` read as a formality.
+      trackingNumber?: string; shippingReference?: string; deliveryFee?: unknown; shippingNote?: string;
       deliveryFailureReason?: string; returnReason?: string; expectedVersion?: number;
     };
 
@@ -296,7 +316,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           }
         }
         if (shippingReference !== undefined) updateData.shippingReference = (shippingReference as string).trim() || null;
-        if (deliveryFee !== undefined) updateData.deliveryFee = Number(deliveryFee) || 0;
+        if (deliveryFee !== undefined) {
+          /*
+           * A FEE THAT IS NOT A NUMBER IS REFUSED, NOT MADE FREE.
+           *
+           * This was `Number(deliveryFee) || 0`, and this column is not a
+           * display: `settlement.ts:469` deducts it from what the courier
+           * owes, `commission.ts:167` subtracts it before commission, and
+           * `agent-custody.ts:141` carries it into the agent's custody
+           * figure. A non-numeric fee stored **0** — free delivery — and
+           * the courier statement then disagreed with the order by exactly
+           * the fee, silently and in the courier's favour.
+           *
+           * DELETING THE FALLBACK IS NOT ENOUGH HERE, and that is measured
+           * rather than assumed: `deliveryFee` is `Float?`, and Prisma
+           * ACCEPTS `NaN` for a nullable Float — it lands as NULL, which
+           * every reader above spells `?? 0`. So the bare write stores the
+           * same wrong zero by a longer road. The only answer that tells
+           * anybody anything is a 400.
+           *
+           * `null` stays writable and means «no fee recorded», which is
+           * what the column's own nullability says and what 30 of 56 live
+           * orders hold. `0` stays writable too: `priceIncludesDelivery`
+           * makes a zero fee a real policy, not a missing number.
+           */
+          if (deliveryFee === null) {
+            updateData.deliveryFee = null;
+          } else {
+            const fee = DELIVERY_FEE.safeParse({ deliveryFee });
+            if (!fee.success) {
+              return NextResponse.json({ error: zodMessage(fee.error) }, { status: 400 });
+            }
+            updateData.deliveryFee = fee.data.deliveryFee;
+          }
+        }
         break;
       }
 

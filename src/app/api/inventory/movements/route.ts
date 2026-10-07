@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { readLimit } from '@/lib/numeric-input';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
     const productId = q.get('product')?.trim();
     const type = q.get('type')?.trim();
     const term = q.get('q')?.trim();
-    const limit = Math.min(Number(q.get('limit') ?? 100), 300);
+    const limit = readLimit(q, 100, 300);
     const before = q.get('before');
 
     const where = {

@@ -46,6 +46,15 @@ const FIELDS: Record<string, string> = {
   unitPrice: 'سعر الوحدة',
   sellingPrice: 'سعر البيع',
   amount: 'المبلغ',
+  // The production-run door. Without these the reader got «حقل مطلوب
+  // ناقص» for a missing quantity and the raw English «Too small: …» for a
+  // negative cost — which is the half of a refusal that nobody can act on.
+  quantityProduced: 'الكمية المنتجة',
+  manufacturingCost: 'كلفة التصنيع',
+  packagingCost: 'كلفة التغليف',
+  rawMaterialCost: 'كلفة المواد الخام',
+  otherCosts: 'كلف أخرى',
+  deliveryFee: 'رسوم التوصيل',
   reason: 'السبب',
   note: 'الملاحظة',
   notes: 'الملاحظات',
@@ -124,10 +133,31 @@ export function zodMessage(error: ZodError): string {
   const isId = !!key && /Id$/.test(key);
 
   switch (issue.code) {
-    case 'invalid_type':
-      // An unchosen dropdown arrives as undefined or null, and "expected
-      // string, received undefined" is not something anyone can act on.
-      return named ? `${named} مطلوب` : 'حقل مطلوب ناقص';
+    case 'invalid_type': {
+      /*
+       * «NOT FILLED IN» AND «FILLED IN WRONG» ARE DIFFERENT SENTENCES.
+       *
+       * An unchosen dropdown arrives as undefined or null, and "expected
+       * string, received undefined" is not something anyone can act on —
+       * `مطلوب` is. But a value that ARRIVED and is merely of the wrong
+       * kind got the same `مطلوب`, which sends the reader looking for an
+       * empty box they already filled. Measured on the production door,
+       * where `quantityProduced: '3,5'` from an Arabic keyboard is the
+       * commonest case: «الكمية المنتجة مطلوب» named the right field and
+       * then told the operator the opposite of what was wrong.
+       *
+       * Zod's own message carries the distinction — `received undefined`
+       * against `received string` — so nothing has to be guessed.
+       */
+      const absent = /received (?:undefined|null|nan)\b/i.test(issue.message);
+      if (absent) return named ? `${named} مطلوب` : 'حقل مطلوب ناقص';
+      const expected = (issue as { expected?: string }).expected;
+      if (expected === 'number' || expected === 'int') {
+        const whole = expected === 'int' ? ' صحيحاً' : '';
+        return named ? `${named}: اكتبه رقماً${whole} بالأرقام` : `اكتب رقماً${whole} بالأرقام`;
+      }
+      return named ? `${named} غير صالح` : 'قيمة غير صالحة';
+    }
 
     case 'too_small': {
       if (isId) return named ? `اختر ${named} أولاً` : 'اختر القيمة المطلوبة أولاً';

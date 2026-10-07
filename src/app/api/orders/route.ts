@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { z } from 'zod';
-import { count, money as amount } from '@/lib/numeric-input';
+import { count, money as amount, readLimit, readPage } from '@/lib/numeric-input';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { findOrCreateCustomer } from '@/lib/customer-identity';
@@ -31,13 +31,20 @@ export async function GET(req: Request) {
     }
     const { searchParams } = new URL(req.url);
 
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    // Cap page size (hard server-side limit) with a NaN guard
-    const parsedLimit = parseInt(searchParams.get('limit') || '25', 10);
-    // Twenty-five reads well; a batch being printed or exported needs all of
-    // it. The ceiling is what one screen can render without stalling, and the
-    // response says the real total either way, so the count never lies.
-    const limit = Math.min(Number.isNaN(parsedLimit) ? 25 : parsedLimit, 500);
+    /*
+     * `limit` already had the NaN guard; `page` never did, and the arrows
+     * are what sends it. `parseInt('abc', 10)` is `NaN`, so `skip` below was
+     * `NaN`, and Prisma refuses `NaN` in the client — which `api-error.ts`
+     * turns into a 500 «حدث خطأ داخلي» because a Prisma message carries the
+     * server's own file paths and may not be shown. One bad character in a
+     * query string took the orders list down.
+     *
+     * Twenty-five reads well; a batch being printed or exported needs all of
+     * it. The ceiling is what one screen can render without stalling, and the
+     * response says the real total either way, so the count never lies.
+     */
+    const page = readPage(searchParams);
+    const limit = readLimit(searchParams, 25, 500);
 
     /*
      * THE FILTERS ARE BUILT IN ONE PLACE — see src/lib/order-filters.ts.
@@ -319,9 +326,31 @@ export async function POST(req: Request) {
     // ONE COD function, used by every screen and service (contract PART 5).
     // It takes the whole order at once, so a discount spread over several
     // lines is allocated in one place rather than guessed per line.
+    /*
+     * THE NINTH VACUOUS GUARD, DELETED RATHER THAN SWAPPED.
+     *
+     * This read `(line.unitPrice || 0) / line.quantity`. By here
+     * `line.unitPrice` is ALWAYS a finite number: an explicit `items[]`
+     * line is `unitPrice: amount(100000)` at the schema above — `money()`
+     * from `numeric-input`, so `min(0).max(100000)` and nothing non-numeric
+     * survives it — and the single-product shorthand is built from
+     * `sellingPrice ?? 0`, where `sellingPrice` is the same `amount(100000)`
+     * and the `??` has already absorbed «not sent». So the only falsy value
+     * `||` could ever meet is a legitimate `0`, which it replaced with `0`.
+     *
+     * That is the shape this audit has now caught nine times: a fallback
+     * that reads as live policy and cannot run. Swapping it for `??` would
+     * have kept the appearance and added nothing.
+     *
+     * `line.quantity > 0` stays, and is not the same kind of thing: it is
+     * `count(999, 1)` so it cannot be 0 today either, but it guards a
+     * DIVISION, and a division that cannot divide by zero is worth saying
+     * out loud. What it returns in that branch is now the unit price
+     * itself, with no fallback dressing.
+     */
     const codLines = requestedLines.map((line) => ({
       quantity: line.quantity,
-      unitPrice: line.quantity > 0 ? (line.unitPrice || 0) / line.quantity : line.unitPrice || 0,
+      unitPrice: line.quantity > 0 ? line.unitPrice / line.quantity : line.unitPrice,
     }));
     const money = computeCod({
       lines: codLines,
@@ -444,7 +473,10 @@ export async function POST(req: Request) {
           productId: line.productId,
           productName: productById.get(line.productId)?.name ?? '',
           quantity: line.quantity,
-          unitPrice: line.quantity > 0 ? (line.unitPrice || 0) / line.quantity : line.unitPrice || 0,
+          // The same reading as `codLines` above, and for the same reason:
+          // `unitPrice` is zod-validated money by the time it is here, so a
+          // `|| 0` could only ever have replaced a real zero with zero.
+          unitPrice: line.quantity > 0 ? line.unitPrice / line.quantity : line.unitPrice,
           discountShare: money.discountShares[i] ?? 0,
           lineTotal: money.lineTotals[i] ?? 0,
           addedById: user.id,

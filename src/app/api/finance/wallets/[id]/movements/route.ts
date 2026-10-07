@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { readLimit } from '@/lib/numeric-input';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
@@ -56,7 +57,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const wallet = await walletOf(id, companyId, storeId);
     if (!wallet) return NextResponse.json({ error: 'المحفظة غير موجودة' }, { status: 404 });
 
-    const take = Math.min(Number(new URL(req.url).searchParams.get('limit') ?? 100), 300);
+    const take = readLimit(new URL(req.url).searchParams, 100, 300);
     const movements = await db.walletMovement.findMany({
       where: { walletId: id },
       orderBy: { createdAt: 'desc' },

@@ -66,7 +66,24 @@ export function ProductsScreen() {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [description, setDescription] = useState('');
-  const [basePrice, setBasePrice] = useState(20);
+  /*
+   * THE PRICE BOX HOLDS WHAT WAS TYPED, AND THE DOOR DECIDES.
+   *
+   * These two boxes were `parseFloat(e.target.value) || 0`, so clearing the
+   * field to retype a price did not clear it: it set the price to **0**, the
+   * box redrew as `0`, and pressing save stored a free product and answered
+   * 200. `82ecac3` closed both product doors against that exact value —
+   * `readBasePrice` refuses anything that is not a number and 0 is a real
+   * price — and the browser was quietly converting the refusable input into
+   * the one wrong value the door is obliged to accept.
+   *
+   * So the state is a string now: an empty box is an empty box, and what
+   * reaches `POST`/`PATCH /api/products` is the characters the person typed.
+   * `readBasePrice` reads `' 12.5 '`, refuses `''` and `'abc'` with
+   * `BASE_PRICE_NOT_A_NUMBER`, and the dialogs already render that sentence.
+   * Nothing here does arithmetic on the figure; it is carried, not computed.
+   */
+  const [basePrice, setBasePrice] = useState('20');
   const [sourceType, setSourceType] = useState<'MANUFACTURED' | 'PURCHASED'>('MANUFACTURED');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState('ACTIVE');
@@ -96,7 +113,7 @@ export function ProductsScreen() {
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', nameEn: '', sku: '', description: '', descriptionEn: '', basePrice: 0, status: 'ACTIVE' , categoryId: null as string | null });
+  const [editForm, setEditForm] = useState({ name: '', nameEn: '', sku: '', description: '', descriptionEn: '', basePrice: '', status: 'ACTIVE' , categoryId: null as string | null });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -108,7 +125,11 @@ export function ProductsScreen() {
       sku: p.sku || '',
       description: p.description || '',
       descriptionEn: p.descriptionEn || '',
-      basePrice: p.basePrice || 0,
+      // `p.basePrice || 0` was the TENTH of the vacuous ones: the column is
+      // `Float @default(0.0)` and NOT NULL, so the only falsy value it can
+      // hold is a real 0, which the fallback replaced with 0. The price is
+      // now shown as the stored number, whatever it is.
+      basePrice: String(p.basePrice),
       categoryId: p.categoryId ?? null,
       status: p.status || 'ACTIVE',
     });
@@ -617,7 +638,7 @@ export function ProductsScreen() {
                 type="number"
                 step="0.01"
                 value={basePrice}
-                onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setBasePrice(e.target.value)}
                 required
               />
               <Select label="حالة المنتج" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -779,7 +800,7 @@ export function ProductsScreen() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input label="رمز SKU *" value={editForm.sku} onChange={(e) => setEditForm({ ...editForm, sku: e.target.value.toUpperCase() })} required />
-            <Input label="السعر الأساسي ($)" type="number" step="0.01" value={editForm.basePrice} onChange={(e) => setEditForm({ ...editForm, basePrice: parseFloat(e.target.value) || 0 })} />
+            <Input label="السعر الأساسي ($)" type="number" step="0.01" value={editForm.basePrice} onChange={(e) => setEditForm({ ...editForm, basePrice: e.target.value })} />
             <Select label="الحالة" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
               <option value="ACTIVE">{PRODUCT_STATUS_AR.ACTIVE}</option>
               <option value="INACTIVE">{PRODUCT_STATUS_AR.INACTIVE}</option>

@@ -55,13 +55,34 @@ describe('a number arriving from outside', () => {
 });
 
 /**
- * The doors that move money or stock use it. Others may still coerce —
- * a page number read loosely costs nobody anything.
+ * The doors that move money or stock use it.
+ *
+ * «Others may still coerce — a page number read loosely costs nobody
+ * anything» stood here, and it has been MEASURED and is wrong. `?page=abc`
+ * is `parseInt('abc', 10)` → `NaN` → `skip: NaN`, and Prisma refuses `NaN`
+ * client-side with a `PrismaClientValidationError`. `api-error.ts` may not
+ * echo a Prisma message (it carries the server's absolute paths), so it
+ * falls to the last branch: **HTTP 500, «حدث خطأ داخلي»**. It costs the
+ * reader the whole screen. Seven list endpoints read it that way; they now
+ * share `readPage`/`readLimit` in `numeric-input.ts`, which clamp — because
+ * a page number is written nowhere, which is the one thing that makes
+ * clamping honest here and dishonest for a price.
  */
 describe('the doors that move money or stock', () => {
   const FILES = [
     'src/app/api/orders/route.ts',
     'src/app/api/inventory/route.ts',
+    /*
+     * BOTH production doors, which is the point of listing them together.
+     * `[id]` — the door that CORRECTS a batch's costs — has validated them
+     * since it was written. The create door beside it validated nothing:
+     * `parseInt(quantityProduced, 10)` past a guard that read
+     * `quantityProduced <= 0`, which is `false` for the string `'abc'`; and
+     * `parseFloat(cost) || 0`, which stored a zero cost for anything that
+     * was not a number. The same sibling-door miss this audit has found in
+     * four other pairs.
+     */
+    'src/app/api/production/route.ts',
     'src/app/api/production/[id]/route.ts',
     'src/lib/offers.ts',
   ];

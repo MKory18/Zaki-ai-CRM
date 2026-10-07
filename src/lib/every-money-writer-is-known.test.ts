@@ -128,7 +128,29 @@ const READS_ONLY: Record<string, string> = {
   'src/app/api/orders/[id]/confirmation/route.ts': 'حالة التأكيد وسببها — لا مال فيها',
   'src/app/api/orders/[id]/finance/route.ts': 'أرباح بـPrisma.Decimal — دالّة مالٍ أخرى ولا تدوير',
   'src/app/api/orders/[id]/reorder/route.ts': 'يمرّر تعديلات إلى createReplacementOrder',
-  'src/app/api/orders/[id]/shipping/route.ts': 'حالة الشحن ومواعيدها — لا يلمس رقماً من أرقام الطلب',
+  /*
+   * THE REASON WAS NOT TRUE, AND THE VOCABULARY IS WHY NOBODY NOTICED.
+   *
+   * It read «حالة الشحن ومواعيدها — لا يلمس رقماً من أرقام الطلب», and this
+   * route DOES write one of the order's money columns: `update_tracking`
+   * writes `deliveryFee`, which `settlement.ts` deducts from what the
+   * courier owes and `commission.ts` subtracts before commission. It
+   * escaped notice because `MONEY_FIELD` above knows four names and
+   * `deliveryFee` is not among them — so the file is in this sweep on the
+   * strength of a different name entirely, and its reason was describing a
+   * file that does not exist.
+   *
+   * The name stays on this list, because the figure it writes is NOT one a
+   * money function computes: a delivery fee is a number a person types,
+   * like a price. What it needed was the door, and `e6…` gave it one —
+   * `money()` from `numeric-input`, refusing what is not a fee instead of
+   * storing `Number(deliveryFee) || 0`, which was free delivery. Widening
+   * `MONEY_FIELD` to include `deliveryFee` is the owner's call and not a
+   * side effect of this correction: it would pull in every reader of the
+   * column across the tree and both lists would have to be re-partitioned.
+   */
+  'src/app/api/orders/[id]/shipping/route.ts':
+    'حالة الشحن ومواعيدها، ويكتب deliveryFee وحدَه — رقمٌ يكتبه شخصٌ لا تحسبه دالّة، وبابُه يرفض ما ليس رقماً',
   'src/app/api/products/route.ts': 'سعر المنتج في الكتالوج، لا سعر سطرٍ في طلب',
   'src/app/api/shipping-batches/[id]/route.ts': 'حالة دفعة الشحن وأعضاؤها — لا مال',
   'src/app/api/whatsapp/conversations/[id]/route.ts': 'يعرض إجمالاً داخل محادثة',
