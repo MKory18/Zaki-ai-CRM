@@ -136,8 +136,16 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
          * alone, and the stored `unitPrice` is itself `lineTotal / quantity`
          * rounded to two places (see `settlement.ts`), so the product is not
          * even a faithful copy: 3 × 16.67 reads 50.01 against a stored 50.
+         *
+         * `String(…)` and not `Number(…)` SINCE THE EDITOR'S PRICE BOX HOLDS
+         * CHARACTERS. It had to, so that «I cleared this box» could be said
+         * at all — `Number('')` is `0` and the box was redrawing a cleared
+         * price as a free line. The stored total is still the only thing the
+         * box opens on; only its notation changed, and `Number(l.lineTotal)`
+         * is still the parse of the string a Prisma `Decimal` becomes on the
+         * wire, now written back as the digits a person would have typed.
          */
-        price: Number(l.lineTotal),
+        price: String(Number(l.lineTotal)),
       }))
     );
     setError(null);

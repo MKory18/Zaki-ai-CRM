@@ -38,7 +38,56 @@ interface Offer {
   status: string;
 }
 
-type Draft = Partial<Offer> & { quantity: number; sellingPrice: number };
+/**
+ * WHAT A BOX PUTS ON THE WIRE: ITS CHARACTERS, OR NOTHING AT ALL.
+ *
+ * The reader `CourierFees.tsx` got in `17cbe93` and `ManufacturingScreen.tsx`
+ * in `509306a`. Three boxes on this form were the defect it names —
+ * `Number(e.target.value) || 0` on the selling price, `|| 0` on the free
+ * quantity, `|| 1` on the quantity — so a cleared box and a typed zero were
+ * the same request, and the component wrote the fabricated figure back into
+ * the box (clearing «25» and typing «30» produced «030»).
+ *
+ * `undefined` is the answer for an empty box and `JSON.stringify` drops it,
+ * so the field is ABSENT on the wire — and `compareAtPrice` just below has
+ * said the equivalent in this file all along (`e.target.value === '' ? null
+ * : …`), which is why nothing new is imported here. The three fields differ
+ * only in WHAT ABSENT MEANS, and each answer is the column's:
+ *
+ *   quantity      `Int @default(1)`   NOT NULL → absent legitimately IS 1,
+ *                                     and `offerFields` says so once:
+ *                                     `count(999, 1).default(1)`.
+ *   freeQuantity  `Int @default(0)`   NOT NULL → absent legitimately IS 0.
+ *   sellingPrice  `Float`             NOT NULL, NO DEFAULT → absent is not a
+ *                                     value this column can hold, so the
+ *                                     door REFUSES it: «سعر البيع مطلوب».
+ *   compareAtPrice `Float?`           NULLABLE → three states, hence `null`
+ *                                     rather than absence. Unchanged.
+ *
+ * So no number in this file is a copy of a default any more. On a PATCH the
+ * absent field is left alone (`omittedMeansOmitted`, see `lib/offers.ts`),
+ * and on a POST the column's own default decides — one copy, in
+ * `schema.prisma`, read once by `offerFields`.
+ *
+ * AND IT IS THE CHARACTERS, NOT A NUMBER: `money()`/`count()` in
+ * `numeric-input.ts` are stricter than `Number()` and refuse `'0x10'` and
+ * `''` by name, so handing them what was typed is the only way their refusal
+ * can be about what a person typed.
+ */
+function onTheWire(raw: string): string | undefined {
+  return raw.trim() === '' ? undefined : raw;
+}
+
+/**
+ * The draft of one offer. The three numeric boxes hold CHARACTERS so that
+ * «I have not written anything» is sayable; everything else is the stored
+ * row's own shape.
+ */
+type Draft = Omit<Partial<Offer>, 'quantity' | 'freeQuantity' | 'sellingPrice'> & {
+  quantity: string;
+  freeQuantity: string;
+  sellingPrice: string;
+};
 
 export function ProductOffers({
   productId, basePrice, currency, canManage = true,
@@ -70,18 +119,39 @@ export function ProductOffers({
     setBusy(true);
     setMsg(null);
     try {
+      /*
+       * NOT ONE `?? <literal>` LEFT ON THIS WIRE.
+       *
+       * Six of them stood here, and every one was a copy of a default that
+       * `schema.prisma` already declares: `?? 0` over `freeQuantity Int
+       * @default(0)`, `?? 0` over `discount Float @default(0)`, `?? true`
+       * over `deliveryIncluded Boolean @default(true)`, `?? false` over
+       * `isDefault Boolean @default(false)`, `?? 'ACTIVE'` over `status
+       * String @default("ACTIVE")`. Harmless on a POST, where they merely
+       * repeated the column — and a live hazard on the PATCH this same
+       * function sends for an EXISTING offer: `discount: draft.discount ??
+       * 0` over an offer stored with a discount of 3 writes 0 the moment
+       * anything leaves that key off the draft. `323e95a` stripped the
+       * defaults out of the patch schema precisely so that omitted could
+       * mean omitted; sending a fabricated value re-opens the door it shut.
+       *
+       * `sortOrder` stays because it is NOT a copy of the column's default:
+       * the column says 0 («first») and this screen means «append», which is
+       * a positional decision only the list can make. It is set once, in the
+       * initialiser below, and sent as it stands.
+       */
       const body = JSON.stringify({
         productId,
         name: draft.name,
-        quantity: draft.quantity,
-        freeQuantity: draft.freeQuantity ?? 0,
-        sellingPrice: draft.sellingPrice,
+        quantity: onTheWire(draft.quantity),
+        freeQuantity: onTheWire(draft.freeQuantity),
+        sellingPrice: onTheWire(draft.sellingPrice),
         compareAtPrice: draft.compareAtPrice ?? null,
-        discount: draft.discount ?? 0,
-        deliveryIncluded: draft.deliveryIncluded ?? true,
-        isDefault: draft.isDefault ?? false,
-        sortOrder: draft.sortOrder ?? (offers?.length ?? 0),
-        status: draft.status ?? 'ACTIVE',
+        discount: draft.discount,
+        deliveryIncluded: draft.deliveryIncluded,
+        isDefault: draft.isDefault,
+        sortOrder: draft.sortOrder,
+        status: draft.status,
       });
       if (draft.id) {
         await crmApi(`/api/offers/${draft.id}`, { method: 'PATCH', body });
@@ -197,18 +267,39 @@ export function ProductOffers({
               <Button
                 size="sm"
                 disabled={busy}
+                /*
+                 * A NEW OFFER OPENS WITH EVERY NUMERIC BOX EMPTY.
+                 *
+                 * `quantity: 1`, `freeQuantity: 0`, `discount: 0`,
+                 * `deliveryIncluded: true` and `status: 'ACTIVE'` were five
+                 * copies of defaults that live in `schema.prisma` —
+                 * transcribed into a browser and then saved as though a
+                 * person had chosen them. They are gone, and absence now
+                 * reaches the column that owns each one.
+                 *
+                 * `sellingPrice` opens empty too, and that is the one worth
+                 * pausing on: `sellingPrice: basePrice` was not invention —
+                 * the product's own price is a real figure — but it was the
+                 * price of ONE PIECE pre-filled into the price of A BUNDLE.
+                 * Press «عرض جديد», type «ثلاث قطع + واحدة هدية», press
+                 * حفظ, and the shop sells four units for the price of one.
+                 * The placeholder names the base price instead, so the
+                 * seller SEES the figure and has to choose it.
+                 *
+                 * What stays is what is not a default: `isDefault` (the
+                 * first offer of a product is its default — a decision only
+                 * this list can make) and `sortOrder` (append, where the
+                 * column says «first»).
+                 */
                 onClick={() =>
                   setDraft({
                     name: '',
-                    quantity: 1,
-                    freeQuantity: 0,
-                    sellingPrice: basePrice,
+                    quantity: '',
+                    freeQuantity: '',
+                    sellingPrice: '',
                     compareAtPrice: null,
-                    discount: 0,
-                    deliveryIncluded: true,
                     isDefault: (offers?.length ?? 0) === 0,
                     sortOrder: offers?.length ?? 0,
-                    status: 'ACTIVE',
                   })
                 }
               >
@@ -321,7 +412,20 @@ export function ProductOffers({
                       </button>
                       <button
                         aria-label="تعديل" title="تعديل"
-                        onClick={() => setDraft({ ...o })}
+                        /*
+                         * EDITING OPENS ON THE STORED ROW, including a
+                         * stored `0` — which is a value, not a blank. The
+                         * three numeric boxes hold characters, so the row's
+                         * own figures are written in as digits.
+                         */
+                        onClick={() =>
+                          setDraft({
+                            ...o,
+                            quantity: String(o.quantity),
+                            freeQuantity: String(o.freeQuantity),
+                            sellingPrice: String(o.sellingPrice),
+                          })
+                        }
                         disabled={busy}
                         className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-foreground)] hover:bg-[var(--sys-surface-strong)]"
                       >
@@ -347,28 +451,44 @@ export function ProductOffers({
           <div className="space-y-2 rounded-lg border border-[var(--sys-primary)]/30 bg-[var(--sys-primary-soft)] p-3">
             <Input
               label="اسم العرض"
+              name="name"
               placeholder="مثال: ثلاث قطع + واحدة هدية"
               value={draft.name ?? ''}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
             <div className="grid grid-cols-2 gap-2">
+              {/* THE PLACEHOLDERS SAY «الافتراضي» AND NOT THE NUMBER.
+                  Printing «1» or «0» here would put the schema's default
+                  back into the browser, which is the duplication this
+                  change removes. The operator sees the real figure the
+                  moment the offer exists and they press تعديل. */}
               <Input
                 label="الكمية"
+                name="quantity"
                 type="number" min="1" dir="ltr"
+                placeholder="الافتراضي"
+                title="اتركها فارغة ليأخذ العرض الجديد افتراضي النظام، أو لتبقى كمية عرضٍ قائم على ما هي عليه."
                 value={draft.quantity}
-                onChange={(e) => setDraft({ ...draft, quantity: Number(e.target.value) || 1 })}
+                onChange={(e) => setDraft({ ...draft, quantity: e.target.value })}
               />
               <Input
                 label="كمية مجانية"
+                name="freeQuantity"
                 type="number" min="0" dir="ltr"
-                value={draft.freeQuantity ?? 0}
-                onChange={(e) => setDraft({ ...draft, freeQuantity: Number(e.target.value) || 0 })}
+                placeholder="الافتراضي"
+                title="اتركها فارغة ليأخذ العرض الجديد افتراضي النظام (لا هدية)، أو لتبقى هديّة عرضٍ قائم على ما هي عليه. واكتب صفراً إن أردت إلغاء هديّةٍ مسجَّلة."
+                value={draft.freeQuantity}
+                onChange={(e) => setDraft({ ...draft, freeQuantity: e.target.value })}
               />
               <Input
                 label={`السعر (${currency})`}
+                name="sellingPrice"
                 type="number" min="0" step="0.01" dir="ltr"
+                // The base price as a SUGGESTION the seller reads, not a
+                // value the form saves behind their back.
+                placeholder={basePrice > 0 ? `سعر القطعة ${basePrice}` : 'مطلوب'}
                 value={draft.sellingPrice}
-                onChange={(e) => setDraft({ ...draft, sellingPrice: Number(e.target.value) || 0 })}
+                onChange={(e) => setDraft({ ...draft, sellingPrice: e.target.value })}
               />
               <Input
                 label="السعر قبل الخصم"
@@ -394,6 +514,15 @@ export function ProductOffers({
               حساب مال، ولا يظهر مشطوباً إلا بقدر ما تسنده طلباتٌ مُسلَّمة فعلاً بهذا السعر
               من قبل: فإن لم يُبَع بهذا السعر خمس مرات على الأقل، لا يظهر شيء. ورقمٌ أعلى مما
               تسنده الطلبات يُعرض بما تسنده، لا بما كُتب.
+            </p>
+            {/* The one sentence that makes an empty box mean something.
+                Before it, an empty box and a typed zero were the same
+                request — and the price box could not say «مطلوب» at all. */}
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              خانة <b>فارغة</b> تعني «لم تُحدَّد»: العرض القائم يبقى على ما هو عليه، والعرض الجديد يأخذ
+              افتراضي النظام. و<b>صفر مكتوب</b> يُحفَظ صفراً ويُحاسَب صفراً. أمّا «السعر» فلا افتراضيَّ
+              له: عرضٌ جديد بلا سعر <b>مرفوض</b> والموقع يقول لك ذلك عند الحفظ، وتفريغُ سعرِ عرضٍ قائم
+              يتركه على سعره المحفوظ — فالتخفيض إلى الصفر يُكتَب صفراً ولا يُفهَم من خانةٍ فارغة.
             </p>
             <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
               «ينتهي العرض» اختياري. حين تضعه، يتوقّف العرض عن البيع في تلك اللحظة — والعدّاد

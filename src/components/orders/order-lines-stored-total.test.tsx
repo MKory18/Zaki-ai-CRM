@@ -33,6 +33,21 @@ import React from 'react';
  * These tests read the NUMBER in the box and the NUMBER in the request body.
  * Put `|| Number(l.unitPrice) * l.quantity` back and the first reads 42
  * against 0, and the saved `unitPrice` goes out as 42.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE WIRE NOW CARRIES CHARACTERS, AND THE TWO BODY ASSERTIONS SAY SO.
+ *
+ * `ProductLinesEditor`'s price box was `Number(e.target.value) || 0`, so a
+ * CLEARED box was a free line and the component redrew the cleared box as
+ * `0`. Saying «I wrote nothing» needs a third state, so `DraftLine.price`
+ * holds the box's characters or `undefined`, and `JSON.stringify` drops the
+ * `undefined` — see that file's header. `unitPrice` therefore goes out as
+ * `'0'` and `'25'` rather than `0` and `25`, which `z.coerce.number()` at
+ * the PATCH door reads as the same two numbers.
+ *
+ * Both assertions below check the CHARACTERS AND their numeric reading, so
+ * the guard did not get weaker: restoring the fallback still fails them,
+ * with `'42'` and 42.
  */
 
 const { apiFetch, apiJson } = vi.hoisted(() => ({
@@ -109,7 +124,10 @@ const priceBox = () => screen.getByPlaceholderText('سعر السطر') as HTMLI
 function sentBody() {
   expect(apiFetch).toHaveBeenCalled();
   const [, init] = apiFetch.mock.calls[0] as [string, { body: string }];
-  return JSON.parse(init.body) as { items: { unitPrice: number; quantity: number }[]; expectedVersion: number };
+  return JSON.parse(init.body) as {
+    items: { unitPrice: string; quantity: number }[];
+    expectedVersion: number;
+  };
 }
 
 beforeEach(() => {
@@ -151,8 +169,10 @@ describe('a line total of zero', () => {
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
     const body = sentBody();
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].unitPrice).toBe(0);
-    expect(body.items[0].unitPrice).not.toBe(INVENTED);
+    // The characters the box held, and the number the door will read.
+    expect(body.items[0].unitPrice).toBe('0');
+    expect(Number(body.items[0].unitPrice)).toBe(0);
+    expect(Number(body.items[0].unitPrice)).not.toBe(INVENTED);
     // The save is still the versioned one — the guard must not have changed
     // what the editor is for.
     expect(body.expectedVersion).toBe(7);
@@ -179,7 +199,8 @@ describe('a line total of zero', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /حفظ بيانات الطلب/ }));
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(1));
-    expect(sentBody().items[0].unitPrice).toBe(25);
+    expect(sentBody().items[0].unitPrice).toBe('25');
+    expect(Number(sentBody().items[0].unitPrice)).toBe(25);
   });
 
   /**

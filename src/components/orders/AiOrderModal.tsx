@@ -13,6 +13,57 @@ import { RiCheckboxCircleLine, RiClipboardLine, RiErrorWarningLine, RiMagicLine,
 import { Money } from '@/components/ui/Money';
 import { useToast } from '@/components/ui/Toast';
 
+/**
+ * WHAT A BOX PUTS ON THE WIRE: ITS CHARACTERS, OR NOTHING AT ALL.
+ *
+ * The reader `CourierFees.tsx` got in `17cbe93` and `ManufacturingScreen.tsx`
+ * in `509306a`. Both boxes on this form were the defect it names:
+ *
+ *   · `setFinalPrice(parseFloat(e.target.value) || 0)` — `parseFloat('')` is
+ *     `NaN` and `||` makes it `0`. And the door this form posts to reads
+ *     `p.finalPrice || product.basePrice`, so A CLEARED PRICE BOX SILENTLY
+ *     CHARGED THE PRODUCT'S BASE PRICE. Not a wrong number anybody could
+ *     see: the modal said one thing, the order said another.
+ *   · `quantity: parseInt(…, 10) || 1` — a cleared quantity became 1, and
+ *     the component wrote that 1 back into the box, so clearing «2» and
+ *     typing «3» produced «13».
+ *
+ * `undefined` is the answer for an empty box, and `JSON.stringify` drops an
+ * `undefined` property — so the field is ABSENT on the wire. Both are
+ * REQUIRED at the door (`confirmSchema`: `quantity` and `finalPrice` are
+ * `z.coerce.number()` with no `.optional()` and no `.default()`), over
+ * columns that have no default either: `OrderItem.quantity` is `Int NOT
+ * NULL` and `OrderItem.unitPrice` is `Decimal(12,2) NOT NULL`. «Nothing» is
+ * not a value either column can hold, so absence is a 400 — which is what
+ * an unfilled box deserves and what a silent fallback could never be.
+ *
+ * AND IT IS THE CHARACTERS. `''` must never be sent: `z.coerce.number()` is
+ * `Number()`, and `Number('')` is `0` — the free line again, one layer down.
+ */
+function onTheWire(raw: string): string | undefined {
+  return raw.trim() === '' ? undefined : raw;
+}
+
+/** The figure a box holds, for this screen's own echo of it. Never an invented 0. */
+function figure(raw: string): number | undefined {
+  if (raw.trim() === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * A SERVER FIGURE FOR A BOX TO OPEN ON, or an empty box — never a `0`.
+ *
+ * `setFinalPrice(data.suggestedPrice ?? data.parsed.price ?? 0)` ended in an
+ * invented zero, and the parser returns `price: null` whenever the message
+ * named no price at all. So a message with no price opened the box at `0`,
+ * and `0` is exactly what the door reads as «absent» and replaces with the
+ * base price. The box is empty instead, and the door says so.
+ */
+function boxFor(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value);
+}
+
 interface AiOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,7 +106,19 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   // Editable confirmed fields
   const [productId, setProductId] = useState('');
   const { products } = useProducts({ enabled: isOpen });
-  const [finalPrice, setFinalPrice] = useState(0);
+  /*
+   * THE TWO BOXES HOLD CHARACTERS, AND THEY OPEN EMPTY.
+   *
+   * `useState(0)` was a price of zero in a browser before the parser had
+   * seen the message — and `0` is the one value the door turns into the
+   * product's base price. The quantity now has state of its own rather than
+   * being written back into `result.parsed`, so an empty box stays empty
+   * instead of being repaired to `1`.
+   */
+  const [priceTyped, setPriceTyped] = useState('');
+  const [quantityTyped, setQuantityTyped] = useState('');
+  /** The price this screen prints on its own button — never a figure it invented. */
+  const priceFigure = figure(priceTyped);
 
   // Reset ALL form state whenever the modal opens — no stale AI parse result
   // or previous text should persist between opens
@@ -66,7 +129,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setSaving(false);
       setResult(null);
       setProductId('');
-      setFinalPrice(0);
+      setPriceTyped('');
+      setQuantityTyped('');
     }
   }, [isOpen]);
 
@@ -93,7 +157,11 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       if (!res.ok) throw new Error(data.error || 'فشل تحليل الطلب');
       setResult(data);
       if (data.matchedProduct) setProductId(data.matchedProduct.id);
-      setFinalPrice(data.suggestedPrice ?? data.parsed.price ?? 0);
+      // The server's suggestion, or the price the message itself named, or an
+      // EMPTY BOX. The old `?? 0` made «the message named no price» and «the
+      // customer pays nothing» the same opening state.
+      setPriceTyped(boxFor(data.suggestedPrice ?? data.parsed.price));
+      setQuantityTyped(boxFor(data.parsed.quantity));
     } catch (err: any) {
       toast.failed(err.message);
     } finally {
@@ -120,7 +188,16 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
           parsed: {
             ...result.parsed,
             productId,
-            finalPrice,
+            /*
+             * THE CHARACTERS, OR THE FIELD IS NOT THERE — and these two keys
+             * come AFTER the spread deliberately. `result.parsed.quantity`
+             * is a number the parser produced; what the reviewer has in
+             * front of them is this box, so the box wins. An explicit
+             * `undefined` after a spread removes the key from the JSON,
+             * which is how «I did not fill this in» reaches the door at all.
+             */
+            quantity: onTheWire(quantityTyped),
+            finalPrice: onTheWire(priceTyped),
           },
         }),
       });
@@ -259,25 +336,28 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                   onChange={(id) => {
                     setProductId(id);
                     const prod = products.find((x) => x.id === id);
-                    if (prod?.offers?.length) setFinalPrice(prod.offers[0].sellingPrice);
+                    // The offer's own price, written into the box as digits.
+                    if (prod?.offers?.length) setPriceTyped(String(prod.offers[0].sellingPrice));
                   }}
                 />
               </div>
 
               <Input
                 label="الكمية"
+                name="quantity"
                 type="number"
                 min="1"
-                value={p.quantity}
-                onChange={(e) => setResult({ ...result, parsed: { ...p, quantity: parseInt(e.target.value, 10) || 1 } })}
+                value={quantityTyped}
+                onChange={(e) => setQuantityTyped(e.target.value)}
               />
 
               <Input
                 label={`السعر${currency?.code ? ` (${currency.code})` : ''}`}
+                name="finalPrice"
                 type="number"
                 step="0.01"
-                value={finalPrice}
-                onChange={(e) => setFinalPrice(parseFloat(e.target.value) || 0)}
+                value={priceTyped}
+                onChange={(e) => setPriceTyped(e.target.value)}
               />
             </div>
 
@@ -310,7 +390,10 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               </Button>
               <Button onClick={handleConfirm} loading={saving}>
                 <RiCheckboxCircleLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
-                تسجيل الطلب (<Money value={finalPrice} />)
+                {/* A BUTTON THAT NAMES A PRICE MUST NAME A REAL ONE. It read
+                    «تسجيل الطلب (0.00)» over an empty box, which is the
+                    figure the reviewer then believed they were recording. */}
+                تسجيل الطلب ({priceFigure === undefined ? '—' : <Money value={priceFigure} />})
               </Button>
             </div>
           </div>

@@ -9,7 +9,7 @@ import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
 import { useProducts } from '@/hooks/useProducts';
 import { productName } from '@/lib/product-name';
-import { ProductLinesEditor, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
+import { ProductLinesEditor, goodsTotal, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { amount } from '@/lib/format';
 import { RiArchiveLine, RiCheckboxCircleLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
@@ -195,7 +195,16 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
     }
   };
 
-  const goodsTotal = lines.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
+  /*
+   * THE EDITOR'S OWN ECHO, NOT A SECOND COPY OF IT.
+   *
+   * This was `lines.reduce((sum, l) => sum + (Number(l.price) || 0), 0)` —
+   * the same reduce `ProductLinesEditor` already had, written out again. Two
+   * copies of one figure, and each `|| 0` printed a confident «0.00» over a
+   * form with every price box empty. `goodsTotal` is that one function now,
+   * and it says «nothing written» rather than «worth nothing».
+   */
+  const goods = goodsTotal(lines);
   const money = (n: number) => amount(n, currency);
   const ready =
     customerName.trim().length >= 2 &&
@@ -391,7 +400,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             </Button>
             <Button type="submit" loading={loading} disabled={!ready}>
               <RiMegaphoneLine className="w-4 h-4" />
-              إنشاء الطلب ({money(goodsTotal)})
+              إنشاء الطلب ({goods === undefined ? '—' : money(goods)})
             </Button>
           </div>
         </div>
