@@ -329,17 +329,40 @@ export async function getCompanyAnalytics(
     : [];
   const orderOf = new Map(orderRows.map((o) => [o.id, o]));
 
-  // Each order's total line value, to allocate its costs proportionally.
+  // Each order's total line value, to allocate its costs proportionally —
+  // and how many rows that allocation has to cover, for the order that has
+  // no value to allocate BY.
   const orderLineValue = new Map<string, number>();
+  const orderGroupCount = new Map<string, number>();
   for (const g of lineGroups) {
     orderLineValue.set(g.orderId, (orderLineValue.get(g.orderId) ?? 0) + Number(g._sum.lineTotal ?? 0));
+    orderGroupCount.set(g.orderId, (orderGroupCount.get(g.orderId) ?? 0) + 1);
   }
 
   const productGroups = lineGroups.map((g) => {
     const order = orderOf.get(g.orderId);
     const share = (() => {
       const whole = orderLineValue.get(g.orderId) ?? 0;
-      if (whole <= 0) return 1;
+      // THE SHARES OF ONE ORDER ADD UP TO EXACTLY ONE, VALUE OR NO VALUE.
+      //
+      // Value cannot be the key when there is no value: a line of 0 out of a
+      // whole of 0 is 0/0. What the fallback protects is that division — and
+      // the order it was written for has ONE row, where the whole order is
+      // that row and a share of 1 is simply correct.
+      //
+      // But `1` is per ROW, and an order with two products got 1 twice: its
+      // shipping cost, its cost of goods AND its collected money were each
+      // posted to the product table twice over. A zero whole is reachable —
+      // the order PATCH schema takes `unitPrice` `min(0)`, the price box
+      // carries `min={0}`, and an order discount that meets a line's
+      // subtotal writes `lineTotal` 0 — so the two-product case is live in
+      // code even with no such row on this database today (measured
+      // 2026-10-07: 56 orders, every one of them a single product group).
+      //
+      // Split equally instead. One row still gets 1/1 = 1, so the case the
+      // fallback was written for answers exactly as it did; N rows get 1/N,
+      // which sums to the one whole order the comment above promises.
+      if (whole <= 0) return 1 / (orderGroupCount.get(g.orderId) ?? 1);
       return Number(g._sum.lineTotal ?? 0) / whole;
     })();
     return {

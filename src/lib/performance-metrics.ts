@@ -1,11 +1,10 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
-import { measure } from './commission-metrics';
+import { measure, sampleSize } from './commission-metrics';
 import { moderatorPerformance } from './attribution-performance';
 import { teamPerformance, type EmployeeRow } from './team-performance';
 import type { BusinessCalendar } from './business-calendar';
 import { bandsForRole, scoreOf, type ScoreInput, type ScoreResult } from './performance-score';
-import { rateOf } from './order-state';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -220,11 +219,35 @@ export async function scoreRole(
       // which the attribution tables already compute for the whole role.
       // An agent's is delivered out of what they CONFIRMED, which is what a
       // commission rule is paid on.
+      //
+      // BOTH BRANCHES ARE A FRACTION, AND A REAL 0 IS A REAL RATE.
+      //
+      // The band's arithmetic is `clamp(value, 0, 1) × weight` and the
+      // owner's bar is stored 0..1, so a fraction is the only unit either
+      // one can read. `measure()` hands the rate back as a WHOLE NUMBER —
+      // `rateOf` multiplies by 100 — so this branch divides by 100 exactly
+      // as the moderator branch beside it already did. Passing 50 for a 50%
+      // agent clamped to 1: full marks for the heaviest band, «٥٠٠٠٪» on the
+      // card, and never below a bar of 0.6 whatever they delivered.
+      //
+      // And «delivered none» is not «nobody measured them». `|| null` could
+      // not tell those apart, so an agent who confirmed orders and had every
+      // one of them come back read «لا يُقاس» — the band dropped out of the
+      // total AND out of `possible`, which is the flattering direction: the
+      // worst delivery rate in the building was scored out of 50 instead of
+      // out of the 85 an agent's five bands come to.
+      // The two are told apart by the DENOMINATOR instead, and `sampleSize`
+      // is the same `everConfirmedBy` population the rate itself divides by.
+      // Called rather than read off `volume` above: that one counts
+      // `confirmationStatus: 'CONFIRMED'` only, which is a different set.
       const mod = byModerator.get(p.id);
+      const everConfirmed = role === 'MODERATOR' ? 0 : await sampleSize(db, 'DELIVERY_RATE', metricScope);
       const deliveryRate =
         role === 'MODERATOR'
           ? mod?.deliveryRate == null ? null : mod.deliveryRate / 100
-          : (await measure(db, 'DELIVERY_RATE', metricScope)).count || null;
+          : everConfirmed === 0
+            ? null
+            : (await measure(db, 'DELIVERY_RATE', metricScope)).count / 100;
 
       return {
         person: p,
@@ -236,7 +259,22 @@ export async function scoreRole(
         // rests on, and a delivery rate is thirty-five of the hundred —
         // gating on anything looser would let the biggest band be noise.
         sample: role === 'MODERATOR' ? mod?.confirmed ?? 0 : volume.count,
-        discount: discounts.byUser.get(p.id)?.share ?? 0,
+        // A MISSING ROW IS NOT A SHARE OF ZERO.
+        //
+        // `byUser` holds a row for every order attributed to somebody,
+        // discounted or not — so a row with `share: 0` is the true statement
+        // "they had orders and gave nothing away", and that earns the band.
+        // ABSENCE means no order in this window was attributed to them at
+        // all, and `?? 0` turned that into a perfect discount record.
+        //
+        // Reachable for a person who IS scored, because the two windows are
+        // not the same window: `discountUse` filters on `createdAt` and the
+        // volume filters on `confirmedAt`, so an agent whose orders all
+        // arrived before the window and were confirmed inside it passes the
+        // sample gate with no discount row. The same rule `issuesRate`
+        // already states one interface up: null when they entered nothing,
+        // «not zero, which would read as perfect».
+        discount: discounts.byUser.get(p.id)?.share ?? null,
         issues: issues.get(p.id)?.rate ?? null,
         responseMinutes: byEmployee.get(p.id)?.medianFirstActionMinutes ?? null,
       };
@@ -274,5 +312,16 @@ export async function scoreRole(
   return ordered.map((s, i) => ({ ...s, rank: i + 1, of: ordered.length }));
 }
 
-/** The whole-number percentage a rate reads as on a card. */
-export const asPercent = (rate: number | null): number | null => rateOf(rate ?? 0, 1);
+/*
+ * `asPercent(rate)` lived here — `rateOf(rate ?? 0, 1)`, "the whole-number
+ * percentage a rate reads as on a card" — with NO caller anywhere in the
+ * repository, while every card that needs one does `Math.round(value * 100)`
+ * inline.
+ *
+ * Deleted rather than kept: its `?? 0` prints «٠٪» for a rate that is NULL,
+ * which is the defect this file was just corrected for, sitting one export
+ * away from the correction. The same judgement `financial.ts` records about
+ * the cost calculator it removed — an exported helper that is merely
+ * wrong-when-used is a loaded gun, and pinning it with a test would write
+ * the wrong number into the suite instead of out of the code.
+ */
