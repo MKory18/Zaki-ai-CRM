@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { stripComments } from './guard-source';
 
 /**
  * تشطيب ٢ — PASS 2: «If the same figure is computed in two different places
@@ -122,7 +123,18 @@ const READS_ONLY: Record<string, string> = {
    * named in it again it reappears as an unclassified stranger, which is
    * the net doing its work. The name went with the reason.
    */
-  'src/app/api/ops/tracking/collect/route.ts': 'يحصّل نقداً إلى محفظة، ولا يغيّر إجمالي الطلب',
+  /*
+   * `ops/tracking/collect/route.ts` STOOD HERE AND NEVER BELONGED.
+   *
+   * Its reason read «collects cash to a wallet, and does not change the
+   * order's total» — true, and the giveaway. The only occurrence of any
+   * of the four names in that file is inside a COMMENT at its line 125;
+   * its code touches none of them. It was swept because the sweep read
+   * prose, and it was excused because somebody then had to explain why a
+   * file that writes no order money appeared in a list of files that do.
+   *
+   * The name goes with the reason, following the dated precedent above.
+   */
   'src/app/api/ops/tracking/write-off/route.ts': 'يقرأ الإجمالي ليعرضه ويشطب الشحنة',
   'src/app/api/orders/[id]/change-requests/route.ts': 'يسجّل طلب تعديل؛ التطبيق يمرّ بمسار الطلب',
   'src/app/api/orders/[id]/confirmation/route.ts': 'حالة التأكيد وسببها — لا مال فيها',
@@ -162,9 +174,23 @@ const READS_ONLY: Record<string, string> = {
 };
 
 describe('every file that could write an order’s money is on one of two lists', () => {
+  /*
+   * THE SWEEP READS CODE, NOT PROSE.
+   *
+   * It used to read the file whole, so a COMMENT naming a money column put
+   * its file in the sweep. Found the honest way: a comment added to
+   * `finance/statements/[id]/route.ts` explaining that revenue sums
+   * `collectedAmount` beside `totalAmount` dragged that file in, and the
+   * suite reported a money writer that had not gained one.
+   *
+   * The far worse direction is the same bug reversed — a file could be kept
+   * OUT by nothing more than how its code was spelled, while a comment above
+   * it talked about the column it writes. `stripComments` is what eight
+   * other guards in this repository already use for exactly this.
+   */
   const swept = filesUnder(SRC)
     .filter((p) => {
-      const src = readFileSync(p, 'utf8');
+      const src = stripComments(readFileSync(p, 'utf8'));
       return MONEY_FIELD.test(src) && WRITES_A_ROW.test(src);
     })
     .map(rel);

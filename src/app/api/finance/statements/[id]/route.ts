@@ -76,7 +76,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const statement = await db.courierStatement.findFirst({
       where: { id, companyId, storeId },
-      include: { receipts: true, matches: { select: { orderId: true, result: true, statementAmount: true } } },
+      // `statementFee` joins them because the money written onto the order is
+      // the GROSS the customer paid — the net plus the fee the courier kept.
+      include: {
+        receipts: true,
+        matches: { select: { orderId: true, result: true, statementAmount: true, statementFee: true } },
+      },
     });
     if (!statement) return NextResponse.json({ error: 'الكشف غير موجود' }, { status: 404 });
     // Read from the stamp of the act, not from `status`: a re-match used to
@@ -155,9 +160,36 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         });
       }
 
-      // What the courier says arrived, per order — read once, used twice.
+      /**
+       * WHAT THE CUSTOMER PAID AT THE DOOR — THE GROSS, NOT THE NET.
+       *
+       * This wrote `statementAmount`, which `schema.prisma:2304` defines as
+       * «the NET: what the courier hands over after keeping their fee». And
+       * `Order.collectedAmount` is documented one table over as «what the
+       * customer actually paid at the door, and it INCLUDES the full delivery
+       * fee». So the column was documented gross and written net, by its only
+       * writer, and two readers then had it wrong in two different ways:
+       *
+       *   `expectedAmountFor` does `collected − fee`, so a settled order's
+       *   expectation came out one fee SHORT of the truth — measured on this
+       *   database at 2.5 on each of twelve orders.
+       *
+       *   And revenue is `SUM(collectedAmount)` for orders that have one PLUS
+       *   `SUM(totalAmount)` for orders that do not (`analytics.ts:257-263`,
+       *   `attribution-performance.ts:113-122`). `totalAmount` is gross, so
+       *   the two halves of one sum were measured in different units: twelve
+       *   orders at 231.00 where the gross is 261.000. **Thirty dinars of
+       *   revenue that nobody spent.**
+       *
+       * The gross is `statementAmount + statementFee`, and it is not a guess:
+       * on all twelve live rows it equals `StatementLine.collected` exactly,
+       * and `statementFee` is null on none of them.
+       */
       const amountOf = new Map(
-        matched.map((m) => [m.orderId as string, m.statementAmount == null ? null : Number(m.statementAmount)])
+        matched.map((m) => [
+          m.orderId as string,
+          m.statementAmount == null ? null : Number(m.statementAmount) + Number(m.statementFee ?? 0),
+        ])
       );
 
       /**
