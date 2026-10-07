@@ -455,6 +455,21 @@ export async function POST(req: Request) {
       return tx.inventoryMovement.create({
         data: {
           companyId,
+          /*
+           * THE SHELF THAT WAS COUNTED. Both halves of this transaction
+           * already carry it — `receiveStock` for the surplus and
+           * `drawDownStock` for the shortfall, the latter under a comment
+           * saying why — and the ledger line that explains them did not, so
+           * a stocktake moved this store's batches and then reported the
+           * adjustment in no store at all.
+           *
+           * `requireContext()` throws `STORE_REQUIRED` rather than
+           * returning a null store, and the product was looked up one query
+           * earlier with this same `inStore(companyId, storeId)` — so «the
+           * store the counter is standing in» and «the product's own store»
+           * are one proven value, not two sources that could disagree.
+           */
+          storeId,
           productId: product.id,
           type: 'MANUAL_ADJUSTMENT',
           quantity: difference,

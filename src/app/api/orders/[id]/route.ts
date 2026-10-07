@@ -1012,6 +1012,22 @@ export async function PATCH(
           await tx.inventoryMovement.create({
             data: {
               companyId,
+              /*
+               * THE ORDER'S OWN SHELF — and it is not a choice between two
+               * candidates. `assertOrderAccess` above refuses this request
+               * with a 404 unless `order.storeId === scope.storeId`, and
+               * `requireContext()` throws `STORE_REQUIRED` rather than
+               * handing back a null store; so by the time this line runs
+               * `existing.storeId` and the context `storeId` are the same
+               * non-null value, proven by the guard the request already
+               * passed.
+               *
+               * Without it this door wrote a SALE line into no store, and
+               * `/api/inventory/movements` filters with the strict
+               * `inStore` — the sale was deducted from a batch and then
+               * appeared in nobody's ledger.
+               */
+              storeId: existing.storeId,
               productId: existing.productId,
               batchId: activeBatch.id,
               type: 'SALE',

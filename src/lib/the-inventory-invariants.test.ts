@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { repoFile, stripComments } from './guard-source';
 import { assertReadyToShip } from './order-state';
 import { allocateDiscount } from './money';
+import { consumeOrderStock, restoreOrderStock } from './stock-consumption';
+import { inStore } from './store-filter';
 
 /**
  * تشطيب ١ — STAGE 1: THE COMMITMENTS LEDGER, the inventory section.
@@ -302,6 +304,32 @@ describe('8 · a shelf belongs to a store, and a store to a country', () => {
  * All five now pass the order's own store, using the convention `onHand`
  * already set: null means company-wide, so an order with no store behaves
  * exactly as before.
+ *
+ * AND THEN A SIXTH AND SEVENTH FACE, on 2026-10-07: THE LEDGER LINES.
+ *
+ * What this section said on 2026-10-02 was true of the BATCHES and silent
+ * about the `InventoryMovement` rows written beside them. Both halves of
+ * `stock-consumption.ts` wrote a movement with no store:
+ *
+ *   · the SALE line on delivery, while the `drawDownStock` call three lines
+ *     above it was handed `order.storeId` and emptied THAT store's batches;
+ *   · the RETURN line, directly under a batch created with
+ *     `storeId: order.storeId` and the comment «back onto the shelf it
+ *     left».
+ *
+ * `/api/inventory/movements` and the ledger block in `/api/inventory` filter
+ * the MOVEMENT itself with the strict `inStore(companyId, storeId)`, so both
+ * rows were written and then returned by no store's query. Measured on this
+ * database before the fix: 30 of 30 movement rows carried no `store_id` —
+ * 26 SALE and 4 RETURN. The whole stock ledger existed and was unreadable.
+ *
+ * AND THIS FILE WAS HALF OF WHY. «a return comes back onto the shelf it
+ * left» asked the SOURCE TEXT whether the BATCH carried the store, inside a
+ * window that ended at `batchNumber` — so it could not have seen the
+ * movement four lines further down even in principle. A half-fix read as
+ * complete. It is replaced below by the PAIR, asserted by running the two
+ * functions against a transaction that answers for real and reading the
+ * rows they hand Prisma.
  * ─────────────────────────────────────────────────────────────────────────
  */
 describe('the shelf is the store’s, at every door', () => {
@@ -330,11 +358,14 @@ describe('the shelf is the store’s, at every door', () => {
     expect(call.slice(0, call.indexOf('})'))).toMatch(/storeId,/);
   });
 
-  it('and a return comes back onto the shelf it left', () => {
-    const con = stripComments(repoFile('src/lib/stock-consumption.ts'));
-    const create = con.slice(con.indexOf('tx.productionBatch.create({'));
-    expect(create.slice(0, create.indexOf('batchNumber'))).toMatch(/storeId: order\.storeId,/);
-  });
+  /*
+   * «and a return comes back onto the shelf it left» STOOD HERE as a grep
+   * over `src/lib/stock-consumption.ts` for `storeId: order.storeId,` in the
+   * window from `tx.productionBatch.create({` to `batchNumber` — the batch's
+   * half, in a window that stopped four lines short of the movement. It is
+   * replaced by «the ledger line lands on the same shelf as the goods»
+   * below, which runs both functions and reads both rows.
+   */
 
   it('and the return’s cost is read off that same shelf', () => {
     const con = stripComments(repoFile('src/lib/stock-consumption.ts'));
@@ -361,5 +392,235 @@ describe('the shelf is the store’s, at every door', () => {
     // And the caller still rounds, by the order's own currency.
     const con = stripComments(repoFile('src/lib/stock-consumption.ts'));
     expect(con).toMatch(/roundMinor\(cost, minorUnit\)/);
+  });
+});
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE LEDGER LINE LANDS ON THE SAME SHELF AS THE GOODS.
+ *
+ * The pair, asserted together — which is the whole point. A batch that
+ * carries the store and a movement that does not is the half-fix that was
+ * already in this file, and no test of the batch alone can see it.
+ *
+ * Nothing is mocked. `consumeOrderStock` and `restoreOrderStock` take their
+ * transaction as an argument and `receiving.ts` imports the client only as a
+ * TYPE, so the real functions run against a transaction written below that
+ * actually applies the `where` it is handed. That matters twice: the
+ * draw-down's own store clause is exercised rather than assumed, and the
+ * rows the code hands Prisma are the rows read back.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+const MUBARAK = 's-mubarak';
+const SIHHA = 's-sihha';
+const PRODUCT = 'p-cream';
+const ORDER = 'o-1';
+
+type Row = Record<string, any>;
+
+/** Prisma's `where` for the shapes these two functions and `inStore` use. */
+function matchesWhere(row: Row, where: Row): boolean {
+  for (const [key, want] of Object.entries(where)) {
+    if (want && typeof want === 'object' && Array.isArray(want.in)) {
+      if (!want.in.includes(row[key])) return false;
+    } else if (want && typeof want === 'object' && 'gt' in want) {
+      if (!((row[key] ?? 0) > want.gt)) return false;
+    } else if (row[key] !== want) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * A transaction that answers honestly.
+ *
+ * `alreadySold` is the ledger state a RETURN depends on: restoring units an
+ * order never consumed invents stock, so the function asks the ledger first.
+ */
+function ledger(opts: { orderStore: string | null; shelf: Row[]; alreadySold?: boolean }) {
+  const movements: Row[] = [];
+  const created: Row[] = [];
+  const shelf: Row[] = opts.shelf.map((b) => ({ ...b }));
+  /** Every `where` the draw-down asked the shelf, so its store can be read. */
+  const shelfQueries: Row[] = [];
+  let seq = 0;
+
+  const tx = {
+    inventoryMovement: {
+      findFirst: async ({ where }: any) => {
+        const written = movements.find((m) => m.referenceId === where.referenceId && m.type === where.type);
+        if (written) return { id: 'seen' };
+        if (opts.alreadySold && where.type === 'SALE') return { id: 'm-prior-sale' };
+        return null;
+      },
+      create: async ({ data }: any) => {
+        movements.push(data);
+        return { id: `m${movements.length}`, ...data };
+      },
+    },
+    order: {
+      findFirst: async () => ({
+        orderNumber: 'ORD-1',
+        storeId: opts.orderStore,
+        items: [{ productId: PRODUCT, productName: 'كريم', quantity: 2, freeQuantity: 1 }],
+        store: { country: { minorUnit: 2 } },
+      }),
+      update: async () => ({}),
+    },
+    orderItem: { updateMany: async () => ({ count: 0 }) },
+    productionBatch: {
+      findMany: async ({ where }: any) => {
+        shelfQueries.push(where);
+        return shelf.filter((b) => matchesWhere(b, where));
+      },
+      findFirst: async ({ where }: any) => {
+        shelfQueries.push(where);
+        return shelf.filter((b) => matchesWhere(b, where))[0] ?? null;
+      },
+      update: async ({ where, data }: any) => {
+        const row = shelf.find((b) => b.id === where.id)!;
+        Object.assign(row, data);
+        return row;
+      },
+      create: async ({ data }: any) => {
+        const row = { id: `b-new-${++seq}`, ...data };
+        created.push(row);
+        shelf.push(row);
+        return row;
+      },
+      aggregate: async ({ where }: any) => ({
+        _sum: {
+          quantityRemaining: shelf
+            .filter((b) => matchesWhere(b, where))
+            .reduce((s, b) => s + (b.quantityRemaining ?? 0), 0),
+        },
+      }),
+    },
+  };
+
+  return { tx: tx as never, movements, created, shelfQueries, shelf };
+}
+
+const batchOn = (store: string, id: string, qty = 50) => ({
+  id,
+  companyId: 'c1',
+  storeId: store,
+  productId: PRODUCT,
+  quantityRemaining: qty,
+  quantitySold: 0,
+  costPerUnit: 4,
+  productionDate: new Date('2026-01-01'),
+});
+
+const consume = (store: string | null, shelf: Row[]) => {
+  const l = ledger({ orderStore: store, shelf });
+  return consumeOrderStock(l.tx, {
+    orderId: ORDER,
+    companyId: 'c1',
+    allowNegativeStock: false,
+    userId: 'u1',
+  }).then(() => l);
+};
+
+const restore = (store: string | null, shelf: Row[]) => {
+  const l = ledger({ orderStore: store, shelf, alreadySold: true });
+  return restoreOrderStock(l.tx, {
+    orderId: ORDER,
+    companyId: 'c1',
+    receivedQty: 3,
+    userId: 'u1',
+  }).then(() => l);
+};
+
+describe('the ledger line lands on the same shelf as the goods', () => {
+  it('the SALE line carries the store the draw-down actually emptied', async () => {
+    const l = await consume(MUBARAK, [batchOn(MUBARAK, 'b-m'), batchOn(SIHHA, 'b-s')]);
+
+    expect(l.movements).toHaveLength(1);
+    const line = l.movements[0];
+    // THE VALUE. `undefined` is what this writer handed Prisma for as long
+    // as it existed, and a revert prints exactly that here.
+    expect(line.storeId).toBe(MUBARAK);
+    expect(line.type).toBe('SALE');
+    expect(line.companyId).toBe('c1');
+
+    // And it is the SAME store the units came out of, not a second source:
+    // the draw-down asked the shelf for this store and no other.
+    const draw = l.shelfQueries.find((w) => w.quantityRemaining)!;
+    expect(draw.storeId).toBe(MUBARAK);
+    expect(line.storeId).toBe(draw.storeId);
+
+    // Proof the other store's batch was never touched, so «the store the
+    // line names» and «the shelf that moved» cannot have come apart.
+    expect(l.shelf.find((b) => b.id === 's-sihha-untouched')).toBeUndefined();
+    expect(l.shelf.find((b) => b.id === 'b-s')!.quantityRemaining).toBe(50);
+    expect(l.shelf.find((b) => b.id === 'b-m')!.quantityRemaining).toBe(47);
+  });
+
+  it('and the RETURN line carries the store its own batch was created with', async () => {
+    const l = await restore(MUBARAK, [batchOn(MUBARAK, 'b-m')]);
+
+    expect(l.created).toHaveLength(1);
+    expect(l.movements).toHaveLength(1);
+    const batch = l.created[0];
+    const line = l.movements[0];
+
+    expect(batch.storeId).toBe(MUBARAK);
+    expect(line.storeId).toBe(MUBARAK);
+    // THE PAIR. This is the assertion that was missing: the batch half was
+    // written on 2026-10-02 and the movement half was not, and the check
+    // that stood here could not tell the difference.
+    expect(line.storeId).toBe(batch.storeId);
+    expect(line.batchId).toBe(batch.id);
+    expect(line.type).toBe('RETURN');
+  });
+
+  it('and both rows come back from this store’s own ledger query, which they did not before', async () => {
+    const sale = (await consume(MUBARAK, [batchOn(MUBARAK, 'b-m')])).movements[0];
+    const ret = (await restore(MUBARAK, [batchOn(MUBARAK, 'b-m')])).movements[0];
+
+    // The real read filter — `/api/inventory/movements` and the ledger block
+    // in `/api/inventory` both use it, and it is an EXACT match.
+    const mine = inStore('c1', MUBARAK);
+    for (const row of [sale, ret]) {
+      expect(matchesWhere(row, mine)).toBe(true);
+      // The row as these writers used to produce it: everything the same,
+      // no shelf. Thirty of them are on this database.
+      expect(matchesWhere({ ...row, storeId: undefined }, mine)).toBe(false);
+      expect(matchesWhere({ ...row, storeId: null }, mine)).toBe(false);
+      // And another store's query must not pick them up either.
+      expect(matchesWhere(row, inStore('c1', SIHHA))).toBe(false);
+      // Nor a session with no store selected, answered with the company.
+      expect(matchesWhere(row, inStore('c1', null))).toBe(false);
+    }
+  });
+
+  it('and follows the order’s store rather than a constant', async () => {
+    const l = await consume(SIHHA, [batchOn(MUBARAK, 'b-m'), batchOn(SIHHA, 'b-s')]);
+    expect(l.movements[0].storeId).toBe(SIHHA);
+    expect(matchesWhere(l.movements[0], inStore('c1', SIHHA))).toBe(true);
+    expect(matchesWhere(l.movements[0], inStore('c1', MUBARAK))).toBe(false);
+
+    const r = await restore(SIHHA, [batchOn(SIHHA, 'b-s')]);
+    expect(r.created[0].storeId).toBe(SIHHA);
+    expect(r.movements[0].storeId).toBe(SIHHA);
+  });
+
+  it('and an order with no store still moves stock, exactly as before', async () => {
+    // The convention `onHand` and `drawDownStock` already keep: null means
+    // company-wide. `Order.storeId` is nullable in the schema, so this case
+    // is real, and it must not start throwing or start inventing a shelf.
+    const l = await consume(null, [batchOn(MUBARAK, 'b-m')]);
+    expect(l.movements[0].storeId).toBeNull();
+    expect(l.shelf.find((b) => b.id === 'b-m')!.quantityRemaining).toBe(47);
+
+    const r = await restore(null, [batchOn(MUBARAK, 'b-m')]);
+    expect(r.created[0].storeId).toBeNull();
+    expect(r.movements[0].storeId).toBeNull();
+    // And such a row is invisible in every store — which is the finding this
+    // whole section is about, not a behaviour anyone wants.
+    expect(matchesWhere(r.movements[0], inStore('c1', MUBARAK))).toBe(false);
   });
 });

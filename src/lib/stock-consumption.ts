@@ -115,6 +115,24 @@ export async function consumeOrderStock(
       await tx.inventoryMovement.create({
         data: {
           companyId: input.companyId,
+          /*
+           * THE SAME SHELF THE UNITS LEFT, written onto the ledger line too.
+           *
+           * `drawDownStock` above is handed `order.storeId` and takes the
+           * units out of THAT store's batches. This row says how the
+           * balance got that way, and it was written with no store at all —
+           * so `/api/inventory/movements` and the ledger block in
+           * `/api/inventory`, which both filter the movement with the strict
+           * `inStore(companyId, storeId)`, returned nothing in any store.
+           * Twenty-six live SALE rows on this database, the whole sale half
+           * of a ledger that existed and could not be read.
+           *
+           * There is no second candidate: this is the value the draw-down
+           * used, so the line and the batches it emptied cannot disagree.
+           * Null when the order has no store, which is the convention
+           * `onHand` and `drawDownStock` already keep.
+           */
+          storeId: order.storeId,
           productId: line.productId,
           type: SALE,
           quantity: -result.taken,
@@ -363,6 +381,16 @@ export async function restoreOrderStock(
     await tx.inventoryMovement.create({
       data: {
         companyId: input.companyId,
+        /*
+         * ONTO THE SHELF THE BATCH ABOVE WENT, not into the company-wide
+         * pile. The batch at hand was created with `storeId: order.storeId`
+         * under «back onto the shelf it left» and this line — the ledger's
+         * own record of the same event — carried no store, so the restock
+         * was invisible in the store's movement log while the units it
+         * describes were visible on the store's shelf. Four live RETURN
+         * rows. Half-fixed is not fixed.
+         */
+        storeId: order.storeId,
         productId: line.productId,
         batchId: batch.id,
         type: RETURN,

@@ -459,16 +459,14 @@ const STORE_LEFT_OUT: Record<string, string> = {
   'prisma/seed.ts#notification': 'بالتصميم: الإشعار يُقرأ بـ OR: [{ storeId }, { storeId: null }] في /api/notifications، فصفٌّ بلا متجر يراه صاحبه في كل متجر',
   'prisma/seed.ts#deliveryProvider': 'بالتصميم: /api/delivery-providers يقرأ OR: [courierScope, { companyId, storeId: null }] — مندوبٌ بلا متجر مشتركٌ بين متاجر الشركة',
 
-  // ── defects, in files this test does not own ───────────────────────────
-  'src/lib/stock-consumption.ts#inventoryMovement':
-    'خلل — حركتا البيع (:115) والمرتجع (:363) تُكتبان بلا متجر، ودفعة المرتجع (:341) تُكتب بمتجرها. ' +
-    'و«/api/inventory/movements» يرشّح الحركة نفسها بـ inStore الصارم. المقياس: 30 من 30 حركة في قاعدة ' +
-    'هذه النسخة بلا store_id (26 SALE و4 RETURN) — أي أن سجل المخزون كلَّه غير مرئي في أي متجر. ' +
-    'الملف ليس ملكَ هذا الاختبار؛ أُبلِغ عنه ولم يُعدَّل',
-  'src/app/api/inventory/route.ts#inventoryMovement':
-    'خلل — حركة «الجرد» (:455) بلا متجر، مع أنّ receiveStock و drawDownStock في الدالة نفسها تُمرَّران storeId. الملف ليس ملكَ هذا الاختبار',
-  'src/app/api/orders/[id]/route.ts#inventoryMovement':
-    'خلل — حركة البيع عند التسليم (:1012) بلا متجر. الملف ليس ملكَ هذا الاختبار',
+  // ── defects in the seed ────────────────────────────────────────────────
+  //
+  // The three movement writers that stood here — stock-consumption.ts (SALE
+  // and RETURN), inventory/route.ts (the stocktake summary) and
+  // orders/[id]/route.ts (the legacy delivery SALE) — now write the column,
+  // and their lines are gone because an entry whose site is fixed FAILS the
+  // register check below. The four of them, with the production door, were
+  // the whole set of movement writers that dropped it.
   'prisma/seed.ts#product':
     'خلل في البذرة — المنتج يُقرأ بـ inStore الصارم في /api/inventory و/api/products، فمنتجٌ مبذورٌ بلا متجر لا يظهر في أي متجر. ' +
     'يُرقَّع اليوم بـ scripts/place-stock-in-stores.ts بعد البذر، والرقعة ليست الكتابة',
