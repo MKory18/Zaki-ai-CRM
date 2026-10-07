@@ -5,13 +5,25 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
+import { count } from '@/lib/numeric-input';
 
 interface Ctx {
   params: Promise<{ id: string; recId: string }>;
 }
 
+/*
+ * `count()` for the reason the POST door states: the window 0…999 is
+ * unchanged, and `z.coerce.number()` — which is `Number()`, so `'0x10'`
+ * is 16 — stops being the shape copied out of this file onto a column
+ * that holds money.
+ *
+ * `.optional()` and NOT `.default()`: this is a PATCH, and `.partial()`
+ * keeping a `.default()` alive is the defect dad59c9 had to go and
+ * close in three other doors. A `sortOrder` that was not sent must come
+ * back absent, not as a zero that moves the row to the top.
+ */
 const patchSchema = z.object({
-  sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+  sortOrder: count(999).optional(),
   isActive: z.boolean().optional(),
 });
 

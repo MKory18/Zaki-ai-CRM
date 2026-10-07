@@ -6,6 +6,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
+import { count } from '@/lib/numeric-input';
 
 /**
  * ORDER CHANNELS — where the shop's orders come from.
@@ -37,10 +38,30 @@ export const CHANNEL_KIND_AR: Record<string, string> = {
   OTHER: 'أخرى',
 };
 
+/*
+ * `count()`, NOT `z.coerce.number()` — AND THE REASON IS NOT THIS FIELD.
+ *
+ * `z.coerce.number()` IS `Number()`. Measured on this build: `'0x10'` → 16,
+ * `'0b11'` → 3, `'0o17'` → 15, `''`/`null`/`[]` → 0, `true` → 1. On a sort
+ * position that lands inside 0…999 anyway, every one of those is harmless:
+ * it moves a name up or down a list and writes nothing anybody counts.
+ *
+ * It is changed because `z.coerce.number()` is what the next developer in
+ * this file copies. The same keystrokes on a price, a quantity or a salary
+ * are the defects 82ecac3 and 9f15044 had to go and find. `src/lib/offers.ts`
+ * already declares its own `sortOrder` as `count(9999).default(0)`, so the
+ * strict reader is the house style on this kind of column and this door was
+ * the odd one out.
+ *
+ * The window is unchanged: `OrderChannel.sortOrder` is `Int @default(0)`, and
+ * 0…999 is what this door and `src/lib/store-pages.ts:167` both already
+ * declare for a hand-ordered list. Nothing about the accepted range moves —
+ * only which strings are read as numbers at all.
+ */
 const createSchema = z.object({
   name: z.string().trim().min(2, 'اسم القناة حرفان على الأقل').max(60),
   kind: z.enum(CHANNEL_KINDS).default('OTHER'),
-  sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+  sortOrder: count(999).default(0),
 });
 
 export async function GET() {

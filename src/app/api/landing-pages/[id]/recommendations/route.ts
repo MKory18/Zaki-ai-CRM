@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
+import { count } from '@/lib/numeric-input';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -29,9 +30,22 @@ export async function GET(_req: Request, ctx: Ctx) {
   }
 }
 
+/*
+ * `count()`, NOT `z.coerce.number()`.
+ *
+ * `z.coerce.number()` IS `Number()`, measured: `'0x10'` → 16, `'0b11'` → 3,
+ * `''`/`null`/`[]` → 0, `true` → 1. On an upsell's position in a list that
+ * is all harmless — it reorders what the shopper sees and writes nothing
+ * anybody counts. It is changed so that `z.coerce.number()` is not the shape
+ * the next developer copies out of this file onto a column that holds money.
+ *
+ * The window is unchanged: `LandingPageRecommendation.sortOrder` is
+ * `Int @default(0)`, and 0…999 is what this door and its sibling
+ * `[recId]/route.ts` already declare. Only the NOTATION moves.
+ */
 const createSchema = z.object({
   productId: z.string().min(10).max(64),
-  sortOrder: z.coerce.number().int().min(0).max(999).optional().default(0),
+  sortOrder: count(999).optional().default(0),
   isActive: z.boolean().optional().default(true),
 });
 

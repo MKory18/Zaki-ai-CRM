@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { CHANNEL_KINDS } from '../route';
 import { zodMessage } from '@/lib/zod-message';
+import { count } from '@/lib/numeric-input';
 
 /**
  * PATCH  /api/settings/channels/:id   rename, re-classify, retire
@@ -22,7 +23,10 @@ const patchSchema = z
     name: z.string().trim().min(2).max(60),
     kind: z.enum(CHANNEL_KINDS),
     isActive: z.boolean(),
-    sortOrder: z.coerce.number().int().min(0).max(999),
+    // `count()` for the reason the POST door states: the window 0…999 is
+    // unchanged, and `z.coerce.number()` stops being the thing a developer
+    // copies out of this file onto a column that holds money.
+    sortOrder: count(999),
   })
   .partial();
 

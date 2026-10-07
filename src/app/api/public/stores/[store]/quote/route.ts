@@ -6,6 +6,7 @@ import { basketDiscount, resolvePublicLines } from '@/lib/public-order';
 import { computeCod } from '@/lib/money';
 import { publicizeMedia } from '@/lib/public-media';
 import { MAX_CART_LINES, MAX_LINE_QUANTITY } from '@/lib/cart';
+import { numeric } from '@/lib/numeric-input';
 
 /**
  * WHAT IS IN THIS BASKET, AND WHAT IT COSTS.
@@ -52,8 +53,45 @@ function chosenFrom(raw: unknown): { productId: string; offerId: string; count: 
     const r = (row ?? {}) as Record<string, unknown>;
     const productId = typeof r.productId === 'string' ? r.productId.slice(0, 64) : '';
     if (!productId) continue;
-    const n = Math.trunc(Number(r.quantity));
-    if (!Number.isFinite(n) || n < 1) continue;
+    /*
+     * HOW MANY, READ STRICTLY — AND MEASURED AGAINST THE ORDER DOOR.
+     *
+     * This was `Math.trunc(Number(r.quantity))`, and `Number()` is open:
+     * `'0x10'` → 16, `true` → 1, `['5']` → 5 (measured on this build).
+     *
+     * The worry worth naming is that 81f1cdd made this door quote the same
+     * money the order door charges, so a quantity read differently here is
+     * a quote that does not match the sale. CHECKED, and the answer is not
+     * what it looks like: at 9f15044 the order door read the SAME field as
+     * `z.coerce.number().int().min(1).max(MAX_LINE_QUANTITY)`
+     * (`lib/landing-order-schema.ts`), and `z.coerce.number()` IS
+     * `Number()` — so on NOTATION the two doors already AGREED, both
+     * reading `'0x10'` as 16. The notation defect never produced a
+     * quote/sale mismatch; it produced the same wrong figure twice. Both
+     * doors read it with `count()`/`numeric()` now, so they agree in the
+     * strict direction instead, and the suite beside this file runs the
+     * order door's real schema to keep that a measured fact.
+     *
+     * Where they DO disagree is the edge, and `numeric()` does not change
+     * it: asked 150, this door clamps to `MAX_LINE_QUANTITY` and prices 99
+     * while the order door answers 400; asked 2.5, this door prices 2 while
+     * `.int()` answers 400. Clamping is deliberate here and follows the rule
+     * `numeric-input.ts` writes down — nothing is WRITTEN by this door, and
+     * the clamped figure is reported back in `lines[].quantity`, so the
+     * shopper can see what they are being quoted for. Making the two agree
+     * means changing the order door's schema, which is not this file.
+     *
+     * `numeric()` and not `count()`: `count()` would refuse 150 outright and
+     * drop the line, and a line that silently disappears from a basket is
+     * worse than a line clamped to 99 in plain sight. So the reading becomes
+     * strict and the clamping stays. No `Number.isFinite` beside it —
+     * `numeric()` already refuses NaN and Infinity, and a check that cannot
+     * fire once is the vacuous guard this audit keeps catching.
+     */
+    const asked = numeric().safeParse(r.quantity);
+    if (!asked.success) continue;
+    const n = Math.trunc(asked.data);
+    if (n < 1) continue;
     out.push({
       productId,
       offerId: typeof r.offerId === 'string' ? r.offerId.slice(0, 64) : '',

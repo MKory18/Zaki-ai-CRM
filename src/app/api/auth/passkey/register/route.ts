@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { REFUSAL_AR, publicOrigin, relyingParty, verifyRegistration } from '@/lib/passkey';
+import { numeric } from '@/lib/numeric-input';
 
 /**
  * POST /api/auth/passkey/register — finish registering a fingerprint.
@@ -27,11 +28,49 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const credentialId = typeof body?.credentialId === 'string' ? body.credentialId : '';
     const publicKey = typeof body?.publicKey === 'string' ? body.publicKey : '';
-    const algorithm = Number(body?.algorithm);
+    /**
+     * THE ALGORITHM NUMBER — READ STRICTLY, AND WHY IT IS NOT THE GATE.
+     *
+     * This was `Number(body?.algorithm)` under `Number.isFinite`, and the
+     * notation was open: measured on this build, `'0x10'` → 16, `null` → 0,
+     * `[]` → 0, `''` → 0, `['-7']` → -7.
+     *
+     * IT CANNOT WEAKEN THE AUTHENTICATION, and this is how that was
+     * established rather than assumed:
+     *
+     *   1. `verifyRegistration` (`lib/passkey.ts`) refuses anything outside
+     *      `ALLOWED_ALGORITHMS = [-7, -257]` with UNSUPPORTED_ALGORITHM, and
+     *      it runs BEFORE `db.passkey.create`. A number nobody meant is
+     *      never stored.
+     *   2. Both accepted values are NEGATIVE, and `Number()` of a
+     *      base-prefixed string is never negative — `Number('-0x10')` is
+     *      NaN, measured. So no notation trick reaches an accepted value.
+     *   3. `verifyAssertion` checks the same allowlist again at sign-in, and
+     *      the proof itself is anchored on the STORED PUBLIC KEY: whichever
+     *      branch the algorithm number selects, the signature must still
+     *      have been made by the matching private key. Claiming -7 over an
+     *      RSA key at worst locks the owner out of their own passkey.
+     *
+     * So the severity is lower than «low»: nil for authentication strength.
+     * What was real is smaller and is what this change fixes — under
+     * `Number()`, `{"algorithm": null}` and `{"algorithm": []}` became `0`,
+     * which IS finite, so they slipped past this «بيانات التسجيل ناقصة»
+     * check, SPENT THE CHALLENGE below, and only then came back as
+     * «نوع المفتاح غير مدعوم». A missing field now reads as a missing field,
+     * before the ticket is burned.
+     *
+     * `numeric()` and not `count()`: a COSE algorithm is negative, so a
+     * reader with `min(0)` would refuse every real one. And no
+     * `Number.isFinite` beside it — `numeric()` already refuses NaN and
+     * Infinity (measured: `numeric().safeParse('1e400')` fails), so such a
+     * check could never fire once, and a guard that cannot fire is the one
+     * thing this audit keeps finding.
+     */
+    const algorithm = numeric().safeParse(body?.algorithm);
     const clientDataJSON = typeof body?.clientDataJSON === 'string' ? body.clientDataJSON : '';
     const label = typeof body?.label === 'string' ? body.label.trim().slice(0, 60) : '';
 
-    if (!credentialId || !publicKey || !clientDataJSON || !Number.isFinite(algorithm)) {
+    if (!credentialId || !publicKey || !clientDataJSON || !algorithm.success) {
       return NextResponse.json({ error: 'بيانات التسجيل ناقصة' }, { status: 400 });
     }
 
@@ -59,7 +98,7 @@ export async function POST(req: Request) {
 
     const verdict = verifyRegistration({
       clientDataJSON,
-      algorithm,
+      algorithm: algorithm.data,
       expected: { challenge: ticket.challenge, origin: rp.origin },
     });
     if (!verdict.ok) {
@@ -87,7 +126,7 @@ export async function POST(req: Request) {
         userId: me.id,
         credentialId,
         publicKey,
-        algorithm,
+        algorithm: algorithm.data,
         label: label || null,
         counter: 0,
       },
@@ -102,7 +141,7 @@ export async function POST(req: Request) {
       entityId: me.id,
       // Never the key itself. What matters on the trail is that a new way
       // in was added, by whom, and which one it is.
-      newData: { passkeyId: key.id, label: key.label, algorithm },
+      newData: { passkeyId: key.id, label: key.label, algorithm: algorithm.data },
     });
 
     return NextResponse.json({ key });

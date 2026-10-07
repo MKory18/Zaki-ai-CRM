@@ -11,6 +11,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { isPrivilegedRoleName } from '@/lib/role-names';
 import { canConferRole } from '@/lib/user-permissions';
 import { parseHhMm, parseRestDays } from '@/lib/employee-shift';
+import { money } from '@/lib/numeric-input';
 
 /**
  * PATCH /api/users/:id — admin actions on a user account:
@@ -283,11 +284,45 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (raw === null || raw === '') {
           updateData.salaryAmount = null;
         } else {
-          const amount = Number(raw);
-          if (!Number.isFinite(amount) || amount < 0 || amount > 100_000_000) {
+          /*
+           * READ LIKE MONEY, NOT LIKE `Number()`.
+           *
+           * The finiteness check and the ceiling were already here and both
+           * are right. The NOTATION was not, and `Number()` is the whole
+           * reason: measured on this build, `Number('0x10')` is **16**, so
+           * `{"salaryAmount":"0x10"}` filed somebody's pay as sixteen —
+           * and `Number('   ')` is **0**, so a field holding one space
+           * filed a salary of ZERO. Zero is the worse of the two: the
+           * screen shows a salary and offers «اصرف» (`UserSalary.tsx`
+           * shows the button for any non-null amount), and payroll then
+           * refuses by the other road — `payroll.ts:85` treats `<= 0` as
+           * NO_SALARY. A person with a salary on file who cannot be paid.
+           *
+           * `money()` is the repository's strict money reader: a number, or
+           * a string written the way a decimal number is written, and
+           * nothing else. It carries these exact bounds, so nothing moves:
+           *
+           *   min 0           — a month paid at nothing is a real entry,
+           *                     and the column's own default side is zero.
+           *   max 100_000_000 — the column is `Decimal(12, 2)`, which holds
+           *                     9,999,999,999.99; a hundred million is the
+           *                     tighter, deliberate business ceiling that
+           *                     was already written here, and no monthly
+           *                     wage in any currency this system serves
+           *                     reaches it. This is the ONLY door that
+           *                     writes `User.salaryAmount`, so there is no
+           *                     second declaration to agree with.
+           *
+           * The clearing branch above stays BEFORE this on purpose: `''`
+           * and `null` mean «no salary on file», and `money()` refuses both
+           * rather than reading them as zero — which is exactly why it is
+           * the right reader here.
+           */
+          const amount = money(100_000_000).safeParse(raw);
+          if (!amount.success) {
             return NextResponse.json({ error: 'الراتب رقم موجب' }, { status: 400 });
           }
-          updateData.salaryAmount = amount;
+          updateData.salaryAmount = amount.data;
         }
       }
       if ('salaryCurrency' in body) {

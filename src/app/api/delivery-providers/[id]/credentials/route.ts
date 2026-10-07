@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit';
 import { encryptJson, decryptJson, encryptionAvailable, secretHint } from '@/lib/secrets';
 import { logesTechsFromCredentials, type LogesTechsCredentials } from '@/lib/couriers/logestechs';
 import { zodMessage } from '@/lib/zod-message';
+import { count } from '@/lib/numeric-input';
 
 /**
  * A courier's account on its shipping platform.
@@ -27,20 +28,64 @@ interface Ctx {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * THESE IDS ARE ADDRESSES AT SOMEBODY ELSE'S SYSTEM — READ THEM STRICTLY.
+ *
+ * They were `z.coerce.number()`, which IS `Number()`: measured on this
+ * build, `'0x10'` → 16, `'0b11'` → 3, `'0o17'` → 15, `['5']` → 5,
+ * `true` → 1. The judgement on the audit was «fails at the courier, not in
+ * our books». That is NOT what these two do, and the adapter says so:
+ *
+ *   `originCityId` is sent as `originAddress.cityId` on every shipment
+ *   (`couriers/logestechs.ts`, `createShipment`). A valid-but-wrong city id
+ *   does not fail at the courier at all — the parcel is CREATED, with a
+ *   barcode, for collection from a city we are not in. It then fails as a
+ *   pickup that never happened, days later, against the courier's name.
+ *
+ *   `companyId` is a path segment on two of their endpoints —
+ *   `POST /guests/{companyId}/packages/pdf` and
+ *   `PUT  /guests/{companyId}/packages/cancel?barcode=` — and the cancel is
+ *   a WRITE. It is ALSO the key of our own outbound rate-limit bucket
+ *   (`paced('logestechs:' + companyId)`), whose comment says crossing their
+ *   limit suspends the account for a working day. So a mis-read id is
+ *   already wrong on this side of the wire, before their server has an
+ *   opinion. What their server does with another merchant's id is NOT
+ *   established here — it would take a call to their API to find out, and
+ *   this fix does not depend on the answer.
+ *
+ * BOUNDS, AND WHERE THEY COME FROM. None of these is a column: they live
+ * inside the encrypted `apiCredentials` blob, so `schema.prisma` declares
+ * nothing. The only other declarations anywhere are
+ * `logesTechsConfigFromEnv` and `logesTechsFromCredentials`, and both ask
+ * for no more than `Number.isFinite` — no ceiling at all. So:
+ *
+ *   min 1  on companyId / originCityId — kept exactly as it was; an account
+ *          or city numbered zero is not an account or a city.
+ *   min 0  on the three type ids — they had NO minimum, so negatives passed.
+ *          Zero is kept reachable rather than tightened to 1 because nothing
+ *          in the adapter or their documented request body says whether 0 is
+ *          a valid type id, and refusing it would break a working account to
+ *          close a hole that negatives already cover.
+ *   max 2_147_483_647 on all five — they had none, so `'1e15'` stored. This
+ *          is the widest a conventional platform's integer id can be, so it
+ *          refuses nothing a real courier id could ever be while refusing
+ *          the junk. A ceiling also matters HERE specifically because
+ *          `companyId` is interpolated into a URL and used as a bucket key.
+ */
 const credentialsSchema = z.object({
   email: z.string().min(3).max(200),
   password: z.string().min(1).max(200),
-  companyId: z.coerce.number().int().min(1),
-  originCityId: z.coerce.number().int().min(1),
+  companyId: count(2_147_483_647, 1),
+  originCityId: count(2_147_483_647, 1),
   senderName: z.string().min(1).max(120),
   senderPhone: z.string().min(5).max(40),
   senderBusiness: z.string().max(120).optional(),
   originAddress: z.string().max(200).optional(),
   originAddress2: z.string().max(200).optional(),
   baseUrl: z.string().max(300).optional(),
-  serviceTypeId: z.coerce.number().int().optional(),
-  vehicleTypeId: z.coerce.number().int().optional(),
-  parcelTypeId: z.coerce.number().int().optional(),
+  serviceTypeId: count(2_147_483_647).optional(),
+  vehicleTypeId: count(2_147_483_647).optional(),
+  parcelTypeId: count(2_147_483_647).optional(),
 });
 
 /**
