@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardFiles } from './guard-source';
+import { dashboardFiles, themeExempt } from './guard-source';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ICONS } from '../components/shell/icons';
@@ -23,7 +23,12 @@ function code(src: string): string {
 
 describe('one icon family', () => {
   it('and the dashboard draws from it alone', () => {
-    const strays = dashboardFiles().filter((f) => f.src.includes("from 'lucide-react'")).map((f) => f.rel);
+    const strays = dashboardFiles()
+      // The page editor draws with lucide because the BLOCKS it edits do.
+      // Moving it to Remix is part of the same restyle. See `THEME_EXEMPT`.
+      .filter((f) => !themeExempt(f.rel))
+      .filter((f) => f.src.includes("from 'lucide-react'"))
+      .map((f) => f.rel);
     expect(strays, `عائلة أيقونات ثانية في لوحة التحكم:\n${strays.join('\n')}`).toEqual([]);
   });
 

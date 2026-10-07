@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardFiles, stripComments, stripTemplates } from './guard-source';
+import { dashboardFiles, stripComments, stripTemplates, themeExempt } from './guard-source';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -57,6 +57,8 @@ describe('the colours on a dashboard screen', () => {
   it('come from the theme, never from Tailwind’s own palette', () => {
     const offenders: string[] = [];
     for (const { rel, src } of dashboardFiles()) {
+      // The page editor keeps its own slate palette — see `THEME_EXEMPT`.
+      if (themeExempt(rel)) continue;
       const lines = stripComments(src).split('\n');
       for (let i = 0; i < lines.length; i++) {
         for (const m of lines[i].matchAll(RAW)) offenders.push(`${rel}:${i + 1}  ${m[0]}`);
@@ -110,6 +112,7 @@ describe('the colours on a dashboard screen', () => {
         if (!styling) continue;
         for (const m of lines[i].matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
           if (OTHER_BRANDS.has(m[0].toLowerCase())) continue;
+          if (themeExempt(rel)) continue;
           offenders.push(`${rel}:${i + 1}  ${m[0]}`);
         }
       }

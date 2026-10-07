@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Eye, EyeOff, Trash2, Plus, Minus, Upload, Loader2, GripVertical,
-  Monitor, Smartphone, X, Paintbrush, LayoutTemplate,
+  Monitor, Smartphone, X, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LookControls } from './LookControls';
@@ -363,7 +363,7 @@ export function BlockBuilder(props: Props) {
                 onClick={() => onTheme({ ...theme, accent: hex })}
                 title={hex}
                 style={{ background: hex }}
-                className={`h-7 rounded-md border-2 transition ${
+                className={`h-11 md:h-7 rounded-md border-2 transition ${
                   theme.accent.toLowerCase() === hex ? 'border-[#121926] scale-105' : 'border-transparent'
                 }`}
               />
@@ -374,7 +374,7 @@ export function BlockBuilder(props: Props) {
               type="color"
               value={isValidHex(theme.accent) ? theme.accent : DEFAULT_THEME.accent}
               onChange={(e) => onTheme({ ...theme, accent: e.target.value })}
-              className="h-8 w-10 cursor-pointer rounded border border-[#e3e8ef]"
+              className="h-11 w-11 md:h-8 md:w-10 cursor-pointer rounded border border-[#e3e8ef]"
             />
             <Input
               dir="ltr"
@@ -590,6 +590,7 @@ export function BlockBuilder(props: Props) {
                         if (openId === s.id) setOpenId(null);
                       }}
                       title="حذف"
+                      aria-label="احذف هذا القسم"
                       className="cursor-pointer p-1 text-[#9aa4b2] hover:text-rose-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -935,7 +936,7 @@ function SectionFields({
             <select
               value={s.columns}
               onChange={(e) => patch({ columns: Number(e.target.value) })}
-              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
             >
               {[2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -949,7 +950,7 @@ function SectionFields({
             <select
               value={s.cardSize}
               onChange={(e) => patch({ cardSize: e.target.value as 'sm' | 'md' | 'lg' })}
-              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
             >
               <option value="sm">صغير</option>
               <option value="md">متوسط</option>
@@ -962,7 +963,7 @@ function SectionFields({
             <select
               value={s.limit}
               onChange={(e) => patch({ limit: Number(e.target.value) })}
-              className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
             >
               <option value={0}>الكل</option>
               {[4, 6, 8, 12, 16, 24].map((n) => <option key={n} value={n}>{n}</option>)}
@@ -991,7 +992,7 @@ function SectionFields({
               <select
                 value={s.seconds}
                 onChange={(e) => patch({ seconds: Number(e.target.value) })}
-                className="h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+                className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
               >
                 {[2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
@@ -1422,6 +1423,7 @@ function ImageField({
             onClick={() => onChange('')}
             className="absolute left-1.5 top-1.5 cursor-pointer rounded-full bg-white/90 p-1 text-[#697586] hover:text-rose-600"
             title="إزالة"
+            aria-label="أزل هذه الصورة"
           >
             <X className="h-3 w-3" />
           </button>
@@ -1517,6 +1519,7 @@ function Repeater<T>({
             onClick={() => onChange(items.filter((_, n) => n !== i))}
             className="absolute left-1.5 top-1.5 cursor-pointer text-[#9aa4b2] hover:text-rose-600"
             title="حذف"
+            aria-label="احذف هذا العنصر"
           >
             <Trash2 className="h-3 w-3" />
           </button>

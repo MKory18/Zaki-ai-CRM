@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardFiles, stripComments } from './guard-source';
+import { dashboardFiles, stripComments, themeExempt } from './guard-source';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { CHART_SERIES, SYSTEM_THEMES } from './system-themes';
@@ -209,6 +209,9 @@ describe('spacing and type', () => {
     // allowed to be tracked out, and an Arabic word never is.
     const PROP = /(?<![\w-])(?:p|px|py|pt|pb|ps|pe|m|mx|my|mt|mb|ms|me|gap|gap-x|gap-y|space-x|space-y|text|leading)-\[([^\]]+)\]/g;
     for (const { rel, src } of dashboardFiles()) {
+      // The page editor keeps its own type sizes — 43 of them, off the
+      // scale, and bringing them onto it is a restyle. See `THEME_EXEMPT`.
+      if (themeExempt(rel)) continue;
       for (const [i, line] of stripComments(src).split('\n').entries()) {
         for (const m of line.matchAll(PROP)) {
           const v = m[1];

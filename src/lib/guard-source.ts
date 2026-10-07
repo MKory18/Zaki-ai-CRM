@@ -126,7 +126,8 @@ export function dashboardFiles(ext: '.ts' | '.tsx' | 'both' = '.tsx'): GuardFile
       if (statSync(p).isDirectory()) walk(p);
       else if (match(p) && !p.includes('.test.')) {
         const rel = `/${relative(process.cwd(), p).split('\\').join('/')}`;
-        if (!SELLER_SURFACES.some((s) => rel.includes(s))) {
+        const editor = EDITOR_ONLY.some((e) => rel.includes(e));
+        if (editor || !SELLER_SURFACES.some((s) => rel.includes(s))) {
           out.push({ rel, src: readFileSync(p, 'utf8') });
         }
       }
@@ -151,6 +152,39 @@ const EDITOR_ONLY = [
   // over selected words while a seller is writing.
   '/components/landing/blocks/SelectionBar.tsx',
 ];
+
+/**
+ * THE TWO FILES THAT WERE GOVERNED BY NOTHING AT ALL.
+ *
+ * `shopperFiles` carves `EDITOR_ONLY` out of the shopper's half — rightly,
+ * because the editor is the dashboard's. But it was never added back to
+ * `dashboardFiles`, so for as long as both functions existed these two
+ * files fell between them and **no guard in this repository could see
+ * them**, while the comment above `shopperFiles` promised the opposite in
+ * writing: «the exact complement … so the two can never drift apart and
+ * leave a file governed by neither».
+ *
+ * Closing it found, in the editor alone: three destructive icon buttons a
+ * screen reader announces as «button», six controls under 44px with no
+ * desk twin, and one icon imported and never drawn. All fixed.
+ *
+ * WHAT IS EXEMPT, AND ONLY FROM THE LOOK RULES. The editor was built on its
+ * own slate palette — 100 hand-written hexes and 43 type sizes off the
+ * scale — and the product's theme is not those greys, it is a blue-green
+ * set. Bringing the editor onto the theme is a RESTYLE that changes how it
+ * looks, not a substitution: `#364152` has no equivalent to swap in. That
+ * is the owner's call, so it is written down and named here rather than
+ * left as a silent hole. Every other rule now reaches these files.
+ *
+ * The defect it leaves standing, stated plainly: the page editor does not
+ * follow the theme, so in dark mode its labels are near-black on a dark
+ * card.
+ */
+export const THEME_EXEMPT = [...EDITOR_ONLY];
+
+/** True for a file exempt from the LOOK rules, and from nothing else. */
+export const themeExempt = (rel: string): boolean =>
+  THEME_EXEMPT.some((e) => rel.includes(e));
 
 /**
  * EVERY FILE A SHOPPER'S PAGE IS DRAWN FROM — the exact complement of
