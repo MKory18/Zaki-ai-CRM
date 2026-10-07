@@ -705,13 +705,90 @@ describe('7 · a partial delivery is measured against what actually happened', (
     ).toBe(0);
   });
 
-  it('and a returned parcel expects nothing at all', () => {
+  it('and a returned parcel nobody was charged for expects nothing at all', () => {
     for (const shippingStatus of ['RETURNED', 'RETURN_REQUESTED']) {
       expect(
         expectedAmountFor(facts({ shippingStatus, totalAmount: 100, deliveryFee: 5 }), JOD),
         shippingStatus
       ).toBe(0);
+      // Not negative zero, which a money column would carry as a lie. The
+      // `-returnFee` below goes through `roundMinor`, and this is the
+      // measurement that says it comes back out positive.
+      expect(
+        Object.is(expectedAmountFor(facts({ shippingStatus, totalAmount: 100 }), JOD), -0),
+        shippingStatus
+      ).toBe(false);
     }
+  });
+
+  it('but the return LEG still costs what the courier charged for it', () => {
+    /*
+     * MEASURED ON THIS DATABASE, which is what settled it. Of seven return
+     * receipts, the only three carrying a non-zero fee — `ORD-2026-0033`,
+     * `-0043`, `-0051` — are every one of them RETURNED, and this branch
+     * returned a flat 0 before reading the column four lines below. So the
+     * figure was written ONLY where it was never read, and 4.50 owed to the
+     * courier had no trace in any expectation.
+     *
+     * The boundary made no sense either: `partial-delivery.ts` stamps
+     * RETURNED when the customer kept nothing, so keeping one cheap unit of
+     * three could already produce a negative while keeping none produced
+     * exactly 0 — the same fee, two answers, either side of one keystroke.
+     */
+    for (const shippingStatus of ['RETURNED', 'RETURN_REQUESTED']) {
+      expect(
+        expectedAmountFor(
+          facts({
+            shippingStatus,
+            totalAmount: 36,
+            deliveryFee: 2.5,
+            returnReceipt: { courierFeeAmount: 1.5 },
+          }),
+          JOD
+        ),
+        shippingStatus
+      ).toBe(-1.5);
+    }
+  });
+
+  it('and the outbound fee is NOT charged on top of it — the trip was not made', () => {
+    // 2.5 to deliver was never earned: the parcel came back. Only the return
+    // leg is owed, so the answer is -1.5 and never -4.
+    const e = expectedAmountFor(
+      facts({
+        shippingStatus: 'RETURNED',
+        totalAmount: 36,
+        deliveryFee: 2.5,
+        returnReceipt: { courierFeeAmount: 1.5 },
+      }),
+      JOD
+    );
+    expect(e).toBe(-1.5);
+    expect(e).not.toBe(-4);
+  });
+
+  it('and a returned parcel the door never spoke for is still not billed its total', () => {
+    /*
+     * THE SHORT-CIRCUIT IS NOT CEREMONY, and this is why it stays. A courier
+     * feed can set RETURNED and count nothing, leaving every `deliveredQty`
+     * null — and the general path below falls back to `totalAmount` when the
+     * door never spoke. Removing the branch to «let the arithmetic handle
+     * it» would expect the whole 36 back from a parcel on our own shelf.
+     */
+    const e = expectedAmountFor(
+      facts({
+        shippingStatus: 'RETURNED',
+        totalAmount: 36,
+        deliveryFee: 2.5,
+        returnReceipt: { courierFeeAmount: 1.5 },
+        items: [
+          { quantity: 3, freeQuantity: 0, unitPrice: 12, discountShare: 0, lineTotal: 36, deliveredQty: null },
+        ],
+      }),
+      JOD
+    );
+    expect(e).toBe(-1.5);
+    expect(e).not.toBe(36);
   });
 
   it('and the partial is swept for too, or a courier could omit every one', () => {

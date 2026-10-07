@@ -627,7 +627,42 @@ export function doorMoney(order: DoorFacts, minorUnit: number): DoorMoney {
  * the courier, and rounding that up to zero would hide a real debt.
  */
 export function expectedAmountFor(order: SettlementFacts, minorUnit: number): number {
-  if (order.shippingStatus === 'RETURNED' || order.shippingStatus === 'RETURN_REQUESTED') return 0;
+  /**
+   * THE RETURN LEG. The returns desk records what the courier charged to
+   * carry the refused units back, and the courier deducts it from what they
+   * remit. Nothing read this column, so a statement stated net of a return
+   * fee read as short by exactly that fee.
+   *
+   * Read ABOVE the returned short-circuit, because that is the one case
+   * where the desk actually writes it — see below.
+   */
+  const returnFee = roundMinor(Number(order.returnReceipt?.courierFeeAmount ?? 0), minorUnit);
+
+  /**
+   * A PARCEL THAT CAME BACK WHOLE: NOTHING COLLECTED, AND THE RETURN LEG
+   * STILL COSTS WHAT IT COSTS.
+   *
+   * This returned a flat 0, and the fee was read four lines later — so a
+   * fully returned order was the one branch that never reached it. Measured
+   * on this database: of seven return receipts, the only three carrying a
+   * non-zero fee are `ORD-2026-0033`, `-0043` and `-0051`, every one of them
+   * RETURNED. The column held a figure ONLY where it was never read, and
+   * 4.50 owed to the courier had no trace in any expectation.
+   *
+   * And the boundary made no sense: `partial-delivery.ts` stamps RETURNED
+   * when the customer kept nothing, so taking one cheap unit of three could
+   * already produce a negative while taking none produced exactly 0 — the
+   * same fee, two answers, on either side of one keystroke.
+   *
+   * THE SHORT-CIRCUIT ITSELF STAYS, and it is not ceremony. Without it a
+   * RETURNED order whose door never spoke — a courier feed that set the
+   * status and counted nothing — falls through to the `totalAmount`
+   * fallback below and expects the whole order back from a parcel sitting
+   * on our own shelf.
+   */
+  if (order.shippingStatus === 'RETURNED' || order.shippingStatus === 'RETURN_REQUESTED') {
+    return roundMinor(-returnFee, minorUnit);
+  }
 
   // An order has lines by construction. An empty array here is a caller who
   // satisfied the compiler without asking the database — the one way left to
@@ -639,13 +674,6 @@ export function expectedAmountFor(order: SettlementFacts, minorUnit: number): nu
   }
 
   const fee = roundMinor(Number(order.deliveryFee ?? 0), minorUnit);
-  /**
-   * THE RETURN LEG. The returns desk records what the courier charged to
-   * carry the refused units back, and the courier deducts it from what they
-   * remit. Nothing read this column, so a statement stated net of a return
-   * fee read as short by exactly that fee.
-   */
-  const returnFee = roundMinor(Number(order.returnReceipt?.courierFeeAmount ?? 0), minorUnit);
 
   /**
    * THE DOOR'S OWN FIGURE, or the order's total when the door never spoke.
