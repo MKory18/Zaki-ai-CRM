@@ -133,7 +133,7 @@ describe('the rule holds for every field in this file, now and later', () => {
     let withoutIdOrName = 0;
     for (const f of files) {
       const t = readFileSync(join(process.cwd(), f), 'utf8');
-      for (const m of t.matchAll(/<(Input|Select|Textarea)\b([^>]*?)\/?>/gs)) {
+      for (const m of t.matchAll(/<(Input|Select|Textarea)\b([^>]*?)\/?>/g)) {
         if (!/\blabel\s*=/.test(m[2])) continue;
         labelled++;
         if (!/\b(id|name)\s*=/.test(m[2])) withoutIdOrName++;

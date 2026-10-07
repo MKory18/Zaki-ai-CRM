@@ -140,7 +140,7 @@ export function SavedViews({
           <button
             type="button"
             onClick={() => setNaming(true)}
-            className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+            className="min-h-11 md:min-h-0 inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
           >
             <RiBookmarkLine className="h-4 w-4" aria-hidden />
             احفظ هذا العرض

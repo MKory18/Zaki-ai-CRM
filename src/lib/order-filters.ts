@@ -158,3 +158,82 @@ export const ORDER_FILTER_PARAMS = [
   'source',
   'lateDays',
 ] as const;
+
+/**
+ * THE SAME GRAMMAR, WRITTEN RATHER THAN READ.
+ *
+ * Everything above turns a query string into a `where`. A screen needs the
+ * other direction: the ten controls a person has set, as the one query
+ * string that asks for them. Two things need it and they must not each
+ * invent it —
+ *
+ *   · «العروض المحفوظة» stores a view AS a query string and nothing else,
+ *     so a saved view is only as faithful as this function;
+ *   · the CSV export forwards the filters it was asked for.
+ *
+ * ABSENT, `''` AND `'all'` ARE ONE THING — read `ordersWhere` above: every
+ * branch is `if (value && value !== 'all')`. So the canonical form OMITS a
+ * filter that is not set, and a saved view carries only what was chosen.
+ * That is also why a short query string and a long one with six `=all` in
+ * it return the same rows: this is a shorter spelling, not a second rule.
+ *
+ * AND APPLYING A VIEW CLEARS WHAT IS NOT IN IT. `orderFiltersFromQuery`
+ * starts from `EMPTY_ORDER_FILTERS`, so recalling «المتأخرة — أرامكس» shows
+ * exactly that and not that plus whatever was already on the screen. «Show
+ * me this view» is the request; «add this to what I have» is not.
+ */
+export interface OrderFilterValues {
+  /** Free text: order number, merchant ref, tracking, name or phone. */
+  q: string;
+  status: string;
+  productId: string;
+  source: string;
+  courierId: string;
+  regionId: string;
+  /** `YYYY-MM-DD`, inclusive. Read by the routes, not by the builder. */
+  from: string;
+  to: string;
+  /** Days late since SHIPPING. `''` when the «المتأخرة» switch is off. */
+  lateDays: string;
+}
+
+/** Every filter at rest — and the value each control shows when unset. */
+export const EMPTY_ORDER_FILTERS: OrderFilterValues = {
+  q: '',
+  status: 'all',
+  productId: 'all',
+  source: 'all',
+  courierId: 'all',
+  regionId: 'all',
+  from: '',
+  to: '',
+  lateDays: '',
+};
+
+/** What the builder treats as «no filter», in its own words: `v && v !== 'all'`. */
+const UNSET_FILTER = new Set(['', 'all']);
+
+/** The filters a screen holds, as the query string that asks for them. */
+export function orderFiltersToQuery(values: Partial<OrderFilterValues>): string {
+  const params = new URLSearchParams();
+  for (const key of Object.keys(EMPTY_ORDER_FILTERS) as (keyof OrderFilterValues)[]) {
+    const value = (values[key] ?? '').trim();
+    if (UNSET_FILTER.has(value)) continue;
+    params.set(key, value);
+  }
+  return params.toString();
+}
+
+/** A stored query string, back as the controls that produced it. */
+export function orderFiltersFromQuery(query: string): OrderFilterValues {
+  const params = new URLSearchParams(query.replace(/^\?/, ''));
+  const out = { ...EMPTY_ORDER_FILTERS };
+  for (const key of Object.keys(EMPTY_ORDER_FILTERS) as (keyof OrderFilterValues)[]) {
+    const raw = params.get(key);
+    if (raw === null) continue;
+    const value = raw.trim();
+    // An empty value in a stored string is «unset», not «filter by nothing».
+    out[key] = value === '' ? EMPTY_ORDER_FILTERS[key] : value;
+  }
+  return out;
+}

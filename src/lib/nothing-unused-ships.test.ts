@@ -235,7 +235,6 @@ function exportedComponents(src: string): string[] {
  * to make it. What it IS allowed to do is stop the number growing quietly.
  */
 const RENDERED_BY_NOTHING: Record<string, string> = {
-  'src/components/ui/SavedViews.tsx:SavedViews': 'مكوّنٌ كاملٌ له اختباراته ولا تعرضه شاشة — «العروض المحفوظة» لم تُوصَل بشاشة الطلبات',
   'src/components/ui/Skeleton.tsx:Skeleton': 'الهيكلُ المفرد: تستعمله SkeletonRows داخل ملفه، ولا يستدعيه أحدٌ من الخارج',
   'src/components/storefront/ShopSkeleton.tsx:ProductSkeleton': 'تصديرٌ لا يستعمله حتى ملفه — ShopSkeleton ترسم بلاطاتها بنفسها',
 };

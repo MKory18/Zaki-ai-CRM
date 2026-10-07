@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { SavedViews } from '@/components/ui/SavedViews';
+import { EMPTY_ORDER_FILTERS, orderFiltersFromQuery, orderFiltersToQuery } from '@/lib/order-filters';
 import { DismissButton } from '@/components/ui/DismissButton';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -219,20 +221,58 @@ export function OrdersScreen() {
     (productId !== 'all' ? 1 : 0) + (courierId !== 'all' ? 1 : 0) +
     (fromDate ? 1 : 0) + (toDate ? 1 : 0) + (lateOnly ? 1 : 0) + (regionId !== 'all' ? 1 : 0);
 
-  const resetFilters = () => {
-    setSearchInput('');
-    setSearch('');
-    setStatus('all');
-    setSource('all');
-    setProductId('all');
-    setCourierId('all');
-    setFromDate('');
-    setToDate('');
-    setLateOnly(false);
-    setRegionId('all');
+  /**
+   * THE FILTERS AS THEY ARE NOW — and this string IS the saved view.
+   *
+   * `orderFiltersToQuery` lives beside the builder that reads it, so the
+   * two halves of the grammar cannot drift. A filter added to this screen
+   * and not to that interface fails to compile, which is the point.
+   */
+  const filterQuery = orderFiltersToQuery({
+    q: search,
+    status,
+    productId,
+    source,
+    courierId,
+    regionId,
+    from: fromDate,
+    to: toDate,
+    lateDays: lateOnly ? '10' : '',
+  });
+
+  /**
+   * RECALLING A VIEW REPLACES THE FILTERS — it does not add to them.
+   *
+   * `orderFiltersFromQuery` starts from `EMPTY_ORDER_FILTERS`, so «المتأخرة
+   * — أرامكس» shows exactly that and not that plus whatever was already
+   * set. And a stored state is checked the same way a URL's is: a view
+   * saved before a state was renamed would otherwise reach the API and come
+   * back 400 «حالة غير معروفة» — a filter nobody chose, refusing to load
+   * the screen. `localStorage` is as typeable as an address bar.
+   */
+  const applyFilters = (query: string) => {
+    const v = orderFiltersFromQuery(query);
+    setSearchInput(v.q);
+    setSearch(v.q);
+    setStatus((FILTERABLE_STATES as string[]).includes(v.status) ? v.status : EMPTY_ORDER_FILTERS.status);
+    setSource(v.source);
+    setProductId(v.productId);
+    setCourierId(v.courierId);
+    setFromDate(v.from);
+    setToDate(v.to);
+    setLateOnly(v.lateDays !== '');
+    setRegionId(v.regionId);
     setShowAll(false);
     setSelected(new Set());
   };
+
+  /*
+   * «إعادة تعيين» is the empty view, and saying so is what keeps the two
+   * from disagreeing: this was thirteen setters repeating the same list of
+   * defaults, and adding a filter meant remembering to clear it HERE as
+   * well as everywhere else. One list, in `EMPTY_ORDER_FILTERS`.
+   */
+  const resetFilters = () => applyFilters('');
 
   /** Selection is per page: it clears whenever the rows underneath change. */
   const toggleRow = (id: string) =>
@@ -490,6 +530,16 @@ export function OrdersScreen() {
               value={{ from: fromDate, to: toDate }}
               onChange={(r) => { setFromDate(r.from); setToDate(r.to); }}
             />
+          </div>
+
+          {/* THE SAME SIX FILTERS, NOT SET AGAIN EVERY MORNING.
+              «المتأخرة أكثر من عشرة أيام، أرامكس، إربد» is what somebody
+              opens this screen to see, and it cost nine controls before any
+              work started. Stored in THIS browser, as a query string and a
+              name — no results, no counts, no customer. Recalling a view
+              re-asks the question; it never replays an answer. */}
+          <div className="border-t border-[var(--sys-border)] px-3 pb-3 pt-2">
+            <SavedViews screen="orders" current={filterQuery} onApply={applyFilters} />
           </div>
         </div>
 
