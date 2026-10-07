@@ -21,7 +21,7 @@ import {
   DELIVERY_FAILURE_REASON_LABELS as FAILURE_REASONS,
   RETURN_REASON_LABELS as RETURN_REASONS,
 } from '@/lib/shipping-workflow';
-import { RiArchiveDrawerLine, RiArchiveLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiMapPinLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiArchiveDrawerLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 
 
 /*

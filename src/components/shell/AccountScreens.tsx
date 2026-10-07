@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { signOut } from '@/lib/sign-out';
-import { RiLogoutBoxLine, RiMailCheckLine, RiRefreshLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
+import { RiLogoutBoxLine, RiMailCheckLine, RiRefreshLine, RiTimerLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 /** Account-state screens for PENDING / SUSPENDED / DISABLED users. */

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { RiErrorWarningLine, RiFingerprintLine, RiLoader4Line, RiLoginBoxLine, RiShieldCrossLine, RiTimerLine } from '@remixicon/react';
+import { RiErrorWarningLine, RiFingerprintLine, RiLoader4Line, RiLoginBoxLine, RiTimerLine } from '@remixicon/react';
 import { BrandStage } from '@/components/shell/BrandStage';
 
 export default function LoginPage() {

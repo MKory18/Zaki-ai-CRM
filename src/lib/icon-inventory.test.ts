@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardFiles, stripComments } from './guard-source';
+import { dashboardFiles, shopperFiles, stripComments } from './guard-source';
 
 /**
  * THE INVENTORY THE BRIEF ASKED FOR, AS A CHECK RATHER THAN A DOCUMENT.
@@ -23,6 +23,60 @@ import { dashboardFiles, stripComments } from './guard-source';
 const TAG = /<(Ri\w+)\b/g;
 const VALUE = /(?:icon\s*[:=]\s*\{?|pair\(|,\s*)(Ri\w+)\b/g;
 const IMPORTS = /import\s*\{([^}]*)\}\s*from\s*'@remixicon\/react'/g;
+
+/**
+ * BOTH FAMILIES, AND PER FILE — which is what an import actually is.
+ *
+ * This read `^Ri\w+$` only, so **lucide-react was entirely unguarded** —
+ * and lucide is what the landing-page tree draws with, which is the public
+ * page the performance budget is about. It also pooled «drawn» across the
+ * whole product, so an icon imported in one file and drawn in a different
+ * one counted as used. An ES import is per MODULE: a name imported into a
+ * file and never mentioned again in that file is a reference the bundler
+ * keeps in THAT file's chunk, whatever any other file does.
+ *
+ * MEASURED when both holes were closed: **17 dead imports**, 14 Remix and
+ * 3 lucide — six of them in `OrderDetailModal.tsx` alone, and one
+ * (`CheckCircle2`) in the public order form every customer loads.
+ *
+ * A mention is a mention: drawn as a tag, handed to a prop, sitting in a
+ * map. This asks whether the name appears at all once the import lines are
+ * taken out, rather than listing the shapes a use can have — the shape
+ * list is what let `icon: Something` slip past before.
+ */
+const ICON_IMPORTS = /import\s*\{([^}]*)\}\s*from\s*'(?:@remixicon\/react|lucide-react)'/g;
+
+/**
+ * THE WHOLE PRODUCT, because this is a rule about BYTES and not about look.
+ *
+ * `dashboardFiles` leaves the seller's surfaces out on purpose — they are
+ * left-to-right, they carry their own fonts, and a styling rule written for
+ * the dashboard would be a rule about a page nobody sees that way. None of
+ * that applies to «imported and never drawn»: the shopper's landing page is
+ * the one with a performance budget on it, so it is the page where an icon
+ * paid for and never seen matters MOST. `shopperFiles` is its half.
+ */
+const everyFile = () => [...dashboardFiles('both'), ...shopperFiles('both')];
+
+/** Every icon a file imports and then never mentions, as `name (file)`. */
+function deadImports(): string[] {
+  const dead: string[] = [];
+  for (const { rel, src } of everyFile()) {
+    const body = stripComments(src);
+    const rest = body.replace(ICON_IMPORTS, '');
+    for (const m of body.matchAll(ICON_IMPORTS)) {
+      for (const part of m[1].split(',')) {
+        const raw = part.trim();
+        // `type Foo` is erased at compile time and costs nothing.
+        if (!raw || raw.startsWith('type ')) continue;
+        const name = raw.split(' as ')[0].trim();
+        if (!/^[A-Z]\w*$/.test(name)) continue;
+        if (!new RegExp(`\\b${name}\\b`).test(rest)) dead.push(`${name} (${rel})`);
+      }
+    }
+  }
+  return dead;
+}
 
 function usage() {
   const imported = new Map<string, string>();
@@ -52,13 +106,21 @@ describe('the icon set', () => {
    * nothing. One was found this way: `RiEqualLine`, left behind when the
    * profit equation moved off the dashboard.
    */
-  it('imports nothing it does not draw', () => {
-    const { imported, drawn } = usage();
-    const dead = [...imported].filter(([name]) => !drawn.has(name));
-    expect(
-      dead.map(([n, where]) => `${n} (${where})`),
-      `أيقونة مستورَدة ولا تُرسم — تُحمَّل ولا تُرى:\n${dead.map(([n, w]) => `${n} · ${w}`).join('\n')}`
-    ).toEqual([]);
+  it('imports nothing it does not draw, in either family, file by file', () => {
+    const dead = deadImports();
+    expect(dead, `أيقونة مستورَدة ولا تُرسم — تُحمَّل ولا تُرى:\n${dead.join('\n')}`).toEqual([]);
+  });
+
+  it('and the sweep reaches both families, not only the dashboard’s', () => {
+    /*
+     * The guard that reads only `Ri…` passes a file full of unused lucide
+     * imports and says the icon set is clean. So the reach is asserted:
+     * lucide is imported somewhere under the scan, and the pattern that
+     * finds imports matches it.
+     */
+    const seen = everyFile().filter((f) => f.src.includes("from 'lucide-react'"));
+    expect(seen.length, 'لا ملفَّ lucide داخل المسح — الحارس يرى عائلةً واحدة').toBeGreaterThan(0);
+    expect("import { Check } from 'lucide-react';").toMatch(ICON_IMPORTS);
   });
 
   /**

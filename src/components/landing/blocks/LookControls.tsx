@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  AlignCenter, AlignLeft, AlignRight, Image as ImageIcon, Italic,
-  Loader2, Minus, Palette, Plus, Trash2, Type, Upload, MousePointerClick } from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, Italic, Loader2, Minus, Palette, Plus, Trash2, Type, Upload, MousePointerClick } from 'lucide-react';
 import type { BlockLook } from '@/lib/landing-sections';
 import { FONTS } from '@/lib/landing-theme';
 

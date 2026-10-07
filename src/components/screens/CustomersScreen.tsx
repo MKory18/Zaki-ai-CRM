@@ -9,7 +9,7 @@ import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine, RiUserLine } from '@remixicon/react';
+import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { HealthChip } from '@/components/ui/HealthChip';
 import type { CustomerFacts } from '@/lib/customer-insights';

@@ -14,7 +14,7 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { apiFetch } from '@/lib/api-client';
 import { CONFIRMATION_STATUS_AR, PICKABLE_REJECTION_REASONS, REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { arDateShort, arDateTime } from '@/lib/format';
-import { RiCalendarScheduleLine, RiCheckLine, RiCloseCircleLine, RiHistoryLine, RiPhoneLine, RiPhoneLockLine, RiRefreshLine, RiTimerLine } from '@remixicon/react';
+import { RiCalendarScheduleLine, RiCheckLine, RiCloseCircleLine, RiPhoneLine, RiPhoneLockLine, RiRefreshLine, RiTimerLine } from '@remixicon/react';
 
 // The list and its words live with the rule, in `confirmation-workflow`. A
 // copy here held eight while that held ten, so a stored reason this screen

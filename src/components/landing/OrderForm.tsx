@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
-import { Loader2, CheckCircle2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
+import { Loader2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { whatsappHref } from '@/lib/store-contact';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 

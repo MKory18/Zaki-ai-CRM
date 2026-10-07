@@ -28,7 +28,7 @@ import { OrderNotes } from '@/components/orders/OrderNotes';
 import { orderStages } from '@/lib/order-stages';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
-import { RiArrowLeftSLine, RiArrowRightSLine, RiChatQuoteLine, RiEBike2Line, RiHistoryLine, RiLockLine, RiMapPinLine, RiMoneyDollarCircleLine, RiPencilLine, RiPhoneLine, RiSaveLine, RiStickyNoteLine, RiTimerLine, RiTruckLine, RiUserFollowLine, RiUserLine } from '@remixicon/react';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiEBike2Line, RiLockLine, RiMoneyDollarCircleLine, RiPencilLine, RiTimerLine, RiTruckLine, RiUserFollowLine } from '@remixicon/react';
 
 /** Settlement is its own fact, never merged into the delivery status. */
 const SETTLEMENT_AR: Record<string, string> = {
