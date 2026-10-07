@@ -1320,33 +1320,38 @@ describe('every bare Number() on money or a count is accounted for', () => {
   );
 
   /**
-   * BOTH SITES, CLASSIFIED — and one of them is OPEN, with its figures.
+   * ONE SITE LEFT, CLASSIFIED — AND THE SECOND ONE IS FIXED, NOT EXCUSED.
    *
-   * `settlement.ts` is the courier statement reader: `toNumber` is what
-   * turns the `net`, `collected` and `fee` columns of a courier's own CSV
-   * into the money this system settles against. It carries the identical
-   * strip the order importer carried, and MEASURED on it:
+   * This list held two entries, and the second was the sharp one:
+   * `src/lib/settlement.ts: Number(cleaned)`, the courier-statement reader.
+   * `toNumber` there turned the `net`, `collected` and `fee` columns of a
+   * courier's own CSV into the money this system settles against, by the
+   * identical strip the order importer carried. MEASURED on it, the day it
+   * was recorded here:
    *
-   *     '٣٥٠٠'    -> null    REFUSED — the empty result is caught, which is
-   *                          the one guard the order importer did not have
+   *     '٣٥٠٠'    -> null    REFUSED — the empty result was caught, which is
+   *                          the one guard the order importer did not have.
+   *                          And the caller then did `continue`, so the
+   *                          parcel left the statement in SILENCE.
    *     '3,5'     -> 35      ten times, exactly as the importer did
    *     '3,500'   -> 3500    right, by accident of the same strip
    *     '1e400'   -> 1400       '0x10' -> 10       '12abc' -> 12
-   *     '(50)'    -> 50      AN ACCOUNTING NEGATIVE LOSES ITS SIGN — a
-   *                          deduction on a statement becomes a credit
+   *     '(50)'    -> 50      AN ACCOUNTING NEGATIVE LOST ITS SIGN — a
+   *                          deduction on a statement became a credit
    *     '50-'     -> null       '12 345' -> 12345
    *
-   * It is OPEN and outside this change: `settlement.ts` is not owned here,
-   * and `STATEMENT_IMPORTED` rows exist in this database, so the path has
-   * run on real data and the fix is a ruling about courier files rather than
-   * a line. Recorded with its figures so it cannot be lost again — it was
-   * missed by the one-step law and found by a grep.
+   * It read through `readStatementFigure` now — `readTypedFigure`'s grammar
+   * plus the one notation a courier's accounting export adds — and an
+   * unreadable cell refuses the whole file with the row named and the cell
+   * quoted. The entry is gone because the site is, which is the only reason
+   * an entry may leave a list in this file; the test below is the same
+   * demand pointed the other way, and the stale-name test above makes
+   * leaving it here a failure too. The figures and the sign are measured in
+   * `a-bracketed-negative-is-a-deduction.test.ts`.
    */
   const TWO_STEP_CLASSIFIED: Record<string, string> = {
     'src/lib/order-parser.ts: parseInt(value,':
       'الاستبدالُ هنا يُزيلُ قوسين محيطين فقط من التقاطِ ‎/([0-9]+)/‎ — شكلٌ فُحِصَ قبلَه فلا يُحذَفُ منه محرفٌ ذو معنى، وما يُنتِجُه يَمُرُّ بمخطَّطِ باب ai-intake قبل الكتابة',
-    'src/lib/settlement.ts: Number(cleaned)':
-      'عطبٌ مفتوحٌ لا استثناء: قارئُ كشفِ المندوبِ يَحشو الخليّةَ بالصنفِ نفسِه الذي كان في مستوردِ الطلبات، فتُصبِحُ «3,5» خمسةً وثلاثين و«(50)» موجبةً بعدَ أن كانت خصماً. الأرقامُ العربيّةُ تُرفَضُ هنا بالمصادفةِ لأنّ الناتجَ الفارغَ مُلتقَطٌ. خارجُ ملكيّةِ هذا التغيير ومُبلَّغٌ عنه بأرقامِه',
   };
 
   it('and every two-step strip in the tree is named, with its reason', () => {
@@ -1381,26 +1386,36 @@ describe('every bare Number() on money or a count is accounted for', () => {
   });
 
   /**
-   * AND THE FIGURES OF THE OPEN ONE ARE COMPUTED HERE, from a copy of that
-   * function, so the record above is a fact — and so that the day somebody
-   * fixes it, this fails and the entry has to go.
+   * AND THE ENTRY THAT LEFT IS MEASURED BOTH WAYS.
+   *
+   * The figures the old code produced are still computed here, from a copy
+   * of that function, so the record above stays a fact rather than a
+   * recollection — and the file is then checked to no longer contain it, and
+   * to reach the shared reader instead. Asserted on the CALL and not on the
+   * import line, because an import line has satisfied a guard in this
+   * repository four times while the thing it named was gone.
    */
-  it('and the open entry’s figures are what that code really produces', () => {
-    const asItIs = (value: unknown) => {
+  it('and the entry that left did so because the strip is gone from that file', () => {
+    const asItWas = (value: unknown) => {
       const cleaned = String(value ?? '').replace(/[^\d.-]/g, '');
       if (!cleaned) return null;
       const n = Number(cleaned);
       return Number.isFinite(n) ? n : null;
     };
-    expect(asItIs('3,5'), 'فاصلةٌ عشريّةٌ في كشفِ مندوبٍ تُصبِحُ عشرةَ أضعاف').toBe(35);
-    expect(asItIs('(50)'), 'خصمٌ بين قوسين يُصبِحُ دائناً').toBe(50);
-    expect(asItIs('1e400')).toBe(1400);
-    expect(asItIs('0x10')).toBe(10);
-    expect(asItIs('12abc')).toBe(12);
-    expect(asItIs('٣٥٠٠'), 'الأرقامُ العربيّةُ مرفوضةٌ هنا لا مُصفَّرة').toBeNull();
-    // And the function is still spelled that way in the file named above.
-    const src = blankComments(sourceOf('src/lib/settlement.ts'));
-    expect(src).toMatch(/replace\(\/\[\^\\d\.-\]\/g, ''\)/);
+    expect(asItWas('3,5'), 'فاصلةٌ عشريّةٌ في كشفِ مندوبٍ كانت تُصبِحُ عشرةَ أضعاف').toBe(35);
+    expect(asItWas('(50)'), 'خصمٌ بين قوسين كان يُصبِحُ دائناً').toBe(50);
+    expect(asItWas('1e400')).toBe(1400);
+    expect(asItWas('0x10')).toBe(10);
+    expect(asItWas('12abc')).toBe(12);
+    expect(asItWas('٣٥٠٠'), 'الأرقامُ العربيّةُ كانت مرفوضةً هنا لا مُصفَّرة').toBeNull();
+
+    const rel = 'src/lib/settlement.ts';
+    const src = blankComments(sourceOf(rel));
+    expect(src, 'الحشوُ عاد').not.toMatch(/replace\(\/\[\^\\d\.-\]\/g, ''\)/);
+    expect(src, 'اسمُ الدالّةِ المحشوَّةِ عاد').not.toMatch(/function toNumber\(/);
+    expect(strippedThenReadNumbers(src).map((h) => h.text), rel).toEqual([]);
+    expect(rewrittenNumberReads(src).map((h) => h.text), rel).toEqual([]);
+    expect(src, rel + ': لا يَصِلُ القارئَ المشترك').toMatch(/readStatementFigure\(text\)/);
   });
 
   it('and so do the other four doors on these columns', () => {

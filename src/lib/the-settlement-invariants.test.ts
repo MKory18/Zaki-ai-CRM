@@ -26,7 +26,7 @@ vi.mock('./stock-consumption', () => ({ consumeOrderStock }));
 import { repoFile, stripComments } from './guard-source';
 import { recordPartialDelivery } from './partial-delivery';
 import type { SettlementFacts } from './settlement';
-import { doorMoney, expectedAmountFor, SWEEP_LIMIT } from './settlement';
+import { doorMoney, expectedAmountFor, parseStatementRows, SWEEP_LIMIT } from './settlement';
 import { approvalRefusal, rematchRefusal } from './settlement-gates';
 
 beforeEach(() => {
@@ -78,6 +78,52 @@ describe('1 · the statement is what the courier CLAIMS, and it imports once', (
     const m = schema.slice(schema.indexOf('model StatementLine {'));
     const body = m.slice(0, m.indexOf('\n}'));
     for (const col of ['amount', 'collected', 'fee']) expect(body, col).toMatch(new RegExp(`\\n\\s*${col}\\s`));
+  });
+
+  /**
+   * AND «WHAT THE COURIER CLAIMS» IS WHAT THE CELL SAYS, SIGN INCLUDED.
+   *
+   * This section said what a statement IS and what its columns are, and
+   * nothing about how a figure gets out of a cell — and for as long as that
+   * was so, the reader strip `/[^\d.-]/` threw the brackets off `(50)` and
+   * called a fifty-unit DEDUCTION a fifty-unit CREDIT. Ten
+   * `STATEMENT_IMPORTED` audit rows exist, so this is the one path in the
+   * repository that has run on real money.
+   *
+   * The two statements below are the gap closed. The figures and the matcher
+   * arithmetic are measured in `a-bracketed-negative-is-a-deduction.test.ts`.
+   */
+  it('and a bracketed figure is the NEGATIVE it is, not its own opposite', () => {
+    const { rows, error } = parseStatementRows(
+      ['المرجع', 'الصافي'],
+      [['ORD-1', '9'], ['ORD-2', '(50)']]
+    );
+    expect(error).toBeUndefined();
+    // THE FIGURE, not a label. Fifty we owe them.
+    expect(rows.map((r) => r.amount)).toEqual([9, -50]);
+    // And the strip that made that +50 is not in the file under any spelling.
+    const src = stripComments(repoFile('src/lib/settlement.ts'));
+    expect(src, 'الحشوُ عاد').not.toMatch(/replace\(\/\[\^\\d\.-\]\/g, ''\)/);
+    expect(src, 'قارئٌ رابعَ عشرَ').toMatch(/readStatementFigure\(text\)/);
+  });
+
+  it('and an unreadable cell refuses the FILE by name — there is no fifth result', () => {
+    const { rows, error } = parseStatementRows(
+      ['المرجع', 'الصافي'],
+      [['ORD-1', '9'], ['ORD-2', '3,500']]
+    );
+    // The row as the sheet numbers it, and the cell quoted back.
+    expect(error).toContain('السطر 3');
+    expect(error).toContain('«3,500»');
+    // ALL OR NOTHING, and the reason is §6: `SettlementMatch.result` has
+    // four words and not one of them means «we could not read this line».
+    // Letting the readable line through would make `totalAmount` 9 instead
+    // of the courier's own claim, and `receiptGap` would then demand a
+    // written explanation for money nobody ever owed.
+    expect(rows).toEqual([]);
+    const schema = repoFile('prisma/schema.prisma');
+    const match = schema.slice(schema.indexOf('model SettlementMatch {'));
+    expect(match.slice(0, match.indexOf('\n}'))).not.toMatch(/UNREADABLE/);
   });
 });
 

@@ -179,3 +179,69 @@ export function readTypedFigure(raw: unknown): number | null {
   const value = Number(latin);
   return Number.isFinite(value) ? value : null;
 }
+
+/**
+ * A FIGURE A COURIER'S ACCOUNTING SOFTWARE WROTE — AND `(50)` IS MINUS FIFTY.
+ *
+ * `readTypedFigure` above is the grammar of a figure a PERSON typed into a
+ * cell. A courier statement is not that: the file is an export from the
+ * courier's own system, and accounting software — Excel's own currency and
+ * accounting number formats among them — writes a negative in BRACKETS.
+ * There is exactly ONE notation this reader adds for that, and it is added
+ * here rather than at the call site for the reason the whole of
+ * `readTypedFigure`'s comment gives.
+ *
+ * WHY THE SIGN IS ACCEPTED AND NOT REFUSED. `(50)` is not an ambiguous
+ * notation like `3,500` — it has one reading in every locale that writes it,
+ * and that reading is −50. Refusing it would be refusing a figure the
+ * courier stated correctly. And the alternative that stood here until today
+ * was neither: the strip `/[^\d.-]/` deleted both brackets and returned
+ * **+50**, so a deduction of fifty became a credit of fifty — a hundred-unit
+ * swing on the one figure the settlement engine reconciles against, with
+ * nothing on any screen to say a character had been thrown away.
+ *
+ * The sign has somewhere to go. `StatementLine.amount` is a signed
+ * `Decimal(14,3)`; `expectedAmountFor` already «returns a negative answer as
+ * it stands» for a return fee larger than the goods the customer kept; and
+ * `runMatching`'s `stated − expected` is sign-correct arithmetic. So a
+ * negative line reconciles as a debt we owe the courier, which is what it is.
+ *
+ * WHAT IT STILL REFUSES, and these are not oversights:
+ *
+ *   · `(-50)` and `(+50)` — a sign written twice. Which one wins is a guess.
+ *   · `(50`, `50)` — one bracket. A truncated cell, not a notation.
+ *   · `3,5`, `3,500`, `1.234,56` — the comma, exactly as everywhere else in
+ *     this file. A courier's export being machine-generated does not make
+ *     the comma readable: it makes it the LOCALE's comma, and the locale is
+ *     not in the cell. `3,500` is 3500 to half the world and 3.5 to the
+ *     other, and being wrong by a factor of a thousand on a settlement
+ *     figure is not improved by the file having been generated rather than
+ *     typed. `(1,250.50)` is refused with them although a reader could argue
+ *     the dot settles it — because a file written that way also holds
+ *     `1,250` with nothing to settle it, and one rule that refuses is worth
+ *     more than two rules where the second is a guess.
+ *   · `12 345` — a space is not a digit here either.
+ *
+ * And an Arabic-Indic figure is ACCEPTED, through the same `toLatinDigits`
+ * as everywhere else: a courier portal in this market renders digits in the
+ * script of its interface, and `٣٥٠٠` is three thousand five hundred.
+ *
+ * `-0` NEVER COMES OUT. `(0)` is zero, and a column holding `-0` prints as
+ * `-0` and compares unequal to the `0` beside it under `Object.is`.
+ */
+export function readStatementFigure(raw: unknown): number | null {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  if (typeof raw !== 'string') return null;
+
+  const text = toLatinDigits(raw).trim();
+  const bracketed = /^\((.*)\)$/.exec(text);
+  if (!bracketed) return readTypedFigure(text);
+
+  const inner = bracketed[1].trim();
+  // A sign inside the brackets is a sign twice over; `()` is nothing at all.
+  if (inner === '' || inner.startsWith('-') || inner.startsWith('+')) return null;
+
+  const value = readTypedFigure(inner);
+  if (value === null) return null;
+  return value === 0 ? 0 : -value;
+}

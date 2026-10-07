@@ -5,6 +5,9 @@ import { db } from './db';
 // order's add-ons. The expectation is not allowed a formula of its own.
 import { codForOrder, type OrderLineLike } from './delivery-fees';
 import { roundMinor } from './money';
+// The ONE reader for a figure that arrived in a file. A courier's money
+// column is read through it, brackets and Arabic digits and all.
+import { readStatementFigure } from './numeric-input';
 import { receiptsInStatementCurrency } from './receipt-conversion';
 import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
 
@@ -76,12 +79,67 @@ function columnIndex(header: string[], field: HeaderField): number {
   return header.findIndex((h) => names.includes(normalizeHeader(h)));
 }
 
-function toNumber(value: unknown): number | null {
-  const cleaned = String(value ?? '').replace(/[^\d.-]/g, '');
-  if (!cleaned) return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+/**
+ * A MONEY CELL OF A COURIER STATEMENT — READ, ABSENT, OR REFUSED BY NAME.
+ *
+ * What stood here was `String(value).replace(/[^\d.-]/g, '')` and then
+ * `Number()` of the remains, which is the SAME defect the order importer
+ * carried at `97530a6` — and this is the path that has run on real money.
+ * Measured on the function as it stood, on the `net`, `collected` and `fee`
+ * columns this reads:
+ *
+ *     '(50)'    -> 50      AN ACCOUNTING NEGATIVE LOST ITS SIGN. `(50)` is
+ *                          how Excel and every accounting export write −50,
+ *                          so a DEDUCTION on a courier's statement became a
+ *                          CREDIT of the same size — and the statement
+ *                          total, which is summed from these, moved by a
+ *                          hundred on a fifty-unit deduction.
+ *     '3,5'     -> 35      ten times
+ *     '3,500'   -> 3500    right, by accident of the same strip
+ *     '1.234,56'-> 1.23456 a European-formatted figure, destroyed
+ *     '1e400'   -> 1400       '0x10' -> 10       '12abc' -> 12
+ *     '12 345'  -> 12345      '50 ر.س' -> 50
+ *     '٣٥٠٠'    -> null    refused — the one guard the importer lacked
+ *
+ * A STRIP DOES NOT REFUSE, IT REWRITES. Every line above is a different
+ * number that then passes every check after it, is written to
+ * `StatementLine`, is summed into `CourierStatement.totalAmount`, and is
+ * what `runMatching` reconciles an order against. Nothing downstream can
+ * tell that a character was thrown away.
+ *
+ * So the reading is `readStatementFigure`, in `numeric-input.ts` with the
+ * other readers — `readTypedFigure`'s grammar plus the one notation a
+ * courier's accounting export adds, the bracketed negative. It is a
+ * fourteenth call site of ONE reader, not a fourteenth reader.
+ *
+ * AND THE THREE ANSWERS ARE KEPT APART, because two of them used to be one.
+ * `toNumber` returned `null` both for «the column is not in this file» and
+ * for «the cell is there and I cannot read it», and `parseStatementRows`
+ * then did `if (amount === null) continue` — so an unreadable cell DROPPED
+ * THE WHOLE LINE in silence. A courier's parcel then simply was not in the
+ * statement, and the sweep reported it as one they never mentioned.
+ *
+ *   ''            → `null`         absent. The column is not in the file, or
+ *                                  the courier said nothing about this
+ *                                  figure. Nothing was lost, so nothing is
+ *                                  refused.
+ *   a figure      → the number     including a negative one.
+ *   anything else → `UNREADABLE`   named, and the caller refuses.
+ */
+const UNREADABLE = Symbol('خانة مال لا تُقرأ');
+
+function readMoneyCell(text: string): number | null | typeof UNREADABLE {
+  if (text === '') return null;
+  const value = readStatementFigure(text);
+  return value === null ? UNREADABLE : value;
 }
+
+/** What to call a money column to an operator holding the file. */
+const MONEY_COLUMN_NAME: Record<'net' | 'collected' | 'fee', string> = {
+  net: 'الصافي',
+  collected: 'التحصيل',
+  fee: 'أجرة التوصيل',
+};
 
 /** "15132 - العميل طلب التأجيل" → "15132". */
 export function refFromNotes(notes: string | null | undefined): string | null {
@@ -144,16 +202,73 @@ export function parseStatementRows(
   const at = (cells: string[], i: number) => (i >= 0 ? (cells[i] ?? '').toString().trim() : '');
 
   const rows: ParsedStatementRow[] = [];
-  for (const cells of dataRows) {
+  for (const [rowIndex, cells] of dataRows.entries()) {
     if (!cells.some((c) => String(c ?? '').trim())) continue;
 
-    const collected = toNumber(at(cells, idx.collected));
-    const fee = toNumber(at(cells, idx.fee));
-    const net = toNumber(at(cells, idx.net));
+    /**
+     * ONE UNREADABLE MONEY CELL REFUSES THE WHOLE FILE, NAMED.
+     *
+     * The order importer refuses the ROW and lets the other rows through,
+     * because it hands back rows for a person to look at one at a time and
+     * each one is its own order. A STATEMENT IS NOT A LIST OF ROWS. It is
+     * one claim — «this is what I owe you» — carried by
+     * `CourierStatement.totalAmount`, which is the sum of these lines and is
+     * what `receiptGap` measures the money that actually arrived against.
+     * Import it with one line quietly left out and the claim is wrong by
+     * that line, the gap is wrong by that line, and the operator is made to
+     * write a `gapExplanation` for money nobody ever owed.
+     *
+     * AND THERE IS NOWHERE TO PUT A REFUSED LINE. `SettlementMatch.result`
+     * has four words — MATCHED, MISMATCHED, MISSING_IN_STATEMENT,
+     * MISSING_IN_SYSTEM — pinned to the schema's own comment by
+     * `the-settlement-invariants.test.ts` §6, and not one of them means «the
+     * courier wrote a figure we could not read». A fifth would be a column
+     * comment, a migration, and four screens.
+     *
+     * So the refusal goes where this file already has a door: the
+     * file-level `error`, which `POST /api/finance/statements` answers as
+     * 400 `UNREADABLE_FILE` with this sentence in it. All or nothing is also
+     * honest about what a statement is, and the operator can fix the cell
+     * and upload again — the file hash changes with it, so the
+     * duplicate-import guard does not stand in the way.
+     *
+     * The sentence names the row as the SHEET numbers it (the header is row
+     * 1, so the first data row is 2) and quotes the cell back verbatim,
+     * which is `97530a6`'s ruling and the only part of a refusal that lets
+     * somebody act on it.
+     */
+    const money: Record<'net' | 'collected' | 'fee', number | null> = { net: null, collected: null, fee: null };
+    for (const field of ['net', 'collected', 'fee'] as const) {
+      const text = at(cells, idx[field]);
+      const value = readMoneyCell(text);
+      if (value === UNREADABLE) {
+        return {
+          rows: [],
+          total: 0,
+          error:
+            `السطر ${rowIndex + 2}: خانة «${MONEY_COLUMN_NAME[field]}» تحمل «${text}» ولا تُقرأ رقماً. ` +
+            'اكتب الرقم بالأرقام وحدها — والسالب بين قوسين مثل (50) أو بإشارة ناقص. ' +
+            'الفاصلة غير مقبولة لأنّ «3,500» قد تكون 3500 وقد تكون 3.5.',
+        };
+      }
+      money[field] = value;
+    }
+    const { collected, fee, net } = money;
 
     // The net is what the courier hands over. When the file gives only the
     // COD and the fee, derive it rather than treating the COD as received.
+    //
+    // A NEGATIVE NET SURVIVES THIS. `(50)` is −50 and stays −50: the courier
+    // is deducting, so this parcel is money WE owe THEM, and `amount` is a
+    // signed `Decimal(14,3)` that holds it. `runMatching` then reconciles
+    // `stated − expected` with the sign intact, and `expectedAmountFor`
+    // already states in words that it returns a negative expectation as it
+    // stands rather than flooring it at zero. Clamping here would be the
+    // same silence the strip had, wearing a `Math.max`.
     const amount = net ?? (collected !== null && fee !== null ? collected - fee : collected);
+    // Null is ABSENT, never unreadable — an unreadable cell refused the file
+    // above. A line the courier wrote no money against carries none, and the
+    // sweep's MISSING_IN_STATEMENT is the word for a parcel no line names.
     if (amount === null) continue;
 
     const explicitRef = at(cells, idx.merchantRef);

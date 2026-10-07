@@ -74,9 +74,36 @@ export function parseOrderText(text: string): ParsedOrder {
         const value = m[1].replace(/^\(|\)$/g, '').trim();
         if (value && value !== '-') {
           if (key === 'quantity') {
-            result.quantity = parseInt(value, 10) || 1;
+            /**
+             * NO `|| 1`, AND THE FALLBACK IS DELETED RATHER THAN SWAPPED FOR
+             * `??` — the ruling of `97530a6`, because the value it was
+             * hiding is a REAL value.
+             *
+             * `parseInt` cannot fail here: `value` is the capture of
+             * `/([0-9]+)/`, so it is one or more ASCII digits and the result
+             * is always a finite non-negative integer. The only input the
+             * `|| 1` could ever fire on is therefore **zero** — so its only
+             * effect in the whole life of this function was to turn a pasted
+             * «الكمية: 0» into an order for ONE unit, and the review screen
+             * then showed a 1 nobody wrote.
+             *
+             * Reporting the 0 is safe and is the honest reading: the write
+             * door is `count(999, 1)` in `orders/ai-intake/route.ts`, which
+             * refuses a quantity below one and names the field, instead of
+             * this file inventing a plausible quantity the message did not
+             * contain.
+             */
+            result.quantity = parseInt(value, 10);
           } else if (key === 'price') {
-            result.price = parseFloat(value.replace(',', '.')) || null;
+            /**
+             * NO `|| null`, for the same reason. `parseFloat` cannot fail
+             * either — the capture is `/([0-9]+(?:[.,][0-9]+)?)/` — so the
+             * only value the fallback could fire on is **zero**, and «السعر:
+             * 0» became «no price stated at all». Those are different
+             * sentences: a stated zero is a free line somebody typed, and it
+             * belongs on the reviewer's screen as a zero.
+             */
+            result.price = parseFloat(value.replace(',', '.'));
           } else {
             (result[key] as string) = value;
           }

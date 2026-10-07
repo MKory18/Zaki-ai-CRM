@@ -6,10 +6,44 @@
  * row carries; a country we have no rule for falls back to a permissive
  * length check rather than rejecting a real customer.
  *
- * Normalization is the same everywhere: drop every non-digit, drop the
- * international prefix (00<dial> / <dial>), drop one leading zero. What is
- * left is the national subscriber number that `national` must match.
+ * Normalization is the same everywhere: ARABIC-INDIC DIGITS TO LATIN, then
+ * drop every non-digit, drop the international prefix (00<dial> / <dial>),
+ * drop one leading zero. What is left is the national subscriber number that
+ * `national` must match.
+ *
+ * THE SCRIPT STEP IS NOT COSMETIC, AND IT WAS MISSING. Every strip in this
+ * file is `/\D/`, and `\D` in JavaScript is `[^0-9]` — not «not a digit», but
+ * «not an ASCII digit», and no flag changes that: `/\D/u` and `/\D/v` behave
+ * the same. So a number typed on an Arabic keypad was not partly mangled, it
+ * was DELETED. Measured:
+ *
+ *     '٠٩٩١٢٣٤٥٦٧'.replace(/\D/g, '')   →   ''
+ *     '+٩٦٣ ٩٦٦ 793918'.replace(/\D/g, '') → '793918'   (the Latin tail only)
+ *
+ * On an Arabic-facing storefront that is a customer's phone number, and it
+ * reached three different wrong places at once:
+ *
+ *   · `canonicalPhone` returned `''`, so `normalizePhoneNumber` stored a
+ *     customer with NO PHONE on a cash-on-delivery system;
+ *   · `activeBlock` does `if (!phone) return null` — SO THE BLACKLIST WAS
+ *     SKIPPED. This file's own comment below says «a block that can be
+ *     walked around by writing the number differently is not a block», and
+ *     writing it on an Arabic keypad walked around it;
+ *   · `isValidPhoneFor` refused the shape outright, so the honest outcome
+ *     on the one path that checked was a real customer told their real
+ *     number does not fit.
+ *
+ * `toLatinDigits` is the one named place that does this conversion, the same
+ * one `readTypedFigure` uses, and it maps a digit to a digit and touches
+ * nothing else. A phone number carries no decimal point and no thousands
+ * separator, so there is none of the ambiguity that makes a comma unreadable
+ * in a money cell: `٠٧٩` is `079` and there is no second reading of it.
+ * `western-digits.test.ts` already carried a test called «the phone
+ * normaliser still recognises what an Arabic keyboard types» — it asserted
+ * that on `toLatinDigits` itself, which was true, while the phone normaliser
+ * did not call it.
  */
+import { toLatinDigits } from './latin-digits';
 
 export interface PhoneRule {
   /** Country calling code, digits only. */
@@ -63,9 +97,14 @@ export const PHONE_RULES: Record<string, PhoneRule> = {
   },
 };
 
-/** Strip formatting, the international prefix and one leading zero. */
+/**
+ * Strip formatting, the international prefix and one leading zero.
+ *
+ * `toLatinDigits` FIRST, because `\D` below is `[^0-9]` and would otherwise
+ * delete an Arabic-typed number rather than normalise it.
+ */
 export function nationalDigits(raw: string, dialCode?: string): string {
-  let digits = (raw || '').replace(/\D/g, '');
+  let digits = toLatinDigits(raw || '').replace(/\D/g, '');
   if (dialCode) {
     if (digits.startsWith(`00${dialCode}`)) digits = digits.slice(2 + dialCode.length);
     else if (digits.startsWith(dialCode) && digits.length > dialCode.length + 6) {
@@ -88,9 +127,13 @@ export function ruleFor(countryCode: string | null | undefined): PhoneRule | nul
  * worse than accepting a loose number a human then calls.
  */
 export function isValidPhoneFor(countryCode: string | null | undefined, raw: string): boolean {
-  if (!raw || !/^[+0-9()\s-]+$/.test(raw)) return false;
+  // The shape is checked AFTER the script conversion, not before it: the
+  // class `[0-9]` refused «٠٧٩٠١٢٣٤٥٦» outright, so a visitor typing on the
+  // keyboard this storefront is written for was told their number is wrong.
+  const text = toLatinDigits(raw ?? '');
+  if (!text || !/^[+0-9()\s-]+$/.test(text)) return false;
   const rule = ruleFor(countryCode);
-  const digits = nationalDigits(raw, rule?.dialCode);
+  const digits = nationalDigits(text, rule?.dialCode);
   if (!rule) return digits.length >= 7 && digits.length <= 15;
   return rule.national.test(digits);
 }
@@ -122,7 +165,10 @@ const DIAL_CODES = [...new Set(Object.values(PHONE_RULES).map((r) => r.dialCode)
  * plain local number just loses its trunk zero.
  */
 export function canonicalPhone(raw: string | null | undefined): string {
-  const text = String(raw ?? '').trim();
+  // The script conversion comes first, so «٠٩٩١٢٣٤٥٦٧» is a number and not
+  // the empty string — which is what `/\D/` made of it, and what then made
+  // `activeBlock` skip the blacklist for anyone who typed in Arabic.
+  const text = toLatinDigits(String(raw ?? '')).trim();
   if (!text) return '';
 
   const digits = text.replace(/\D/g, '');
