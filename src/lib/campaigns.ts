@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { AttributionRow } from './attribution-performance';
 import { publicPath } from './public-address';
+import { money as moneyInput } from './numeric-input';
 import { omittedMeansOmitted } from './zod-patch';
 
 /**
@@ -70,9 +71,30 @@ export const campaignInputSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED', 'ENDED']).default('ACTIVE'),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().nullable().optional(),
-  // A campaign that has not run yet has spent nothing; that is a real state
-  // and not a missing value.
-  spend: z.coerce.number().min(0).max(100_000_000).default(0),
+  /**
+   * WHAT LEFT FOR META, TYPED BY THE PERSON WHO PAID IT.
+   *
+   * A campaign that has not run yet has spent nothing; that is a real state
+   * and not a missing value, so the `.default(0)` stays.
+   *
+   * But `z.coerce.number()` is `Number(value)`, and `Number(null)` is
+   * **0** — while `.default()` fires only on `undefined`. So a body
+   * carrying `spend: null` did not get the default and did not get refused:
+   * it stored a zero, and the audit entry recorded the zero as the edit the
+   * seller asked for. `dad59c9` closed the other half of this — `.partial()`
+   * kept the `.default()`, so a bare `{ name }` arrived as a whole row and a
+   * rename wiped a 1250 spend to 0. That fix made an OMITTED spend absent;
+   * this one makes an EXPLICIT `null` a 400 instead of a silent zero. The
+   * two are the same column losing real money by two different routes, and
+   * both routes had to be closed for the column to be safe.
+   *
+   * `money()` from `numeric-input` also refuses `'0x10'` (which `Number()`
+   * reads as 16), `''` and `[]` (both 0), and `'1e400'` (Infinity). The
+   * ceiling is unchanged at 100_000_000 — `Campaign.spend` is
+   * `Decimal(14, 2)`, so this is well inside the column, and it is the same
+   * figure `production/route.ts` declares for money a person types.
+   */
+  spend: moneyInput(100_000_000).default(0),
   notes: z.string().trim().max(1000).nullable().optional(),
 });
 

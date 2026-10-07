@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import { z } from 'zod';
 import { COMMISSION_RATE_MAX, readCommissionRate } from './user-commission-rate';
 import { readBasePrice } from './product-base-price';
-import { numeric } from './numeric-input';
+import { count, money, numeric } from './numeric-input';
 
 /**
  * ONE COLUMN, ONE RULE — AND THE DOORS MAY NOT BRING THEIR OWN.
@@ -531,5 +532,594 @@ describe('no door carries a second rule for a column it shares', () => {
     expect(src, 'product-base-price.ts: لا يستورد القارئ الصارم').toContain('./numeric-input');
     expect(src.match(/parseFloat\(/), 'product-base-price.ts: parseFloat').toBeNull();
     expect(src.match(/\bNumber\(/), 'product-base-price.ts: Number() بيدها').toBeNull();
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  THE DIVERGENCE MADE IMPOSSIBLE, NOT MERELY ABSENT
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Everything above this line is about TWO COLUMNS that had two rules each,
+ * and it guards them BY NAME. That is the right shape for a rule living in a
+ * file of its own (`product-base-price.ts`, `user-commission-rate.ts`) — and
+ * it is the wrong shape for the question underneath it, which is not «does
+ * `basePrice` have one rule» but «CAN a column have two».
+ *
+ * It could, and nine more sites did. `PATCH /api/orders/[id]` read
+ * `quantity`, `unitPrice`, `sellingPrice`, `discountAmount` and
+ * `shippingCost` with `z.coerce.number()` while `POST /api/orders` read the
+ * same columns with `count()`/`money()`. `Campaign.spend`, the public cart's
+ * `quantity`, and the AI-intake confirm payload's `quantity` and
+ * `finalPrice` were the same. Nothing in the suite objected — because
+ * nothing in the suite was asking the general question.
+ *
+ * `z.coerce.number()` IS `Number(value)` (zod 4 calls it), and `Number()` is
+ * this, measured:
+ *
+ *     '0x10' → 16      '0b11' → 3      '0o17' → 15      '1e400' → Infinity
+ *     ''     → 0       '   '  → 0      null   → 0       []      → 0
+ *     ['5']  → 5       true   → 1      {valueOf:()=>7} → 7   new Date(0) → 0
+ *
+ * So the law below is not «these doors read strictly». It is:
+ *
+ *      NO FIELD THAT IS MONEY OR A COUNT MAY BE READ WITH
+ *      `z.coerce.number()`, ANYWHERE IN THE TREE.
+ *
+ * WHAT MAKES IT NOT A LIST — four things, each of which is what would have
+ * failed if it were missing:
+ *
+ *   1. THE COLUMN NAMES ARE DERIVED FROM `prisma/schema.prisma`. Every
+ *      `Decimal` and `Float` field is money; every `Int` field whose name
+ *      contains «quantity» is a count. A money column added tomorrow joins
+ *      the law the moment it is in the schema, with nobody remembering to
+ *      add it — which is the half a named list cannot have.
+ *   2. AND THE SCHEMA IS NOT ENOUGH, which was MEASURED rather than
+ *      assumed: the first draft of this law derived its vocabulary from the
+ *      schema alone and DID NOT CATCH `finalPrice` — the AI-intake confirm
+ *      payload's price, which is written to `Order.sellingPrice` under a
+ *      different name. A request field does not have to be spelled like the
+ *      column it lands in. So a second rule reads the NAME'S MORPHOLOGY:
+ *      anything ending in price / cost / amount / fee / total / spend /
+ *      discount / revenue / profit / balance / salary / quantity / qty is
+ *      money or a count whatever the schema calls it. Both rules are
+ *      general; neither is a list of fields.
+ *   3. THE SWEEP IS THE WHOLE TREE AND HAS NO EXEMPTION LIST for law one.
+ *      Not «these five doors»: every non-test `.ts` and `.tsx` under `src/`.
+ *      A tenth door written next year is in it the day it is written.
+ *   4. THE DETECTORS ARE PURE FUNCTIONS RUN AGAINST THE EXACT TEXT THAT WAS
+ *      DELETED. A guard whose detector has quietly stopped matching
+ *      anything passes forever and says nothing — ten vacuous guards have
+ *      been caught in this audit. So each detector is first shown to FIND
+ *      the real sites in a fixture, and only then shown to find none in the
+ *      tree.
+ *
+ * AND THE BROADENING IN (2) IMMEDIATELY EARNED ITSELF: it found
+ * `src/lib/order-import.ts`, a tenth site nobody had named, where the
+ * spreadsheet importer reads `Number(rawQty)` and
+ * `Number(String(rawPrice).replace(/[^\d.-]/g, ''))`. That file is not this
+ * change's to write, so it is recorded below as open, with the figures it
+ * really produces, rather than classified as acceptable.
+ */
+
+/* ──────────────────── what counts as money or a count ──────────────────── */
+
+interface Vocabulary {
+  readonly money: ReadonlySet<string>;
+  readonly counts: ReadonlySet<string>;
+  readonly all: ReadonlySet<string>;
+}
+
+/**
+ * The money and quantity COLUMNS this system has, taken from the schema
+ * rather than from anybody's memory of it.
+ *
+ * `Decimal` and `Float` are both money here: the order's own figures are
+ * `Float` (`sellingPrice`, `totalAmount`, `discountAmount`, `shippingCost`)
+ * and the finance snapshot and the wallets are `Decimal(12,2)`/`(14,3)`.
+ * `Int` is NOT money, and most `Int` columns are not counts either —
+ * `version`, `sortOrder` and `postponeCount` are integers no `money()`
+ * reader has business touching — so the count side takes only the ones
+ * NAMED for a quantity.
+ */
+function columnVocabulary(): Vocabulary {
+  const schema = readFileSync(join(process.cwd(), 'prisma/schema.prisma'), 'utf8');
+  const money = new Set<string>();
+  const counts = new Set<string>();
+  for (const line of schema.split('\n')) {
+    const field = /^\s{2,}([A-Za-z_][A-Za-z0-9_]*)\s+(Decimal|Float|Int)(\?)?(\s|$)/.exec(line);
+    if (!field) continue;
+    const name = field[1]!;
+    const type = field[2]!;
+    if (type === 'Decimal' || type === 'Float') money.add(name);
+    else if (/quantity/i.test(name)) counts.add(name);
+  }
+  return { money, counts, all: new Set([...money, ...counts]) };
+}
+
+const VOCAB = columnVocabulary();
+
+/**
+ * A name that is money or a count whatever the schema calls it.
+ *
+ * This is the rule that catches `finalPrice`, `rawQty` and `unitCost` —
+ * fields that carry money or a count into a column spelled differently. It
+ * is morphology, not a list: the word a developer puts at the end of such a
+ * field is one of a small, closed set of English nouns, and a field ending
+ * in `Id`, `Order`, `Count`-of-events, `page` or `limit` is deliberately
+ * outside it. Both halves of that claim are asserted below.
+ */
+const MONEY_OR_COUNT_NAME =
+  /(?:^|[a-z])(?:price|cost|amount|fee|total|spend|discount|revenue|profit|balance|salary|quantity|qty)s?$/i;
+
+const isMoneyOrCount = (name: string) => VOCAB.all.has(name) || MONEY_OR_COUNT_NAME.test(name);
+
+/* ───────────────────────────── the two detectors ────────────────────────── */
+
+type Finding = { readonly field: string; readonly text: string };
+
+/**
+ * Comments are blanked before either scan, because the docblocks this audit
+ * writes QUOTE the deleted line — and a guard that reads its own prose as
+ * the defect is a failure this repository has hit four times.
+ */
+function blankComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+/** Every money-or-count field read with `z.coerce.number()`. */
+function coercedFields(source: string): Finding[] {
+  const src = blankComments(source);
+  const re = /([A-Za-z_][A-Za-z0-9_]*)\s*:\s*z\s*\.\s*coerce\s*\.\s*number/g;
+  return [...src.matchAll(re)]
+    .filter((m) => isMoneyOrCount(m[1]!))
+    .map((m) => ({ field: m[1]!, text: m[0]! }));
+}
+
+/**
+ * Every money-or-count value handed, BY NAME AND BARE, to `Number()`,
+ * `parseFloat()` or `parseInt()`.
+ *
+ * «Bare» is the whole distinction and it is one character wide:
+ * `Number(refundAmount)` is a value that came off a request body, and
+ * `Number(order.totalAmount)` is a stored Decimal turned into a JavaScript
+ * number to show somebody. The second is everywhere and correct. So the
+ * pattern refuses a preceding dot and takes only a bare identifier inside
+ * the brackets, and the property reads fall out.
+ *
+ * WHAT IT THEREFORE DOES NOT SEE, stated rather than left to be found: a
+ * read whose argument is an EXPRESSION. `order-import.ts`'s
+ * `Number(String(rawPrice).replace(…))` is invisible to this pattern, and
+ * it is the worse of that file's two defects. A pattern that matched
+ * arbitrary expressions would match every arithmetic line in the tree; the
+ * honest answer is that this detector finds the identifier form, and the
+ * expression form is found by a person reading the file the identifier form
+ * led them to — which is exactly how `order-import.ts` was found.
+ */
+function bareNumberReads(source: string): Finding[] {
+  const src = blankComments(source);
+  const re = /(?<![.\w])(?:Number|parseFloat|parseInt)\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,)]/g;
+  return [...src.matchAll(re)]
+    .filter((m) => isMoneyOrCount(m[1]!))
+    .map((m) => ({ field: m[1]!, text: m[0]! }));
+}
+
+/* ─────────────────────────────── the sweep ──────────────────────────────── */
+
+function filesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) out.push(...filesUnder(p));
+    else if (/\.tsx?$/.test(p) && !p.includes('.test.')) out.push(p);
+  }
+  return out;
+}
+
+const SWEPT_FILES = filesUnder(join(process.cwd(), 'src')).map((p) =>
+  relative(process.cwd(), p).split(sep).join('/')
+);
+
+const sourceOf = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
+
+/** A door, not a screen: the directories that can write a column. */
+const isServerSide = (rel: string) => rel.startsWith('src/app/api/') || rel.startsWith('src/lib/');
+
+/* ───────────────────────── the detectors must bite ──────────────────────── */
+
+/**
+ * THE NINE COERCED SITES, AS THEY WERE WRITTEN, in one fixture.
+ *
+ * Copied from the four files at `9f15044` — the commit that found them and
+ * did not fix them. This is what keeps the law from going vacuous: if
+ * `coercedFields` is ever broken, narrowed, or quietly satisfied by a change
+ * in zod's spelling, THIS fails and says which of the nine it stopped
+ * seeing. Without it the law over the tree would pass because the tree is
+ * clean, and would go on passing after the detector died.
+ */
+const AS_IT_WAS = [
+  '  items: z.array(z.object({',
+  '    productId: z.string().min(10).max(64),',
+  '    quantity: z.coerce.number().int().min(1).max(999),',
+  '    unitPrice: z.coerce.number().min(0).max(100000),',
+  '  })),',
+  '  sellingPrice: z.coerce.number().finite().min(0).max(100000).optional(),',
+  '  quantity: z.coerce.number().int().finite().min(1).max(10000).optional(),',
+  '  discountAmount: z.coerce.number().finite().min(0).max(100000).optional(),',
+  '  shippingCost: z.coerce.number().finite().min(0).max(1000).optional(),',
+  '  spend: z.coerce.number().min(0).max(100_000_000).default(0),',
+  '  quantity: z.coerce.number().int().min(1).max(MAX_LINE_QUANTITY),',
+  '  finalPrice: z.coerce.number().min(0).max(100000),',
+].join('\n');
+
+/** The finance door's bare reads, beside the reads that are NOT the hazard. */
+const FINANCE_AS_IT_WAS = [
+  '  refundNum = Number(refundAmount);',
+  '  if (!isFinite(refundNum) || refundNum < 0) { return bad(); }',
+  '  const amt = Number(amount);',
+  '  const fee = parseFloat(deliveryFee);',
+  '  const units = parseInt(quantity, 10);',
+  '  const total = Number(order.totalAmount);',
+  '  const already = Number(order.refundAmount ?? 0);',
+  '  const shown = Number(row.sellingPrice);',
+].join('\n');
+
+describe('the detectors that carry the law find the law’s own history', () => {
+  it('the column names really come from the schema, and are not a handful', () => {
+    expect(VOCAB.all.size, 'المفردات لم تُقرأ من المخطَّط').toBeGreaterThan(50);
+    for (const column of [
+      'sellingPrice', 'unitPrice', 'discountAmount', 'shippingCost', 'totalAmount',
+      'basePrice', 'spend', 'deliveryFee', 'refundAmount',
+      'productCost', 'packagingCost', 'advertisingCost', 'otherCost', 'discount', 'shippingRevenue',
+    ]) {
+      expect(VOCAB.money, column + ' ليست في مفردات المال').toContain(column);
+    }
+    for (const column of ['quantity', 'freeQuantity', 'quantityRemaining']) {
+      expect(VOCAB.counts, column + ' ليست في مفردات الكمّيات').toContain(column);
+    }
+  });
+
+  /**
+   * AND THE SCHEMA ALONE IS NOT ENOUGH — the measurement that produced the
+   * second rule. `finalPrice` is a field on the AI-intake confirm payload
+   * and a column on no model, and it was one of the nine.
+   */
+  it('and the schema alone would have missed finalPrice, which is why morphology exists', () => {
+    expect(VOCAB.all, 'finalPrice صار عموداً — فالقاعدة الثانية قد تكون زائدة الآن').not.toContain(
+      'finalPrice'
+    );
+    expect(isMoneyOrCount('finalPrice'), 'finalPrice ليست مالاً عند القاعدة').toBe(true);
+    // The other two the broadening catches, both real sites in the tree.
+    expect(isMoneyOrCount('rawQty')).toBe(true);
+    expect(isMoneyOrCount('unitCost')).toBe(true);
+  });
+
+  /**
+   * AND IT MUST NOT SWALLOW EVERY INTEGER. A law that swept `sortOrder`, a
+   * delivery provider's `companyId` or a page number would fail on doors
+   * that are not about money at all, and the pressure would then be to add
+   * exemptions — which is how a law becomes a list.
+   */
+  it('and neither rule swallows what is not money', () => {
+    for (const notMoney of [
+      'sortOrder', 'version', 'postponeCount', 'totalOrders', 'minorUnit',
+      'companyId', 'originCityId', 'serviceTypeId', 'page', 'limit', 'productId',
+    ]) {
+      expect(isMoneyOrCount(notMoney), notMoney + ' صُنِّفَت مالاً أو كمّيةً').toBe(false);
+    }
+  });
+
+  it('finds all nine coerced fields in the text that was deleted', () => {
+    const found = coercedFields(AS_IT_WAS);
+    expect(found.map((h) => h.field).sort()).toEqual(
+      [
+        'discountAmount', 'finalPrice', 'quantity', 'quantity', 'quantity',
+        'sellingPrice', 'shippingCost', 'spend', 'unitPrice',
+      ].sort()
+    );
+  });
+
+  it('and leaves a field that is neither money nor a count alone', () => {
+    expect(coercedFields('sortOrder: z.coerce.number().int().min(0).max(999)')).toEqual([]);
+    expect(coercedFields('companyId: z.coerce.number().int().min(1)')).toEqual([]);
+  });
+
+  it('finds the finance door’s bare reads, and none of its property reads', () => {
+    const found = bareNumberReads(FINANCE_AS_IT_WAS).map((h) => h.text);
+    expect(found).toEqual([
+      'Number(refundAmount)',
+      'Number(amount)',
+      'parseFloat(deliveryFee)',
+      'parseInt(quantity,',
+    ]);
+    // The dot is the whole difference, so these three must be absent.
+    expect(found.join(' ')).not.toContain('order.');
+    expect(found.join(' ')).not.toContain('row.');
+  });
+
+  it('and neither detector is fooled by a docblock that quotes the defect', () => {
+    const quoted = [
+      '/**',
+      ' * This used to read quantity: z.coerce.number().int() and',
+      ' * Number(refundAmount), which is the defect being described.',
+      ' */',
+      '// spend: z.coerce.number() — and this line is a comment too',
+      'const clean = 1;',
+    ].join('\n');
+    expect(coercedFields(quoted)).toEqual([]);
+    expect(bareNumberReads(quoted)).toEqual([]);
+  });
+
+  it('and the sweep really walks the tree', () => {
+    expect(SWEPT_FILES.length, 'المسح لم يجد ملفّات').toBeGreaterThan(200);
+    expect(SWEPT_FILES).toContain('src/app/api/orders/route.ts');
+    expect(SWEPT_FILES).toContain('src/app/api/orders/[id]/route.ts');
+    expect(SWEPT_FILES).toContain('src/lib/campaigns.ts');
+    expect(SWEPT_FILES.filter(isServerSide).length).toBeGreaterThan(100);
+  });
+});
+
+/* ──────────────────────────────── law one ───────────────────────────────── */
+
+describe('no money or quantity field is read with z.coerce.number(), anywhere', () => {
+  /**
+   * This law has NO exemption list, because `z.coerce.number()` has no safe
+   * use on money or a count. A door wanting an unbounded number has
+   * `numeric()`; one wanting no coercion at all has `z.number()`, which is
+   * what the commission rate uses on purpose. Both remain available. What is
+   * gone is `Number()` wearing a schema.
+   */
+  it('and the sweep over the whole tree is empty', () => {
+    const offenders: string[] = [];
+    for (const rel of SWEPT_FILES) {
+      for (const hit of coercedFields(sourceOf(rel))) offenders.push(rel + ': ' + hit.text);
+    }
+    expect(
+      offenders,
+      'حقلُ مالٍ أو كمّيةٍ يُقرَأُ بـz.coerce.number() — وهي Number() بعينها'
+    ).toEqual([]);
+  });
+
+  /** And `z.coerce.number()` really is `Number()` — measured, not assumed. */
+  it('because z.coerce.number() is Number(), which is the premise of the law', () => {
+    const coerce = z.coerce.number();
+    expect(coerce.safeParse('0x10')).toMatchObject({ success: true, data: 16 });
+    expect(coerce.safeParse('0b11')).toMatchObject({ success: true, data: 3 });
+    expect(coerce.safeParse('0o17')).toMatchObject({ success: true, data: 15 });
+    expect(coerce.safeParse(null)).toMatchObject({ success: true, data: 0 });
+    expect(coerce.safeParse([])).toMatchObject({ success: true, data: 0 });
+    expect(coerce.safeParse(['5'])).toMatchObject({ success: true, data: 5 });
+    expect(coerce.safeParse(true)).toMatchObject({ success: true, data: 1 });
+    expect(coerce.safeParse(new Date(0))).toMatchObject({ success: true, data: 0 });
+    expect(coerce.safeParse({ valueOf: () => 7 })).toMatchObject({ success: true, data: 7 });
+    // And the one it refuses, so the difference from the rule is exact.
+    expect(coerce.safeParse('abc').success).toBe(false);
+  });
+
+  /** While the strict readers refuse the whole table. */
+  it('while count() and money() refuse every value in it', () => {
+    const table: unknown[] = [
+      '0x10', '0b11', '0o17', '1e400', '', '   ', null, [], ['5'], true,
+      new Date(0), { valueOf: () => 7 },
+    ];
+    for (const reader of [count(999, 1), money(100_000)]) {
+      for (const value of table) {
+        expect(reader.safeParse(value).success, 'القارئُ الصارمُ قَبِلَ «' + String(value) + '»').toBe(
+          false
+        );
+      }
+    }
+  });
+});
+
+/* ──────────────────────────────── law two ───────────────────────────────── */
+
+/**
+ * A MONEY-OR-COUNT VALUE HANDED BARE TO `Number()` IN SERVER CODE —
+ * CLASSIFIED, WITH THE REASON WRITTEN OUT.
+ *
+ * This side is partitioned rather than emptied, for the reason
+ * `every-money-writer-is-known.test.ts` gives: whether an identifier is a
+ * request field or a local that happens to share a column's name is
+ * semantic, and the syntax does not carry it. A detector known to be wrong
+ * in both directions is worse than a human classification with a reason a
+ * reviewer can check. What IS machine-checked is the part that fails open —
+ * a NEW bare read, in any server file, is an unclassified stranger.
+ *
+ * AND THERE ARE TWO SIDES TO THE CLASSIFICATION, NOT ONE. A reading-side
+ * list where every entry means «this is fine» is a list that can quietly
+ * absorb a defect — `every-money-writer-is-known.test.ts` carried a reason
+ * that was not true for weeks. So a site this law FINDS and that is NOT fine
+ * goes on a separate list that says so, with the figures it produces.
+ *
+ * COMPONENTS ARE OUT OF THIS SWEEP, as a directory rule and not a list of
+ * files. `src/components/**` holds ten of these (`Number(amount)` in the
+ * wallet screens, `Number(quantity)` in receiving) and not one can write a
+ * column: each posts to a door, and the door is in this sweep. A screen
+ * computing a display figure from its own input is doing arithmetic, not
+ * validation.
+ */
+const BARE_READS_WITH_A_REASON: Record<string, string> = {
+  'src/app/api/users/[id]/profile/route.ts':
+    'يُحوِّلُ Decimal مخزَّناً إلى رقمٍ ليُرسِلَه في JSON — قراءةُ عمودٍ لا كتابتُه، والقيمةُ لم تأتِ من طلبٍ أصلاً',
+  'src/lib/campaigns.ts':
+    'المعامِلُ مُعلَنٌ number سلفاً، وNumber()||0 هنا حارسُ NaN: عمودُ numeric في بوستغرس يَقبَلُ NaN وإن كان بريزما يَرفُضُ كتابتَها',
+  'src/lib/order-parser.ts':
+    'value هنا التقاطُ تعبيرٍ نمطيٍّ من نصٍّ مكتوبٍ بيدٍ لا حقلُ طلبٍ، والاسمُ يَتصادَمُ مع عمودِ CommissionRule.value؛ وما يُنتِجُه يَمُرُّ بمخطَّطِ باب ai-intake قبل أن يُكتَب',
+};
+
+/**
+ * FOUND BY THIS LAW, MEASURED, AND STILL OPEN — not «acceptable».
+ *
+ * `src/lib/order-import.ts` parses an uploaded CSV or Excel sheet of orders
+ * and `ImportOrdersDialog.tsx` posts the figures it produced to
+ * `POST /api/orders`. So the create door's strict reader CANNOT help: the
+ * mis-reading happens in the browser's round trip, before the request.
+ * Measured against the file as it stands:
+ *
+ *     quantity, `rawQty ? Number(rawQty) : 1` then `Number.isInteger`
+ *       '0x10' → 16 units, accepted      '0b11' → 3       '0o17' → 15
+ *
+ *     price, `Number(String(rawPrice).replace(/[^\d.-]/g, ''))` — the strip
+ *     does not refuse, it REWRITES, and every one of these then passes the
+ *     finiteness check below it:
+ *       '3,5'    → 35      an Arabic decimal comma, ten times the price
+ *       '1e400'  → 1400
+ *       '0x10'   → 10
+ *       '12abc'  → 12
+ *       '١٢'     → 0       Arabic-Indic digits: a free order
+ *
+ * The last is the one that matters most in an Arabic-facing product. The
+ * file is outside this change's ownership, so it is named here with its
+ * figures instead of being fixed — and naming it keeps the sweep passing
+ * without the entry reading as approval.
+ */
+const FOUND_AND_STILL_OPEN: Record<string, string> = {
+  'src/lib/order-import.ts':
+    'عطبٌ مفتوحٌ لا استثناء: مستوردُ الجداول يَقرأُ الكميّةَ بـNumber() فتَمُرُّ «0x10» ستّةَ عشرَ، ويَقرأُ السعرَ بـNumber(String(x).replace(…)) فتُصبِحُ «3,5» خمسةً وثلاثين و«١٢» صفراً — والواجهةُ تُرسِلُ الناتجَ إلى باب الإنشاء، فقارئُه الصارمُ لا يَراه. خارجُ ملكيّةِ هذا التغيير ومُبلَّغٌ عنه',
+};
+
+describe('every bare Number() on money or a count is accounted for', () => {
+  const swept = SWEPT_FILES.filter(isServerSide).filter(
+    (rel) => bareNumberReads(sourceOf(rel)).length > 0
+  );
+
+  it('and not one of them is an unclassified stranger', () => {
+    const known = new Set([
+      ...Object.keys(BARE_READS_WITH_A_REASON),
+      ...Object.keys(FOUND_AND_STILL_OPEN),
+    ]);
+    const strangers = swept.filter((rel) => !known.has(rel));
+    expect(
+      strangers,
+      'بابٌ يَقرأُ مالاً أو كمّيةً بـNumber() عاريةً ولم يُصنَّف — إمّا أن يَقرأَ بـnumeric-input، أو أن يُقالَ لماذا لا يحتاجُه، أو أن يُسمّى عطباً مفتوحاً'
+    ).toEqual([]);
+  });
+
+  it('and neither list has gone stale by naming a file that no longer reads one', () => {
+    const live = new Set(swept);
+    const ghosts = [
+      ...Object.keys(BARE_READS_WITH_A_REASON),
+      ...Object.keys(FOUND_AND_STILL_OPEN),
+    ].filter((rel) => !live.has(rel));
+    expect(ghosts, 'اسمٌ في القائمة لا يَظهَرُ في المسح').toEqual([]);
+  });
+
+  it('and every reason is a sentence a reviewer can check, not a shrug', () => {
+    for (const [rel, why] of Object.entries({
+      ...BARE_READS_WITH_A_REASON,
+      ...FOUND_AND_STILL_OPEN,
+    })) {
+      expect([...why].length, rel + ': السببُ أقصرُ من أن يُراجَع').toBeGreaterThan(40);
+    }
+  });
+
+  /** And a file cannot be on both lists, which would be a reason both ways. */
+  it('and no file is both classified as fine and recorded as open', () => {
+    const both = Object.keys(FOUND_AND_STILL_OPEN).filter((rel) => rel in BARE_READS_WITH_A_REASON);
+    expect(both, 'ملفٌّ مُصنَّفٌ سليماً ومعطوباً في الوقت نفسِه').toEqual([]);
+  });
+
+  /**
+   * THE FIGURES ON THE OPEN LIST ARE MEASURED HERE, so the entry above is a
+   * fact and not a recollection — and so that the day somebody fixes that
+   * file, this fails and the entry has to go.
+   */
+  it('and the open entry’s figures are what that code really produces', () => {
+    const importedQuantity = (raw: string) => {
+      const q = raw ? Number(raw) : 1;
+      return Number.isInteger(q) && q >= 1 ? q : 'REFUSED';
+    };
+    const importedPrice = (raw: string) => {
+      const p = raw ? Number(String(raw).replace(/[^\d.-]/g, '')) : null;
+      return p !== null && Number.isFinite(p) && p >= 0 ? p : 'REFUSED';
+    };
+    expect(importedQuantity('0x10')).toBe(16);
+    expect(importedQuantity('0b11')).toBe(3);
+    expect(importedQuantity('0o17')).toBe(15);
+    expect(importedPrice('3,5'), 'فاصلةٌ عشريّةٌ عربيّةٌ تُصبِحُ خمسةً وثلاثين').toBe(35);
+    expect(importedPrice('1e400')).toBe(1400);
+    expect(importedPrice('0x10')).toBe(10);
+    expect(importedPrice('١٢'), 'سعرٌ بأرقامٍ عربيّةٍ يُصبِحُ طلباً مجّانيّاً').toBe(0);
+    // And the two lines are still spelled that way in the file named above.
+    const src = blankComments(sourceOf('src/lib/order-import.ts'));
+    expect(src).toMatch(/Number\(rawQty\)/);
+    expect(src).toMatch(/Number\(String\(rawPrice\)\.replace\(/);
+  });
+
+  /**
+   * AND THE DOORS THIS LAW WAS WRITTEN FOR CARRY NO BARE READ AT ALL — the
+   * finance door had three of them and is the reason the law exists.
+   */
+  it('and the finance door, which had three, has none', () => {
+    const rel = 'src/app/api/orders/[id]/finance/route.ts';
+    expect(bareNumberReads(sourceOf(rel)).map((h) => h.text), rel).toEqual([]);
+    // And it reaches the shared reader instead — the CALL, not the import,
+    // because an import line has satisfied a guard here four times while the
+    // thing it named was gone.
+    expect(blankComments(sourceOf(rel))).toMatch(/moneyInput\(\s*[0-9_]/);
+  });
+
+  it('and so do the other four doors on these columns', () => {
+    for (const rel of [
+      'src/app/api/orders/[id]/route.ts',
+      'src/app/api/orders/ai-intake/route.ts',
+      'src/lib/landing-order-schema.ts',
+      'src/app/api/orders/route.ts',
+    ]) {
+      expect(bareNumberReads(sourceOf(rel)).map((h) => h.text), rel).toEqual([]);
+      expect(blankComments(sourceOf(rel)), rel + ': لا يستورد القارئ المشترك').toMatch(
+        /from '@\/lib\/numeric-input'/
+      );
+    }
+  });
+});
+
+/* ───────────────── and the bounds, where the doors can be compared ─────── */
+
+/**
+ * ONE COLUMN, ONE BOUND — EXCEPT WHERE THE DISAGREEMENT IS DECLARED.
+ *
+ * A shared reader fixes the NOTATION. It does not fix the CEILING, and two
+ * doors can read one column strictly and still disagree about how large it
+ * may be — which is what `quantity` did: `count(999, 1)` on the create door
+ * and `max(10000)` on the edit door, eleven times higher and declared
+ * nowhere else.
+ *
+ * So the ceilings the two order doors declare are compared here directly.
+ * The one deliberate disagreement is `shippingCost`, and it is asserted AS a
+ * disagreement, so that closing it in either direction fails this test and
+ * makes somebody say which way.
+ */
+describe('the two order doors, bound by bound', () => {
+  const create = blankComments(sourceOf('src/app/api/orders/route.ts'));
+  const edit = blankComments(sourceOf('src/app/api/orders/[id]/route.ts'));
+
+  const boundOn = (src: string, field: string): string | null => {
+    const m = new RegExp('\\b' + field + ':\\s*(count|amount|money|moneyInput)\\(([^)]*)\\)').exec(src);
+    return m ? m[1] + '(' + m[2]!.replace(/\s+/g, '') + ')' : null;
+  };
+
+  it('agree exactly on a quantity and on a price', () => {
+    expect(boundOn(create, 'quantity'), 'create: quantity').toBe('count(999,1)');
+    expect(boundOn(edit, 'quantity'), 'edit: quantity').toBe('count(999,1)');
+    expect(boundOn(create, 'unitPrice')).toBe('amount(100000)');
+    expect(boundOn(edit, 'unitPrice')).toBe('amount(100000)');
+    expect(boundOn(create, 'sellingPrice')).toBe('amount(100000)');
+    expect(boundOn(edit, 'sellingPrice')).toBe('amount(100000)');
+  });
+
+  it('and disagree on the shipping fee, on purpose and on the record', () => {
+    expect(boundOn(create, 'shippingCost'), 'create: shippingCost').toBe('amount(1000)');
+    expect(boundOn(edit, 'shippingCost'), 'edit: shippingCost').toBe('amount(1_000_000)');
+    // The edit door's figure is borrowed, not invented: it is what the door
+    // that owns the courier fee declares for the same economic quantity.
+    expect(blankComments(sourceOf('src/app/api/orders/[id]/shipping/route.ts'))).toMatch(
+      /deliveryFee:\s*moneyInput\(1_000_000\)/
+    );
+    // And a Syrian shipping fee of 25,000 is the case that splits them.
+    expect(money(1000).safeParse(25_000).success, 'the create door takes 25000').toBe(false);
+    expect(money(1_000_000).safeParse(25_000).success, 'the edit door refuses 25000').toBe(true);
   });
 });

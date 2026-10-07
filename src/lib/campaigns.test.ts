@@ -5,6 +5,7 @@ import {
   generateCampaignCode,
   campaignCodeSchema,
   campaignInputSchema,
+  campaignPatchSchema,
   datesMakeSense,
   wasRunning,
 } from './campaigns';
@@ -197,5 +198,91 @@ describe('what a campaign may be created with', () => {
 
   it('takes a spend typed as text, which is how a form sends it', () => {
     expect(campaignInputSchema.parse({ ...base, spend: '250.50' }).spend).toBe(250.5);
+  });
+});
+
+/**
+ * THE SPEND, READ THE WAY THE REST OF THE SYSTEM READS MONEY.
+ *
+ * `spend` was `z.coerce.number().min(0).max(100_000_000).default(0)`, and
+ * `z.coerce.number()` is `Number(value)`. Two things followed, both of them
+ * about a figure a person typed after paying it:
+ *
+ *   · `Number(null)` is **0**, and `.default()` fires only on `undefined` —
+ *     so a body carrying `spend: null` stored a zero instead of being
+ *     refused. `dad59c9` closed the other road to the same loss: `.partial()`
+ *     kept the default, so a bare `{ name }` arrived as a whole row and a
+ *     rename wiped a 1250 spend. One column, two ways to lose the money.
+ *   · `Number('0x10')` is **16** — an ad spend of sixteen, in a column
+ *     `roas`, `costPerDelivered` and `costPerOrder` are all divided by.
+ *
+ * It reads through `money()` from `numeric-input` now, which is the reader
+ * `POST /api/orders`, the inventory, production and shipping doors and the
+ * finance door all use. The ceiling is unchanged.
+ */
+describe('the money that left for Meta, as the door reads it', () => {
+  const base = { name: 'حملة رمضان', startDate: '2026-03-01' };
+
+  /** The spend the schema produced, or REFUSED — so a failure prints the figure. */
+  const recorded = (spend: unknown): number | 'REFUSED' => {
+    const parsed = campaignInputSchema.safeParse({ ...base, spend });
+    return parsed.success ? parsed.data.spend : 'REFUSED';
+  };
+  const afterEdit = (spend: unknown): number | 'REFUSED' | 'ABSENT' => {
+    const parsed = campaignPatchSchema.safeParse({ name: 'اسم جديد', spend });
+    if (!parsed.success) return 'REFUSED';
+    return parsed.data.spend === undefined ? 'ABSENT' : parsed.data.spend;
+  };
+
+  it('an explicit null is refused, where it used to be a silent zero', () => {
+    expect(Number(null), 'Number(null)').toBe(0);
+    expect(recorded(null), 'مصروفٌ null صار صفراً بصمت').toBe('REFUSED');
+    expect(afterEdit(null), 'تعديلٌ بـnull صفَّرَ مصروفاً').toBe('REFUSED');
+  });
+
+  it('and an OMITTED spend is still the two things it was: 0 on create, absent on edit', () => {
+    // `dad59c9`'s rule, re-asserted here because wrapping the field in a
+    // reader could have broken `omittedMeansOmitted`'s unwrapping of the
+    // `.default()` — which is exactly the kind of thing that passes review.
+    expect(campaignInputSchema.parse(base).spend).toBe(0);
+    expect(campaignPatchSchema.parse({ name: 'اسم جديد' }).spend).toBeUndefined();
+  });
+
+  it('and a base-prefixed notation is refused, where it used to be a figure', () => {
+    for (const [notation, wouldHaveBeen] of [
+      ['0x10', 16],
+      ['0X10', 16],
+      ['0b11', 3],
+      ['0o17', 15],
+    ] as const) {
+      expect(Number(notation), `Number('${notation}')`).toBe(wouldHaveBeen);
+      expect(recorded(notation), `«${notation}» كان يُسجَّلُ مصروفاً قدرُه ${wouldHaveBeen}`).toBe('REFUSED');
+      expect(afterEdit(notation), `تعديلٌ بـ«${notation}»`).toBe('REFUSED');
+    }
+  });
+
+  it('and an overflow is refused instead of becoming Infinity', () => {
+    expect(Number('1e400')).toBe(Infinity);
+    expect(recorded('1e400')).toBe('REFUSED');
+  });
+
+  it('and the rest of what Number() turns into a number is refused too', () => {
+    for (const value of ['', '   ', [], true, ['5'], {}, '2,500', '١٢٣']) {
+      expect(recorded(value), `مصروفٌ «${String(value)}» مرّ`).toBe('REFUSED');
+    }
+  });
+
+  it('while a real spend, typed or sent as a form string, is recorded exactly', () => {
+    expect(recorded(1250)).toBe(1250);
+    expect(recorded('250.50')).toBe(250.5);
+    expect(recorded(' 1250 ')).toBe(1250);
+    expect(recorded(0)).toBe(0);
+    expect(afterEdit(1250)).toBe(1250);
+  });
+
+  it('and the ceiling is still the column’s', () => {
+    expect(recorded(100_000_000)).toBe(100_000_000);
+    expect(recorded(100_000_001)).toBe('REFUSED');
+    expect(recorded(-1)).toBe('REFUSED');
   });
 });

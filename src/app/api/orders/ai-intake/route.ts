@@ -8,6 +8,7 @@ import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { orderRefFields } from '@/lib/order-ref';
 import { resolveRegionId } from '@/lib/regions';
 import { computeCod, roundMinor } from '@/lib/money';
+import { count, money as amount } from '@/lib/numeric-input';
 import { productCost } from '@/lib/product-cost';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -100,8 +101,21 @@ export async function POST(req: Request) {
         address: z.string().trim().max(200).optional().nullable(),
         governorate: z.string().trim().max(60).optional().nullable(),
         productId: z.string().min(10).max(64),
-        quantity: z.coerce.number().int().min(1).max(999),
-        finalPrice: z.coerce.number().min(0).max(100000),
+        /**
+         * THE SAME READER AND THE SAME BOUNDS AS `POST /api/orders`.
+         *
+         * These two were `z.coerce.number()`, which is `Number(value)`, and
+         * the text above this schema says «the client-confirmed payload is
+         * never trusted with raw values (same rules as POST /api/orders)» —
+         * which was not true of the notation. `count(999, 1)` and
+         * `amount(100000)` ARE the create door's rules, imported rather
+         * than described, so `'0x10'` is a 400 here as it is there instead
+         * of sixteen units or sixteen dinars.
+         *
+         * The bounds are unchanged; only what counts as a number is.
+         */
+        quantity: count(999, 1),
+        finalPrice: amount(100000),
         moderatorId: z.string().min(10).max(64).optional().nullable(),
         notes: z.string().trim().max(500).optional().nullable(),
         source: z.string().trim().max(40).optional().nullable(),

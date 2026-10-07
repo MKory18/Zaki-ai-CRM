@@ -13,6 +13,7 @@ import {
   mapZodFieldErrors,
   isKnownRegion,
 } from './landing-order-schema';
+import { MAX_LINE_QUANTITY } from './cart';
 import { isValidPhoneFor, phoneErrorFor } from './phone-rules';
 
 const SYRIA = { countryCode: 'SY', regions: ['دمشق', 'حلب', 'اللاذقية', 'طرطوس'] };
@@ -169,5 +170,71 @@ describe('errors never leak Zod internals to a visitor', () => {
     expect(fieldErrors.full_name).toBe('يرجى إدخال الاسم الكامل.');
     // The specific rule that fired wins when it has its own Arabic message.
     expect(fieldErrors.address).toBe('يرجى إدخال العنوان بشكل أوضح.');
+  });
+});
+
+/**
+ * HOW MANY, ON A PUBLIC DOOR.
+ *
+ * The header of this schema promises that «price / productId / companyId /
+ * quantity … are NOT part of the schema — any client-sent value is
+ * ignored», and for the single-product form that is true: the block above
+ * proves a top-level `quantity` is dropped. The CART is the exception the
+ * promise does not cover — `items[].quantity` IS taken from the browser,
+ * because only the browser knows how many of each the shopper put in it.
+ *
+ * It was read with `z.coerce.number()`, which is `Number(value)`, so
+ * `'0x10'` was sixteen units and `'0b11'` was three — measured, and inside
+ * `[1, 99]`, so no bound caught either. It is `count(MAX_LINE_QUANTITY, 1)`
+ * from `numeric-input` now: the same reader `POST /api/orders` uses for the
+ * same column.
+ */
+describe('the one number the cart really does take from the browser', () => {
+  const cart = (quantity: unknown) =>
+    jordanSchema.safeParse({ ...GOOD_JO, items: [{ productId: 'p-a', quantity }] });
+
+  /**
+   * THE FIGURE, NOT THE VERDICT. `success: false` prints «expected true to
+   * be false», which does not say what would have been ordered. This
+   * returns the count the schema produced, so a regression prints the 16.
+   */
+  const ordered = (quantity: unknown): number | 'REFUSED' => {
+    const parsed = cart(quantity);
+    return parsed.success ? parsed.data.items![0].quantity : 'REFUSED';
+  };
+
+  it('reads a count a shopper can actually have chosen', () => {
+    expect(ordered(3)).toBe(3);
+    // A number arriving as a form string is still a number.
+    expect(ordered('3')).toBe(3);
+  });
+
+  it('and refuses every notation Number() would have turned into a count', () => {
+    for (const [notation, wouldHaveBeen] of [
+      ['0x10', 16],
+      ['0X10', 16],
+      ['0b11', 3],
+      ['0o17', 15],
+    ] as const) {
+      expect(Number(notation), `Number('${notation}')`).toBe(wouldHaveBeen);
+      expect(
+        ordered(notation),
+        `«${notation}» كان يُقرَأُ ${wouldHaveBeen} وحدةً من باب عامّ`
+      ).toBe('REFUSED');
+    }
+  });
+
+  it('and the values Number() reads as a zero or a one are refused too', () => {
+    // Each of these was `Number(x)` → 0 or 1, i.e. a silent line.
+    for (const value of ['', '   ', null, [], true, ['5'], {}]) {
+      expect(ordered(value), `كميّةٌ «${String(value)}» مرّت`).toBe('REFUSED');
+    }
+  });
+
+  it('and the ceiling is the cart’s own, so the two ends of the form agree', () => {
+    expect(cart(MAX_LINE_QUANTITY).success).toBe(true);
+    expect(cart(MAX_LINE_QUANTITY + 1).success).toBe(false);
+    expect(cart(0).success).toBe(false);
+    expect(cart(2.5).success).toBe(false);
   });
 });

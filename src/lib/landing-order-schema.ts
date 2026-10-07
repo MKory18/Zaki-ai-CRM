@@ -11,6 +11,7 @@
  */
 
 import { z } from 'zod';
+import { count } from '@/lib/numeric-input';
 import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
 
 /**
@@ -84,7 +85,23 @@ export function buildPublicOrderSchema(locale: OrderLocale) {
         z.object({
           productId: z.string().trim().min(1).max(64),
           offerId: z.string().trim().max(64).optional().default(''),
-          quantity: z.coerce.number().int().min(1).max(MAX_LINE_QUANTITY),
+          /**
+           * NO PRICE ARRIVES HERE, BUT A COUNT DOES — AND A PUBLIC DOOR IS
+           * THE ONE PLACE A HOSTILE VALUE COMES ON PURPOSE.
+           *
+           * This was `z.coerce.number()`, which is `Number(value)`, so
+           * `quantity: '0x10'` was sixteen units of a product off a public
+           * form and `'0b11'` was three — measured. The bound caught
+           * nothing: 16 is inside `[1, 99]`, and it is the figure stock is
+           * reserved and the line total computed from.
+           *
+           * `count()` from `numeric-input` is the same reader
+           * `POST /api/orders` uses for the same column, and the ceiling is
+           * unchanged — `MAX_LINE_QUANTITY` from `cart.ts`, which the
+           * browser-side cart already clamps to, so the two ends of the
+           * same form agree on one number.
+           */
+          quantity: count(MAX_LINE_QUANTITY, 1),
         })
       )
       .max(MAX_CART_LINES, 'السلة فيها أصناف أكثر مما نقبله في طلب واحد.')

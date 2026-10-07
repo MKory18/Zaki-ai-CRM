@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { notify } from '@/lib/notify';
 import { closingStages } from '@/lib/order-closing';
 import { z } from 'zod';
+import { count, money as amount } from '@/lib/numeric-input';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
@@ -56,8 +57,8 @@ const patchSchema = z.object({
     .array(
       z.object({
         productId: z.string().min(10).max(64),
-        quantity: z.coerce.number().int().min(1).max(999),
-        unitPrice: z.coerce.number().min(0).max(100000),
+        quantity: count(999, 1),
+        unitPrice: amount(100000),
       })
     )
     .min(1)
@@ -74,11 +75,59 @@ const patchSchema = z.object({
   trackingCode: z.string().trim().max(100).optional().nullable(),
   confirmationStatus: z.enum(CONFIRMATION_STATUSES).optional(),
   shippingStatus: z.enum(SHIPPING_STATUSES).optional(),
-  // Order line editing — validated then persisted (mirrors POST caps)
-  sellingPrice: z.coerce.number().finite().min(0).max(100000).optional(),
-  quantity: z.coerce.number().int().finite().min(1).max(10000).optional(),
-  discountAmount: z.coerce.number().finite().min(0).max(100000).optional(),
-  shippingCost: z.coerce.number().finite().min(0).max(1000).optional(),
+  /**
+   * ORDER LINE EDITING — THE SAME READER THE CREATE DOOR USES.
+   *
+   * The comment here used to say «mirrors POST caps», and it did not. These
+   * five fields were `z.coerce.number()`, which is `Number(value)`, and
+   * `POST /api/orders` reads the SAME COLUMNS through `count()`/`money()`
+   * from `numeric-input`. So `'0x10'` was sixteen units or sixteen dinars
+   * on this door and a 400 on the create door — one column, two doors, two
+   * notations, which is the shape `82ecac3` closed for `commissionRate`.
+   * Measured: `Number('0x10')` is 16, `'0b11'` is 3, `'0o17'` is 15, and
+   * `''` and `null` and `[]` are all 0.
+   *
+   * `.finite()` is gone from all four, and NOT because it was wrong: it
+   * cannot fire. `money()`/`count()` are `z.preprocess(read, z.number()…)`
+   * and zod 4's `z.number()` already refuses `Infinity` and `NaN` —
+   * measured, and asserted by name in `a-column-has-one-rule.test.ts`. It
+   * is also not expressible: `z.preprocess` returns a pipe with no
+   * `.finite()` on it, so keeping it would not compile. A check that cannot
+   * fire reads as policy while doing nothing, and ten of those have been
+   * caught in this audit.
+   *
+   * THE BOUNDS, each with its reason rather than its inheritance:
+   *
+   *   · `sellingPrice` — `amount(100000)`, identical to the create door.
+   *   · `quantity` — `count(999, 1)`, identical to the create door. It was
+   *     `max(10000)` here, a ceiling ten times the create door's and
+   *     declared nowhere else; no order could be CREATED above 999, so the
+   *     only way past it was this door. Measured against the database
+   *     before narrowing it: the largest quantity on any of the 56 orders
+   *     is 3, so no stored row becomes unsavable.
+   *   · `discountAmount` — `amount(100000)`. The create door does not
+   *     accept this field at all, so there is no cap to match; 100000 is
+   *     `sellingPrice`'s, and a discount is subtracted from a price, so the
+   *     largest price the system accepts is the largest discount that can
+   *     mean anything.
+   *   · `shippingCost` — `amount(1_000_000)`, and this one DISAGREES with
+   *     the create door's `amount(1000)` on purpose. 1000 cannot hold a
+   *     shipping fee in Syrian pounds, where a fee is tens of thousands,
+   *     and this is the door an operator corrects a real fee on after the
+   *     courier tells them what it was — a cap that refuses the truth is
+   *     worse here than a cap that permits a typo. 1_000_000 is not
+   *     invented either: `PATCH /api/orders/[id]/shipping` declares
+   *     `deliveryFee: money(1_000_000)` for the same economic quantity —
+   *     a shipping fee a person types — so this borrows the one bound in
+   *     the repository that was chosen for this currency. The create door's
+   *     1000 is, in my reading, wrong for the same reason, and it is not
+   *     mine to change; it is named in the report as the remaining
+   *     disagreement.
+   */
+  sellingPrice: amount(100000).optional(),
+  quantity: count(999, 1).optional(),
+  discountAmount: amount(100000).optional(),
+  shippingCost: amount(1_000_000).optional(),
   productId: z.string().min(10).max(64).optional(),
   expectedVersion: z.number().optional(),
   // Why this edit was made. Required — and only required — of an edit made
