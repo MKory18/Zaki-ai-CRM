@@ -207,3 +207,104 @@ describe('editing a product: the stored price survives a bad one', () => {
     expect(res.status).toBe(200);
   });
 });
+
+/**
+ * THE NOTATION THAT GOT PAST THE OLD READER — MEASURED AT THE DOOR.
+ *
+ * `readBasePrice` used `Number()` because `parseFloat('3,5')` is 3 and that
+ * stored a wrong price silently. The reasoning was right and the coverage was
+ * not: `Number()` reads base prefixes, so `'0x10'` arrived at both doors and
+ * was stored as **16** with a 200 — the same defect one notation over. The
+ * price rule now borrows its notation from `numeric-input.ts`.
+ *
+ * Each case asserts the figure `Number()` really answers before asserting the
+ * refusal, so the hazard in this file is measured rather than recited.
+ */
+describe('a price written in another notation reaches neither door', () => {
+  const PREFIXED = [
+    ['0x10', 16],
+    ['0X10', 16],
+    ['0b11', 3],
+    ['0B11', 3],
+    ['0o17', 15],
+    ['0O17', 15],
+  ] as const;
+
+  it.each(PREFIXED)('creating refuses «%s», which Number() reads as %i', async (typed, wouldStore) => {
+    expect(Number(typed), 'the hazard is measured, not remembered').toBe(wouldStore);
+    const res = await post({ ...sound, basePrice: typed });
+    // The row Prisma was handed comes first, so a failure prints the figure
+    // that would have been stored rather than only the status code.
+    expect(
+      db.product.create.mock.calls.map((c) => c[0].data.basePrice),
+      `${typed} was handed to Prisma as a price; Number() reads it as ${wouldStore}`
+    ).toEqual([]);
+    expect(res.status).toBe(400);
+    const { error } = await res.json();
+    expect(error).toContain('السعر الأساسي');
+  });
+
+  it.each(PREFIXED)('editing refuses «%s» rather than overwriting 120 with %i', async (typed, wouldStore) => {
+    db.product.findFirst.mockResolvedValue(STORED);
+    expect(Number(typed)).toBe(wouldStore);
+    const res = await patch({ basePrice: typed });
+    expect(
+      db.product.update.mock.calls.map((c) => c[0].data.basePrice),
+      `the stored 120 would have been overwritten; Number() reads ${typed} as ${wouldStore}`
+    ).toEqual([]);
+    expect(res.status).toBe(400);
+  });
+
+  it('refuses before the price authority is consulted at all', async () => {
+    // 16 against a stored 120 IS a change, so the old reader did not bypass
+    // `products.change_price` — it satisfied it with a number nobody typed and
+    // then wrote 16, and the audit log recorded 120 next to it. The refusal
+    // now happens before that question is asked.
+    db.product.findFirst.mockResolvedValue(STORED);
+    const res = await patch({ basePrice: '0x10' });
+    expect(res.status).toBe(400);
+    expect(authorize).not.toHaveBeenCalledWith(expect.anything(), 'products.change_price', expect.anything());
+    expect(logAudit).not.toHaveBeenCalled();
+  });
+
+  it('refuses an Arabic-Indic numeral — this product is Arabic-facing and ١٢٣ is not 123', async () => {
+    expect(Number('١٢٣'), 'Number() does not read Arabic-Indic digits').toBeNaN();
+    const res = await post({ ...sound, basePrice: '١٢٣' });
+    expect(res.status).toBe(400);
+    expect(db.product.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a whitespace-only box, though Number('   ') is 0", async () => {
+    expect(Number('   ')).toBe(0);
+    const res = await post({ ...sound, basePrice: '   ' });
+    expect(res.status).toBe(400);
+    expect(db.product.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses null, though Number(null) is 0', async () => {
+    expect(Number(null)).toBe(0);
+    const res = await post({ ...sound, basePrice: null });
+    expect(res.status).toBe(400);
+    expect(db.product.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a one-element array, though Number(['5']) is 5", async () => {
+    expect(Number(['5'])).toBe(5);
+    const res = await post({ ...sound, basePrice: ['5'] });
+    expect(res.status).toBe(400);
+    expect(db.product.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses an overflowing exponent, though it is written in digits', async () => {
+    expect(Number('1e400')).toBe(Infinity);
+    const res = await post({ ...sound, basePrice: '1e400' });
+    expect(res.status).toBe(400);
+    expect(db.product.create).not.toHaveBeenCalled();
+  });
+
+  it('still stores a scientific-notation price, which a form may legitimately post', async () => {
+    const res = await post({ ...sound, basePrice: '5e-1' });
+    expect(res.status).toBe(200);
+    expect(created().basePrice).toBe(0.5);
+  });
+});

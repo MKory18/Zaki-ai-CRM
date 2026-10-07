@@ -1,3 +1,5 @@
+import { numeric } from './numeric-input';
+
 /**
  * ONE READING OF A TYPED PRICE — for both product doors.
  *
@@ -24,22 +26,54 @@
  *     yet, and the column's own default IS `0.0`. A typed zero is a real
  *     value here, so it is stored as typed — never replaced by a fallback.
  *
- * `Number` RATHER THAN `parseFloat` WAS THE SECOND DIFFERENCE AND IS NOT
- * ONE ANY MORE. `parseFloat('3,5')` is `3` and `parseFloat('12abc')` is
- * `12`, so a decimal comma from an Arabic keyboard stored a wrong price
- * silently; `Number('3,5')` is `NaN` and is refused, which is an answer a
- * person can act on. `finance/route.ts` carried the `parseFloat` weakness
- * until it was closed there too — it now reads its amount through
- * `numeric-input.ts`, which is stricter than `Number` as well: it refuses
- * `'0x10'`, which `Number` reads as **16**. THIS READER STILL DOES NOT, and
- * that is a known gap recorded here rather than a decision — see
- * `a-column-has-one-rule.test.ts`, where `'0x10'` is the one hostile string
- * the price tests do not list.
+ * `Number` RATHER THAN `parseFloat` WAS A SECOND DIFFERENCE, AND IT WAS NOT
+ * ENOUGH. `parseFloat('3,5')` is `3` and `parseFloat('12abc')` is `12`, so a
+ * decimal comma from an Arabic keyboard stored a wrong price silently;
+ * `Number('3,5')` is `NaN` and is refused, which is an answer a person can
+ * act on. That reasoning was right. What it did not close is the other road
+ * into the same defect — **`Number` reads base prefixes**, measured here:
+ *
+ *     Number('0x10') → 16        Number('0b11') → 3
+ *     Number('0o17') → 15        Number('0X10') → 16   (and 0B, 0O)
+ *
+ * so `readBasePrice('0x10')` returned **16**: a wrong price, stored
+ * silently, answering 200 — the exact class of defect this file exists to
+ * prevent, one notation over. `Number` closed the comma road and left the
+ * base-prefix road open, and a reader that is strict about one notation and
+ * generous about another is not a strict reader.
+ *
+ * SO THE NOTATION IS NOT DECIDED HERE ANY MORE. It is decided by
+ * `numeric-input.ts`, the one strict reader the money and stock doors
+ * already use: a number, or a string written the way a decimal number is
+ * written (sign, digits, decimal point, decimal exponent) and nothing else.
+ * A twelfth hand-rolled variant is how the eleven before it diverged.
+ *
+ * WHAT THIS FILE STILL DECIDES, and what it borrows:
+ *
+ *   · **Borrowed from `numeric()`:** the notation, and finiteness. `'0x10'`,
+ *     `'2,500'`, `'12abc'`, `'١٢٣'`, `''`, `'   '`, `null`, `[]`, `['5']`,
+ *     `{valueOf}` and `true` all fail its schema; `'Infinity'` and `'1e400'`
+ *     fail `z.number()`, which is finite in zod 4. THIS FUNCTION NO LONGER
+ *     CHECKS FINITENESS ITSELF — that would be a guard that cannot fire, and
+ *     this audit has already caught ten of those. The dependency is pinned
+ *     by assertion instead, in `a-column-has-one-rule.test.ts`: if `numeric()`
+ *     ever lets `Infinity` through, that suite fails.
+ *   · **Decided here:** that zero is a price and a negative number is not.
+ *
+ * NO CEILING IS DECLARED, and that is reported rather than decided:
+ * `'1e308'` is a plain decimal, is finite, and is stored. See the note in
+ * `a-column-has-one-rule.test.ts`.
  */
 
 /** What the person is told when what they typed is not a price. */
 export const BASE_PRICE_NOT_A_NUMBER =
   'السعر الأساسي رقمٌ صفر أو أكثر. اكتبه بالأرقام.';
+
+/**
+ * The one notation a price may be written in — the shared strict reader,
+ * built once rather than per call.
+ */
+const PRICE = numeric();
 
 /**
  * The price as it arrives in a request body, or `null` when what arrived is
@@ -53,13 +87,9 @@ export const BASE_PRICE_NOT_A_NUMBER =
  * value that doubles as the refusal.
  */
 export function readBasePrice(raw: unknown): number | null {
-  const value =
-    typeof raw === 'number'
-      ? raw
-      : typeof raw === 'string' && raw.trim() !== ''
-        ? Number(raw.trim())
-        : NaN;
-  // Finite rules out NaN and ±Infinity; a negative price is not a discount,
-  // it is a typo with a minus in front of it.
-  return Number.isFinite(value) && value >= 0 ? value : null;
+  const read = PRICE.safeParse(raw);
+  if (!read.success) return null;
+  // A negative price is not a discount, it is a typo with a minus in front
+  // of it. This is the only bound this file adds to the shared reader.
+  return read.data >= 0 ? read.data : null;
 }
