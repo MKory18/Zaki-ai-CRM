@@ -46,7 +46,7 @@ import { join, relative, sep } from 'node:path';
 
 const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
   db: {
-    productionBatch: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    productionBatch: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), aggregate: vi.fn() },
     productionBatchCost: { deleteMany: vi.fn(), createMany: vi.fn() },
     product: { findFirst: vi.fn() },
     inventoryMovement: { create: vi.fn() },
@@ -96,10 +96,36 @@ const context = (storeId: string | null) => ({
   country: { currencyCode: 'SYP', minorUnit: 2 },
 });
 
+/**
+ * THE SHELF, AS ROWS, SHARED BY EVERY TEST BELOW.
+ *
+ * `onHandTotal` is NOT mocked anywhere in this file — the real function from
+ * `receiving.ts` runs against this. So `aggregate` has to behave like
+ * Prisma's: apply the `where` it is handed and sum the column it is ASKED
+ * for. A fake that ignores either is how a guard goes vacuous — one in
+ * `7c98b01` survived a mutation because the fake transaction sorted
+ * ascending whichever direction it was given.
+ */
+interface ShelfRow { id: string; companyId: string; storeId: string | null; productId: string; quantityRemaining: number }
+const shelf: ShelfRow[] = [];
+
+function aggregateShelf(args: any): { _sum: { quantityRemaining: number | null } } {
+  // The column actually asked for, so an aggregate over the wrong one
+  // cannot come back looking right.
+  if (!args?._sum?.quantityRemaining) {
+    throw new Error(`aggregate asked for ${JSON.stringify(args?._sum)} — this fake only sums quantityRemaining`);
+  }
+  const rows = shelf.filter((r) => matchesWhere(r as unknown as Record<string, unknown>, args.where ?? {}));
+  if (rows.length === 0) return { _sum: { quantityRemaining: null } };
+  return { _sum: { quantityRemaining: rows.reduce((n, r) => n + r.quantityRemaining, 0) } };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  shelf.length = 0;
   requireContext.mockResolvedValue(context(MUBARAK));
   requirePermission.mockResolvedValue(undefined);
+  db.productionBatch.aggregate.mockImplementation(async (args: any) => aggregateShelf(args));
   db.productionBatch.findUnique.mockResolvedValue(null);
   db.product.findFirst.mockResolvedValue({
     id: PRODUCT,
@@ -109,7 +135,13 @@ beforeEach(() => {
     companyId: 'c1',
     storeId: MUBARAK,
   });
-  db.productionBatch.create.mockImplementation(async (args: any) => ({ id: 'b-new', ...args.data }));
+  db.productionBatch.create.mockImplementation(async (args: any) => {
+    const row = { id: `b-new-${shelf.length + 1}`, ...args.data };
+    // The run the door just wrote is ON the shelf from this moment, which is
+    // what makes «the balance after» answerable at all.
+    shelf.push(row as ShelfRow);
+    return row;
+  });
   db.inventoryMovement.create.mockResolvedValue({ id: 'm-new' });
 });
 
@@ -603,5 +635,156 @@ describe('every writer of a store-scoped table writes the store', () => {
     expect(mine.map((s) => s.accessor).sort()).toEqual(['inventoryMovement', 'productionBatch']);
     for (const s of mine) expect(s.store, `${s.rel}:${s.line}`).toBe('WRITES_IT');
     for (const s of mine) expect(s.company, `${s.rel}:${s.line}`).toBe('WRITES_IT');
+  });
+});
+
+/**
+ * ───────────────────────────────────────────────────────────────────────────
+ * 5 · AND THE LEDGER LINE SAYS THE SHELF'S BALANCE, NOT THE RUN'S SIZE
+ *
+ * `balanceAfter: qty` — the new batch's own quantity. For the FIRST run of a
+ * product the two agree, and that is the whole reason this survived: every
+ * hand-built fixture starts a product at nothing, so the wrong expression
+ * and the right one printed the same number.
+ *
+ * The second run is where it parts. A product holding 50 that takes a run of
+ * 20 wrote `balanceAfter: 20` beside `quantity: 20`, so the ledger read 20
+ * where the shelf held 70 — and the next line under it, a sale of one
+ * written by `consumeOrderStock` from `onHandTotal`, read 69. The series
+ * steps 20 → 69, and the column exists for exactly one purpose: that
+ * somebody can read the shelf's history and have it add up.
+ *
+ * WHAT IS ASSERTED IS THE ROW HANDED TO PRISMA, and the arithmetic over the
+ * rows — never the text of the route. `onHandTotal` and the rest of
+ * `receiving.ts` are the real functions; only `@/lib/db` is a fake, and that
+ * fake applies the `where` it is given and refuses to sum a column it was
+ * not asked for.
+ * ───────────────────────────────────────────────────────────────────────────
+ */
+describe('the stock ledger records the balance the shelf is actually at', () => {
+  /** A run already on this shelf, written by someone else, some other day. */
+  const standing = (units: number): ShelfRow => ({
+    id: 'b-standing',
+    companyId: 'c1',
+    storeId: MUBARAK,
+    productId: PRODUCT,
+    quantityRemaining: units,
+  });
+
+  it('counts the stock already there — fifty on hand, a run of twenty, a balance of seventy', async () => {
+    shelf.push(standing(50));
+
+    const res = await post({ ...sound, quantityProduced: 20 });
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+
+    const movement = writtenMovement();
+    expect(movement.quantity).toBe(20);
+    expect(
+      movement.balanceAfter,
+      'الرصيدُ بعدَ تشغيلةٍ ثانيةٍ هو الرفُّ كلُّه (٥٠ + ٢٠ = ٧٠)، لا كميّةُ التشغيلةِ وحدَها'
+    ).toBe(70);
+
+    // The two columns are DIFFERENT facts, and the defect was writing one
+    // into the other. Naming that directly, with the numbers, so a revert
+    // prints `20 !== 20` rather than a sentence about a function name.
+    expect(movement.balanceAfter).not.toBe(movement.quantity);
+  });
+
+  it('and the balance includes the run just written, not the shelf before it', async () => {
+    shelf.push(standing(50));
+    await post({ ...sound, quantityProduced: 20 });
+    // 70, not 50: the movement explains a shelf that already holds the run.
+    expect(writtenMovement().balanceAfter).toBe(70);
+  });
+
+  /**
+   * THE SERIES, WHICH IS THE COLUMN'S ONLY JOB.
+   *
+   * Every row's balance must be the row before it plus its own quantity.
+   * This is the same arithmetic run against the live database for this
+   * audit — 30 movements of one product, zero drift — and it is the check
+   * the old expression fails on the second row and every row after it.
+   */
+  it('so two runs in a row read as a series that adds up', async () => {
+    await post({ ...sound, batchNumber: 'BATCH-2026-010', quantityProduced: 50 });
+    await post({ ...sound, batchNumber: 'BATCH-2026-011', quantityProduced: 20 });
+
+    const rows = db.inventoryMovement.create.mock.calls.map(
+      (c: any) => c[0].data as { quantity: number; balanceAfter: number }
+    );
+    expect(rows).toHaveLength(2);
+
+    let running = 0;
+    for (const [i, row] of rows.entries()) {
+      running += row.quantity;
+      expect(row.balanceAfter, `الحركةُ ${i + 1}: الرصيدُ المكتوبُ لا يساوي ما قبلَه + كميّتَه`).toBe(running);
+    }
+    expect(rows.map((r) => r.balanceAfter)).toEqual([50, 70]);
+  });
+
+  /**
+   * AND WHY NOBODY SAW IT. The first run of a product is the one case where
+   * the broken expression and the correct one agree, and it is the only case
+   * any fixture in this repository had.
+   */
+  it('while a product’s very first run reads the same either way — 1000 and 1000', async () => {
+    const res = await post(sound);
+    expect(res.status).toBe(200);
+    const movement = writtenMovement();
+    expect(movement.quantity).toBe(1000);
+    expect(movement.balanceAfter).toBe(1000);
+  });
+
+  /**
+   * THE BALANCE IS THIS PRODUCT'S, NOT THE WHOLE SHELF'S.
+   *
+   * `onHandTotal` filters on `{ companyId, productId }` and the fake applies
+   * that filter, so a run of one product cannot be credited with another
+   * product's units — and a mutation that drops the filter prints 70 vs 500.
+   */
+  it('and never another product’s units, nor another company’s', async () => {
+    shelf.push(standing(50));
+    shelf.push({ id: 'b-other-product', companyId: 'c1', storeId: MUBARAK, productId: 'p-other', quantityRemaining: 430 });
+    shelf.push({ id: 'b-other-company', companyId: 'c2', storeId: MUBARAK, productId: PRODUCT, quantityRemaining: 900 });
+
+    await post({ ...sound, quantityProduced: 20 });
+    expect(writtenMovement().balanceAfter).toBe(70);
+  });
+
+  /**
+   * IT ASKED THE SHARED FUNCTION, which is the point of the fix rather than
+   * a detail of it: five writers computed this figure one way and this door
+   * computed it another, and a sixth way is a sixth answer.
+   */
+  it('by asking the shelf, not by arithmetic of its own', async () => {
+    shelf.push(standing(50));
+    await post({ ...sound, quantityProduced: 20 });
+
+    expect(db.productionBatch.aggregate).toHaveBeenCalled();
+    const call = db.productionBatch.aggregate.mock.calls.at(-1)![0];
+    expect(call.where).toEqual({ companyId: 'c1', productId: PRODUCT });
+    expect(call._sum).toEqual({ quantityRemaining: true });
+  });
+
+  /**
+   * AND THE FAKE IS NOT ASLEEP. Each way this test could pass while proving
+   * nothing, run rather than assumed.
+   */
+  it('the shelf fake applies the where it is handed and refuses the wrong column', () => {
+    shelf.length = 0;
+    shelf.push(standing(50));
+    shelf.push({ id: 'x', companyId: 'c1', storeId: MUBARAK, productId: 'p-other', quantityRemaining: 7 });
+
+    expect(aggregateShelf({ where: { companyId: 'c1', productId: PRODUCT }, _sum: { quantityRemaining: true } }))
+      .toEqual({ _sum: { quantityRemaining: 50 } });
+    // No filter at all is a DIFFERENT answer, so a mutation that drops the
+    // filter cannot come back looking the same.
+    expect(aggregateShelf({ where: {}, _sum: { quantityRemaining: true } }))
+      .toEqual({ _sum: { quantityRemaining: 57 } });
+    // Nothing matched is null, the way Prisma answers it — `?? 0` in
+    // `onHandTotal` is what turns that into a number.
+    expect(aggregateShelf({ where: { companyId: 'c-none' }, _sum: { quantityRemaining: true } }))
+      .toEqual({ _sum: { quantityRemaining: null } });
+    expect(() => aggregateShelf({ where: {}, _sum: { quantitySold: true } })).toThrow(/quantityRemaining/);
   });
 });

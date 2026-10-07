@@ -753,3 +753,245 @@ describe('the draw crosses batches, and nobody deducts by hand', () => {
     }
   });
 });
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * AND THE BALANCE ON THE LEDGER LINE IS THE SHELF'S, FROM THE ONE FUNCTION
+ * THAT KNOWS IT.
+ *
+ * `balanceAfter` records a DERIVED TOTAL at write time, and the whole value
+ * of such a column is that the series adds up when somebody reads it back.
+ * `POST /api/production` wrote `balanceAfter: qty` — the NEW BATCH'S OWN
+ * QUANTITY. For the first run of a product the two agree, which is why it
+ * survived every fixture; for the second they do not. A product holding 50
+ * taking a run of 20 wrote 20, and the sale written under it from
+ * `onHandTotal` wrote 69, so the series stepped 20 → 69. Fixed 2026-10-07.
+ *
+ * Six writers of this column exist. Five already asked `onHandTotal`; this
+ * one was the exception, and «one of six forgot» is a shape no behavioural
+ * test of the other five can see — the same shape as the missing `storeId`
+ * in `ad54038`. So the writers are FOUND rather than listed: every
+ * `inventoryMovement.create` in the shipped tree, in `scripts` and in
+ * `prisma`, must take `balanceAfter` from the shared function, and any site
+ * that does not must be WRITTEN DOWN HERE with its reason.
+ *
+ * Comments and template literals are blanked first, so a file that merely
+ * MENTIONS `onHandTotal` in prose does not pass.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+/** The balanced argument text of a call whose `(` is at `open`. */
+function callArgs(src: string, open: number): string {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '(' || ch === '{' || ch === '[') depth++;
+    else if (ch === ')' || ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) return src.slice(open, i + 1);
+    }
+  }
+  return src.slice(open);
+}
+
+/**
+ * The `balanceAfter` value inside a `create`'s own arguments.
+ *
+ * Depth-tracked rather than `[^,\n]+`, because the figure this guard is
+ * about — `await onHandTotal(db, companyId, productId)` — has commas INSIDE
+ * it, and a lazy capture would read it as `await onHandTotal(db` and call
+ * that a different expression every time an argument was renamed.
+ *
+ * And the ES shorthand is the same write: `receiving.ts` computes the
+ * figure one line above and passes `balanceAfter,` with no colon at all.
+ */
+function balanceExpression(args: string): { expression: string; shorthand: boolean } | null {
+  const key = /\bbalanceAfter\b/.exec(args);
+  if (!key) return null;
+  let i = key.index + 'balanceAfter'.length;
+  while (i < args.length && /\s/.test(args[i])) i++;
+  if (args[i] !== ':') return { expression: 'balanceAfter', shorthand: true };
+  i++;
+  let depth = 0;
+  let out = '';
+  for (; i < args.length; i++) {
+    const ch = args[i];
+    if (ch === '(' || ch === '{' || ch === '[') depth++;
+    else if (ch === ')' || ch === '}' || ch === ']') {
+      if (depth === 0) break;
+      depth--;
+    } else if (ch === ',' && depth === 0) break;
+    out += ch;
+  }
+  return { expression: out.trim(), shorthand: false };
+}
+
+type BalanceSource = 'FROM_SHARED' | 'VIA_LOCAL_FROM_SHARED' | 'COMPUTED_LOCALLY' | 'ABSENT';
+
+interface BalanceSite {
+  rel: string;
+  line: number;
+  expression: string;
+  source: BalanceSource;
+}
+
+/**
+ * Every writer of an inventory movement, with where its balance came from.
+ *
+ * `receiving.ts` assigns the figure to a local one line above its `create`,
+ * so a bare identifier is followed back to its assignment in the same file
+ * rather than counted as hand arithmetic.
+ */
+function balanceSites(): BalanceSite[] {
+  const extra = ['prisma/seed.ts', 'scripts/backfill-delivered-stock.ts', 'scripts/place-stock-in-stores.ts'];
+  const files: Array<{ rel: string; src: string }> = [
+    ...dashboardFiles('both').map((f) => ({ rel: f.rel.replace(/^\//, ''), src: f.src })),
+  ];
+  for (const rel of extra) {
+    try {
+      files.push({ rel, src: repoFile(rel) });
+    } catch {
+      // A script that has been deleted is not an offender.
+    }
+  }
+
+  const out: BalanceSite[] = [];
+  for (const file of files) {
+    const src = stripTemplates(stripComments(file.src));
+    const CALL = /\.inventoryMovement\.create(?:Many)?\s*\(/g;
+    for (let m = CALL.exec(src); m; m = CALL.exec(src)) {
+      const open = src.indexOf('(', m.index + 1);
+      const args = callArgs(src, open);
+      const line = src.slice(0, m.index).split('\n').length;
+
+      const found = balanceExpression(args);
+      if (!found) {
+        out.push({ rel: file.rel, line, expression: '', source: 'ABSENT' });
+        continue;
+      }
+      const { expression } = found;
+      let source: BalanceSource = 'COMPUTED_LOCALLY';
+      if (/^await\s+onHandTotal\s*\(/.test(expression)) {
+        source = 'FROM_SHARED';
+      } else if (/^[A-Za-z_$][\w$]*$/.test(expression)) {
+        const assigned = new RegExp(`(?:const|let|var)\\s+${expression}\\s*=\\s*await\\s+onHandTotal\\s*\\(`);
+        if (assigned.test(src)) source = 'VIA_LOCAL_FROM_SHARED';
+      }
+      out.push({ rel: file.rel, line, expression, source });
+    }
+  }
+  return out;
+}
+
+describe('the ledger balance comes from the shelf, not from the row being written', () => {
+  const sites = balanceSites();
+
+  /**
+   * THE SEED, AND WHY IT IS NOT A DEFECT.
+   *
+   * `prisma/seed.ts` writes `balanceAfter: qty` too, and it is CORRECT BY
+   * CONSTRUCTION rather than by luck of the fixture: the product is created
+   * by `prisma.product.create` in the same loop iteration, two statements
+   * above, and this is the only batch it will ever have at that moment — so
+   * its on hand IS `qty`. The seed is also how this database is rebuilt,
+   * which makes it the owner's ground and not a file an audit edits.
+   */
+  const WRITTEN_DOWN: Record<string, string> = {
+    'prisma/seed.ts':
+      'المنتجُ يُنشَأُ في الدورةِ نفسِها ولا دفعةَ له غيرُها — فالرصيدُ هو الكميّةُ بالبناء. وهو ملفُّ بناءِ القاعدة.',
+  };
+
+  it('finds every writer, so the sweep is not looking at nothing', () => {
+    // Five in the shipped tree plus the seed. A seventh appearing here is a
+    // writer somebody must classify.
+    expect(sites.length, JSON.stringify(sites, null, 1)).toBeGreaterThanOrEqual(6);
+    const paths = sites.map((s) => s.rel);
+    for (const expected of [
+      'src/lib/receiving.ts',
+      'src/lib/stock-consumption.ts',
+      'src/app/api/inventory/route.ts',
+      'src/app/api/production/route.ts',
+      'prisma/seed.ts',
+    ]) {
+      expect(paths, `${expected} يَكتُبُ حركةَ مخزونٍ ولم يَرَه الكنس`).toContain(expected);
+    }
+    // And `stock-consumption.ts` writes TWO of them — the sale and the
+    // return — so a sweep that found one per file would be half blind.
+    expect(sites.filter((s) => s.rel === 'src/lib/stock-consumption.ts')).toHaveLength(2);
+  });
+
+  it('and every one of them takes the figure from `onHandTotal`', () => {
+    const offenders = sites
+      .filter((s) => s.source !== 'FROM_SHARED' && s.source !== 'VIA_LOCAL_FROM_SHARED')
+      .filter((s) => !(s.rel in WRITTEN_DOWN))
+      .map((s) => `${s.rel}:${s.line} → balanceAfter: ${s.expression || '(غائب)'} [${s.source}]`);
+    expect(
+      offenders,
+      'رصيدٌ مُشتَقٌّ يُحسَبُ محليّاً بدلَ الدالّةِ المشتركة — السلسلةُ تَتوقّفُ عن الجمعِ عندَ هذا السطر'
+    ).toEqual([]);
+  });
+
+  it('and the production door in particular, which was the exception', () => {
+    const mine = sites.filter((s) => s.rel === 'src/app/api/production/route.ts');
+    expect(mine).toHaveLength(1);
+    expect(mine[0].source).toBe('FROM_SHARED');
+    // The value, so a revert prints what actually reached the column.
+    expect(mine[0].expression).not.toBe('qty');
+    expect(mine[0].expression).toMatch(/^await onHandTotal\(db, companyId, productId\)/);
+  });
+
+  /**
+   * THE DETECTOR STILL RECOGNISES WHAT IT WAS WRITTEN FOR.
+   *
+   * Ten vacuous guards have been caught in this audit. Each way this one
+   * could go blind is run rather than assumed.
+   */
+  it('recognises a locally computed balance, and is not fooled by prose', () => {
+    const shape = (body: string) => {
+      const src = stripTemplates(stripComments(`await tx.inventoryMovement.create(${body});`));
+      const open = src.indexOf('(', src.indexOf('.create'));
+      return balanceExpression(callArgs(src, open));
+    };
+
+    expect(shape('{ data: { quantity: qty, balanceAfter: qty } }')).toEqual({ expression: 'qty', shorthand: false });
+
+    // THE COMMAS INSIDE THE CALL. `[^,\n]+` read this as `await
+    // onHandTotal(db` — which is why the expression is extracted by depth.
+    expect(shape('{ data: { balanceAfter: await onHandTotal(db, companyId, productId) } }')).toEqual({
+      expression: 'await onHandTotal(db, companyId, productId)',
+      shorthand: false,
+    });
+    // And it stops at the key's own value, not at the end of the object.
+    expect(shape('{ data: { balanceAfter: qty, referenceId: batch.id } }')).toEqual({
+      expression: 'qty',
+      shorthand: false,
+    });
+
+    // THE SHORTHAND IS THE SAME WRITE, and `receiving.ts` uses it. A guard
+    // that only knew `balanceAfter:` reported that file as ABSENT.
+    expect(shape('{ data: { balanceAfter, reason } }')).toEqual({ expression: 'balanceAfter', shorthand: true });
+    expect(shape('{ data: { productId } }')).toBeNull();
+
+    // Balanced to the call's own closing paren, so a LATER call that does it
+    // right cannot cover for this one.
+    const pair = stripComments(
+      'await tx.inventoryMovement.create({ data: { balanceAfter: qty } });\n' +
+        'await tx.inventoryMovement.create({ data: { balanceAfter: await onHandTotal(tx, c, p) } });'
+    );
+    const first = callArgs(pair, pair.indexOf('(', pair.indexOf('.create')));
+    expect(balanceExpression(first)!.expression).toBe('qty');
+
+    // A SENTENCE ABOUT THE FUNCTION IS NOT THE FUNCTION, in both the forms
+    // this repository writes.
+    expect(shape('{ data: { /* balanceAfter: await onHandTotal(tx, c, p) */ balanceAfter: qty } }')!.expression).toBe(
+      'qty'
+    );
+    expect(shape('{ data: {\n  // from onHandTotal\n  balanceAfter: qty } }')!.expression).toBe('qty');
+    expect(stripTemplates('const s = `await onHandTotal(tx, c, p)`;')).not.toMatch(/onHandTotal/);
+
+    // And the local-assignment follow-back needs the assignment to exist.
+    const assigned = /(?:const|let|var)\s+balanceAfter\s*=\s*await\s+onHandTotal\s*\(/;
+    expect(assigned.test('const balanceAfter = await onHandTotal(tx, c, p);')).toBe(true);
+    expect(assigned.test('const balanceAfter = qty;')).toBe(false);
+  });
+});

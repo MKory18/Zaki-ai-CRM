@@ -37,7 +37,7 @@ const { db, requireContext, requirePermission, assertOrderAccess, authorize, can
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     product: { findFirst: vi.fn() },
-    productionBatch: { findUnique: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+    productionBatch: { findUnique: vi.fn(), create: vi.fn(), findMany: vi.fn(), aggregate: vi.fn() },
     inventoryMovement: { create: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -132,6 +132,10 @@ beforeEach(() => {
   authorize.mockReturnValue({ allowed: true });
   can.mockReturnValue(true);
   db.productionBatch.findUnique.mockResolvedValue(null);
+  // What `onHandTotal` answers for a product with no batches yet. The
+  // production door takes the ledger line's `balanceAfter` from it now,
+  // instead of writing the run's own quantity into the balance column.
+  db.productionBatch.aggregate.mockResolvedValue({ _sum: { quantityRemaining: null } });
   db.product.findFirst.mockResolvedValue({ ...PRODUCT });
   db.productionBatch.create.mockImplementation(async ({ data }: any) => ({ id: 'batch-1', ...data }));
   db.inventoryMovement.create.mockResolvedValue({});

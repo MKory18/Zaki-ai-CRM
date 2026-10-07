@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
+import { onHandTotal } from '@/lib/receiving';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -254,7 +255,37 @@ export async function POST(req: Request) {
         batchId: batch.id,
         type: 'PRODUCTION',
         quantity: qty,
-        balanceAfter: qty,
+        /*
+         * THE SHELF'S BALANCE, NOT THIS RUN'S SIZE.
+         *
+         * This was `qty` — the new batch's own quantity. For the FIRST run
+         * of a product the two agree, which is why it read as correct; for
+         * every run after it the column says something that is not the
+         * balance. Measured on the shape: a product holding 50 that takes a
+         * second run of 20 wrote `balanceAfter: 20` beside `quantity: 20`,
+         * so the ledger read 20 where the shelf held 70, and the next line
+         * under it — a sale of 1 written by `consumeOrderStock` from
+         * `onHandTotal` — read 69. The series jumps 20 → 69 and the column
+         * whose whole purpose is that somebody can read the shelf's history
+         * and have it add up stops adding up at exactly that row.
+         *
+         * `onHandTotal` is what the other five writers use —
+         * `receiving.ts:77,87`, `stock-consumption.ts:139,398`,
+         * `inventory/route.ts:476` — and this door was the only exception.
+         * It is read AFTER `productionBatch.create` above, so the run just
+         * written is already in the sum.
+         *
+         * AND IT IS COMPANY-WIDE PER PRODUCT ON PURPOSE, not an oversight
+         * left behind by the `storeId` work above. `Product.storeId` is a
+         * single column, so one `productId` belongs to one store and this
+         * sum can never mix two shelves; and the shelf screen itself —
+         * `GET /api/inventory` — filters the PRODUCT by store and then sums
+         * ALL of that product's batches, which is this exact figure. A
+         * store filter here would make `balanceAfter` disagree with the
+         * number the operator reads as on hand, which is the opposite of
+         * what the column is for.
+         */
+        balanceAfter: await onHandTotal(db, companyId, productId),
         referenceId: batch.id,
         reason: `Production Batch ${batch.batchNumber} completed`,
         createdById: user.id,

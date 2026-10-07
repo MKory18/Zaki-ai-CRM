@@ -33,7 +33,10 @@ import { join } from 'node:path';
 
 const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
   db: {
-    productionBatch: { findUnique: vi.fn(), create: vi.fn() },
+    // `aggregate` is what `onHandTotal` asks, and the door now takes the
+    // ledger line's `balanceAfter` from it rather than from the run's own
+    // quantity. Without it on the fake, every POST here answered 500.
+    productionBatch: { findUnique: vi.fn(), create: vi.fn(), aggregate: vi.fn() },
     product: { findFirst: vi.fn() },
     inventoryMovement: { create: vi.fn() },
   },
@@ -68,6 +71,9 @@ const written = () => db.productionBatch.create.mock.calls[0][0].data;
 /** And the stock movement written beside it. */
 const moved = () => db.inventoryMovement.create.mock.calls[0][0].data;
 
+/** The batches this door has written, so `onHandTotal` has something to sum. */
+const shelf: Array<Record<string, any>> = [];
+
 beforeEach(() => {
   vi.clearAllMocks();
   requireContext.mockResolvedValue({
@@ -79,10 +85,27 @@ beforeEach(() => {
   requirePermission.mockResolvedValue(undefined);
   db.productionBatch.findUnique.mockResolvedValue(null);
   db.product.findFirst.mockResolvedValue({ id: PRODUCT, name: 'كريم', sourceType: 'MANUFACTURED' });
-  db.productionBatch.create.mockImplementation(async (args: any) => ({
-    id: 'b1',
-    batchNumber: args.data.batchNumber,
-    ...args.data,
+  /*
+   * A SHELF THAT STARTS EMPTY AND HOLDS WHAT THIS DOOR PUTS ON IT.
+   *
+   * The ledger line's `balanceAfter` now comes from `onHandTotal`, which
+   * asks `aggregate` — so a fake that answered a constant would make every
+   * assertion about that column a sentence about the fake. The run the door
+   * just wrote is on the shelf from the moment `create` returns, which is
+   * the only way «the balance after» is answerable at all.
+   */
+  shelf.length = 0;
+  db.productionBatch.create.mockImplementation(async (args: any) => {
+    const row = { id: 'b1', batchNumber: args.data.batchNumber, ...args.data };
+    shelf.push(row);
+    return row;
+  });
+  db.productionBatch.aggregate.mockImplementation(async ({ where }: any) => ({
+    _sum: {
+      quantityRemaining: shelf
+        .filter((b) => b.companyId === where.companyId && b.productId === where.productId)
+        .reduce((s, b) => s + (b.quantityRemaining ?? 0), 0),
+    },
   }));
   db.inventoryMovement.create.mockResolvedValue({ id: 'm1' });
 });

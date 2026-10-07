@@ -176,6 +176,54 @@ export function apiError(error: unknown): ApiErrorResult {
   const AR_NOT_FOUND = /غير موجود|لا يوجد|لم يُعثر/;
   const AR_CONFLICT = /مسبقا|مسبقاً|بالفعل|تعارض|عُدِّل|عدّل/;
 
+  /*
+   * A SHORT SHELF IS NOT A CRASH.
+   *
+   * `drawDownStock` throws «المخزون غير كافٍ: المتاح ٣ والمطلوب ١٠» when a
+   * draw-down would take more than is there, and nothing here named it — so
+   * the request answered 500 «حدث خطأ داخلي. أعد المحاولة، وإن تكرّر أبلغ
+   * مدير النظام». A warehouse clerk was told the system broke and to call
+   * the administrator, for a condition that is ordinary, expected, and
+   * entirely theirs to resolve; the sentence the code had already written,
+   * which names the two numbers, was thrown away on the way out.
+   *
+   * ONE BRANCH, NOT FIVE. Five doors reach this thrower — the stocktake
+   * shortfall in `/api/inventory`, and `consumeOrderStock` from
+   * `/api/orders/[id]`, `/api/orders/[id]/shipping`,
+   * `/api/finance/statements/[id]`, `/api/ops/tracking/write-off` and
+   * `/api/ops/tracking/deliver` through `partial-delivery.ts` — and all of
+   * them already funnel through this function. Per-door handling is how
+   * `7c98b01` got two delivery doors that disagreed about the same stock
+   * rule, which is what produced the single-batch defect; the shared
+   * mapper is where this belongs.
+   *
+   * 409 rather than 400: the request was well formed and the operator is
+   * allowed to make it. What refused it is the state of the shelf at this
+   * instant, and that is what 409 means.
+   *
+   * The thrown sentence is kept WHOLE — it carries the available and the
+   * required, which is the only part that tells the clerk how far short
+   * they are — and the next step is added, because it is the same step in
+   * all five doors. `ours` is still the gate: this never echoes a Prisma
+   * message, a multi-line message or one holding a server path.
+   *
+   * Placed BEFORE the two below on purpose. «غير» sits in both this
+   * sentence and `AR_NOT_FOUND`'s «غير موجود», and a stock shortage
+   * answered 404 would be a second wrong answer rather than a fixed one.
+   */
+  const AR_INSUFFICIENT = /المخزون غير كاف/;
+
+  if (ours(error) && AR_INSUFFICIENT.test(message)) {
+    return {
+      body: {
+        error: message,
+        errorAr: `${message}. استلم الكمية الناقصة من «استلام بضاعة» أو اجردها، أو أنقص الكمية المطلوبة، ثمّ أعد المحاولة.`,
+        code: 'INSUFFICIENT_STOCK',
+      },
+      status: 409,
+    };
+  }
+
   if (ours(error) && (/version|conflict/i.test(message) || AR_CONFLICT.test(message))) {
     return {
       body: {
