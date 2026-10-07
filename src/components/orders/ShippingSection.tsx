@@ -277,7 +277,21 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
           ))}
           {canTrack && (
             <button
-              onClick={() => { setTrackingNumber(order.trackingNumber || ''); setDeliveryFee(order.deliveryFee ? String(order.deliveryFee) : ''); setOpenForm('tracking'); }}
+              /*
+               * A STORED ZERO IS A VALUE, NOT A BLANK.
+               *
+               * `order.deliveryFee ? String(…) : ''` was falsy-tested on a
+               * figure whose legitimate values include 0 —
+               * `priceIncludesDelivery` makes a zero fee a real policy — so
+               * an order recorded as «delivery costs us nothing» opened with
+               * an EMPTY box. Harmless while an empty box also sent 0; now
+               * that an empty box sends `null`, it would have silently
+               * turned a recorded 0 into «not recorded» on the next save.
+               *
+               * So the box shows `null`/absent as empty and everything else,
+               * including 0, as the stored number.
+               */
+              onClick={() => { setTrackingNumber(order.trackingNumber || ''); setDeliveryFee(order.deliveryFee == null ? '' : String(order.deliveryFee)); setOpenForm('tracking'); }}
               disabled={actionLoading !== null}
               className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
             >
@@ -463,8 +477,22 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
               <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
             ))}
           </Select>
-          <Input label={ar ? 'رقم التتبع' : 'Tracking Number'} value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} dir="ltr" />
-          <Input label={ar ? 'رسوم التوصيل ($)' : 'Delivery Fee ($)'} type="number" step="0.01" value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} dir="ltr" />
+          <Input label={ar ? 'رقم التتبع' : 'Tracking Number'} name="trackingNumber" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} dir="ltr" />
+          <Input
+            label={ar ? 'رسوم التوصيل ($)' : 'Delivery Fee ($)'}
+            name="deliveryFee"
+            type="number"
+            step="0.01"
+            value={deliveryFee}
+            onChange={(e) => setDeliveryFee(e.target.value)}
+            dir="ltr"
+            placeholder={ar ? 'غير مسجّلة' : 'Not recorded'}
+            helperText={
+              ar
+                ? 'فارغة = لم تُسجَّل بعد (وهي حالة 30 من 56 طلباً). صفر مكتوب = الشركة لا تأخذ أجرة على هذا الطلب، ويُحاسَب صفراً.'
+                : 'Empty = not recorded yet. A typed 0 = no fee on this order, and it is settled as zero.'
+            }
+          />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setOpenForm(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
             <Button
@@ -480,10 +508,40 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
                   currentVersion = r1.order?.version ?? currentVersion;
                 }
                 if (trackingNumber !== (order.trackingNumber ?? '') || deliveryFee !== String(order.deliveryFee ?? '')) {
+                  /*
+                   * THREE STATES, THREE THINGS ON THE WIRE — AND THIS IS WHY
+                   * `0aea050`'s DOOR WAS UNREACHABLE.
+                   *
+                   * `deliveryFee ? Number(deliveryFee) : 0` could only ever
+                   * send a number. So:
+                   *
+                   *   · an EMPTY box sent `0` — «the courier charges us
+                   *     nothing» — over a `Float?` column whose whole point
+                   *     is that it can say «not recorded», which 30 of 56
+                   *     live orders do. The browser manufactured the one
+                   *     wrong value the door is obliged to accept.
+                   *   · `'2,500'` sent `Number('2,500')` = `NaN`, and
+                   *     `0aea050` measured that Prisma ACCEPTS `NaN` for a
+                   *     nullable Float: it lands as NULL and every reader
+                   *     spells NULL `?? 0`. The same wrong zero by a longer
+                   *     road, and the 400 waiting at the door never fired.
+                   *
+                   * Now, and the column is nullable so all three are
+                   * sayable:
+                   *   empty   → `null`  — «not recorded», written as NULL.
+                   *   `'0'`   → `'0'`   — a real zero fee, stored 0.
+                   *   typed   → the CHARACTERS, so `numeric-input` reads
+                   *             them and refuses `'2,500'` with
+                   *             «رسوم التوصيل: اكتبه رقماً بالأرقام».
+                   *
+                   * `null` and not `undefined`: `undefined` means «do not
+                   * touch the column» at this door, and clearing the box is
+                   * a decision to clear the fee, not a decision to skip it.
+                   */
                   const r2 = await submitWithVersion({
                     action: 'update_tracking',
                     trackingNumber,
-                    deliveryFee: deliveryFee ? Number(deliveryFee) : 0,
+                    deliveryFee: deliveryFee.trim() === '' ? null : deliveryFee,
                   }, currentVersion);
                   if (!r2.ok) return;
                 }

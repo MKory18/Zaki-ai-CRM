@@ -49,6 +49,56 @@ const COST_PRESETS = [
   'عمولة وسيط',
 ];
 
+/**
+ * A TYPED NUMBER, OR «NOTHING» — AND A TYPED `0` IS A NUMBER.
+ *
+ * The same reader `CourierFees.tsx` got in `17cbe93`, for the same defect.
+ * Every box on this form was `parseFloat(e.target.value) || 0` (and the
+ * quantity `parseInt(…, 10) || 0`), so:
+ *
+ *   · A CLEARED BOX WAS A TYPED ZERO. `parseFloat('')` is `NaN` and `||`
+ *     makes it `0`, the box redrew as `0`, and the batch was saved with a
+ *     real zero cost — which `0aea050`'s new door is obliged to accept,
+ *     because a run with no packaging cost is a legitimate 0. The refusal
+ *     the door now carries was unreachable from this screen.
+ *   · `'2,500'` FROM AN ARABIC KEYBOARD WAS 2. `parseFloat` stops at the
+ *     comma. `0aea050` measured it: a 2500+500 batch over 1000 units
+ *     recorded as 502, a unit cost of 0.502 instead of 3.
+ *
+ * `undefined` is the third answer, and `JSON.stringify` DROPS an
+ * `undefined` property — so an empty box is ABSENT on the wire and the
+ * door decides what absent means, not this component.
+ *
+ * `NOT_A_NUMBER` is the fourth outcome and it is used for the LIVE TOTAL
+ * ONLY. What goes on the wire is the CHARACTERS, as `ProductsScreen` sends
+ * them since `0aea050`: `'2,500'` must reach `POST /api/production` and be
+ * REFUSED by name («الكمية المنتجة: اكتبه رقماً صحيحاً بالأرقام»), not be
+ * quietly repaired or quietly truncated here. A browser that pre-rejects it
+ * is a second rule for the same number.
+ */
+const NOT_A_NUMBER = Symbol('NOT_A_NUMBER');
+function typedNumber(raw: string): number | undefined | typeof NOT_A_NUMBER {
+  if (raw.trim() === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NOT_A_NUMBER;
+}
+
+/** The number a box holds, or nothing — the symbol is not a figure. */
+function figure(v: number | undefined | typeof NOT_A_NUMBER): number | undefined {
+  return typeof v === 'number' ? v : undefined;
+}
+
+/**
+ * WHAT A BOX PUTS ON THE WIRE: its characters, or nothing at all.
+ *
+ * Not a number. `numeric-input.ts` is the door's reader and it is stricter
+ * than `Number()` — it refuses `'0x10'`, `''` and `[]` — so handing it the
+ * characters is the only way its refusal can be about what a person typed.
+ */
+function onTheWire(raw: string): string | undefined {
+  return raw.trim() === '' ? undefined : raw;
+}
+
 export function ManufacturingScreen() {
   const { t } = useApp();
   const [batches, setBatches] = useState<any[]>([]);
@@ -63,15 +113,40 @@ export function ManufacturingScreen() {
   // margin built on it is gross. This is where that gets fixed.
   const [costing, setCosting] = useState<BatchForCost | null>(null);
   const [batchNumber, setBatchNumber] = useState('');
-  const [quantityProduced, setQuantityProduced] = useState(1000);
-  const [manufacturingCost, setManufacturingCost] = useState(2500);
-  const [packagingCost, setPackagingCost] = useState(800);
-  const [rawMaterialCost, setRawMaterialCost] = useState(700);
-  const [otherCosts, setOtherCosts] = useState(0);
+  /*
+   * EVERY BOX OPENS EMPTY, AND EVERY BOX HOLDS WHAT WAS TYPED.
+   *
+   * These five were `useState(1000)`, `2500`, `800`, `700` and `0` — five
+   * numbers invented in a browser and then saved as though a person had
+   * chosen them. They are not even copies of a schema default: nothing on
+   * the server says a run makes a thousand units and costs 2500 to make.
+   * Pressing «تشغيلة جديدة» and then «احفظ» stored a complete, plausible,
+   * entirely fictional batch, and its `costPerUnit` then priced real stock.
+   *
+   * Where the ONE copy of each default now lives:
+   *   · the four buckets — `money.default(0)` in
+   *     `src/app/api/production/route.ts`, over a `Float @default(0)` NOT
+   *     NULL column. The column cannot say «unknown», so an absent cost IS
+   *     zero, and that is stated once, at the door, where it is readable.
+   *   · the quantity — `count(1_000_000, 1)` at the same door, with NO
+   *     default: a run of nothing is not a run, so an empty box is refused
+   *     («الكمية المنتجة مطلوب») rather than defaulted anywhere.
+   *   · a cost line's amount — `money` at the same door, no default: a
+   *     named line with no amount is refused, not counted as nothing.
+   *
+   * The state is `string` for the reason `ProductsScreen` is since
+   * `0aea050`: an empty box must stay an empty box, and `'2,500'` must
+   * reach the door intact.
+   */
+  const [quantityTyped, setQuantityTyped] = useState('');
+  const [manufacturingCost, setManufacturingCost] = useState('');
+  const [packagingCost, setPackagingCost] = useState('');
+  const [rawMaterialCost, setRawMaterialCost] = useState('');
+  const [otherCosts, setOtherCosts] = useState('');
   // Free-form cost lines. Four fixed buckets never matched a real run —
   // they matched whatever fitted into four words — so a batch can name as
   // many costs as the work actually had.
-  const [costLines, setCostLines] = useState<{ label: string; amount: number }[]>([]);
+  const [costLines, setCostLines] = useState<{ label: string; amount: string }[]>([]);
   const [notes, setNotes] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -83,15 +158,47 @@ export function ManufacturingScreen() {
    * places, while the server records four — so the unit cost somebody
    * watched while typing could differ from the one written down. The same
    * two functions now, which are pure and import only types.
+   *
+   * AND THE PREVIEW NEVER INVENTS A FIGURE. The boxes hold characters, so
+   * each one is read into «a number», «nothing» or «not a number», and:
+   *
+   *   · «nothing» is handed to `batchTotal` AS `undefined`. The zero an
+   *     absent cost counts as lives inside `batchTotal` — the one function
+   *     both sides call — so there is no `?? 0` here to be a second copy
+   *     of it.
+   *   · «not a number» (`'2,500'`) shows NO total and NO unit cost. The
+   *     old code showed 502 for a 3000 batch, which is the number the
+   *     operator then believed. A dash and a sentence are honest; a figure
+   *     computed from a truncated string is not.
+   *   · an unreadable or empty QUANTITY shows no unit cost either.
+   *     `batchUnitCost` returns 0 for a quantity of zero, and «تكلفة
+   *     الوحدة: 0» over real costs reads as «free», which is the one thing
+   *     it cannot mean.
    */
+  const typedMfg = typedNumber(manufacturingCost);
+  const typedPack = typedNumber(packagingCost);
+  const typedRaw = typedNumber(rawMaterialCost);
+  const typedOther = typedNumber(otherCosts);
+  const typedAmounts = costLines.map((l) => typedNumber(l.amount));
+  const typedQuantity = typedNumber(quantityTyped);
+  const unreadable = [typedMfg, typedPack, typedRaw, typedOther, typedQuantity, ...typedAmounts].some(
+    (v) => v === NOT_A_NUMBER
+  );
+
   const { total: totalProductionCost } = batchTotal({
-    manufacturingCost,
-    packagingCost,
-    rawMaterialCost,
-    otherCosts,
-    costLines,
+    manufacturingCost: figure(typedMfg),
+    packagingCost: figure(typedPack),
+    rawMaterialCost: figure(typedRaw),
+    otherCosts: figure(typedOther),
+    costLines: typedAmounts
+      .filter((a): a is number => typeof a === 'number')
+      .map((amount) => ({ amount })),
   });
-  const costPerUnit = String(batchUnitCost(totalProductionCost, quantityProduced));
+  const quantityProduced = figure(typedQuantity);
+  const costPerUnit =
+    !unreadable && quantityProduced !== undefined && quantityProduced > 0
+      ? String(batchUnitCost(totalProductionCost, quantityProduced))
+      : null;
 
   // This screen is the door for what you MAKE. A bought product listed here
   // would be entered as a run that never happened, with a cost breakdown
@@ -195,12 +302,26 @@ export function ManufacturingScreen() {
         body: JSON.stringify({
           productId,
           batchNumber,
-          quantityProduced,
-          manufacturingCost,
-          packagingCost,
-          rawMaterialCost,
-          otherCosts,
-          costLines: costLines.filter((l) => l.label.trim()),
+          /*
+           * THE CHARACTERS, OR THE FIELD IS NOT THERE.
+           *
+           * `onTheWire` returns `undefined` for an empty box and
+           * `JSON.stringify` drops it, so the key is absent — and the door
+           * answers each absence with the rule it declares for that column:
+           * «الكمية المنتجة مطلوب» for the quantity, the column's own `0`
+           * for a bucket, «المبلغ مطلوب» for a named line.
+           *
+           * And a non-empty box is sent AS TYPED, so `'2,500'` is refused
+           * by name instead of being stored as 2.
+           */
+          quantityProduced: onTheWire(quantityTyped),
+          manufacturingCost: onTheWire(manufacturingCost),
+          packagingCost: onTheWire(packagingCost),
+          rawMaterialCost: onTheWire(rawMaterialCost),
+          otherCosts: onTheWire(otherCosts),
+          costLines: costLines
+            .filter((l) => l.label.trim())
+            .map((l) => ({ label: l.label, amount: onTheWire(l.amount) })),
           notes,
         }),
       });
@@ -210,6 +331,21 @@ export function ManufacturingScreen() {
       setCreateModalOpen(false);
       setBatchNumber('');
       setNotes('');
+      /*
+       * AND THE BOXES ARE EMPTIED, which they never were.
+       *
+       * With the old prefills this was invisible: the form reopened showing
+       * 1000/2500/800/700 whether or not anybody had touched them. Leaving
+       * the last run's typed costs sitting in the boxes would put them back
+       * exactly where the prefills were — a number from somewhere else,
+       * ready to be saved as this run's.
+       */
+      setQuantityTyped('');
+      setManufacturingCost('');
+      setPackagingCost('');
+      setRawMaterialCost('');
+      setOtherCosts('');
+      setCostLines([]);
       loadData();
     } catch (err: any) {
       setModalError(err.message);
@@ -533,8 +669,13 @@ export function ManufacturingScreen() {
             label="الكمية المنتَجة (قطعة) *"
             type="number"
             min="1"
-            value={quantityProduced}
-            onChange={(e) => setQuantityProduced(parseInt(e.target.value, 10) || 0)}
+            name="quantityProduced"
+            value={quantityTyped}
+            onChange={(e) => setQuantityTyped(e.target.value)}
+            // No `placeholder="1000"`: printing the old prefill as a hint is
+            // the same invented number one layer down, and an operator who
+            // reads a greyed-out 1000 in an empty box types nothing.
+            placeholder="اكتب العدد"
             required
           />
 
@@ -544,34 +685,52 @@ export function ManufacturingScreen() {
               تفصيل الكلفة المباشرة
             </h4>
 
+            {/* The one sentence that makes an empty box mean something. Before
+                it, an empty box and a typed zero were the same request — and
+                the boxes were not even empty, they opened holding 2500، 800
+                و700. */}
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              خانة <b>فارغة</b> = هذه التشغيلة ما كلّفت شيئاً من هذا البند، فتُحسب صفراً.
+              و<b>صفر مكتوب</b> يُحسب صفراً كذلك. اكتب الرقم بالأرقام الإنجليزية وبنقطة عشرية —
+              «2,500» تُرَدّ ولا تُقرأ 2.
+            </p>
+
             <div className="grid grid-cols-2 gap-3">
               <Input
                 label="كلفة التصنيع"
                 type="number"
                 step="0.01"
+                name="manufacturingCost"
                 value={manufacturingCost}
-                onChange={(e) => setManufacturingCost(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setManufacturingCost(e.target.value)}
+                placeholder="لا شيء"
               />
               <Input
                 label="كلفة التغليف"
                 type="number"
                 step="0.01"
+                name="packagingCost"
                 value={packagingCost}
-                onChange={(e) => setPackagingCost(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setPackagingCost(e.target.value)}
+                placeholder="لا شيء"
               />
               <Input
                 label="كلفة المواد الخام"
                 type="number"
                 step="0.01"
+                name="rawMaterialCost"
                 value={rawMaterialCost}
-                onChange={(e) => setRawMaterialCost(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setRawMaterialCost(e.target.value)}
+                placeholder="لا شيء"
               />
               <Input
                 label="فحص الجودة / أخرى"
                 type="number"
                 step="0.01"
+                name="otherCosts"
                 value={otherCosts}
-                onChange={(e) => setOtherCosts(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setOtherCosts(e.target.value)}
+                placeholder="لا شيء"
               />
             </div>
 
@@ -588,8 +747,12 @@ export function ManufacturingScreen() {
                     onChange={(e) => {
                       if (!e.target.value) return;
                       setCostLines([
+                        // `amount: 0` opened a named line already claiming it
+                        // cost nothing — a zero nobody typed, in the list the
+                        // batch total is built from. It opens EMPTY, and the
+                        // door refuses a named line with no amount.
                         ...costLines,
-                        { label: e.target.value === 'أخرى' ? '' : e.target.value, amount: 0 },
+                        { label: e.target.value === 'أخرى' ? '' : e.target.value, amount: '' },
                       ]);
                     }}
                     disabled={costLines.length >= 30}
@@ -625,15 +788,18 @@ export function ManufacturingScreen() {
                       <div className="w-32 shrink-0">
                         <Input
                           label={i === 0 ? 'كم كلّف' : undefined}
+                          name={`costLineAmount-${i}`}
+                          aria-label={`مبلغ البند ${i + 1}`}
                           type="number"
                           step="0.01"
                           min="0"
                           dir="ltr"
                           value={line.amount}
+                          placeholder="كم"
                           onChange={(e) =>
                             setCostLines(
                               costLines.map((l, n) =>
-                                n === i ? { ...l, amount: parseFloat(e.target.value) || 0 } : l
+                                n === i ? { ...l, amount: e.target.value } : l
                               )
                             )
                           }
@@ -659,9 +825,17 @@ export function ManufacturingScreen() {
             <div className="flex items-center space-x-2">
               <RiCalculatorLine className="w-5 h-5 text-[var(--sys-destructive)]" />
               <div>
-                <p className="font-bold text-[var(--sys-heading)]">الكلفة الكلية: <Money value={totalProductionCost} /></p>
+                {/* A total computed from a truncated string is worse than no
+                    total: `parseFloat('2,500')` is 2, and the box used to
+                    print 502 for a 3000 batch as though it were measured. */}
+                <p className="font-bold text-[var(--sys-heading)]">
+                  الكلفة الكلية:{' '}
+                  {unreadable ? <span>—</span> : <Money value={totalProductionCost} />}
+                </p>
                 <p className="text-[var(--sys-muted-foreground)]">
-                  المعادلة: تصنيع ({manufacturingCost}) + تغليف ({packagingCost}) + مواد خام ({rawMaterialCost})
+                  {unreadable
+                    ? 'خانة فيها ما ليس رقماً — صحّحها ليظهر المجموع. (الفاصلة ليست عشرية: اكتب 2500 أو 2500.75)'
+                    : `المعادلة: تصنيع (${manufacturingCost || '—'}) + تغليف (${packagingCost || '—'}) + مواد خام (${rawMaterialCost || '—'})`}
                 </p>
               </div>
             </div>
@@ -669,7 +843,10 @@ export function ManufacturingScreen() {
             <div className="text-right">
               <span className="text-[var(--sys-muted-foreground)] block">تكلفة الوحدة المحسوبة:</span>
               <span className="text-xl font-black text-[var(--sys-destructive)] block">
-                <Money value={costPerUnit} />
+                {/* `batchUnitCost` returns 0 for a quantity of zero, and a
+                    «0» here over real costs reads as «this unit is free» —
+                    the one thing an unfilled quantity box cannot mean. */}
+                {costPerUnit === null ? '—' : <Money value={costPerUnit} />}
               </span>
             </div>
           </div>
