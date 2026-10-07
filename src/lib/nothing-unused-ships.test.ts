@@ -363,7 +363,6 @@ const REACHED_BUT_UNSEEN: Record<string, string> = {
  * should delete them on a sweep's word.
  */
 const NO_CALLER_FOUND: Record<string, string> = {
-  '/api/ops/tracking/write-off': 'أخواتُه collect وdeliver وtransfer تُستدعى من الشاشات؛ شطبُ الشحنة المفقودة لا يُستدعى من أيِّ زرّ',
   '/api/orders/[id]/finance': 'لقطةُ مالِ الطلبِ ودفترُه — لا نافذةَ تطلبها، وشاشةُ الطلب تقرأ /api/orders/[id] وحدها',
   '/api/orders/[id]/call-logs': 'المسارُ باقٍ وتعليقُ OrderDetailModal نفسه يقول إنه عاش هناك ولم يرسمه شيء',
   '/api/orders/follow-ups': 'طوابيرُ المتابعةِ المحسوبةُ بساعةِ الخادم — لا شاشةَ تسألها، ولا اختبارَ يذكرها',

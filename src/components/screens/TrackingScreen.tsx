@@ -8,10 +8,11 @@ import { ContactButtons } from '@/components/orders/ContactButtons';
 import { TransferDialog } from '@/components/screens/tracking/TransferDialog';
 import { CollectDialog } from '@/components/screens/tracking/CollectDialog';
 import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
+import { WriteOffDialog } from '@/components/screens/tracking/WriteOffDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows } from '@/components/ui/Rows';
-import { RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -133,6 +134,8 @@ export function TrackingScreen() {
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
   const [deliverFor, setDeliverFor] = useState<Row | null>(null);
+  /** The parcel somebody is about to stop waiting for. */
+  const [writeOffFor, setWriteOffFor] = useState<Row | null>(null);
   const [noting, setNoting] = useState<string | null>(null);
   /** The order whose door outcome is being written, so its buttons wait. */
   const [settling, setSettling] = useState<string | null>(null);
@@ -819,6 +822,33 @@ export function TrackingScreen() {
                   </button>
                 </>
               )}
+              {/*
+                THE ONLY WAY OUT OF «مطلوب إرجاعه» WHEN NOTHING COMES BACK.
+
+                `POST /api/ops/tracking/write-off` was built and tested with
+                the transfer flow and then reached from nowhere:
+                `nothing-unused-ships.test.ts` listed it as a door no button
+                opens. So an order whose goods the company lost waited at
+                `RETURN_REQUESTED` forever, its units reserved against a
+                parcel that no longer exists — a shelf promising stock
+                nobody can pick, with no screen able to say so.
+
+                SHOWN ONLY ON THE ONE STATUS THE DOOR ACCEPTS. Anywhere else
+                it answers 409, and a button that always refuses is a broken
+                one. And it is a bordered destructive target rather than
+                another bare link, because it consumes stock and cannot be
+                undone — the same reason «رفض / ملغى» stopped being a link.
+              */}
+              {o.shippingStatus === 'RETURN_REQUESTED' && (
+                <button
+                  onClick={() => setWriteOffFor(o)}
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 text-xs font-bold text-[var(--sys-destructive)] md:min-h-0"
+                  title="البضاعة لن تعود — تخرج من المخزون ويُغلق الطلب كخسارة بسبب مكتوب"
+                >
+                  <RiAlertLine className="w-4 h-4" aria-hidden />
+                  أغلقه كخسارة
+                </button>
+              )}
               <button
                 onClick={() => setTransferFor(o)}
                 className="inline-flex min-h-11 items-center text-xs text-[var(--sys-primary)] hover:underline md:min-h-0"
@@ -869,6 +899,19 @@ export function TrackingScreen() {
           onClose={() => setDeliverFor(null)}
           onDone={async (message) => {
             setDeliverFor(null);
+            setDone(message);
+            setError(null);
+            await load();
+          }}
+        />
+      )}
+
+      {writeOffFor && (
+        <WriteOffDialog
+          order={writeOffFor}
+          onClose={() => setWriteOffFor(null)}
+          onDone={async (message) => {
+            setWriteOffFor(null);
             setDone(message);
             setError(null);
             await load();

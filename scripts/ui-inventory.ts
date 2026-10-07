@@ -69,14 +69,37 @@ function count(src: string): Counts {
   const n = (re: RegExp) => (src.match(re) ?? []).length;
   return {
     buttons: n(/<button[\s>]/g) + n(/<Button[\s>]/g),
-    // A field is a field whether it is a text box, a dropdown or a tick.
-    inputs: n(/<input[\s>]/g) + n(/<Input[\s>]/g) + n(/<textarea[\s>]/g) + n(/<Select[\s>]/g) + n(/<select[\s>]/g),
+    /*
+     * A field is a field whether it is a text box, a dropdown or a tick.
+     *
+     * `<Textarea>` WAS MISSING and the lowercase `<textarea>` beside it was
+     * not: both spellings are in use, and the capitalised one — the shared
+     * component almost every dialog reaches for — counted as nothing.
+     * MEASURED when it was added: **16 fields across 9 files** that this
+     * census said were not there. A dialog built out of the component this
+     * repository actually provides registered as having no inputs at all,
+     * which is the one thing a census exists to notice.
+     */
+    inputs:
+      n(/<input[\s>]/g) +
+      n(/<Input[\s>]/g) +
+      n(/<textarea[\s>]/g) +
+      n(/<Textarea[\s>]/g) +
+      n(/<Select[\s>]/g) +
+      n(/<select[\s>]/g),
     // A table heading, or a column described once for `Rows` to draw twice.
     columns: n(/<th[\s>]/g) + n(/^\s*\{\s*key:\s*'/gm),
     cards: n(/<Card[\s>]/g),
     modals: n(/<Modal[\s>]/g),
     icons: countIcons(src),
-    links: n(/<Link[\s>]/g),
+    /*
+     * `<Link>` AND A PLAIN ANCHOR. 37 anchors across 20 files were invisible
+     * here, including every «اذهب إلى» a screen writes without reaching for
+     * next/link. The `href` is required rather than matching `<a[\s>]`: the
+     * looser form also matched the word «<a>» inside a COMMENT, and a census
+     * that counts prose is worse than one that counts nothing.
+     */
+    links: n(/<Link[\s>]/g) + n(/<a\s+[^>]*href/g),
     tabs: n(/role="tab"/g),
   };
 }

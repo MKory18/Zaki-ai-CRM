@@ -101,9 +101,15 @@ export function Select({ label, error, options, children, className, id, ...prop
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
+  /**
+   * A sentence under the box — the same shape `Input` has, and for the same
+   * reason: the rule a field is held to belongs beside the field, not in a
+   * refusal that arrives after the work is typed. An error replaces it.
+   */
+  helperText?: string;
 }
 
-export function Textarea({ label, error, className, id, ...props }: TextareaProps) {
+export function Textarea({ label, error, helperText, className, id, ...props }: TextareaProps) {
   const autoId = useId();
   const textareaId = id || props.name || autoId;
 
@@ -124,6 +130,7 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
         {...props}
       />
       {error && <p className="text-xs text-[var(--sys-destructive)] mt-1">{error}</p>}
+      {helperText && !error && <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">{helperText}</p>}
     </div>
   );
 }

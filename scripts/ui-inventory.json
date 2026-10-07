@@ -81,7 +81,7 @@
   },
   "src/components/orders/AiOrderModal.tsx": {
     "buttons": 4,
-    "inputs": 9,
+    "inputs": 10,
     "columns": 0,
     "cards": 0,
     "modals": 1,
@@ -101,7 +101,7 @@
   },
   "src/components/orders/ConfirmationActions.tsx": {
     "buttons": 9,
-    "inputs": 2,
+    "inputs": 5,
     "columns": 0,
     "cards": 0,
     "modals": 1,
@@ -116,7 +116,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 3,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/orders/CourierNotifyDialog.tsx": {
@@ -131,7 +131,7 @@
   },
   "src/components/orders/CreateOrderModal.tsx": {
     "buttons": 3,
-    "inputs": 7,
+    "inputs": 9,
     "columns": 0,
     "cards": 0,
     "modals": 1,
@@ -251,7 +251,7 @@
   },
   "src/components/orders/ShippingSection.tsx": {
     "buttons": 11,
-    "inputs": 6,
+    "inputs": 9,
     "columns": 0,
     "cards": 0,
     "modals": 4,
@@ -386,7 +386,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 6,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/ai/AssistantsTable.tsx": {
@@ -556,7 +556,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 11,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/ConfirmationPostponedScreen.tsx": {
@@ -586,7 +586,7 @@
     "cards": 0,
     "modals": 1,
     "icons": 9,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/CustomersScreen.tsx": {
@@ -596,7 +596,7 @@
     "cards": 0,
     "modals": 2,
     "icons": 4,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/DashboardScreen.tsx": {
@@ -616,7 +616,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 3,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/finance/ClosingScreen.tsx": {
@@ -666,7 +666,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 3,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/finance/TransfersScreen.tsx": {
@@ -691,7 +691,7 @@
   },
   "src/components/screens/FinanceProfitScreen.tsx": {
     "buttons": 3,
-    "inputs": 5,
+    "inputs": 6,
     "columns": 5,
     "cards": 4,
     "modals": 1,
@@ -731,12 +731,12 @@
   },
   "src/components/screens/InventoryBalancesScreen.tsx": {
     "buttons": 6,
-    "inputs": 3,
+    "inputs": 4,
     "columns": 0,
     "cards": 1,
     "modals": 1,
     "icons": 1,
-    "links": 0,
+    "links": 2,
     "tabs": 0
   },
   "src/components/screens/InventoryMovementsScreen.tsx": {
@@ -776,7 +776,7 @@
     "cards": 7,
     "modals": 0,
     "icons": 18,
-    "links": 0,
+    "links": 3,
     "tabs": 0
   },
   "src/components/screens/LandingPageEditorScreen.tsx": {
@@ -786,7 +786,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 22,
-    "links": 0,
+    "links": 2,
     "tabs": 0
   },
   "src/components/screens/LandingPagesScreen.tsx": {
@@ -796,12 +796,12 @@
     "cards": 1,
     "modals": 2,
     "icons": 14,
-    "links": 0,
+    "links": 2,
     "tabs": 0
   },
   "src/components/screens/ManufacturingScreen.tsx": {
     "buttons": 9,
-    "inputs": 9,
+    "inputs": 10,
     "columns": 11,
     "cards": 2,
     "modals": 1,
@@ -881,7 +881,7 @@
   },
   "src/components/screens/ProductsScreen.tsx": {
     "buttons": 16,
-    "inputs": 11,
+    "inputs": 14,
     "columns": 8,
     "cards": 1,
     "modals": 2,
@@ -936,7 +936,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 6,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/StoreDomainScreen.tsx": {
@@ -956,7 +956,7 @@
     "cards": 1,
     "modals": 0,
     "icons": 17,
-    "links": 2,
+    "links": 4,
     "tabs": 0
   },
   "src/components/screens/StoreLanguagesScreen.tsx": {
@@ -986,7 +986,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 7,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/StoreRoutesScreen.tsx": {
@@ -1016,7 +1016,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 11,
-    "links": 0,
+    "links": 3,
     "tabs": 0
   },
   "src/components/screens/SystemSettingsScreen.tsx": {
@@ -1079,13 +1079,23 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/screens/tracking/WriteOffDialog.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/screens/TrackingScreen.tsx": {
-    "buttons": 13,
+    "buttons": 14,
     "inputs": 2,
     "columns": 11,
     "cards": 0,
     "modals": 0,
-    "icons": 15,
+    "icons": 16,
     "links": 0,
     "tabs": 0
   },
@@ -1156,7 +1166,7 @@
     "cards": 1,
     "modals": 2,
     "icons": 13,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/WhatsAppInboxScreen.tsx": {
@@ -1196,7 +1206,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 8,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/settings/CourierCredentials.tsx": {
@@ -1236,7 +1246,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 12,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/settings/MessageTemplatesCard.tsx": {
@@ -1296,7 +1306,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 6,
-    "links": 0,
+    "links": 5,
     "tabs": 0
   },
   "src/components/settings/StoreIdentityCard.tsx": {
@@ -1536,7 +1546,7 @@
     "cards": 0,
     "modals": 0,
     "icons": 0,
-    "links": 2,
+    "links": 8,
     "tabs": 0
   },
   "src/components/storefront/TrackForm.tsx": {
