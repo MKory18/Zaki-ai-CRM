@@ -202,6 +202,27 @@ export async function POST(req: Request) {
           ? { create: costLines.map((l, i) => ({ companyId, label: l.label, amount: l.amount, sortOrder: i })) }
           : undefined,
         companyId,
+        // WHICH SHELF THESE UNITS LAND ON.
+        //
+        // The column was here and this door never wrote it, so a batch
+        // created through it belonged to no store — and the GET above
+        // filters `inStore(companyId, storeId)`, which per
+        // `store-filter.ts` is an EXACT `storeId: storeId` match that a
+        // NULL can never satisfy. The run was stored, held
+        // `quantityRemaining` units, fed `costPerUnit` into cost of
+        // goods — and was invisible on the one screen that owns it. The
+        // PATCH in `[id]/route.ts` looks a batch up the same way, so its
+        // costs could not be corrected either, and nobody knew to look.
+        //
+        // The store is the request context's, and that is not a choice
+        // between candidates: `requireContext()` refuses a request with
+        // no store (`STORE_REQUIRED`) so `storeId` is always a string
+        // here, and the product was just tenant-validated with the same
+        // `inStore(companyId, storeId)` — so `prodCheck.storeId` IS this
+        // `storeId`, exactly. The two paths that get this right agree:
+        // `receiveStock` takes the store from the receiving context and
+        // the return restock puts units «back onto the shelf it left».
+        storeId,
         productId,
         batchNumber: batchNumber.trim().toUpperCase(),
         quantityProduced: qty,
@@ -223,6 +244,12 @@ export async function POST(req: Request) {
     await db.inventoryMovement.create({
       data: {
         companyId,
+        // The same shelf as the batch. One of the pair getting a store
+        // while the other does not is the defect half-fixed: the stock
+        // ledger (`/api/inventory/movements`) filters the movement
+        // itself with `inStore`, so an unplaced movement is a run that
+        // happened and left no trace of how the balance got that way.
+        storeId,
         productId,
         batchId: batch.id,
         type: 'PRODUCTION',
