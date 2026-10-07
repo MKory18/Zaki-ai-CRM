@@ -7,6 +7,7 @@ import { requireContext } from '@/lib/geo-context';
 import { computeCod } from '@/lib/money';
 import { hasEverShipped, hasLeftWarehouse, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
+import { consumeOrderStock } from '@/lib/stock-consumption';
 import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, orderVisibilityWhere } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -990,55 +991,77 @@ export async function PATCH(
           },
         });
 
-        // 2. Automatically deduct stock from active batch with remaining inventory
-        const activeBatch = await tx.productionBatch.findFirst({
-          where: {
-            productId: existing.productId,
-            quantityRemaining: { gt: 0 },
-          },
-          orderBy: { productionDate: 'asc' },
+        /*
+         * 2. THE GOODS LEAVE THE SHELF — AND THIS DOOR NO LONGER DOES THE
+         *    ARITHMETIC ITSELF.
+         *
+         * What stood here was a hand-rolled deduction: find the OLDEST batch
+         * with stock left, take `Math.min(existing.quantity,
+         * activeBatch.quantityRemaining)` out of it, write one SALE line,
+         * done. Five things were wrong with it, and the first is the one
+         * that matters.
+         *
+         *   ONE BATCH. A ten-unit order against batches of 3 and 8 took 3
+         *   and stopped. Seven units were handed to the customer and stayed
+         *   on the books — no error raised, no second batch consulted, on
+         *   hand reading 8 when it was 1. `drawDownStock` walks EVERY batch
+         *   oldest-first and reports the shortfall it could not cover.
+         *
+         *   NO IDEMPOTENCY. The only thing stopping a second deduction was
+         *   `status !== previousStatus` — and the legacy `status` column is
+         *   NOT what the other delivery doors write. Measured on this
+         *   database: 26 orders are DELIVERED or PARTIALLY_DELIVERED with
+         *   their SALE already in the ledger, and all 26 still read
+         *   `status: 'SHIPPED'`, because `partial-delivery.ts`, the
+         *   statement sweep in `/api/finance/statements/[id]` and
+         *   `/api/ops/tracking/write-off` each set `shippingStatus` and
+         *   leave `status` alone. One PATCH of `status: 'DELIVERED'` on any
+         *   of them passed the gate and took 52 units off the shelf a
+         *   second time. `consumeOrderStock` asks the ledger —
+         *   `alreadyMoved` — and returns `alreadyDone` touching nothing.
+         *
+         *   ONE PRODUCT. `existing.productId` is the legacy denormalised
+         *   column; a two-line order deducted its first product and ignored
+         *   the rest. `consumeOrderStock` loops `order.items`.
+         *
+         *   NO GIFTS. `existing.quantity` excludes `freeQuantity`, so a 3+1
+         *   offer deducted 3 and left the gift on the shelf. Three such
+         *   orders are on this database. The helper asks for
+         *   `quantity + freeQuantity`, which is what `reservation.ts` HELD,
+         *   so the hold and the draw finally agree.
+         *
+         *   A BALANCE THAT IS NOT THE BALANCE. `balanceAfter` was
+         *   `activeBatch.quantityRemaining - deductQty` — ONE batch's
+         *   remainder. With batches of 3 and 8 and an order for 2 it wrote
+         *   1 while the product held 9. `onHandTotal` sums the batches.
+         *
+         * AND WHAT THE OLD BLOCK WROTE IS NOT LOST: `quantitySold` is
+         * incremented by `drawDownStock` on every batch it draws from, the
+         * SALE line still carries `storeId`, `referenceId` and
+         * `createdById`, and the customer counters above are this door's own
+         * and untouched. One field IS dropped — `batchId` on the movement —
+         * because a draw across two batches has no single batch and naming
+         * one would be a false record; every SALE row on this database
+         * already carries none.
+         *
+         * The claim that the missing `companyId`/`storeId` on that query let
+         * units come off another tenant's shelf was OVERSTATED, and is not
+         * why this block is gone: `productId` is a unique uuid (0 duplicates
+         * of 12), every product belongs to one store (1 distinct), and
+         * batch-vs-product store and company diverge on 0 of 5 batches. The
+         * query was tenant-scoped in effect, BY THE PRODUCT. It is now
+         * scoped by declaration too, because the helper passes both.
+         */
+        await consumeOrderStock(tx, {
+          orderId: id,
+          companyId,
+          // The country's own rule, read from the same context the rest of
+          // this handler uses — and the same argument
+          // `/api/orders/[id]/shipping` passes, so the two doors cannot
+          // disagree about whether a short shelf may deliver.
+          allowNegativeStock: country.allowNegativeStock,
+          userId: user.id,
         });
-
-        if (activeBatch) {
-          const deductQty = Math.min(existing.quantity, activeBatch.quantityRemaining);
-          await tx.productionBatch.update({
-            where: { id: activeBatch.id },
-            data: {
-              quantitySold: { increment: deductQty },
-              quantityRemaining: { decrement: deductQty },
-            },
-          });
-
-          await tx.inventoryMovement.create({
-            data: {
-              companyId,
-              /*
-               * THE ORDER'S OWN SHELF — and it is not a choice between two
-               * candidates. `assertOrderAccess` above refuses this request
-               * with a 404 unless `order.storeId === scope.storeId`, and
-               * `requireContext()` throws `STORE_REQUIRED` rather than
-               * handing back a null store; so by the time this line runs
-               * `existing.storeId` and the context `storeId` are the same
-               * non-null value, proven by the guard the request already
-               * passed.
-               *
-               * Without it this door wrote a SALE line into no store, and
-               * `/api/inventory/movements` filters with the strict
-               * `inStore` — the sale was deducted from a batch and then
-               * appeared in nobody's ledger.
-               */
-              storeId: existing.storeId,
-              productId: existing.productId,
-              batchId: activeBatch.id,
-              type: 'SALE',
-              quantity: -deductQty,
-              balanceAfter: Math.max(0, activeBatch.quantityRemaining - deductQty),
-              referenceId: existing.id,
-              reason: `Delivered Order #${existing.orderNumber}`,
-              createdById: user.id,
-            },
-          });
-        }
       }
 
       if ((status === 'REJECTED' || status === 'CANCELLED') && status !== previousStatus) {

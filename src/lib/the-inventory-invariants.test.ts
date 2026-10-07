@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repoFile, stripComments } from './guard-source';
+import { dashboardFiles, repoFile, stripComments, stripTemplates } from './guard-source';
 import { assertReadyToShip } from './order-state';
 import { allocateDiscount } from './money';
 import { consumeOrderStock, restoreOrderStock } from './stock-consumption';
@@ -471,13 +471,35 @@ function ledger(opts: { orderStore: string | null; shelf: Row[]; alreadySold?: b
     },
     orderItem: { updateMany: async () => ({ count: 0 }) },
     productionBatch: {
-      findMany: async ({ where }: any) => {
+      findMany: async ({ where, orderBy }: any) => {
         shelfQueries.push(where);
-        return shelf.filter((b) => matchesWhere(b, where));
+        // THE ORDER IS APPLIED, NOT ASSUMED. Returning rows in array order
+        // lets «oldest batch first» pass because the fixture listed them
+        // that way, which is no test of the draw-down at all.
+        // COPIES, as Prisma returns, so a writer cannot read back a value
+        // it has already changed in the same call.
+        const rows = shelf.filter((b) => matchesWhere(b, where)).map((b) => ({ ...b }));
+        // DIRECTION INCLUDED, or a fake that always sorts ascending swallows
+        // a flip of the draw-down's own `productionDate: 'asc'`.
+        const specs: Array<[string, string]> = (Array.isArray(orderBy) ? orderBy : [orderBy ?? {}]).flatMap(
+          (o: any) => Object.entries<string>(o ?? {})
+        );
+        for (const [key, dir] of [...specs].reverse()) {
+          rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0));
+          if (dir === 'desc') rows.reverse();
+        }
+        return rows;
       },
-      findFirst: async ({ where }: any) => {
+      findFirst: async ({ where, orderBy }: any) => {
         shelfQueries.push(where);
-        return shelf.filter((b) => matchesWhere(b, where))[0] ?? null;
+        const rows = shelf.filter((b) => matchesWhere(b, where)).map((b) => ({ ...b }));
+        const key = Object.keys((Array.isArray(orderBy) ? orderBy[0] : orderBy) ?? {})[0];
+        const dir = key ? (Array.isArray(orderBy) ? orderBy[0] : orderBy)[key] : 'asc';
+        if (key) {
+          rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0));
+          if (dir === 'desc') rows.reverse();
+        }
+        return rows[0] ?? null;
       },
       update: async ({ where, data }: any) => {
         const row = shelf.find((b) => b.id === where.id)!;
@@ -622,5 +644,112 @@ describe('the ledger line lands on the same shelf as the goods', () => {
     // And such a row is invisible in every store — which is the finding this
     // whole section is about, not a behaviour anyone wants.
     expect(matchesWhere(r.movements[0], inStore('c1', MUBARAK))).toBe(false);
+  });
+});
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE DRAW CROSSES BATCHES, AND ONLY ONE FUNCTION IS ALLOWED TO DRAW.
+ *
+ * The legacy delivery door in `PATCH /api/orders/[id]` deducted from ONE
+ * batch — `Math.min(existing.quantity, activeBatch.quantityRemaining)` — so
+ * an order larger than the oldest batch was delivered and the remainder
+ * stayed on the books. It was deleted on 2026-10-07 and replaced by a call
+ * to `consumeOrderStock`; the per-door arithmetic is pinned in
+ * `src/app/api/orders/[id]/the-delivery-line-lands-on-a-shelf.test.ts`.
+ *
+ * These two rules are the ones that outlive that door: the draw itself must
+ * cross batches, and no SECOND door may ever write the deduction by hand
+ * again. Five writers of inventory movements were found in this codebase
+ * once; the sixth must not be another delivery path.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+describe('the draw crosses batches, and nobody deducts by hand', () => {
+  it('three units against batches of 1 and 5 empty the first and take two from the second', async () => {
+    // The order in this fixture needs 3 (two paid, one gift). The old
+    // arithmetic took `min(3, 1)` = ONE and stopped: two units delivered and
+    // still on the shelf. Listed NEWEST first, so array order would take 3
+    // out of the June batch and leave the January one full — a different
+    // pair of numbers from the one asserted.
+    const l = await consume(MUBARAK, [
+      { ...batchOn(MUBARAK, 'b-june', 5), productionDate: new Date('2026-06-01') },
+      { ...batchOn(MUBARAK, 'b-jan', 1), productionDate: new Date('2026-01-01') },
+    ]);
+
+    expect(l.shelf.find((b) => b.id === 'b-jan')!.quantityRemaining).toBe(0);
+    expect(l.shelf.find((b) => b.id === 'b-june')!.quantityRemaining).toBe(3);
+    expect(l.shelf.find((b) => b.id === 'b-jan')!.quantitySold).toBe(1);
+    expect(l.shelf.find((b) => b.id === 'b-june')!.quantitySold).toBe(2);
+
+    // One ledger line for the whole draw, and its balance is the PRODUCT's
+    // on hand — not the last batch it touched, which held 3 of the 3 left
+    // only by coincidence here, so the sum is asserted instead.
+    expect(l.movements).toHaveLength(1);
+    expect(l.movements[0].quantity).toBe(-3);
+    expect(l.movements[0].balanceAfter).toBe(
+      l.shelf.reduce((s, b) => s + (b.quantityRemaining ?? 0), 0)
+    );
+  });
+
+  it('and a shelf shorter than the order refuses rather than taking what it can', async () => {
+    // `allowNegativeStock` is false in `consume` above. Taking 1 of 3 and
+    // reporting success is exactly what the deleted block did.
+    await expect(consume(MUBARAK, [batchOn(MUBARAK, 'b-jan', 1)])).rejects.toThrow(/المخزون غير كافٍ/);
+  });
+
+  it('and asking twice deducts once — the ledger is the key, not a status column', async () => {
+    const first = await consume(MUBARAK, [batchOn(MUBARAK, 'b-m', 10)]);
+    expect(first.shelf.find((b) => b.id === 'b-m')!.quantityRemaining).toBe(7);
+
+    // The same world, asked again, as a second delivery door would.
+    const again = await consumeOrderStock(first.tx, {
+      orderId: ORDER,
+      companyId: 'c1',
+      allowNegativeStock: false,
+      userId: 'u1',
+    });
+    expect(again.alreadyDone).toBe(true);
+    expect(again.taken).toBe(0);
+    expect(first.shelf.find((b) => b.id === 'b-m')!.quantityRemaining).toBe(7);
+    expect(first.movements).toHaveLength(1);
+  });
+
+  it('and `consumeOrderStock` is the only thing in the repository that writes a SALE line', async () => {
+    /*
+     * THE RULE THAT STOPS A SIXTH WRITER. A delivery path that writes its
+     * own SALE row writes its own arithmetic with it, and then idempotency,
+     * the gift units and the multi-batch walk are all somebody's to get
+     * right a second time. That is the whole history of this defect.
+     */
+    const offenders = dashboardFiles('both')
+      .filter((f) => f.rel !== '/src/lib/stock-consumption.ts')
+      .filter((f) => /type:\s*('SALE'|"SALE"|SALE\b)/.test(stripTemplates(stripComments(f.src))))
+      .map((f) => f.rel);
+    expect(offenders).toEqual([]);
+
+    // AND THE CHECK IS NOT VACUOUS: the shape it looks for is present in the
+    // one file allowed to have it, so an empty result means «nowhere else»
+    // and not «the pattern never matches anything».
+    const owner = stripTemplates(stripComments(repoFile('src/lib/stock-consumption.ts')));
+    expect(owner).toMatch(/type:\s*SALE\b/);
+  });
+
+  it('and every delivery door reaches it rather than reimplementing it', async () => {
+    // The five doors that take goods off the shelf. The legacy PATCH is the
+    // last of them to join; before 2026-10-07 it deducted by hand, and the
+    // four others already called the helper.
+    for (const door of [
+      'src/app/api/orders/[id]/route.ts',
+      'src/app/api/orders/[id]/shipping/route.ts',
+      'src/lib/partial-delivery.ts',
+      'src/app/api/finance/statements/[id]/route.ts',
+      'src/app/api/ops/tracking/write-off/route.ts',
+    ]) {
+      const src = stripComments(repoFile(door));
+      expect(src, door).toMatch(/consumeOrderStock\(/);
+      // And none of them does the arithmetic beside the call.
+      expect(src, door).not.toMatch(/quantityRemaining: \{ decrement:/);
+      expect(src, door).not.toMatch(/quantitySold: \{ increment:/);
+    }
   });
 });

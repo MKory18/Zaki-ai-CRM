@@ -2,42 +2,40 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * THE LEGACY DELIVERY DOOR WROTE A SALE INTO NO STORE.
+ * THE LEGACY DELIVERY DOOR, AFTER IT STOPPED DOING ITS OWN ARITHMETIC.
  *
- * `PATCH /api/orders/[id]` with `status: 'DELIVERED'` deducts the units from
- * the oldest batch with stock left and writes one `InventoryMovement` of type
- * `SALE` beside it. That row carried no `storeId`.
+ * `PATCH /api/orders/[id]` with `status: 'DELIVERED'` used to deduct stock by
+ * hand: the OLDEST batch with units left, `Math.min(existing.quantity,
+ * batch.quantityRemaining)` out of it, one SALE line, done. It now calls
+ * `consumeOrderStock`, and this file asserts the DIFFERENCE IN QUANTITIES —
+ * not that the call is present.
  *
- * `/api/inventory/movements` and the ledger block in `/api/inventory` filter
- * the movement itself with `inStore(companyId, storeId)` — an EXACT match
- * (`src/lib/store-filter.ts`), which a NULL can never satisfy. So the batch
- * was decremented, the customer had the goods, and the line explaining the
- * balance came back from no store's query.
+ * Every number below is one the old block got wrong:
  *
- * WHERE THE STORE COMES FROM, AND WHY IT IS NOT A CHOICE:
- * `requireContext()` throws `STORE_REQUIRED` rather than returning a null
- * store, and `assertOrderAccess` (`src/lib/rbac.ts`) refuses this request
- * with a 404 unless `order.storeId === scope.storeId`. So by the time the
- * write runs, `existing.storeId` and the context `storeId` are the same
- * non-null value — proven by a guard the request has already passed, not
- * assumed. The test below pins both halves of that: the value written, and
- * that an order of another store never reaches the write at all.
+ *   batches of 3 and 8, order for 10 → old: 3 taken, 7 delivered and still
+ *   on the books. new: 3 + 7, one unit left.
  *
- * ASSERTED BY VALUE, and against the real read filter.
+ *   a SALE already in the ledger → old: deducted again (26 orders and 52
+ *   units on this database sit in exactly that state, DELIVERED by shipping
+ *   status with `status` still 'SHIPPED'). new: nothing moves.
+ *
+ *   two lines → old: the first product only. new: both.
+ *
+ *   3 paid + 1 gift → old: 3. new: 4.
+ *
+ *   `balanceAfter` → old: one batch's remainder. new: the product's on hand.
+ *
+ * NOTHING IS MOCKED BELOW THE ROUTE. `consumeOrderStock`, `drawDownStock`
+ * and `onHandTotal` are the real functions, running against a transaction
+ * that actually applies the `where` it is handed and actually mutates the
+ * rows — so the remainders asserted here are the remainders the code
+ * produces, and the store clause is exercised rather than described.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-const { db, requireContext, assertOrderAccess, authorize, can, getPermissionScope, logAudit, notify } =
+const { makeDb, requireContext, assertOrderAccess, authorize, can, getPermissionScope, logAudit, notify } =
   vi.hoisted(() => ({
-    db: {
-      order: { updateMany: vi.fn(), findUnique: vi.fn() },
-      customer: { update: vi.fn() },
-      productionBatch: { findFirst: vi.fn(), update: vi.fn() },
-      inventoryMovement: { create: vi.fn() },
-      orderStatusLog: { create: vi.fn() },
-      orderActivity: { create: vi.fn() },
-      $transaction: vi.fn(),
-    },
+    makeDb: { current: null as any },
     requireContext: vi.fn(),
     assertOrderAccess: vi.fn(),
     authorize: vi.fn(),
@@ -47,7 +45,23 @@ const { db, requireContext, assertOrderAccess, authorize, can, getPermissionScop
     notify: vi.fn(),
   }));
 
-vi.mock('@/lib/db', () => ({ db }));
+/**
+ * The route imports `db` once, at module load, so the object handed to it has
+ * to be stable while its CONTENTS change per test. Every call is forwarded to
+ * the world built for the test at hand.
+ */
+vi.mock('@/lib/db', () => {
+  const forward = (model: string, method: string) => (args: unknown) => makeDb.current[model][method](args);
+  const models = ['order', 'orderItem', 'customer', 'productionBatch', 'inventoryMovement', 'orderStatusLog', 'orderActivity'];
+  const methods = ['findFirst', 'findUnique', 'findMany', 'create', 'createMany', 'update', 'updateMany', 'deleteMany', 'aggregate', 'count'];
+  const db: Record<string, unknown> = {
+    $transaction: (fn: (tx: unknown) => unknown) => fn(db),
+  };
+  for (const m of models) {
+    db[m] = Object.fromEntries(methods.map((k) => [k, forward(m, k)]));
+  }
+  return { db };
+});
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 vi.mock('@/lib/notify', () => ({ notify: (...a: unknown[]) => notify(...a) }));
@@ -67,24 +81,43 @@ vi.mock('@/lib/authorization', () => ({
 import { PATCH } from './route';
 /** The real filter the ledger screens use — not a restatement of it. */
 import { inStore } from '@/lib/store-filter';
+/** The real helper, called a second time where a second door would call it. */
+import { consumeOrderStock } from '@/lib/stock-consumption';
 
 const ORDER = 'o-1';
-const PRODUCT = 'p-cream';
-const BATCH = 'b-mubarak';
+const CREAM = 'p-cream';
+const SOAP = 'p-soap';
 const MUBARAK = 's-mubarak';
 const SIHHA = 's-sihha';
 
+type Row = Record<string, any>;
+
+/** Prisma's `where` for the shapes this route, the helper and `inStore` use. */
+function matchesWhere(row: Row, where: Row): boolean {
+  for (const [key, want] of Object.entries(where)) {
+    if (want && typeof want === 'object' && Array.isArray(want.in)) {
+      if (!want.in.includes(row[key])) return false;
+    } else if (want && typeof want === 'object' && 'gt' in want) {
+      if (!((row[key] ?? 0) > want.gt)) return false;
+    } else if (row[key] !== want) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** An order of المبارك ستور, shipped and awaiting delivery. */
-const orderRow = (storeId: string | null) => ({
+const orderRow = (over: Row = {}) => ({
   id: ORDER,
   orderNumber: 'ORD-1',
   companyId: 'c1',
-  storeId,
+  storeId: MUBARAK,
   countryId: 'co1',
   customerId: 'cust-1',
-  productId: PRODUCT,
+  productId: CREAM,
   productNameSnapshot: 'كريم',
   quantity: 3,
+  freeQuantity: 0,
   version: 7,
   status: 'SHIPPED',
   confirmationStatus: 'CONFIRMED',
@@ -94,13 +127,155 @@ const orderRow = (storeId: string | null) => ({
   deliveredAt: null,
   confirmedAt: new Date('2026-09-30'),
   totalAmount: 120,
+  estimatedCostOfGoods: 0,
   moderatorId: 'u2',
   lockedById: null,
   lockExpiresAt: null,
   assignedToId: 'u1',
   claimedById: 'u1',
   currentOwnerId: 'u1',
+  ...over,
 });
+
+const batch = (over: Row) => ({
+  companyId: 'c1',
+  storeId: MUBARAK,
+  productId: CREAM,
+  quantitySold: 0,
+  costPerUnit: 4,
+  productionDate: new Date('2026-01-01'),
+  ...over,
+});
+
+/**
+ * A transaction that answers honestly: it applies the `where` it is handed,
+ * mutates the rows it is told to, and keeps what was written so the test can
+ * read the ledger back.
+ */
+function world(opts: {
+  order?: Row;
+  items?: Row[];
+  shelf?: Row[];
+  /** A SALE already recorded for this order — the 26-order state measured. */
+  priorSale?: boolean;
+}) {
+  const order = opts.order ?? orderRow();
+  const items = opts.items ?? [{ productId: CREAM, productName: 'كريم', quantity: 3, freeQuantity: 0 }];
+  const shelf: Row[] = (opts.shelf ?? [batch({ id: 'b-only', quantityRemaining: 50 })]).map((b) => ({ ...b }));
+  const movements: Row[] = opts.priorSale
+    ? [{ id: 'm-prior', companyId: 'c1', storeId: order.storeId, productId: CREAM, type: 'SALE', quantity: -4, balanceAfter: 9, referenceId: ORDER }]
+    : [];
+  const logs: Row[] = [];
+  const orderWrites: Row[] = [];
+  const shelfQueries: Row[] = [];
+  let seq = 0;
+
+  const db: Row = {
+    order: {
+      updateMany: async ({ data }: any) => {
+        orderWrites.push(data);
+        return { count: 1 };
+      },
+      update: async ({ data }: any) => {
+        orderWrites.push(data);
+        Object.assign(order, data);
+        return order;
+      },
+      findUnique: async () => order,
+      findFirst: async () => ({
+        orderNumber: order.orderNumber,
+        storeId: order.storeId,
+        items,
+        store: { country: { minorUnit: 2 } },
+      }),
+    },
+    orderItem: {
+      updateMany: async () => ({ count: 0 }),
+      deleteMany: async () => ({ count: 0 }),
+      createMany: async () => ({ count: 0 }),
+    },
+    customer: { update: async () => ({}) },
+    productionBatch: {
+      findMany: async ({ where, orderBy }: any) => {
+        shelfQueries.push(where);
+        // COPIES, as Prisma returns: a fake that hands back the live row
+        // lets a writer read a value it has already changed — which is how a
+        // revert of this fix told a different story about its own arithmetic.
+        const rows = shelf.filter((b) => matchesWhere(b, where)).map((b) => ({ ...b }));
+        // THE ORDER IS APPLIED, NOT ASSUMED. A fake that returns rows in
+        // array order lets «oldest batch first» pass because the fixture
+        // happened to list them that way — so the batches below are listed
+        // NEWEST first and the sort is what puts them right.
+        // DIRECTION INCLUDED. Sorting ascending whatever the query asked is
+        // how a fake swallows a mutation: flipping `drawDownStock`'s
+        // `productionDate: 'asc'` to `'desc'` left every test passing until
+        // this read the direction too.
+        const specs: Array<[string, string]> = (Array.isArray(orderBy) ? orderBy : [orderBy ?? {}]).flatMap(
+          (o: any) => Object.entries<string>(o ?? {})
+        );
+        for (const [key, dir] of [...specs].reverse()) {
+          rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0));
+          if (dir === 'desc') rows.reverse();
+        }
+        return rows;
+      },
+      findFirst: async ({ where, orderBy }: any) => {
+        shelfQueries.push(where);
+        // Sorted for the same reason `findMany` is — and here it matters for
+        // the REVERT: the deleted block asked for the oldest batch with
+        // `orderBy: { productionDate: 'asc' }`, and a fake that ignores it
+        // tells a different story about what that block did.
+        const rows = shelf.filter((b) => matchesWhere(b, where)).map((b) => ({ ...b }));
+        const spec = (Array.isArray(orderBy) ? orderBy[0] : orderBy) ?? {};
+        const key = Object.keys(spec)[0];
+        if (key) {
+          rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0));
+          if (spec[key] === 'desc') rows.reverse();
+        }
+        return rows[0] ?? null;
+      },
+      update: async ({ where, data }: any) => {
+        const row = shelf.find((b) => b.id === where.id)!;
+        // `{ increment: n }` and `{ decrement: n }` are APPLIED, so a writer
+        // that uses them — the deleted block did — moves real numbers here
+        // and a revert of this fix prints the quantities it actually
+        // produces rather than an unevaluated object.
+        for (const [key, value] of Object.entries<any>(data)) {
+          if (value && typeof value === 'object' && 'increment' in value) row[key] = (row[key] ?? 0) + value.increment;
+          else if (value && typeof value === 'object' && 'decrement' in value) row[key] = (row[key] ?? 0) - value.decrement;
+          else row[key] = value;
+        }
+        return row;
+      },
+      create: async ({ data }: any) => {
+        const row = { id: `b-new-${++seq}`, ...data };
+        shelf.push(row);
+        return row;
+      },
+      aggregate: async ({ where }: any) => ({
+        _sum: {
+          quantityRemaining: shelf
+            .filter((b) => matchesWhere(b, where))
+            .reduce((s, b) => s + (b.quantityRemaining ?? 0), 0),
+        },
+      }),
+    },
+    inventoryMovement: {
+      findFirst: async ({ where }: any) =>
+        movements.find((m) => m.referenceId === where.referenceId && m.type === where.type) ?? null,
+      create: async ({ data }: any) => {
+        const row = { id: `m${movements.length + 1}`, ...data };
+        movements.push(row);
+        return row;
+      },
+    },
+    orderStatusLog: { create: async ({ data }: any) => (logs.push(data), data) },
+    orderActivity: { create: async ({ data }: any) => (logs.push(data), data) },
+  };
+  db.$transaction = (fn: (tx: unknown) => unknown) => fn(db);
+
+  return { db, order, items, shelf, movements, orderWrites, shelfQueries };
+}
 
 const deliver = (body: Record<string, unknown> = {}) =>
   PATCH(
@@ -119,77 +294,301 @@ const deliver = (body: Record<string, unknown> = {}) =>
     { params: Promise.resolve({ id: ORDER }) } as never
   );
 
-/** The SALE row exactly as it reached Prisma. */
-const saleRow = () => db.inventoryMovement.create.mock.calls[0][0].data as Record<string, unknown>;
-
-/** `inStore`'s own shapes, applied for real rather than described. */
-function matchesWhere(row: Record<string, unknown>, where: Record<string, any>): boolean {
-  for (const [key, want] of Object.entries(where)) {
-    if (want && typeof want === 'object' && Array.isArray(want.in)) {
-      if (!want.in.includes(row[key])) return false;
-    } else if (row[key] !== want) {
-      return false;
-    }
-  }
-  return true;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
+/** Install a world and point the route's mocked `db` and guards at it. */
+function install(w: ReturnType<typeof world>, store: string = MUBARAK) {
+  makeDb.current = w.db;
   requireContext.mockResolvedValue({
     user: { id: 'u1', name: 'سامر', role: 'MANAGER' },
     companyId: 'c1',
-    storeId: MUBARAK,
+    storeId: store,
     countryId: 'co1',
     country: { id: 'co1', code: 'SY', currencyCode: 'SYP', minorUnit: 2, allowNegativeStock: false },
   });
-  assertOrderAccess.mockResolvedValue({ allowed: true, order: orderRow(MUBARAK) });
+  assertOrderAccess.mockResolvedValue({ allowed: true, order: w.order });
+  return w;
+}
+
+const left = (w: ReturnType<typeof world>, id: string) => w.shelf.find((b) => b.id === id)!.quantityRemaining;
+const sold = (w: ReturnType<typeof world>, id: string) => w.shelf.find((b) => b.id === id)!.quantitySold;
+const sales = (w: ReturnType<typeof world>) => w.movements.filter((m) => m.type === 'SALE' && m.id !== 'm-prior');
+
+beforeEach(() => {
+  vi.clearAllMocks();
   authorize.mockReturnValue({ allowed: true });
   can.mockReturnValue(true);
   getPermissionScope.mockReturnValue({ scope: 'ALL_COMPANY' });
   logAudit.mockResolvedValue(undefined);
-  db.$transaction.mockImplementation(async (fn: any) => fn(db));
-  db.order.updateMany.mockResolvedValue({ count: 1 });
-  db.order.findUnique.mockResolvedValue(orderRow(MUBARAK));
-  db.customer.update.mockResolvedValue({});
-  db.productionBatch.findFirst.mockResolvedValue({ id: BATCH, quantityRemaining: 40, quantitySold: 0 });
-  db.productionBatch.update.mockResolvedValue({});
-  db.inventoryMovement.create.mockImplementation(async ({ data }: any) => ({ id: 'm1', ...data }));
-  db.orderStatusLog.create.mockResolvedValue({});
-  db.orderActivity.create.mockResolvedValue({});
 });
 
-describe('the legacy delivery door files its SALE on the order’s own shelf', () => {
-  it('writes the order’s store onto the movement — the value, not the word', async () => {
+describe('the delivery door takes every unit off the shelf', () => {
+  it('walks PAST the first batch — 3 and 8 against an order for 10 leaves 0 and 1', async () => {
+    // THE DEFECT, IN ONE ASSERTION. `Math.min(10, 3)` is 3: the old block
+    // emptied the oldest batch, stopped, raised nothing, and left the other
+    // seven units on the books after the customer had them.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 10 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 10, freeQuantity: 0 }],
+        // Listed NEWEST first on purpose: array order would take 8 out of
+        // June and 2 out of March, which is a different pair of remainders
+        // from the one asserted below.
+        shelf: [
+          batch({ id: 'b-june', quantityRemaining: 8, productionDate: new Date('2026-06-01'), costPerUnit: 5 }),
+          batch({ id: 'b-march', quantityRemaining: 3, productionDate: new Date('2026-03-01'), costPerUnit: 3 }),
+        ],
+      })
+    );
+
     const res = await deliver();
     expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
 
-    expect(db.inventoryMovement.create).toHaveBeenCalledTimes(1);
-    const row = saleRow();
+    // Oldest first, and all the way: 3 out of March, 7 out of June.
+    expect(left(w, 'b-march')).toBe(0);
+    expect(left(w, 'b-june')).toBe(1);
+    expect(sold(w, 'b-march')).toBe(3);
+    expect(sold(w, 'b-june')).toBe(7);
+    // 11 on the shelf, 10 delivered, 1 left. The old block left 8.
+    expect(w.shelf.reduce((s, b) => s + b.quantityRemaining, 0)).toBe(1);
+
+    // One ledger line for the whole draw, carrying the whole quantity.
+    expect(sales(w)).toHaveLength(1);
+    expect(sales(w)[0].quantity).toBe(-10);
+    // AND THE BALANCE IS THE BALANCE. The old block wrote
+    // `activeBatch.quantityRemaining - deductQty` = 0 here, while the
+    // product held 1.
+    expect(sales(w)[0].balanceAfter).toBe(1);
+    expect(sales(w)[0].balanceAfter).toBe(w.shelf.reduce((s, b) => s + b.quantityRemaining, 0));
+
+    // And the cost is each batch at ITS price: 3×3 + 7×5 = 44, never 10×3
+    // and never an average.
+    expect(w.orderWrites.some((d) => d.estimatedCostOfGoods === 44)).toBe(true);
+  });
+
+  it('and `balanceAfter` is the product’s on hand, not the batch it last touched', async () => {
+    // Two units out of batches of 3 and 8: the draw never reaches the second
+    // batch, so the old arithmetic (`3 - 2`) wrote 1 while 9 were on the
+    // shelf. That row described a balance that did not exist.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 2 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 2, freeQuantity: 0 }],
+        // Newest first again, so the draw's own ordering is what reaches
+        // March and leaves June alone.
+        shelf: [
+          batch({ id: 'b-june', quantityRemaining: 8, productionDate: new Date('2026-06-01') }),
+          batch({ id: 'b-march', quantityRemaining: 3, productionDate: new Date('2026-03-01') }),
+        ],
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+    expect(left(w, 'b-march')).toBe(1);
+    expect(left(w, 'b-june')).toBe(8);
+    expect(sales(w)[0].balanceAfter).toBe(9);
+    expect(sales(w)[0].balanceAfter).not.toBe(1);
+  });
+
+  it('and a SALE already in the ledger stops it dead — nothing moves a second time', async () => {
+    // THE STATE MEASURED ON THIS DATABASE: 26 orders are DELIVERED or
+    // PARTIALLY_DELIVERED with their SALE written, and all 26 still read
+    // `status: 'SHIPPED'` because `partial-delivery.ts`, the statement sweep
+    // and the write-off door set `shippingStatus` and leave `status` alone.
+    // So `status !== previousStatus` is TRUE here — the only guard the old
+    // block had — and it deducted again. 52 units of exposure.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 4, shippingStatus: 'DELIVERED' }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 4, freeQuantity: 0 }],
+        shelf: [batch({ id: 'b-only', quantityRemaining: 9 })],
+        priorSale: true,
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+
+    // The gate the old block relied on DID open: the order's own write for
+    // this request carries the new status, so `status !== previousStatus`
+    // was true and the deleted block would have run.
+    expect(w.order.status).toBe('SHIPPED');
+    expect(w.orderWrites.some((d) => d.status === 'DELIVERED')).toBe(true);
+    // And still nothing came off the shelf, because the ledger said so.
+    expect(left(w, 'b-only')).toBe(9);
+    expect(sold(w, 'b-only')).toBe(0);
+    expect(sales(w)).toHaveLength(0);
+    expect(w.movements.filter((m) => m.type === 'SALE')).toHaveLength(1);
+  });
+
+  it('and a second door arriving after this one also moves nothing', async () => {
+    // The statement sweep in `/api/finance/statements/[id]` calls the same
+    // helper on orders it promotes. An order delivered here and then settled
+    // there must be deducted ONCE, and the key is the ledger, not a column.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 4 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 4, freeQuantity: 0 }],
+        shelf: [batch({ id: 'b-only', quantityRemaining: 9 })],
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+    expect(left(w, 'b-only')).toBe(5);
+
+    const again = await consumeOrderStock(w.db as never, {
+      orderId: ORDER,
+      companyId: 'c1',
+      allowNegativeStock: false,
+      userId: 'u1',
+    });
+    expect(again.alreadyDone).toBe(true);
+    expect(again.taken).toBe(0);
+    expect(left(w, 'b-only')).toBe(5);
+    expect(w.movements.filter((m) => m.type === 'SALE')).toHaveLength(1);
+  });
+
+  it('and a TWO-LINE order deducts both lines, not the first product only', async () => {
+    // `existing.productId` is one column on a denormalised order; the second
+    // line was invisible to the old block and its units never left the shelf.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 2 }),
+        items: [
+          { productId: CREAM, productName: 'كريم', quantity: 2, freeQuantity: 0 },
+          { productId: SOAP, productName: 'صابون', quantity: 4, freeQuantity: 0 },
+        ],
+        shelf: [
+          batch({ id: 'b-cream', productId: CREAM, quantityRemaining: 5 }),
+          batch({ id: 'b-soap', productId: SOAP, quantityRemaining: 9 }),
+        ],
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+
+    expect(left(w, 'b-cream')).toBe(3);
+    expect(left(w, 'b-soap')).toBe(5);
+    expect(sold(w, 'b-cream')).toBe(2);
+    expect(sold(w, 'b-soap')).toBe(4);
+
+    // One ledger line per line of the order, each naming its own product.
+    expect(sales(w)).toHaveLength(2);
+    const byProduct = new Map(sales(w).map((m) => [m.productId, m]));
+    expect(byProduct.get(CREAM)!.quantity).toBe(-2);
+    expect(byProduct.get(SOAP)!.quantity).toBe(-4);
+    // And each balance is ITS OWN product's on hand — 3 and 5, two different
+    // numbers, so neither can be the other's by accident.
+    expect(byProduct.get(CREAM)!.balanceAfter).toBe(3);
+    expect(byProduct.get(SOAP)!.balanceAfter).toBe(5);
+  });
+
+  it('and a GIFT unit leaves the shelf with the paid ones — 3 + 1 is four units', async () => {
+    // Three such orders are on this database. The old block read
+    // `existing.quantity`, which is 3, and the gift stayed in stock after it
+    // was given away — while `reservation.ts` had HELD all four.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 3, freeQuantity: 1 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 3, freeQuantity: 1 }],
+        shelf: [batch({ id: 'b-only', quantityRemaining: 10 })],
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+    expect(left(w, 'b-only')).toBe(6);
+    expect(sold(w, 'b-only')).toBe(4);
+    expect(sales(w)[0].quantity).toBe(-4);
+    expect(sales(w)[0].balanceAfter).toBe(6);
+  });
+
+  it('and a shelf too short to cover the order refuses, rather than under-deducting in silence', async () => {
+    // The old block's answer to «ten ordered, five on the shelf» was to take
+    // five and say nothing. `allowNegativeStock` is false for this country,
+    // so the draw refuses and the whole transaction — status, counters,
+    // ledger — goes with it.
+    const w = install(
+      world({
+        order: orderRow({ quantity: 10 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 10, freeQuantity: 0 }],
+        shelf: [batch({ id: 'b-only', quantityRemaining: 5 })],
+      })
+    );
+
+    expect((await deliver()).status).not.toBe(200);
+    expect(left(w, 'b-only')).toBe(5);
+    expect(sales(w)).toHaveLength(0);
+  });
+
+  it('and where the country allows it, the shortfall is drawn to zero and recorded', async () => {
+    const w = install(
+      world({
+        order: orderRow({ quantity: 10 }),
+        items: [{ productId: CREAM, productName: 'كريم', quantity: 10, freeQuantity: 0 }],
+        shelf: [batch({ id: 'b-only', quantityRemaining: 5 })],
+      })
+    );
+    requireContext.mockResolvedValue({
+      user: { id: 'u1', name: 'سامر', role: 'MANAGER' },
+      companyId: 'c1',
+      storeId: MUBARAK,
+      countryId: 'co1',
+      country: { id: 'co1', code: 'SY', currencyCode: 'SYP', minorUnit: 2, allowNegativeStock: true },
+    });
+
+    expect((await deliver()).status).toBe(200);
+    // Never a negative remainder: the shelf goes to zero and the five units
+    // it could not supply are the shortfall, not an invented deduction.
+    expect(left(w, 'b-only')).toBe(0);
+    expect(sales(w)[0].quantity).toBe(-5);
+    expect(sales(w)[0].balanceAfter).toBe(0);
+  });
+});
+
+describe('and it files that SALE on the order’s own shelf', () => {
+  it('writes the order’s store onto the movement — the value, not the word', async () => {
+    const w = install(
+      world({
+        shelf: [
+          batch({ id: 'b-m', quantityRemaining: 50 }),
+          batch({ id: 'b-s', storeId: SIHHA, quantityRemaining: 50 }),
+        ],
+      })
+    );
+
+    expect((await deliver()).status).toBe(200);
+    const row = sales(w)[0];
     // THE VALUE. `undefined` is what this door wrote for as long as the
     // defect existed, and a revert prints exactly that here.
     expect(row.storeId).toBe(MUBARAK);
     expect(row.companyId).toBe('c1');
     expect(row.type).toBe('SALE');
-    expect(row.quantity).toBe(-3);
-    expect(row.batchId).toBe(BATCH);
     expect(row.referenceId).toBe(ORDER);
+    expect(row.createdById).toBe('u1');
     expect(typeof row.storeId).toBe('string');
-    expect(row.storeId).not.toBe('');
+
+    // And it is the SAME store the units came out of: the draw asked the
+    // shelf for this store and no other, and the other store's batch is
+    // untouched at its full 50.
+    const draw = w.shelfQueries.find((q) => q.quantityRemaining)!;
+    expect(draw.storeId).toBe(MUBARAK);
+    expect(draw.companyId).toBe('c1');
+    expect(row.storeId).toBe(draw.storeId);
+    expect(left(w, 'b-s')).toBe(50);
+    expect(left(w, 'b-m')).toBe(47);
   });
 
   it('and that store is the one the access guard already matched the context against', async () => {
+    const w = install(world({}));
     await deliver();
     // `assertOrderAccess(id, user, { companyId, storeId })` returns NOT_FOUND
     // unless `order.storeId === scope.storeId`, so these two are one value.
     const scope = assertOrderAccess.mock.calls[0][2] as { companyId: string; storeId: string };
     expect(scope).toMatchObject({ companyId: 'c1', storeId: MUBARAK });
-    expect(saleRow().storeId).toBe(scope.storeId);
+    expect(sales(w)[0].storeId).toBe(scope.storeId);
   });
 
   it('and the row it writes is a row the ledger screen returns — before, it was not', async () => {
+    const w = install(world({}));
     await deliver();
-    const row = saleRow();
+    const row = sales(w)[0];
 
     const mine = inStore('c1', MUBARAK);
     expect(matchesWhere(row, mine)).toBe(true);
@@ -206,37 +605,67 @@ describe('the legacy delivery door files its SALE on the order’s own shelf', (
   it('and it follows the order, not a constant', async () => {
     // A session in صحة بلس delivering صحة بلس's order. Both halves move
     // together, because they are the same value.
-    requireContext.mockResolvedValue({
-      user: { id: 'u1', name: 'سامر', role: 'MANAGER' },
-      companyId: 'c1',
-      storeId: SIHHA,
-      countryId: 'co1',
-      country: { id: 'co1', code: 'SY', currencyCode: 'SYP', minorUnit: 2, allowNegativeStock: false },
-    });
-    assertOrderAccess.mockResolvedValue({ allowed: true, order: orderRow(SIHHA) });
-    db.order.findUnique.mockResolvedValue(orderRow(SIHHA));
+    const w = install(
+      world({
+        order: orderRow({ storeId: SIHHA }),
+        shelf: [
+          batch({ id: 'b-m', quantityRemaining: 50 }),
+          batch({ id: 'b-s', storeId: SIHHA, quantityRemaining: 50 }),
+        ],
+      }),
+      SIHHA
+    );
 
-    await deliver();
-    expect(saleRow().storeId).toBe(SIHHA);
-    expect(matchesWhere(saleRow(), inStore('c1', SIHHA))).toBe(true);
-    expect(matchesWhere(saleRow(), inStore('c1', MUBARAK))).toBe(false);
+    expect((await deliver()).status).toBe(200);
+    expect(sales(w)[0].storeId).toBe(SIHHA);
+    // And the units came off صحة بلس's batch, not المبارك's.
+    expect(left(w, 'b-s')).toBe(47);
+    expect(left(w, 'b-m')).toBe(50);
+    expect(matchesWhere(sales(w)[0], inStore('c1', SIHHA))).toBe(true);
+    expect(matchesWhere(sales(w)[0], inStore('c1', MUBARAK))).toBe(false);
   });
 
   it('and an order of another store never reaches the write at all', async () => {
-    // Which is why `existing.storeId` has one possible value here: the guard
-    // is what makes the context store and the order's store the same fact.
+    // Which is why `order.storeId` has one possible value here: the guard is
+    // what makes the context store and the order's store the same fact.
+    const w = install(world({}));
     assertOrderAccess.mockResolvedValue({ allowed: false, reason: 'NOT_FOUND' });
     const res = await deliver();
     expect(res.status).toBe(404);
-    expect(db.inventoryMovement.create).not.toHaveBeenCalled();
-    expect(db.productionBatch.update).not.toHaveBeenCalled();
+    expect(w.movements).toHaveLength(0);
+    expect(left(w, 'b-only')).toBe(50);
   });
 
   it('and with no batch to draw from, no ledger line is written', async () => {
-    // Nothing moved, so nothing is recorded. The store question does not
-    // arise, and a row here would describe a deduction that never happened.
-    db.productionBatch.findFirst.mockResolvedValue(null);
+    // Nothing moved, so nothing is recorded — a row here would describe a
+    // deduction that never happened. The country allows the shortfall, or
+    // the draw would refuse instead.
+    const w = install(world({ shelf: [] }));
+    requireContext.mockResolvedValue({
+      user: { id: 'u1', name: 'سامر', role: 'MANAGER' },
+      companyId: 'c1',
+      storeId: MUBARAK,
+      countryId: 'co1',
+      country: { id: 'co1', code: 'SY', currencyCode: 'SYP', minorUnit: 2, allowNegativeStock: true },
+    });
     expect((await deliver()).status).toBe(200);
-    expect(db.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(w.movements).toHaveLength(0);
+  });
+});
+
+describe('and the hand-rolled deduction does not grow back', () => {
+  /*
+   * ONE source assertion, and it is about ROT, not about behaviour: every
+   * rule above is asserted in quantities. This exists because the block that
+   * was deleted is the kind of thing a later edit re-adds «just for the
+   * legacy column», and the quantities would then still pass — the helper
+   * would run AND the hand-rolled arithmetic beside it.
+   */
+  it('the single-batch arithmetic is gone from the route', async () => {
+    const { repoFile, stripComments } = await import('@/lib/guard-source');
+    const route = stripComments(repoFile('src/app/api/orders/[id]/route.ts'));
+    expect(route).not.toMatch(/Math\.min\(existing\.quantity/);
+    expect(route).not.toMatch(/activeBatch/);
+    expect(route).toMatch(/await consumeOrderStock\(tx, \{/);
   });
 });
