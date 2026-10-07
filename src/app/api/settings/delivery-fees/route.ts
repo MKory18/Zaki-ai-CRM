@@ -23,8 +23,24 @@ const upsertSchema = z.object({
   deliveryProviderId: z.string().uuid(),
   regionId: z.string().uuid(),
   fee: z.number().min(0).max(1_000_000),
-  lateThresholdDays: z.number().int().min(0).max(90),
-  returnFee: z.number().min(0).max(1_000_000).default(0),
+  /**
+   * ABSENT IS A THIRD ANSWER, AND NEITHER FIELD CARRIES A `.default()`.
+   *
+   * The form used to post `Number(box) || 0`, so an empty box and a typed
+   * zero arrived here as the same number and this endpoint could not tell
+   * them apart. An empty box now OMITS the field, and `undefined` means
+   * «not stated» — `stated` below is the one place that decides what that
+   * writes.
+   *
+   * A `.default(3)` here would be a SECOND copy of a number
+   * `prisma/schema.prisma` already holds (`lateThresholdDays Int
+   * @default(3)`, `returnFee Decimal @default(0)`), and two copies of one
+   * fact is what `2aa703a` and `600407e` spent a day deleting. So the
+   * defaults are not written down here at all: an omitted field is omitted
+   * from the `create` too, and the column applies the one default there is.
+   */
+  lateThresholdDays: z.number().int().min(0).max(90).optional(),
+  returnFee: z.number().min(0).max(1_000_000).optional(),
   isActive: z.boolean().default(true),
   /** Required when an existing fee changes — written to the audit log. */
   reason: z.string().trim().max(300).optional(),
@@ -90,13 +106,36 @@ export async function PUT(req: Request) {
       );
     }
 
+    /**
+     * WHAT «NOT STATED» WRITES — and the two writes answer it differently.
+     *
+     * On an UPDATE the field is left out of `data`, so Prisma does not
+     * touch the column and the stored value survives. That is the real
+     * damage this fixes: an empty late-threshold box used to post 0 and
+     * overwrite a courier’s real 3 with «never late», silently.
+     *
+     * On a CREATE it is left out of `data` as well, so the column default
+     * in `prisma/schema.prisma` decides. That is the ONE copy of each
+     * number, and it is why no literal 3 and no literal 0 appear in this
+     * file or in the browser any more.
+     *
+     * A STATED ZERO IS STILL WRITTEN, because `0` is not `undefined`: a
+     * courier whose late threshold is genuinely zero («never call these
+     * late») and one whose return fee is genuinely zero («they charge us
+     * nothing for a return») each record what they mean, and the tracking
+     * screen now says so rather than showing a blank.
+     */
+    const stated = {
+      ...(input.lateThresholdDays === undefined ? {} : { lateThresholdDays: input.lateThresholdDays }),
+      ...(input.returnFee === undefined ? {} : { returnFee: input.returnFee }),
+    };
+
     const saved = existing
       ? await db.deliveryFee.update({
           where: { id: existing.id },
           data: {
             fee: input.fee,
-            lateThresholdDays: input.lateThresholdDays,
-            returnFee: input.returnFee,
+            ...stated,
             isActive: input.isActive,
           },
         })
@@ -107,8 +146,7 @@ export async function PUT(req: Request) {
             deliveryProviderId: input.deliveryProviderId,
             regionId: input.regionId,
             fee: input.fee,
-            lateThresholdDays: input.lateThresholdDays,
-            returnFee: input.returnFee,
+            ...stated,
             isActive: input.isActive,
           },
         });
@@ -122,9 +160,13 @@ export async function PUT(req: Request) {
       previousData: existing
         ? { fee: Number(existing.fee), lateThresholdDays: existing.lateThresholdDays, returnFee: Number(existing.returnFee) }
         : undefined,
+      // READ OFF THE SAVED ROW, NOT OFF THE REQUEST. A field the request
+      // left out is decided by the column (on a create) or kept as it was
+      // (on an update), so logging `input.lateThresholdDays` would write
+      // `null` into the audit trail for a row that holds 3.
       newData: {
         courier: provider.name, region: region.name,
-        fee: input.fee, lateThresholdDays: input.lateThresholdDays, returnFee: input.returnFee,
+        fee: Number(saved.fee), lateThresholdDays: saved.lateThresholdDays, returnFee: Number(saved.returnFee),
         reason: input.reason ?? null,
       },
     });

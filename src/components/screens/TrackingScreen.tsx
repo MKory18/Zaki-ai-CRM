@@ -41,7 +41,12 @@ interface Row {
   shippingStatus: string;
   collectionStatus: string;
   daysInTransit: number | null;
-  lateThresholdDays: number;
+  /**
+   * The region's late threshold in days, or `null` when this courier has no
+   * fee row for this region at all — three states, not two. A stored `0` is
+   * a decision («never call these late»); `null` is the absence of one.
+   */
+  lateThresholdDays: number | null;
   late: boolean;
   totalAmount: number;
   currency: string;
@@ -627,9 +632,47 @@ export function TrackingScreen() {
                   className={`tabular-nums ${o.late ? 'font-semibold text-[var(--sys-destructive)]' : 'text-[var(--sys-foreground)]'}`}
                 >
                   {o.daysInTransit ?? '—'}
-                  {o.lateThresholdDays > 0 && (
-                    <span className="text-xs text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>
-                  )}
+                  {/*
+                    THREE STATES, AND THEY USED TO BE TWO.
+
+                    The condition here was `o.lateThresholdDays > 0`, so a
+                    stored threshold of ZERO printed nothing at all — exactly
+                    what an unpriced region printed. A courier told «never
+                    call these late» and a courier nobody has priced looked
+                    identical on the screen an operator uses to decide which
+                    parcel to chase.
+
+                      · no fee row (null) → «بلا أجرة»: the lane is not
+                        priced, so there is no threshold to miss, and the
+                        cause is a missing row in the fees table.
+                      · a row saying 0    → «بلا حد»: priced, and the
+                        decision was «this one is never late».
+                      · a row saying 3    → «/ 3», as before.
+
+                    Shown only once the clock is running. An order that has
+                    not shipped has no days in transit, and «/ 3» beside a
+                    «—» was a threshold against a clock nobody started.
+                  */}
+                  {o.daysInTransit !== null &&
+                    (o.lateThresholdDays === null ? (
+                      <span
+                        className="text-xs text-[var(--sys-warning)]"
+                        title="لا أجرة توصيل لهذه المحافظة عند هذه الشركة، فلا حدَّ تأخيرٍ لها — عرّفها من «الإعدادات ← شركات الشحن وأجورها»."
+                      >
+                        {' '}
+                        / بلا أجرة
+                      </span>
+                    ) : o.lateThresholdDays === 0 ? (
+                      <span
+                        className="text-xs text-[var(--sys-muted)]"
+                        title="حدّ التأخير لهذه المحافظة مكتوب صفراً: هذا الطلب لا يُعلَّم متأخّراً أبداً."
+                      >
+                        {' '}
+                        / بلا حد
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[var(--sys-muted)]"> / {o.lateThresholdDays}</span>
+                    ))}
                   {o.late && o.daysInTransit !== null && (
                     <span className="block text-xs font-medium">{lateLabel(o.daysInTransit)}</span>
                   )}

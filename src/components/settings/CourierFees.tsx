@@ -42,6 +42,35 @@ interface FeesData {
   fees: Fee[];
 }
 
+/**
+ * A TYPED NUMBER, OR «NOTHING» — AND A TYPED `0` IS A NUMBER.
+ *
+ * Every box on this form used to be read as `Number(box) || 0`.
+ * `Number('')` is `0` and `Number('abc')` is `NaN` which `||` turns into
+ * `0`, so **an empty box and a typed zero left the browser as the same
+ * number**: a courier whose return fee nobody knows was recorded as
+ * "charges nothing", and an empty late-threshold box overwrote a real 3
+ * with "never late".
+ *
+ * `undefined` is the third answer. `JSON.stringify` DROPS an `undefined`
+ * property, so an empty box makes the field absent on the wire rather than
+ * zero — and the endpoint, not this component, decides what absent means
+ * (keep what is stored, or let the column's default decide). That is also
+ * why there is no `3` and no `0` left in this file: the default lives in
+ * `prisma/schema.prisma` and nowhere else.
+ *
+ * `NOT_A_NUMBER` is the fourth outcome and it is NOT silently zero either.
+ * A `type="number"` box normally reports `''` for unparseable input, so
+ * this is the unreachable branch — named rather than folded into «empty»,
+ * because folding it into «empty» is how `|| 0` got here.
+ */
+const NOT_A_NUMBER = Symbol('NOT_A_NUMBER');
+function typedNumber(raw: string): number | undefined | typeof NOT_A_NUMBER {
+  if (raw.trim() === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : NOT_A_NUMBER;
+}
+
 export function CourierFees({
   courierId,
   /**
@@ -94,14 +123,26 @@ export function CourierFees({
    * The row's draft, and one setter for it. A card's cells are separate
    * render functions, so this lives here — one definition read by five of
    * them, rather than five copies of the same defaults.
+   *
+   * AN UNPRICED REGION OPENS WITH EVERY BOX EMPTY, including the two that
+   * used to open pre-filled. `String(current?.lateThresholdDays ?? 3)` put
+   * the SCHEMA'S OWN DEFAULT into a browser and then saved it as though a
+   * person had typed it — two copies of one number, and the browser's copy
+   * was the one that reached the database. The same went for `?? 0` on the
+   * return fee, which is where thirteen rows of "the courier charges us
+   * nothing to return a parcel" came from.
+   *
+   * So the boxes are empty, and empty now MEANS something: the field is
+   * left off the request and the column decides. An existing row shows what
+   * is stored — including a stored `0`, which is a value, not a blank.
    */
   const draftFor = (id: string) => {
     const current = feeFor(id);
     return (
       draft[id] ?? {
-        fee: String(current?.fee ?? ''),
-        lateThresholdDays: String(current?.lateThresholdDays ?? 3),
-        returnFee: String(current?.returnFee ?? 0),
+        fee: current ? String(current.fee) : '',
+        lateThresholdDays: current ? String(current.lateThresholdDays) : '',
+        returnFee: current ? String(current.returnFee) : '',
       }
     );
   };
@@ -114,9 +155,24 @@ export function CourierFees({
   const save = async (regionId: string, reason?: string) => {
     const current = feeFor(regionId);
     const d = draftFor(regionId);
-    const fee = Number(d.fee);
-    if (!Number.isFinite(fee) || d.fee.trim() === '') {
+
+    // The fee itself is the one field with no "nothing" to say: a region
+    // with no fee cannot be shipped to, which is what the warning above the
+    // table is about. So an empty fee box is refused here rather than sent.
+    const fee = typedNumber(d.fee);
+    if (typeof fee !== 'number') {
       toast.failed('أجرة غير صالحة');
+      return;
+    }
+
+    const lateThresholdDays = typedNumber(d.lateThresholdDays);
+    if (lateThresholdDays === NOT_A_NUMBER) {
+      toast.failed('حد تأخير غير صالح');
+      return;
+    }
+    const returnFee = typedNumber(d.returnFee);
+    if (returnFee === NOT_A_NUMBER) {
+      toast.failed('أجرة إرجاع غير صالحة');
       return;
     }
 
@@ -137,8 +193,10 @@ export function CourierFees({
           deliveryProviderId: courierId,
           regionId,
           fee,
-          lateThresholdDays: Number(d.lateThresholdDays) || 0,
-          returnFee: Number(d.returnFee) || 0,
+          // `undefined` is dropped by `JSON.stringify`, so an empty box is
+          // ABSENT on the wire. A typed `0` is sent as `0`.
+          lateThresholdDays,
+          returnFee,
           reason,
         }),
       });
@@ -166,6 +224,12 @@ export function CourierFees({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[var(--sys-muted-foreground)]">
           الطلبات المشحونة تحتفظ بالأجرة وقت شحنها؛ التعديل هنا يسري على الشحنات الجديدة فقط.
+          {/* The one sentence that makes an empty box mean something. Before
+              it, an empty box and a typed zero were the same request. */}
+          <span className="mt-0.5 block">
+            خانة <b>فارغة</b> في «حد التأخير» أو «أجرة الإرجاع» تعني «لم تُحدَّد»: الصفّ القائم يبقى على
+            ما هو عليه، والصفّ الجديد يأخذ افتراضي النظام. و<b>صفر مكتوب</b> يُحفَظ صفراً ويُحاسَب صفراً.
+          </span>
         </p>
         {missing.length > 0 && (
           <button
@@ -236,6 +300,12 @@ export function CourierFees({
                   value={draftFor(r.id).lateThresholdDays}
                   onChange={(e) => setField(r.id, { lateThresholdDays: e.target.value })}
                   aria-label={`حد التأخير في ${r.name}`}
+                  // The placeholder says «default» and NOT the number itself:
+                  // printing «3» here would put the schema's default back into
+                  // the browser, which is the duplication this change removes.
+                  // The operator sees the real number the moment the row exists.
+                  placeholder="الافتراضي"
+                  title="اتركها فارغة لتُترك على ما هي عليه (أو على افتراضي النظام لصفٍّ جديد). اكتب صفراً إن كانت هذه المحافظة لا تُعلَّم متأخّرة أبداً."
                   type="number"
                   min={0}
                   max={90}
@@ -252,6 +322,8 @@ export function CourierFees({
                   value={draftFor(r.id).returnFee}
                   onChange={(e) => setField(r.id, { returnFee: e.target.value })}
                   aria-label={`أجرة إرجاع ${r.name}`}
+                  placeholder="الافتراضي"
+                  title="اتركها فارغة إن كانت أجرة الإرجاع غير معروفة. اكتب صفراً إن كانت الشركة لا تأخذ شيئاً على الإرجاع — الصفر المكتوب يُحاسَب صفراً."
                   type="number"
                   min={0}
                   step="0.001"
@@ -351,8 +423,13 @@ function BulkFillDialog({
   onSaved: (message: string) => void;
 }) {
   const [fee, setFee] = useState('');
-  const [days, setDays] = useState('3');
-  const [returnFee, setReturnFee] = useState('0');
+  // EMPTY, NOT '3' AND '0'. This dialog writes fourteen regions in one pass,
+  // so a pre-filled box here is fourteen rows claiming a number nobody
+  // chose — and the audit log holds twenty-eight `DELIVERY_FEE_CREATED`
+  // entries reading exactly `lateThresholdDays: 3, returnFee: 0`, two runs
+  // of this dialog with its boxes untouched.
+  const [days, setDays] = useState('');
+  const [returnFee, setReturnFee] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -362,6 +439,17 @@ function BulkFillDialog({
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          const amount = typedNumber(fee);
+          const lateThresholdDays = typedNumber(days);
+          const feeOnReturn = typedNumber(returnFee);
+          if (typeof amount !== 'number') {
+            setError('أجرة غير صالحة');
+            return;
+          }
+          if (lateThresholdDays === NOT_A_NUMBER || feeOnReturn === NOT_A_NUMBER) {
+            setError('قيمة غير صالحة');
+            return;
+          }
           setSaving(true);
           setError(null);
           let done = 0;
@@ -372,9 +460,11 @@ function BulkFillDialog({
                 body: JSON.stringify({
                   deliveryProviderId: courier,
                   regionId: region.id,
-                  fee: Number(fee),
-                  lateThresholdDays: Number(days) || 0,
-                  returnFee: Number(returnFee) || 0,
+                  fee: amount,
+                  // Left out of the body when the box is empty, so each new
+                  // row takes the column's default instead of a zero.
+                  lateThresholdDays,
+                  returnFee: feeOnReturn,
                 }),
               });
               done++;
@@ -394,6 +484,9 @@ function BulkFillDialog({
         <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs text-[var(--sys-muted-foreground)]">
           تُكتب على المحافظات التي <b>لا أجرة لها</b> فقط. المحافظات المسعّرة مسبقاً لا تُلمس — تعديلها
           قرار منفصل يحتاج سبباً مكتوباً. تقدر تعدّل أي محافظة بعدها من الجدول.
+          <span className="mt-1 block">
+            خانة فارغة = <b>لم تُحدَّد</b>، فيأخذ الصفّ الجديد افتراضي النظام. وصفر مكتوب = <b>صفر</b>.
+          </span>
         </p>
 
         <label className="block">
@@ -410,6 +503,8 @@ function BulkFillDialog({
             <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">حد التأخير (أيام)</span>
             <input
               type="number" min="0" max="90" value={days} onChange={(e) => setDays(e.target.value)} dir="ltr"
+              placeholder="الافتراضي"
+              title="فارغة = افتراضي النظام. صفر = لا تُعلَّم متأخّرة أبداً."
               className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm md:h-10"
             />
           </label>
@@ -417,6 +512,8 @@ function BulkFillDialog({
             <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">أجرة الإرجاع</span>
             <input
               type="number" min="0" step="0.001" value={returnFee} onChange={(e) => setReturnFee(e.target.value)} dir="ltr"
+              placeholder="الافتراضي"
+              title="فارغة = غير معروفة. صفر = الشركة لا تأخذ شيئاً على الإرجاع."
               className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] px-3 text-sm md:h-10"
             />
           </label>

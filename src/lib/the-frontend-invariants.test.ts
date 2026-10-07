@@ -464,7 +464,17 @@ describe('Ⅲ · days in transit — held', () => {
     // «late» against a per-region threshold is the figure; a screen holding
     // its own number of days would make «متأخرة» mean two things.
     const screen = stripComments(repoFile('src/components/screens/TrackingScreen.tsx'));
-    expect(screen).toMatch(/lateThresholdDays: number;/);
+    /*
+     * `| null` SINCE 2026-10-07, and the null is the point of the change.
+     *
+     * The route read the threshold as `?? 0`, so «no fee row for this
+     * courier and region» and «a row saying zero» arrived as the same
+     * number, and the cell's `> 0` condition printed a blank for both. The
+     * row now carries `null` for the unpriced lane and the screen says
+     * which of the two it is. The assertion follows the type rather than
+     * being relaxed: a plain `number` here would mean the collapse is back.
+     */
+    expect(screen).toMatch(/lateThresholdDays: number \| null;/);
     expect(screen).toMatch(/late: boolean;/);
   });
 });

@@ -134,8 +134,22 @@ export async function GET(req: Request) {
       // it: three fields selected for the rule, none of them stripped, is how
       // a payload grows without anyone deciding it should.
       const { items: _items, returnReceipt: _returnReceipt, addOns: _addOns, ...o } = order;
-      const threshold = thresholdOf.get(`${o.deliveryProviderId}|${o.regionId}`) ?? 0;
-      const transit = transitStatus(o.shippedAt, threshold);
+      /**
+       * NULL WHEN THIS LANE HAS NO FEE ROW — it used to be `?? 0`, and that
+       * made two different facts the same number on the wire: «nobody has
+       * priced this courier for this region» and «the threshold is zero».
+       * The screen then printed a blank for both, so a deliberate zero read
+       * as an absence — and «late» is how an operator decides to chase a
+       * parcel.
+       *
+       * `transitStatus` still receives `0` for the unpriced lane, and that
+       * is not a fallback sneaking back in: it reads `0` as «no threshold»
+       * and an unpriced lane has none either, so both are «never late».
+       * What differs is only what the screen is allowed to SAY about it,
+       * which is why the row carries the null and the rule does not.
+       */
+      const threshold = thresholdOf.get(`${o.deliveryProviderId}|${o.regionId}`) ?? null;
+      const transit = transitStatus(o.shippedAt, threshold ?? 0);
       return {
         ...o,
         daysInTransit: transit.days,
