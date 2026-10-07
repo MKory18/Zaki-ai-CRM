@@ -81,11 +81,38 @@ describe('what was advertised is what is collected', () => {
 describe('every door divides the same way', () => {
   it('the offers door never rounds a derived unit price', () => {
     const src = stripComments(repoFile('src/lib/public-order.ts'));
-    // `offer.price` is the total for the offer's own quantity, and this is
-    // the division that makes it a unit price.
-    expect(src).toContain('offer.price / offer.quantity');
+    /*
+     * The division that makes a bundle total into a unit price, and it must
+     * stay unrounded: `roundMinor(10/3) * 3` is not 10, which is the whole
+     * of this section.
+     *
+     * It divides `listTotal` now, not `offer.price`. `OfferView.price`
+     * became the figure the customer is CHARGED, so dividing it would hand
+     * `computeCod` a unit price with the reduction already inside and the
+     * reduction would be taken twice — 19 for a bundle promising 22.
+     * `listTotal` is the bundle before its own reduction, which is what
+     * `computeCod` is built to be given.
+     */
+    expect(src).toContain('const unitPrice = offer ? listTotal / offer.quantity : p.basePrice;');
+    expect(src).not.toMatch(/roundMinor\(\s*listTotal/);
     expect(src).not.toMatch(/roundMinor\(\s*offer\.price/);
-    expect(src).not.toMatch(/offer\.price \/ offer\.quantity\)\.toFixed/);
+    expect(src).not.toMatch(/listTotal \/ offer\.quantity\)\.toFixed/);
+    // And the figure it is derived FROM is the pre-discount one, not the
+    // charged one — the difference between 12.5 a piece and 11.
+    expect(src).toContain('const listTotal = offer ? offer.listPrice ?? offer.price : p.basePrice;');
+  });
+
+  it('and the offer view rounds the CHARGED total, which is not an intermediate', () => {
+    /*
+     * Not rounding a derived unit price is not «stop rounding». `price` on
+     * the view is money a customer is shown and charged, so it is rounded
+     * once, by the order's own currency — the same distinction the Telegram
+     * door's test below draws between an intermediate and a written figure.
+     */
+    const src = stripComments(repoFile('src/lib/offers.ts'));
+    expect(src).toContain('const charged = roundMinor(o.sellingPrice - taken, minorUnit);');
+    // And the reduction itself comes from the one place that allocates it.
+    expect(src).toMatch(/allocateDiscount\(/);
   });
 
   it('and the Telegram door does not either', () => {

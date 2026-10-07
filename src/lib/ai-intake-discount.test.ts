@@ -89,7 +89,10 @@ vi.mock('@/lib/product-cost', () => ({ productCost: (...a: unknown[]) => product
 vi.mock('@/lib/regions', () => ({ resolveRegionId: (...a: unknown[]) => resolveRegionId(...a) }));
 vi.mock('@/lib/order-ref', () => ({ orderRefFields: (...a: unknown[]) => orderRefFields(...a) }));
 vi.mock('@/lib/blacklist', () => ({ activeBlock: (...a: unknown[]) => activeBlock(...a) }));
-vi.mock('@/lib/offers', () => ({ activeOffersFor: (...a: unknown[]) => activeOffersFor(...a) }));
+vi.mock('@/lib/offers', async (importOriginal) => ({
+  ...((await importOriginal()) as object),
+  activeOffersFor: (...a: unknown[]) => activeOffersFor(...a),
+}));
 // The parse is not the subject: the price is. Everything else in the parser
 // module stays real so a rename there is still a compile error here.
 vi.mock('@/lib/order-parser', async (importOriginal) => ({
@@ -99,6 +102,8 @@ vi.mock('@/lib/order-parser', async (importOriginal) => ({
 }));
 
 import { repoFile, stripComments } from '@/lib/guard-source';
+// The real one: the view the route reads is built by it, not typed out.
+import { toOfferView } from '@/lib/offers';
 
 const { POST } = await import('@/app/api/orders/ai-intake/route');
 
@@ -108,17 +113,22 @@ const JOD = { orderPrefix: 'JO', minorUnit: 3, currencyCode: 'JOD', allowNegativ
 const SYP = { orderPrefix: 'SY', minorUnit: 0, currencyCode: 'SYP', allowNegativeStock: false };
 
 /**
- * THE VIEW A BROWSER IS HANDED — and it has no `discount` property, because
- * `activeOffersFor` does not select that column. Frozen so that a route
- * reaching for the money figure here cannot be quietly fed one.
+ * THE OFFER ROW, as `activeOffersFor` selects it — the money column
+ * included, which is the change this file was rewritten for.
+ *
+ * It used to be a frozen VIEW with no `discount` property, so that a route
+ * reaching for the money figure could not be fed one. That was the right
+ * guard for the wrong architecture: keeping the column out of the view is
+ * what left `price` at 25 while every door charged 22.
  */
-const OFFER_VIEW = Object.freeze({
+const OFFER_ROW = Object.freeze({
   id: 'off-25',
   name: 'قطعتان',
   /** PIECES PER PICK. 25 is the bundle's total, never a unit price. */
   quantity: 2,
   freeQuantity: 0,
-  price: 25,
+  sellingPrice: 25,
+  discount: 3,
   compareAtPrice: null,
   isDefault: true,
   deliveryIncluded: false,
@@ -141,16 +151,21 @@ async function preview(text = 'اسمي سامر ورقمي 0999111222 وبدي 
   return json as { suggestedPrice: number | null; suggestedOfferName: string | null };
 }
 
-/** What the offer table answers when asked for the money column. */
-function discountIs(discount: number) {
-  db.offer.findFirst.mockImplementation(async ({ where, select }: any) => {
-    // The second read is NARROW and SCOPED: this column only, this offer,
-    // this company. A mock that answered anything to anything would hide a
-    // missing tenant filter.
-    expect(select).toEqual({ discount: true });
-    expect(where).toEqual({ id: OFFER_VIEW.id, companyId: 'c1' });
-    return { discount };
-  });
+/**
+ * THE VIEW THE ROUTE IS HANDED, BUILT BY THE REAL `toOfferView`.
+ *
+ * A second, by-id read of `Offer.discount` used to stand here and this
+ * helper mocked it. The reduction is applied once now, inside
+ * `activeOffersFor`, so there is nothing left for the route to ask — and
+ * the honest way to mock a function that does arithmetic is to let it do
+ * the arithmetic. `toOfferView` is imported for real through
+ * `importOriginal`, so the rounding tests below still measure the one
+ * rounding rule rather than a number typed into a fixture.
+ */
+function discountIs(discount: number, minorUnit = JOD.minorUnit) {
+  activeOffersFor.mockResolvedValue([
+    toOfferView({ ...OFFER_ROW, discount }, minorUnit),
+  ]);
 }
 
 beforeEach(() => {
@@ -181,7 +196,7 @@ beforeEach(() => {
   matchProduct.mockReturnValue({ id: 'p-a', name: 'منتج أ', sku: 'SKU-A', score: 40 });
   db.product.findMany.mockResolvedValue([{ id: 'p-a', name: 'منتج أ', sku: 'SKU-A' }]);
   db.customer.findFirst.mockResolvedValue(null);
-  activeOffersFor.mockResolvedValue([OFFER_VIEW]);
+  activeOffersFor.mockResolvedValue([toOfferView(OFFER_ROW, JOD.minorUnit)]);
   discountIs(3);
 
   // The write path's cast, used only by the confirm tests.
@@ -221,20 +236,18 @@ describe('المقترَح للمراجع هو ما يَعِدُ به العرض
     expect(json.suggestedOfferName).toBe('قطعتان');
   });
 
-  it('والخصمُ يُقرأ باستعلامٍ ثانٍ ضيّقٍ، لا من العرضِ المُسلَّمِ للمتصفّح', async () => {
+  it('ولا استعلامَ ثانيَ للخصمِ أصلاً — العرضُ المُسلَّمُ يَحمِلُه', async () => {
     await preview();
     // The catalogue read still happens — the positive control. Without it a
     // «no second read» assertion would pass on a route that reads nothing.
     expect(activeOffersFor).toHaveBeenCalledTimes(1);
-    expect(db.offer.findFirst).toHaveBeenCalledTimes(1);
-    // The shape of that read is asserted inside `discountIs`: `{ discount:
-    // true }` only, this offer, this company.
-    expect(db.offer.findFirst.mock.calls[0][0]).toEqual({
-      where: { id: 'off-25', companyId: 'c1' },
-      select: { discount: true },
-    });
-    // And the view it was NOT taken from carries no such field at all.
-    expect(Object.keys(OFFER_VIEW)).not.toContain('discount');
+    // And nothing else asks the offer table anything.
+    expect(db.offer.findFirst).toHaveBeenCalledTimes(0);
+    // The view it comes from carries both figures, which is why: what is
+    // charged, and what the bundle costs before its own reduction.
+    const view = toOfferView(OFFER_ROW, JOD.minorUnit);
+    expect(view.price).toBe(22);
+    expect(view.listPrice).toBe(25);
   });
 
   it('خصمٌ أكبرُ من السعرِ يَقِفُ عند صفر ولا يَنقلب', async () => {
@@ -259,6 +272,10 @@ describe('المقترَح للمراجع هو ما يَعِدُ به العرض
       countryId: 'sy',
       country: SYP,
     });
+    // The same offer and the same reduction, read in the whole-unit
+    // currency: `allocateDiscount` rounds 2.4 to 2 and the suggestion is 23.
+    // A file doing its own `25 - 2.4` would answer 22.6 here too.
+    discountIs(2.4, SYP.minorUnit);
     expect((await preview()).suggestedPrice).toBe(23);
   });
 
@@ -343,8 +360,15 @@ describe('وبابُ الكتابةِ يقبض ما أكّدَه المراجع�
 describe('وحسابُ المالِ يبقى في money.ts', () => {
   const src = () => stripComments(repoFile('src/app/api/orders/ai-intake/route.ts'));
 
-  it('نداءان لـ computeCod ولا ثالث', () => {
-    expect(src().match(/computeCod\(/g) ?? []).toHaveLength(2);
+  it('نداءٌ واحدٌ لـ computeCod ولا ثانٍ', () => {
+    /*
+     * It was two: one to raise the order and one the suggestion did of its
+     * own, beside a second read of `Offer.discount`. Both are gone — the
+     * view hands the route the charged figure, and a second subtraction
+     * here would charge 19 for a bundle promising 22.
+     */
+    expect(src().match(/computeCod\(/g) ?? []).toHaveLength(1);
+    expect(src()).toContain('suggestedPrice = qtyOffer.price;');
   });
 
   it('ولا تدويرَ من عندِه', () => {

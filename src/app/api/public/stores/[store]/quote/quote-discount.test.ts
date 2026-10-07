@@ -86,24 +86,27 @@ const OFF = {
 const OFF_B = { ...OFF, id: 'off-10', name: 'واحدة', quantity: 1, sellingPrice: 10, discount: 1 };
 
 /**
- * One mock serves both reads of the offer table — the catalogue read
- * (`activeOffersFor`, which filters by `productId` and must NOT be handed
- * the money column) and the discount read (by id, for the whole basket).
- * Dispatching on the `where` is what keeps the two honest: a mock that
- * answered both the same way would hide a missing filter.
+ * ONE READ OF THE OFFER TABLE NOW, AND IT CARRIES THE MONEY COLUMN.
+ *
+ * This mock used to serve two: the catalogue read, which it asserted must
+ * NOT be handed `discount`, and a second by-id read for the whole basket.
+ * That separation was the defect, not the discipline — keeping the column
+ * out of the view is what made `OfferView.price` the figure BEFORE the
+ * bundle's reduction while every door charged the figure after, so the
+ * landing page printed 25 for a bundle the cart priced at 22.
+ *
+ * The catalogue read now selects it and `toOfferView` applies it once. The
+ * mock asserts that, and asserts the second read is GONE — a by-id read
+ * arriving here fails loudly rather than being answered.
  */
 function sellingOffers(...offers: (typeof OFF)[]) {
   const byProduct: Record<string, (typeof OFF)[]> = { 'p-a': [], 'p-b': [] };
   for (const o of offers) byProduct[o.id === OFF_B.id ? 'p-b' : 'p-a'].push(o);
   db.offer.findMany.mockImplementation(async ({ where, select }: any) => {
     if (where?.id?.in) {
-      expect(select).toEqual({ id: true, discount: true });
-      expect(where.companyId).toBe('c1');
-      return offers
-        .filter((o) => where.id.in.includes(o.id))
-        .map((o) => ({ id: o.id, discount: o.discount }));
+      throw new Error('the second, by-id read of Offer.discount is gone — see toOfferView');
     }
-    expect(select?.discount).toBeUndefined();
+    expect(select?.discount).toBe(true);
     return byProduct[where?.productId] ?? [];
   });
 }
@@ -177,15 +180,18 @@ describe('the offer the brief names: 25, reduced by 3, a bundle of 2', () => {
     expect(q.cod).toBe(47);
   });
 
-  it('and reads the discounts in ONE query for the whole basket', async () => {
+  it('and reads the discounts in NO query of their own — the catalogue read carries them', async () => {
     sellingOffers(OFF, OFF_B);
     await body([
       { productId: 'p-a', offerId: OFF.id, quantity: 1 },
       { productId: 'p-b', offerId: OFF_B.id, quantity: 1 },
     ]);
     const discountReads = db.offer.findMany.mock.calls.filter((c: any[]) => c[0]?.where?.id?.in);
-    expect(discountReads).toHaveLength(1);
-    expect(discountReads[0][0].where.id.in.sort()).toEqual([OFF_B.id, OFF.id].sort());
+    expect(discountReads).toHaveLength(0);
+    // One read per product, each already carrying the column.
+    const catalogueReads = db.offer.findMany.mock.calls.filter((c: any[]) => c[0]?.where?.productId);
+    expect(catalogueReads).toHaveLength(2);
+    for (const [arg] of catalogueReads) expect(arg.select.discount).toBe(true);
   });
 });
 

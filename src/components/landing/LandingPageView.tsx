@@ -54,11 +54,11 @@ import { publicizeMedia } from '@/lib/public-media';
  * The offers this page sells. They belong to the PRODUCT, so raising a
  * price in the catalogue reaches every page selling it.
  */
-async function fetchOffers(companyId: string, productId: string | null) {
+async function fetchOffers(companyId: string, productId: string | null, minorUnit: number) {
   if (!productId) return [];
   // The view itself: one mapping, and the struck-through price already
   // measured against real delivered orders — see price-honesty.ts.
-  return activeOffersFor(db, companyId, productId);
+  return activeOffersFor(db, companyId, productId, minorUnit);
 }
 
 /**
@@ -79,9 +79,9 @@ function pageThemeOverride(raw: string | null | undefined): Partial<typeof DEFAU
   }
 }
 
-async function loadLpData(landingPageId: string, companyId: string, productId: string | null) {
+async function loadLpData(landingPageId: string, companyId: string, productId: string | null, minorUnit: number) {
   const [offers, recs] = await Promise.all([
-    fetchOffers(companyId, productId),
+    fetchOffers(companyId, productId, minorUnit),
     db.landingPageRecommendation.findMany({
       where: { landingPageId, isActive: true, product: { status: 'ACTIVE' } },
       orderBy: { sortOrder: 'asc' },
@@ -117,7 +117,7 @@ const PAGE_SELECT = {
   store: {
     select: {
       countryId: true, name: true, slug: true, logo: true, favicon: true, supportPhone: true, theme: true, language: true,
-      country: { select: { code: true, currencyCode: true } },
+      country: { select: { code: true, currencyCode: true, minorUnit: true } },
     },
   },
 } as const;
@@ -176,7 +176,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   }
   const companyId = lp.company!.id;
 
-  const [offers, recs] = await loadLpData(lp.id, companyId, lp.product?.id ?? null);
+  const [offers, recs] = await loadLpData(lp.id, companyId, lp.product?.id ?? null, lp.store?.country.minorUnit ?? 2);
   const previewToken = 'slug' in target && previewing ? target.previewToken : undefined;
   // A visitor has no session: every stored image this page shows goes out
   // through the public media route, naming this page (public-media.ts). A

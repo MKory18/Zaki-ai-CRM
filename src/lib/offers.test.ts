@@ -59,13 +59,15 @@ describe('what an offer may say', () => {
 });
 
 describe('the view a customer is shown', () => {
+  // The dinar, three places — the currency the charged price is rounded with.
+  const JOD = 3;
   const base = {
     id: 'o1', name: 'قطعتان', quantity: 2, freeQuantity: 0,
     sellingPrice: 108, compareAtPrice: 120, isDefault: true,
   };
 
   it('shows the bundle total as the price, never a unit price', () => {
-    expect(toOfferView(base).price).toBe(108);
+    expect(toOfferView(base, JOD).price).toBe(108);
   });
 
   /**
@@ -75,38 +77,113 @@ describe('the view a customer is shown', () => {
    * never charged. Evidence now, or nothing.
    */
   it('shows nothing when no delivered order supports it', () => {
-    expect(toOfferView(base).compareAtPrice).toBeNull();
-    expect(toOfferView(base, undefined).compareAtPrice).toBeNull();
+    expect(toOfferView(base, JOD).compareAtPrice).toBeNull();
+    expect(toOfferView(base, JOD, undefined).compareAtPrice).toBeNull();
   });
 
   it('shows the evidenced price when orders support it', () => {
-    expect(toOfferView(base, 120).compareAtPrice).toBe(120);
+    expect(toOfferView(base, JOD, 120).compareAtPrice).toBe(120);
   });
 
   /** The seller's number is a ceiling. It may be lower; it may never be higher. */
   it('never shows more of a saving than the orders prove', () => {
-    expect(toOfferView({ ...base, compareAtPrice: 200 }, 120).compareAtPrice).toBe(120);
+    expect(toOfferView({ ...base, compareAtPrice: 200 }, JOD, 120).compareAtPrice).toBe(120);
   });
 
   it('honours a claim below the evidence', () => {
-    expect(toOfferView({ ...base, compareAtPrice: 115 }, 120).compareAtPrice).toBe(115);
+    expect(toOfferView({ ...base, compareAtPrice: 115 }, JOD, 120).compareAtPrice).toBe(115);
   });
 
   it('hides a "was" price that is not above the price', () => {
     // 108 was 108 is not a saving; it is a lie with extra steps.
-    expect(toOfferView({ ...base, compareAtPrice: 108 }, 108).compareAtPrice).toBeNull();
-    expect(toOfferView({ ...base, compareAtPrice: 90 }, 90).compareAtPrice).toBeNull();
+    expect(toOfferView({ ...base, compareAtPrice: 108 }, JOD, 108).compareAtPrice).toBeNull();
+    expect(toOfferView({ ...base, compareAtPrice: 90 }, JOD, 90).compareAtPrice).toBeNull();
   });
 
   /** A claim with no number at all still shows the evidence. */
   it('needs no claim to show what really happened', () => {
-    expect(toOfferView({ ...base, compareAtPrice: null }, 120).compareAtPrice).toBe(120);
+    expect(toOfferView({ ...base, compareAtPrice: null }, JOD, 120).compareAtPrice).toBe(120);
+  });
+
+  /*
+   * WHAT THE CUSTOMER IS CHARGED, AND WHAT IT WAS BEFORE ITS OWN REDUCTION.
+   *
+   * Measured on the live app before any of this was written: the landing
+   * page printed «25 JOD · 12.50 / قطعة» for a bundle the cart quote priced
+   * at 22, and printed the identical 25 for the plain two-piece bundle
+   * beside it. Two cards a customer cannot tell apart, three dinars apart
+   * at the door — and the one whose own NAME says «بحسم ٣» was the cheap one.
+   *
+   * `price` is the charged figure now, which is what this file's own doc
+   * and `struckThroughPrice`'s own argument have always said it was.
+   */
+  const discounted = { ...base, sellingPrice: 25, compareAtPrice: null, quantity: 2, discount: 3 };
+
+  it('charges the bundle less its own reduction, and says what it was', () => {
+    const v = toOfferView(discounted, JOD);
+    expect(v.price).toBe(22);
+    expect(v.listPrice).toBe(25);
+  });
+
+  it('and a bundle with no reduction has nothing to strike through', () => {
+    const v = toOfferView({ ...discounted, discount: 0 }, JOD);
+    expect(v.price).toBe(25);
+    expect(v.listPrice).toBeNull();
+    // Absent is the same as none — a caller that has not selected the column.
+    expect(toOfferView({ ...base }, JOD).listPrice).toBeNull();
+  });
+
+  it('rounds the charge by the order’s own currency, not a global rule', () => {
+    // 2.4 off 25 is 22.6 where the dinar has three places and 23 where the
+    // lira has none. A file doing its own subtraction would answer 22.6 twice.
+    expect(toOfferView({ ...discounted, discount: 2.4 }, JOD).price).toBe(22.6);
+    expect(toOfferView({ ...discounted, discount: 2.4 }, 0).price).toBe(23);
+  });
+
+  it('rounds the REDUCTION before subtracting it, which is not the same answer', () => {
+    /*
+     * THE TEST THAT MADE A SOURCE GUARD UNNECESSARY.
+     *
+     * Replacing `allocateDiscount` with a hand-written
+     * `Math.max(0, Math.min(discount, price))` left every other number in
+     * this file unchanged — measured — so «the shared rule is used» was
+     * pinned only by its own name appearing in the source. A name is not a
+     * behaviour.
+     *
+     * The two differ wherever the reduction itself lands on a half: the
+     * shared rule rounds the DISCOUNT by the currency and then subtracts,
+     * the hand version subtracts and rounds once. In a whole-unit currency
+     * a reduction of 2.5 off 25 is 22 the first way and 23 the second, and
+     * 0.5 off 25 is 24 against 25 — a reduction that disappears entirely.
+     */
+    expect(toOfferView({ ...discounted, discount: 2.5 }, 0).price).toBe(22);
+    expect(toOfferView({ ...discounted, discount: 1.5 }, 0).price).toBe(23);
+    // The one that matters most: a small reduction must not round away to
+    // nothing while the card still strikes a price through.
+    expect(toOfferView({ ...discounted, discount: 0.5 }, 0).price).toBe(24);
+  });
+
+  it('never lets a reduction invert a price', () => {
+    // `57eb1d6` refuses this at the door; the clamp is the second net.
+    expect(toOfferView({ ...discounted, discount: 30 }, JOD).price).toBe(0);
+    expect(toOfferView({ ...discounted, discount: 30 }, JOD).price).toBeGreaterThanOrEqual(0);
+  });
+
+  it('measures an evidenced «was» against what is CHARGED, not what is listed', () => {
+    /*
+     * 24 delivered before, 22 charged now: a true saving, and it used to be
+     * hidden — `struckThroughPrice` compared it against the pre-discount 25
+     * and 24 is not above that. The customer pays 22.
+     */
+    const v = toOfferView({ ...discounted, compareAtPrice: 24 }, JOD, 24);
+    expect(v.price).toBe(22);
+    expect(v.compareAtPrice).toBe(24);
   });
 
   it('carries the ending, so the countdown has one source', () => {
     const ends = new Date('2026-10-01T00:00:00.000Z');
-    expect(toOfferView({ ...base, endsAt: ends }).endsAt).toBe(ends);
-    expect(toOfferView(base).endsAt).toBeNull();
+    expect(toOfferView({ ...base, endsAt: ends }, JOD).endsAt).toBe(ends);
+    expect(toOfferView(base, JOD).endsAt).toBeNull();
   });
 });
 

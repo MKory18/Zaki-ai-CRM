@@ -156,20 +156,22 @@ export async function POST(req: Request, ctx: Ctx) {
       select: { id: true, name: true, image: true, basePrice: true },
     });
 
-    const resolved = await resolvePublicLines(store.companyId, products, chosen);
-    if (!resolved.ok) {
-      return NextResponse.json(
-        { error: Object.values(resolved.fieldErrors)[0] ?? 'تعذّر تسعير السلة' },
-        { status: 400, headers: CORS }
-      );
-    }
-
+    // The currency first: the offer view rounds its charged price with it,
+    // so the lines cannot be priced before the country is known.
     const country = await db.country.findUnique({
       where: { id: store.countryId },
       select: { currencyCode: true, minorUnit: true },
     });
     if (!country) {
       return NextResponse.json({ error: 'هذا المتجر لا يقبل الطلبات حاليًا' }, { status: 409, headers: CORS });
+    }
+
+    const resolved = await resolvePublicLines(store.companyId, products, chosen, country.minorUnit);
+    if (!resolved.ok) {
+      return NextResponse.json(
+        { error: Object.values(resolved.fieldErrors)[0] ?? 'تعذّر تسعير السلة' },
+        { status: 400, headers: CORS }
+      );
     }
 
     /**

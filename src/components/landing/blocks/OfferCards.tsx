@@ -17,7 +17,14 @@ interface Offer {
   name: string;
   quantity: number;
   freeQuantity: number;
+  /** What the customer is charged for this bundle. */
   price: number;
+  /**
+   * The bundle's price before its OWN reduction, and null when there is none.
+   * A certainty about today, unlike `compareAtPrice`, which is a claim about
+   * the past and has to be earned from delivered orders.
+   */
+  listPrice?: number | null;
   /** The struck-through "was" price. Display only — never charged. */
   compareAtPrice?: number | null;
   isDefault?: boolean;
@@ -58,13 +65,19 @@ export function OfferCards({ offers, currency }: { offers: Offer[]; currency: st
               {o.freeQuantity > 0 && <em> + {o.freeQuantity} مجاناً</em>}
             </span>
             <span className="lp-offer-price" dir="ltr">
-              {/* Already measured — against the price, and against real
-                  delivered orders. See price-honesty.ts. This used to repeat
-                  the «must be above the price» half here, which is a second
-                  copy of a rule that can only ever be one. */}
-              {o.compareAtPrice !== null && o.compareAtPrice !== undefined && (
-                <s>{o.compareAtPrice.toLocaleString('en-US')}</s>
-              )}
+              {/* ONE STRUCK-THROUGH FIGURE, AND THE CERTAIN ONE WINS.
+                  `listPrice` is this bundle's own price before its own
+                  reduction — the seller typed both numbers and `57eb1d6`
+                  refuses a discount that reaches the price, so it is always
+                  above what is charged and needs no evidence. `compareAtPrice`
+                  is a claim about the past and is already measured against
+                  real delivered orders (price-honesty.ts). Two strikes on one
+                  price is not a saving, it is a puzzle, so the certainty is
+                  shown and the claim falls back behind it. */}
+              {(o.listPrice ?? o.compareAtPrice) !== null &&
+                (o.listPrice ?? o.compareAtPrice) !== undefined && (
+                  <s>{(o.listPrice ?? o.compareAtPrice)!.toLocaleString('en-US')}</s>
+                )}
               {o.price.toLocaleString('en-US')} {currency}
             </span>
             {units > 1 && (

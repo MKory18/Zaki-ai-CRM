@@ -154,7 +154,7 @@ ${settings.width === 'contained' && settings.maxWidth ? `.zaki-page-wrap{max-wid
   // read a per-page copy of the same tiers; there is only one copy now, so a
   // price raised in the catalogue reaches the uploaded HTML too.
   const productOffers = lp.productId
-    ? await activeOffersFor(db, lp.companyId, lp.productId)
+    ? await activeOffersFor(db, lp.companyId, lp.productId, lp.store?.country.minorUnit ?? 2)
     : [];
 
   html = resolveDynamicPlaceholders({

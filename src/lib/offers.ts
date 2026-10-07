@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { count, money } from './numeric-input';
 import { omittedMeansOmitted } from './zod-patch';
 import { evidencedWasPrices, struckThroughPrice } from './price-honesty';
+// `money.ts` imports nothing from here, so the one money rule stays a leaf.
+import { allocateDiscount, roundMinor } from './money';
 import type { Prisma } from '@prisma/client';
 import type { db } from './db';
 
@@ -234,6 +236,15 @@ export async function activeOffersFor(
   tx: Tx,
   companyId: string,
   productId: string,
+  /*
+   * THE CURRENCY, AND IT IS REQUIRED ON PURPOSE.
+   *
+   * `price` below is money the customer is charged, so it is rounded, and
+   * rounding is the order's own currency's business — JOD has three places
+   * and the dollar two. A default here would be a fourth place money gets
+   * decided, and a caller that forgets is a compile error instead.
+   */
+  minorUnit: number,
   now: Date = new Date()
 ): Promise<OfferView[]> {
   const rows = await tx.offer.findMany({
@@ -245,6 +256,10 @@ export async function activeOffersFor(
       quantity: true,
       freeQuantity: true,
       sellingPrice: true,
+      // The bundle's own reduction. Selected here for the first time: for as
+      // long as it was not, `price` below was the figure BEFORE it, while
+      // every door charged the figure after — see `toOfferView`.
+      discount: true,
       compareAtPrice: true,
       isDefault: true,
       deliveryIncluded: true,
@@ -253,7 +268,7 @@ export async function activeOffersFor(
   });
 
   const evidence = await evidencedWasPrices(tx, rows);
-  return rows.map((o) => toOfferView(o, evidence.get(o.id)));
+  return rows.map((o) => toOfferView(o, minorUnit, evidence.get(o.id)));
 }
 
 /**
@@ -262,13 +277,33 @@ export async function activeOffersFor(
  * `price` is the bundle's total — never a unit price. Every caller that
  * divides by the quantity does so from this one number, so a per-unit figure
  * shown to a customer can never disagree with what they are charged.
+ *
+ * THAT SENTENCE WAS FALSE FOR AS LONG AS A DISCOUNT EXISTED, and this file
+ * said it anyway. `price` was `sellingPrice`, the figure BEFORE the bundle's
+ * own `discount`, while `createPublicOrder`, the cart quote and `POST /orders`
+ * all charged the figure after it. Measured on the live app: the landing page
+ * printed «25 JOD · 12.50 / قطعة» for an offer the quote door priced at 22,
+ * and printed the identical 25 for the plain two-piece bundle beside it —
+ * two cards a customer cannot tell apart, three dinars apart at the door.
+ * `price` is now what is charged, which is what this doc always claimed and
+ * what `struckThroughPrice` has always documented its own argument to be.
  */
 export interface OfferView {
   id: string;
   name: string;
   quantity: number;
   freeQuantity: number;
+  /** What the customer is charged for this bundle. */
   price: number;
+  /**
+   * The bundle's price before its OWN reduction, and null when there is none.
+   *
+   * Not the same fact as `compareAtPrice`: that is a claim about the past and
+   * must be earned from delivered orders, while this is a certainty about
+   * today — the seller typed both numbers, and `57eb1d6` refuses a discount
+   * that reaches the price, so it is always above it.
+   */
+  listPrice: number | null;
   /** Already measured against real delivered orders. Null means show nothing. */
   compareAtPrice: number | null;
   isDefault: boolean;
@@ -284,11 +319,15 @@ export function toOfferView(
     quantity: number;
     freeQuantity: number;
     sellingPrice: number;
+    /** Absent only for a caller that has not selected it; treated as none. */
+    discount?: number | null;
     compareAtPrice: number | null;
     isDefault: boolean;
     deliveryIncluded?: boolean;
     endsAt?: Date | null;
   },
+  /** The order's own currency. See `activeOffersFor` for why it is required. */
+  minorUnit: number,
   /**
    * What this bundle was really delivered at before, from
    * `evidencedWasPrices`. Absent means «not proven», which shows nothing —
@@ -297,14 +336,34 @@ export function toOfferView(
    */
   evidence?: number
 ): OfferView {
+  /*
+   * THE REDUCTION IS APPLIED BY `allocateDiscount`, NOT HERE.
+   *
+   * A bundle is one line, so the allocation is the whole of it — and going
+   * through the shared function is what makes this card and the door agree
+   * by construction rather than by two people writing the same subtraction.
+   * It carries the clamp (`Math.min(discount, subtotal)`, so a reduction can
+   * never invert a price) and the one rounding rule, both of which a hand
+   * -written `sellingPrice - discount` would have to restate.
+   */
+  const [taken] = allocateDiscount(
+    [{ quantity: 1, unitPrice: o.sellingPrice }],
+    Number(o.discount ?? 0),
+    minorUnit
+  );
+  const charged = roundMinor(o.sellingPrice - taken, minorUnit);
   return {
     id: o.id,
     name: o.name,
     quantity: o.quantity,
     freeQuantity: o.freeQuantity,
-    price: o.sellingPrice,
+    price: charged,
+    listPrice: taken > 0 ? roundMinor(o.sellingPrice, minorUnit) : null,
     compareAtPrice: struckThroughPrice({
-      price: o.sellingPrice,
+      // The charged figure, so an evidenced «was» is compared against what is
+      // actually paid. A past 24 beside a charged 22 is a true strike-through
+      // and used to be hidden, because 24 is not above the pre-discount 25.
+      price: charged,
       claim: o.compareAtPrice,
       evidence,
     }),

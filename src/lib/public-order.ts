@@ -101,7 +101,9 @@ export type ResolveResult =
 export async function resolvePublicLines(
   companyId: string,
   products: SellingSurface['products'],
-  chosen: ChosenLine[]
+  chosen: ChosenLine[],
+  /** The order's own currency — `activeOffersFor` rounds the charged price with it. */
+  minorUnit: number
 ): Promise<ResolveResult> {
   const byId = new Map(products.map((p) => [p.id, p]));
   const lines: ResolvedLine[] = [];
@@ -114,7 +116,7 @@ export async function resolvePublicLines(
 
     // One query per product: a basket is bounded at MAX_CART_LINES, and
     // this runs when somebody opens their cart or presses «اطلب».
-    const offers = await activeOffersFor(db, companyId, p.id);
+    const offers = await activeOffersFor(db, companyId, p.id, minorUnit);
     let offer: OfferView | null = null;
     if (want.offerId) {
       const found = offers.find((o) => o.id === want.offerId);
@@ -125,44 +127,48 @@ export async function resolvePublicLines(
       return { ok: false, fieldErrors: { offerId: 'يرجى اختيار أحد العروض.' } };
     }
 
+    /*
+     * THE PRE-DISCOUNT UNIT PRICE, AND THE REDUCTION, BOTH FROM THE VIEW.
+     *
+     * `offer.price` is now what the customer is CHARGED and `offer.listPrice`
+     * is the bundle before its own reduction, so the difference IS the
+     * discount — and `computeCod` must be handed the figures BEFORE it, or
+     * it would subtract a reduction already taken and charge 19 for a bundle
+     * that promises 22.
+     *
+     * The reduction is not simply dropped instead. `computeCod` allocates it
+     * into `OrderItem.discountShare`, which is the figure a partial return
+     * refunds against — losing it is the quieter half of the defect 448ba22
+     * was written for.
+     */
     const unitsPerPick = offer ? offer.quantity : 1;
-    const unitPrice = offer ? offer.price / offer.quantity : p.basePrice;
+    const listTotal = offer ? offer.listPrice ?? offer.price : p.basePrice;
+    const unitPrice = offer ? listTotal / offer.quantity : p.basePrice;
     lines.push({
       product: p,
       offer,
       quantity: unitsPerPick * want.count,
       freeQuantity: (offer ? offer.freeQuantity : 0) * want.count,
       unitPrice,
-      // Filled below, in ONE query for the whole basket.
-      offerDiscount: 0,
+      offerDiscount: offer ? Math.max(0, listTotal - offer.price) : 0,
     });
   }
 
-  /**
-   * THE DISCOUNTS, in one query for the whole basket.
+  /*
+   * THE SECOND QUERY IS GONE, and so is the reason it existed.
    *
-   * One read, not one per product: the ids are already settled by the loop
-   * above, and every one of them came out of `activeOffersFor` for THIS
-   * company and THIS product — so they are live, they are ours, and the
-   * `companyId` here is belt-and-braces rather than the check that matters.
+   * A basket-wide read of `Offer.discount` stood here, under a comment
+   * explaining that the view «does not carry this column; widening it would
+   * put a money figure into the shape four public surfaces render». The
+   * view already carried a money figure — `price` — and the real defect was
+   * that it was the WRONG one: the figure before the bundle's reduction,
+   * while every door charged the figure after. So the landing page printed
+   * 25 for a bundle the cart priced at 22.
    *
-   * This is a second touch of the offer table, and it is deliberate.
-   * `activeOffersFor` returns the VIEW a browser is shown and does not
-   * carry this column; widening it would put a money figure into the shape
-   * four public surfaces render. Cheaper to ask again, once.
+   * `activeOffersFor` now returns both, computed once by `allocateDiscount`,
+   * and the loop above reads them. One source, one subtraction, and a query
+   * per basket fewer.
    */
-  const offerIds = [...new Set(lines.map((l) => l.offer?.id).filter((id): id is string => !!id))];
-  if (offerIds.length > 0) {
-    const rows = await db.offer.findMany({
-      where: { companyId, id: { in: offerIds } },
-      select: { id: true, discount: true },
-    });
-    const byOffer = new Map(rows.map((r) => [r.id, r.discount ?? 0]));
-    for (const line of lines) {
-      if (line.offer) line.offerDiscount = byOffer.get(line.offer.id) ?? 0;
-    }
-  }
-
   return { ok: true, lines };
 }
 
@@ -322,7 +328,7 @@ export async function createPublicOrder(
     ? v.items.map((i) => ({ productId: i.productId, offerId: i.offerId || '', count: i.quantity }))
     : [{ productId: principalProduct.id, offerId: v.offerId || '', count: 1 }];
 
-  const resolved = await resolvePublicLines(companyId, surface.products, chosen);
+  const resolved = await resolvePublicLines(companyId, surface.products, chosen, surface.store.country.minorUnit);
   if (!resolved.ok) {
     return {
       ok: false,

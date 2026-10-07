@@ -136,7 +136,13 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
   // The same offers the order path will charge from. A listing that reads a
   // different source is a listing that can advertise a price the checkout
   // refuses.
-  const offers = await activeOffersFor(db, store.companyId, product.id);
+  // The country's own minor unit: the same one every price on this page
+  // is written with.
+  const minorUnit =
+    (await db.country.findUnique({ where: { id: store.countryId }, select: { minorUnit: true } }))
+      ?.minorUnit ?? 2;
+
+  const offers = await activeOffersFor(db, store.companyId, product.id, minorUnit);
 
   // Already the shape every surface renders, and already measured against
   // real delivered orders — see price-honesty.ts. This used to be a copy of
@@ -152,11 +158,6 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
    * products come from the same shelf read the grid uses, so a pair whose
    * other half has been retired quietly shrinks the row.
    */
-  // The country's own minor unit: the same one every price on this page
-  // is written with.
-  const minorUnit =
-    (await db.country.findUnique({ where: { id: store.countryId }, select: { minorUnit: true } }))
-      ?.minorUnit ?? 2;
 
   const pairs = await boughtTogether(db, { companyId: store.companyId, storeId: store.id }, product.id);
   const shelf = pairs.length > 0 ? await storefrontProducts(store.companyId, store.id) : [];

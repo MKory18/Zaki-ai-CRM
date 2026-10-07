@@ -26,7 +26,15 @@ export async function sellingCurrency(
   return first?.currencyCode || 'USD';
 }
 
-/** What a landing page select needs to price itself. */
+/**
+ * What a landing page select needs to price itself.
+ *
+ * The minor unit joined it the day `OfferView.price` became the figure
+ * the customer is CHARGED rather than the one before the bundle's own
+ * discount: a charged figure is rounded, and rounding is the country's
+ * business. A page that selects the code without it can print a currency
+ * it cannot round in.
+ */
 export const SELLING_STORE_SELECT = {
-  select: { country: { select: { currencyCode: true } } },
+  select: { country: { select: { currencyCode: true, minorUnit: true } } },
 } as const;

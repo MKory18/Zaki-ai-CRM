@@ -310,12 +310,23 @@ describe('a basket of two bundles', () => {
     expect(items().reduce((s: number, l: any) => s + l.lineTotal, 0)).toBe(31);
   });
 
-  it('and asks for the discounts in ONE query, not one per product', async () => {
+  it('and asks for the discounts in NO query at all — the view already carried them', async () => {
+    /*
+     * THE QUERY THAT WENT. A basket-wide second read of `Offer.discount`
+     * stood here and this test demanded it be exactly one, not one per
+     * product. It is now none: `activeOffersFor` returns the charged price
+     * and the pre-discount one, and the difference IS the reduction.
+     *
+     * Asserted as ABSENCE, not merely as a smaller number — a second read
+     * that comes back for any reason is a second place the figure can
+     * disagree with the card the customer pressed.
+     */
     sellingOffers(OFF, OFF_B);
     await createPublicOrder(surface([P.a, P.b]) as never, body(twoBundles));
     const discountReads = db.offer.findMany.mock.calls.filter((c: any[]) => c[0]?.where?.id?.in);
-    expect(discountReads).toHaveLength(1);
-    expect(discountReads[0][0].where.id.in.sort()).toEqual([OFF_B.id, OFF.id].sort());
+    expect(discountReads).toHaveLength(0);
+    // And the reduction still reached the order, from the view instead.
+    expect(created().totalAmount).toBe(31);
   });
 });
 
