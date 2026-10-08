@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { PartialDeliveryRefused, recordPartialDelivery } from '@/lib/partial-delivery';
+import { doorMoney } from '@/lib/settlement';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -47,6 +48,29 @@ const schema = z.union([
       .min(1)
       .max(100),
     note: z.string().trim().max(300).optional(),
+    /**
+     * ASK WHAT THIS WOULD COLLECT, AND WRITE NOTHING.
+     *
+     * `DeliverDialog` showed the money a courier is about to be told to
+     * collect, and it worked the figure out ITSELF — a second copy of the
+     * door's rule, carried on `the-frontend-invariants.test.ts`'s DIVERGED
+     * list. The two disagreed, measured:
+     *
+     *   an order with a thank-you-page upsell   door 29.5   screen 24.5
+     *   the same, one of two units refused      door 18.5   screen 13.5
+     *   Syrian pounds, whole units              door 21     screen 21.333…
+     *
+     * The upsell has no LINE, so the screen's loop over lines could never
+     * see it, and nothing in the browser rounded by the store's currency.
+     * The courier was told a figure five dinars short of what the door
+     * would actually record.
+     *
+     * The contract forbids computing a COD in a browser at all, so the
+     * answer is not a corrected copy — it is this: the same door, reading
+     * the same order, running the SAME `doorMoney`, and returning the
+     * figures for the screen to print.
+     */
+    preview: z.literal(true).optional(),
   }),
 ]);
 
@@ -81,6 +105,47 @@ export async function POST(req: Request) {
       }));
     } else {
       lines = asked.lines;
+    }
+
+    /*
+     * THE PREVIEW ANSWERS AND STOPS. No transaction, no stock, no audit —
+     * the person has not pressed anything yet. It is deliberately AFTER the
+     * permission check and the `outcome` expansion, so what it prices is
+     * exactly what a submit would price.
+     */
+    if ('preview' in asked && asked.preview) {
+      const order = await db.order.findFirst({
+        where: { id: asked.orderId, companyId },
+        select: {
+          priceIncludesDelivery: true,
+          deliveryFee: true,
+          addOns: { select: { quantity: true, price: true } },
+          items: {
+            select: { id: true, quantity: true, freeQuantity: true, unitPrice: true, discountShare: true, lineTotal: true },
+          },
+        },
+      });
+      if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
+
+      const asKept = new Map(lines.map((l) => [l.itemId, l.deliveredQty]));
+      const money = doorMoney(
+        {
+          items: order.items.map((i) => ({ ...i, deliveredQty: asKept.get(i.id) ?? 0 })),
+          addOns: order.addOns,
+          priceIncludesDelivery: order.priceIncludesDelivery,
+          deliveryFee: order.deliveryFee,
+        },
+        country.minorUnit
+      );
+      return NextResponse.json({
+        preview: {
+          goods: money.goods,
+          addOns: money.addOns,
+          fee: money.fee,
+          collected: money.collected,
+          anythingTaken: money.anythingTaken,
+        },
+      });
     }
 
     try {

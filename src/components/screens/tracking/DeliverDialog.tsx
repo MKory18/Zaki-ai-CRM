@@ -66,19 +66,59 @@ export function DeliverDialog({
       .catch((e) => setError(e instanceof Error ? e.message : 'تعذر تحميل البنود'));
   }, [order.id]);
 
-  const fee = Number(order.deliveryFee ?? 0);
   const anyTaken = Object.values(taken).some((n) => n > 0);
-
-  const goods = (lines ?? []).reduce((sum, l) => {
-    const delivered = taken[l.id] ?? 0;
-    const paid = Math.min(delivered, l.quantity);
-    const discountPerUnit = l.quantity > 0 ? Number(l.discountShare) / l.quantity : 0;
-    return sum + paid * (Number(l.unitPrice) - discountPerUnit);
-  }, 0);
-
-  const chargedFee = anyTaken ? fee : 0;
-  const collected = order.priceIncludesDelivery ? goods : goods + chargedFee;
   const allTaken = (lines ?? []).every((l) => (taken[l.id] ?? 0) === l.quantity + l.freeQuantity);
+
+  /**
+   * THE MONEY IS THE DOOR'S, ASKED FOR — NOT WORKED OUT HERE.
+   *
+   * This screen used to compute it: a loop over the lines, the discount
+   * share divided back out per unit, the fee added unless it was already
+   * in the price. A second copy of `doorMoney`, and
+   * `the-frontend-invariants.test.ts` carried it on the DIVERGED list.
+   *
+   * MEASURED, the two copies apart:
+   *
+   *   an order with a thank-you-page upsell   door 29.5   screen 24.5
+   *   the same, one of two units refused      door 18.5   screen 13.5
+   *   Syrian pounds, whole units              door 21     screen 21.333…
+   *
+   * The upsell has no LINE, so a loop over lines could never see it — the
+   * courier was told to collect five dinars less than the door would
+   * record. And nothing here rounded by the store's currency.
+   *
+   * The contract forbids computing a COD in a browser, so this is not a
+   * corrected copy: `POST …/deliver` answers `{ preview }` for the ticks
+   * as they stand, running the same `doorMoney` the submit will run, and
+   * writing nothing. Until it answers, the figures are a dash — never a
+   * confident zero over a sum nobody has made.
+   */
+  const [money, setMoney] = useState<{ goods: number; fee: number; collected: number } | null>(null);
+  const [pricing, setPricing] = useState(false);
+
+  useEffect(() => {
+    if (!lines) return;
+    const body = {
+      orderId: order.id,
+      lines: lines.map((l) => ({ itemId: l.id, deliveredQty: taken[l.id] ?? 0 })),
+      preview: true as const,
+    };
+    let current = true;
+    setPricing(true);
+    apiJson<{ preview: { goods: number; fee: number; collected: number } }>(
+      '/api/ops/tracking/deliver',
+      { method: 'POST', body: JSON.stringify(body) }
+    )
+      .then((d) => { if (current) setMoney(d.preview); })
+      // A failed price is a dash, not a stale figure from the last tick.
+      .catch(() => { if (current) setMoney(null); })
+      .finally(() => { if (current) setPricing(false); });
+    return () => { current = false; };
+  }, [lines, taken, order.id]);
+
+  /** A figure the server sent, or a dash. Never one this screen made. */
+  const figure = (v: number | undefined) =>
+    v === undefined ? <span className="text-[var(--sys-muted)]">—</span> : <Money value={v} currency={order.currency} />;
 
   return (
     <Modal
@@ -171,14 +211,14 @@ export function DeliverDialog({
             <div className="text-xs bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3 space-y-1 tabular-nums">
               <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>قيمة ما استُلم</span>
-                <span><Money value={goods} currency={order.currency} /></span>
+                <span>{figure(money?.goods)}</span>
               </p>
               <p className="flex justify-between text-[var(--sys-foreground)]">
                 <span>
                   أجرة التوصيل
                   {order.priceIncludesDelivery && <span className="text-[var(--sys-muted)]"> (داخلة في السعر)</span>}
                 </span>
-                <span><Money value={chargedFee} currency={order.currency} /></span>
+                <span>{figure(money?.fee)}</span>
               </p>
               {/*
                 «المتوقَّع», not «المحصَّل».
@@ -189,10 +229,12 @@ export function DeliverDialog({
               */}
               <p className="flex justify-between font-semibold text-[var(--sys-heading)] border-t border-[var(--sys-border)] pt-1">
                 <span>المتوقَّع تحصيله</span>
-                <span><Money value={collected} currency={order.currency} /></span>
+                <span>{figure(money?.collected)}</span>
               </p>
               <p className="text-xs text-[var(--sys-muted)]">
-                المبلغ الفعليّ يُسجَّل من كشف شركة الشحن عند المطابقة — لا من هنا.
+                {pricing
+                  ? 'جارٍ حساب المتوقَّع على الخادم…'
+                  : 'المبلغ الفعليّ يُسجَّل من كشف شركة الشحن عند المطابقة — لا من هنا.'}
               </p>
 
               {!allTaken && anyTaken && (

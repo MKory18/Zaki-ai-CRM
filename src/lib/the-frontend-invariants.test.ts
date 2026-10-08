@@ -253,9 +253,28 @@ const RENDERS_ONLY: Record<string, string> = {
  * the deliver dialog needs a dry-run the delivery endpoint does not offer.
  */
 const DIVERGED: Record<string, string> = {
-  'src/components/screens/tracking/DeliverDialog.tsx':
-    'يعيد كتابة قاعدة COD وتوزيع الخصم وأجرة التسليم الجزئي التي في partial-delivery.ts',
   /*
+   * EMPTY, AND THAT IS THE LIST WORKING RATHER THAN THE LIST BEING UNUSED.
+   *
+   * `DeliverDialog.tsx` was the last entry — «it rewrites the COD rule and
+   * the discount allocation and the partial-delivery fee that are in
+   * partial-delivery.ts» — and the note above this list said its remedy
+   * «is not a line: the deliver dialog needs a dry-run the delivery
+   * endpoint does not offer».
+   *
+   * The endpoint offers one now (`preview: true`), running the same
+   * `doorMoney` the submit runs, and the dialog prints what comes back.
+   * Measured before it was built, the two copies apart: an order carrying
+   * a thank-you-page upsell priced 29.5 at the door and 24.5 on the
+   * screen — five dinars the courier was never asked for, invisible to the
+   * screen's loop because an add-on has no line to loop over.
+   *
+   * An entry leaves this list when the ARITHMETIC leaves the browser. The
+   * test below fails on a name that no longer sweeps, which is what
+   * prompted both removals.
+   *
+   * ── and the one before it ────────────────────────────────────────────
+   *
    * `OrderLinesCard.tsx` STOOD HERE AND IS GONE, which is what this list is
    * supposed to lead to.
    *
@@ -287,10 +306,18 @@ const DIVERGED: Record<string, string> = {
 
 describe('Ⅰ · every screen that does arithmetic on one of the eleven figures is classified', () => {
   it('and the sweep finds a real set, not an empty one', () => {
-    // A detector that matches nothing passes every rule in this file. The
-    // floor is the measured set less a little slack, so a refactor that
-    // genuinely removes a screen does not fail — but a broken regex does.
-    expect(SWEPT.length).toBeGreaterThanOrEqual(10);
+    /*
+     * A detector that matches nothing passes every rule in this file. The
+     * floor is the measured set less a little slack, so a refactor that
+     * genuinely removes a screen does not fail — but a broken regex does.
+     *
+     * LOWERED FROM 10 TO 8 when `DeliverDialog` stopped computing: the
+     * swept set is 9 now. It comes down by hand, in the commit that takes
+     * a screen off the list, because a floor that drifts on its own is not
+     * a floor. Both removals so far were real — `OrderLinesCard` and this
+     * one — and the number should keep falling.
+     */
+    expect(SWEPT.length).toBeGreaterThanOrEqual(8);
   });
 
   it('and not one of them is unaccounted for', () => {
@@ -368,9 +395,17 @@ describe('Ⅱ · the shape of a forbidden rule, wherever it is written', () => {
      * not do is make the flag the head of a ternary that chooses between
      * two money expressions, because that IS the branch.
      */
-    expect(shapeHits(/\b(?:price)?[Ii]ncludesDelivery\s*\?\s*[^:\n]+:/)).toEqual([
-      'src/components/screens/tracking/DeliverDialog.tsx:80',
-    ]);
+    /*
+     * AND NOW THERE IS NO SUCH TERNARY ANYWHERE.
+     *
+     * This expectation named one line — `DeliverDialog.tsx:80`,
+     * `order.priceIncludesDelivery ? goods : goods + chargedFee` — the last
+     * place a browser branched on the flag to pick between two money
+     * expressions. The dialog asks the door for the figure now, so the
+     * shape is gone and the rule is held as an absence, which is the
+     * stronger form: a new one fails here on the day it is written.
+     */
+    expect(shapeHits(/\b(?:price)?[Ii]ncludesDelivery\s*\?\s*[^:\n]+:/)).toEqual([]);
   });
 
   it('the delivery fee is never taken out of an order total in a browser', () => {
@@ -392,9 +427,16 @@ describe('Ⅱ · the shape of a forbidden rule, wherever it is written', () => {
     // line. Without this, partial returns refund the wrong amount.» The
     // allocation is `money.allocateDiscount`; spreading the stored share
     // back over the units is `partial-delivery.ts:188` and nowhere else.
-    expect(shapeHits(/discount\w*\s*\)?\s*\/\s*[\w.]*(?:quantity|qty|units)/i)).toEqual([
-      'src/components/screens/tracking/DeliverDialog.tsx:75',
-    ]);
+    /*
+     * AND THE ONE PLACE THAT DID IT IS GONE. `DeliverDialog.tsx:75` was
+     * `Number(l.discountShare) / l.quantity` — the stored share spread back
+     * over units so the screen could price a partial delivery. It priced it
+     * wrong: the loop could not see the thank-you-page upsell, which has no
+     * line, so an order carrying one was shown five dinars short of what
+     * the door records. The door prices it now and the browser prints the
+     * answer, so this is held as an absence.
+     */
+    expect(shapeHits(/discount\w*\s*\)?\s*\/\s*[\w.]*(?:quantity|qty|units)/i)).toEqual([]);
   });
 });
 
@@ -757,39 +799,70 @@ describe('Ⅳ · 1 — the tracking screen’s «صافي» is not the settlemen
   });
 });
 
-describe('Ⅳ · 2 — the deliver dialog is a second COD engine', () => {
+describe('Ⅳ · 2 — the deliver dialog asks the door, and computes nothing', () => {
   const DIALOG = 'src/components/screens/tracking/DeliverDialog.tsx';
+  const DOOR = 'src/app/api/ops/tracking/deliver/route.ts';
 
-  it('all four rules are written out in the browser, and pinned as they are', () => {
+  /**
+   * THIS SECTION USED TO BE A REPORT. It named four rules the browser had
+   * transcribed — the per-unit discount, the delivered value, the
+   * partial-delivery fee, and the COD branch — pinned them as they stood,
+   * and measured where they had already drifted from the server. Ⅳ reports
+   * rather than fixes, and its closing line was that the remedy «is the
+   * endpoint's change, not this file's».
+   *
+   * The endpoint changed. The four rules are gone from the browser and the
+   * section is the record of the remedy instead, with the gaps kept as
+   * arithmetic so nobody has to take the reason on trust.
+   */
+  it('none of the four rules is written in the browser any more', () => {
     const src = stripComments(repoFile(DIALOG));
-    // The per-unit discount — the allocation rule.
-    expect(src).toMatch(/const discountPerUnit = l\.quantity > 0 \? Number\(l\.discountShare\) \/ l\.quantity : 0;/);
+    // The allocation rule, spread back over units.
+    expect(src).not.toMatch(/discountPerUnit/);
+    expect(src).not.toMatch(/Number\(l\.discountShare\)/);
     // The delivered value.
-    expect(src).toMatch(/return sum \+ paid \* \(Number\(l\.unitPrice\) - discountPerUnit\);/);
-    // The partial-delivery fee rule: in full unless nothing was taken.
-    expect(src).toMatch(/const chargedFee = anyTaken \? fee : 0;/);
-    // The COD branch.
-    expect(src).toMatch(
-      /const collected = order\.priceIncludesDelivery \? goods : goods \+ chargedFee;/
-    );
-    // All three are PRINTED, so they are figures and not intermediates.
-    expect(src).toMatch(/<Money value=\{goods\} currency=\{order\.currency\} \/>/);
-    expect(src).toMatch(/<Money value=\{chargedFee\} currency=\{order\.currency\} \/>/);
-    expect(src).toMatch(/<Money value=\{collected\} currency=\{order\.currency\} \/>/);
+    expect(src).not.toMatch(/Number\(l\.unitPrice\)/);
+    // The partial-delivery fee rule.
+    expect(src).not.toMatch(/anyTaken \? fee : 0/);
+    // The COD branch — the shape nets in Ⅱ hold this one globally now.
+    expect(src).not.toMatch(/priceIncludesDelivery \? /);
   });
 
-  it('and the server’s copy of those four is GONE — they live in one place now', () => {
+  it('and it asks the door for the figures instead, writing nothing', () => {
+    const src = stripComments(repoFile(DIALOG));
+    expect(src).toMatch(/preview: true as const/);
+    expect(src).toMatch(/'\/api\/ops\/tracking\/deliver'/);
+    // What it prints is what came back, and a dash before it does.
+    expect(src).toMatch(/figure\(money\?\.goods\)/);
+    expect(src).toMatch(/figure\(money\?\.fee\)/);
+    expect(src).toMatch(/figure\(money\?\.collected\)/);
+  });
+
+  it('and the door prices a preview with the SAME function it settles with', () => {
     /*
-     * `partial-delivery.ts` used to hold the original, line for line, and
-     * this pinned the pair of them. On 2026-10-02 the server's copy went:
-     * the door calls `doorMoney` in `settlement.ts`, which is the function
-     * the settlement matcher itself calls, so the figure on the door's
-     * screen and the figure the matcher demands cannot disagree. Two copies
-     * pinned to each other is what let the add-on money go missing from
-     * both at once.
-     *
-     * Pinned at its new address, and pinned ABSENT at the old one, so a
-     * second server copy cannot grow back.
+     * A preview computed by a second expression would be this defect again
+     * with the copy moved one file to the left. The route calls
+     * `doorMoney` — the function `partial-delivery.ts` calls on the write
+     * path, which is the function the settlement matcher itself calls.
+     */
+    const door = stripComments(repoFile(DOOR));
+    expect(door).toMatch(/import \{ doorMoney \} from '@\/lib\/settlement'/);
+    expect(door).toMatch(/const money = doorMoney\(/);
+    // And it answers before the transaction, so nothing is written.
+    const at = door.indexOf('doorMoney(');
+    const tx = door.indexOf('db.$transaction');
+    expect(at).toBeGreaterThan(0);
+    expect(tx).toBeGreaterThan(at);
+  });
+
+  it('and the server’s own copy of those four is still GONE', () => {
+    /*
+     * `partial-delivery.ts` used to hold the original, line for line. On
+     * 2026-10-02 the server's copy went: the door calls `doorMoney` in
+     * `settlement.ts`, the same function the settlement matcher calls, so
+     * the figure on the door's screen and the figure the matcher demands
+     * cannot disagree. Two copies pinned to each other is what let the
+     * add-on money go missing from both at once.
      */
     const door = stripComments(repoFile('src/lib/partial-delivery.ts'));
     expect(door).toMatch(/const money = doorMoney\(/);
@@ -797,122 +870,58 @@ describe('Ⅳ · 2 — the deliver dialog is a second COD engine', () => {
     expect(door).not.toMatch(/const discountPerUnit =/);
 
     const rule = stripComments(repoFile('src/lib/settlement.ts'));
-    // The per-unit value, divided out of the line total the order was
-    // created with rather than multiplied back out of `unitPrice`.
     expect(rule).toMatch(/return Number\(item\.lineTotal\) \/ item\.quantity;/);
     /*
-     * And the fils-losing reconstruction is pinned ABSENT, not merely unused.
-     * A fallback reading `quantity × unitPrice − discountShare` stood here
-     * for a day, for rows that had not selected the column. It was the
-     * schema's own definition of `lineTotal` and still the wrong answer —
-     * `unitPrice` is `Decimal(12,2)` and the dinar has three places, so that
-     * branch returned 9.990 where the order says 10.000. A branch that
-     * silently gives the wrong figure to a caller who forgot one column is
-     * not a floor; it is this defect waiting behind an `if`. The type makes
-     * the omission a compile error instead, and the six test doubles that
-     * lacked the column were given it rather than accommodated.
+     * And the fils-losing reconstruction is pinned ABSENT, not merely
+     * unused. A fallback reading `quantity × unitPrice − discountShare`
+     * stood here for a day: `unitPrice` is `Decimal(12,2)` and the dinar
+     * has three places, so that branch returned 9.990 where the order says
+     * 10.000.
      */
     expect(rule).not.toMatch(/Number\(item\.unitPrice\) - Number\(item\.discountShare\)/);
-    // Paid units only — the gift units are stock at zero price.
     expect(rule).toMatch(/const paid = Math\.min\(taken, item\.quantity\);/);
-    // The fee rule and the COD branch, both now inside `computeCod`.
     expect(rule).toMatch(/deliveryFee: anythingTaken \? fee : 0,/);
     expect(rule).toMatch(/priceIncludesDelivery: order\.priceIncludesDelivery,/);
   });
 
-  it('AND THE DIALOG IS NOW WRONG BY MORE THAN ROUNDING — two measured gaps', () => {
+  it('and the gaps that are now closed, kept as arithmetic rather than as a memory', () => {
     /*
-     * Ⅳ reports rather than fixes, and this report got worse on 2026-10-02.
-     * The browser's transcription predates both of the server's corrections
-     * of that day, and neither of them is a rounding difference.
+     * MEASURED by running the real `doorMoney` against the dialog's own
+     * former expression, before either was touched:
      *
-     *   THE UPSELL. `doorMoney` collects `OrderAddOn` money, which has no
-     *   `OrderItem` row at all. The dialog sums `items` and nothing else,
-     *   so on the measured order — 36 of lines, a 12 upsell, a 2.5 fee —
-     *   it prints 38.5 where the server expects 50.5, and the operator is
-     *   shown a figure twelve dinars under what the courier owes.
+     *   an order carrying a thank-you-page upsell   door 29.5   screen 24.5
+     *   the same, one of two units refused          door 18.5   screen 13.5
+     *   Syrian pounds, whole units                  door 21     screen 21.333…
      *
-     *   THE LINE TOTAL. `doorMoney` divides the stored `lineTotal`; the
-     *   dialog multiplies the stored `unitPrice`, which is `Decimal(12,2)`
-     *   in a currency with three places. On 3 units for 10.000 it prints
-     *   9.990 where the server says 10.000.
-     *
-     * NOT FIXED HERE, as with everything in Ⅳ: the dialog needs the two
-     * figures sent to it, which is the endpoint's change, not this file's.
+     * THE UPSELL is the one that mattered. `OrderAddOn` has no `OrderItem`
+     * row, so a loop over `items` could not see it however carefully it was
+     * written — the courier was told to collect five dinars less than the
+     * door records, and no amount of correcting the copy would have found
+     * it. That is the argument for one rule rather than two right ones.
      */
-    const src = stripComments(repoFile(DIALOG));
-    // The dialog knows neither column exists.
-    expect(src).not.toMatch(/addOns/);
-    expect(src).not.toMatch(/lineTotal/);
+    const upsell = 5;
+    const screenOnUpsold = 2 * 11 + 2.5;
+    expect(screenOnUpsold).toBe(24.5);
+    expect(screenOnUpsold + upsell).toBe(29.5);
 
-    // Gap one, as arithmetic: 36 of lines, a 12 upsell, a 2.5 fee.
-    const screenOnUpsold = 3 * 12 + 2.5;
-    expect(screenOnUpsold).toBe(38.5);
-    expect(screenOnUpsold + 12).toBe(50.5);
-
-    // Gap two: three units of a line that does not divide by its quantity.
-    expect(Number((3 * 3.33).toFixed(3))).toBe(9.99);
-    expect(10 - Number((3 * 3.33).toFixed(3))).toBeCloseTo(0.01, 5);
+    // And the rounding: a currency with no minor unit cannot hold a third.
+    expect(roundMinor(21.333333333333332, 0)).toBe(21);
+    expect(roundMinor(21.333333333333332, 3)).not.toBe(21);
   });
 
-  it('and the dialog already has the server’s answer in hand for the common case', () => {
+  it('and a negative «قيمة ما استُلم» cannot be printed, because the browser no longer sums', () => {
     /*
-     * The dialog fetches `/api/orders/${order.id}` and keeps only
-     * `d.order.items`. That same response carries `cod`, computed by
-     * `computeCod` — and the dialog's default state is EVERYTHING TAKEN, so
-     * for the case it opens in, `collected` is a hand-rolled reproduction
-     * of a number it already parsed and threw away.
-     */
-    const src = stripComments(repoFile(DIALOG));
-    expect(src).toMatch(/apiJson<\{ order: \{ items: Line\[\] \} \}>\(`\/api\/orders\/\$\{order\.id\}`\)/);
-    expect(src).toMatch(/setTaken\(Object\.fromEntries\(d\.order\.items\.map\(\(i\) => \[i\.id, i\.quantity \+ i\.freeQuantity\]\)\)\)/);
-    expect(src).not.toMatch(/\bd\.order\.cod\b/);
-  });
-
-  it('and the two disagree where the server clamps and the browser does not', () => {
-    /*
-     * `partial-delivery.ts:204` is `roundMinor(Math.max(0, deliveredValue),
-     * minorUnit)`. The dialog has neither half. A line whose stored
-     * discount share exceeds its own value — which `allocateDiscount` can
-     * produce after an edit, and which the data has no constraint against —
-     * gives the screen a NEGATIVE «قيمة ما استُلم» where the server shows
-     * zero.
+     * `partial-delivery.ts` clamps with `Math.max(0, …)`. The dialog had
+     * neither that nor the rounding, so a line whose stored discount share
+     * exceeds its own value — which `allocateDiscount` can produce after an
+     * edit — gave the screen a NEGATIVE figure where the server shows zero.
+     * The arithmetic is kept; the place that could produce it is gone.
      */
     const line = { quantity: 2, unitPrice: 10, discountShare: 30 };
-    const discountPerUnit = line.discountShare / line.quantity;
-    const screenGoods = line.quantity * (line.unitPrice - discountPerUnit);
-    expect(screenGoods).toBe(-10);
-    expect(roundMinor(Math.max(0, screenGoods), 3)).toBe(0);
-  });
-
-  it('and again on the rounding, which is the whole reason `roundMinor` exists', () => {
-    // The server rounds the sum to the currency's minor unit at every step.
-    // The dialog sums raw floats and hands them to `<Money>`.
-    const raw = 0.1 + 0.2;
-    expect(raw).not.toBe(0.3);
-    expect(roundMinor(raw, 3)).toBe(0.3);
-    const src = stripComments(repoFile(DIALOG));
-    expect(src).not.toMatch(/roundMinor|minorUnit/);
-  });
-
-  it('and `computeCod` is the function this screen is standing in for', () => {
-    // Stated as arithmetic so the claim is checkable: the dialog's
-    // all-taken branch and `computeCod` are the same formula.
-    const cod = computeCod({
-      lines: [{ quantity: 2, unitPrice: 10 }],
-      discount: 4,
-      deliveryFee: 3,
-      minorUnit: 3,
-      priceIncludesDelivery: false,
-    });
-    expect(cod.cod).toBe(19);
-    // The dialog's shape, by hand, on the same order:
-    const goods = 2 * (10 - 4 / 2);
-    expect(goods + 3).toBe(19);
-    // They agree HERE. That is the point of the invariant, not a defence of
-    // the duplicate: two copies of a rule agree until one of them is
-    // edited, and the three tests above are where this pair has already
-    // stopped agreeing.
+    const wouldHaveBeen = line.quantity * (line.unitPrice - line.discountShare / line.quantity);
+    expect(wouldHaveBeen).toBe(-10);
+    expect(roundMinor(Math.max(0, wouldHaveBeen), 3)).toBe(0);
+    expect(stripComments(repoFile(DIALOG))).not.toMatch(/\.reduce\(/);
   });
 });
 
