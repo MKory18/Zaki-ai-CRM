@@ -256,31 +256,33 @@ const DIVERGED: Record<string, string> = {
   'src/components/screens/tracking/DeliverDialog.tsx':
     'يعيد كتابة قاعدة COD وتوزيع الخصم وأجرة التسليم الجزئي التي في partial-delivery.ts',
   /*
-   * MOVED HERE FROM `RENDERS_ONLY` ON 2026-10-03, and the move is the point.
+   * `OrderLinesCard.tsx` STOOD HERE AND IS GONE, which is what this list is
+   * supposed to lead to.
    *
-   * Its old entry read «a single synthetic line for a legacy order with no
-   * items, and the line sum is the editor's own input» — two halves. The
-   * second half, `Number(l.lineTotal) || Number(l.unitPrice) * l.quantity`,
-   * was deleted that day: it opened a line whose stored total is a real 0
-   * at an invented price, and `save()` then wrote that price onto the order.
+   * It arrived from `RENDERS_ONLY` on 2026-10-03 carrying a synthetic line
+   * for an order with no `items`, whose unit price was
+   * `sellingPrice / quantity` rounded by nothing — against the server's
+   * `lineTotal / quantity` to two places (`settlement.ts`).
    *
-   * What is left is the FIRST half, and it was never a render. It derives a
-   * unit price the server already derives — the server's `unitPrice` is
-   * `lineTotal / quantity` rounded to two places (`settlement.ts`), this is
-   * `sellingPrice / quantity` rounded by nothing — so the two disagree
-   * wherever a line does not divide evenly. Measured in
-   * `replacement-order.ts`: 3 units, `lineTotal` 50, server unit price
-   * 16.67; this reads the order back as 50.01.
+   * MEASURED BY RESTORING IT, not quoted: 3 units over a selling price of
+   * 50 drew «3 × 16.667 JOD» where the server stores 16.67. The «50.01»
+   * this entry used to name belonged to the OTHER half of the branch,
+   * `unitPrice × quantity`, deleted the same day it was listed — a figure
+   * from a different expression, carried forward unchecked.
    *
-   * Unreachable today — 0 of 56 orders have no `items`, `assertReadyToShip`
-   * refuses a lineless order, and `e92df25` closed the last door that made
-   * one. So it is a second copy that cannot currently be reached, which is
-   * exactly what this list is for: named, with its disagreement measured,
-   * and not dressed up as legitimate. The remedy is to delete the branch,
-   * not to re-justify it.
+   * Its entry ended «the remedy is to delete the branch,
+   * not to re-justify it», and the branch is deleted: the card renders
+   * `order.items` and nothing else, and an order with no lines says so in
+   * a sentence while the summary beneath it shows the server's own
+   * `sellingPrice` and `quantity`.
+   *
+   * Re-measured before deleting rather than trusted: **0 of 56 orders have
+   * no items**, so nothing on this database changes appearance.
+   *
+   * An entry is removed from this list by removing the ARITHMETIC, never by
+   * removing the line — the test below fails on a name that no longer
+   * sweeps, which is how this removal was prompted.
    */
-  'src/components/orders/OrderLinesCard.tsx':
-    'يشتقّ سعرَ الوحدة من sellingPrice ÷ quantity بلا تقريبٍ، والخادمُ يشتقّه من lineTotal ÷ quantity بمنزلتَين — فيَقرأُ ٥٠٫٠١ عن سطرٍ كتبَه الخادمُ ٥٠. فرعٌ لا يُطالُ اليوم: لا طلبَ بلا أسطر',
 };
 
 describe('Ⅰ · every screen that does arithmetic on one of the eleven figures is classified', () => {

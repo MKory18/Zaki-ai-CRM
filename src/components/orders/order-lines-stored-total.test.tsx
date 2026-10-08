@@ -226,3 +226,57 @@ describe('a line total of zero', () => {
     expect(Number(priceBox().value)).not.toBe(50.01);
   });
 });
+
+/**
+ * AN ORDER WITH NO LINES SAYS SO, RATHER THAN BEING GIVEN ONE.
+ *
+ * The card built a synthetic line when `order.items` was empty, priced at
+ * `sellingPrice / quantity` — rounded by nothing, against the server's
+ * `lineTotal / quantity` to two places. `the-frontend-invariants.test.ts`
+ * carried it on its DIVERGED list with the disagreement measured (3 units
+ * over 50: server 16.67, card 50.01) and the remedy stated: delete the
+ * branch.
+ *
+ * MEASURED BEFORE DELETING: 0 of 56 orders on this database have no items,
+ * so nothing a person looks at today changes. What goes is a second copy of
+ * a money rule, waiting for the day something makes a lineless order and
+ * prints a figure nobody can trace.
+ *
+ * The fixture below is the shape that made the divergence visible — 3 units
+ * for 50 — so a restored branch dies on the number rather than on a layout.
+ */
+describe('an order with no lines at all', () => {
+  const uneven = () =>
+    render(
+      <OrderLinesCard
+        order={{ ...order([]), items: [], quantity: 3, sellingPrice: 50 }}
+        currency={CURRENCY}
+        canEdit
+        onAcquireLock={() => {}}
+        onSaved={() => {}}
+      />
+    );
+
+  it('prints no invented unit price — 16.667 is nobody’s figure', () => {
+    uneven();
+    const text = document.body.textContent ?? '';
+    expect(text).not.toContain('16.66');
+    expect(text).not.toContain('16.67');
+    // And no «3 ×» row at all, because there is no line to multiply.
+    expect(text).not.toMatch(/3\s*×/);
+  });
+
+  it('and says in a sentence that there are none', () => {
+    uneven();
+    expect(document.body.textContent).toContain('لا أسطرَ مسجَّلةٌ على هذا الطلب');
+  });
+
+  it('while the order’s own figures, which the server holds, are still shown', () => {
+    // Nothing a reader needs is lost: the summary below the list carries the
+    // selling price and the quantity exactly as the server sent them.
+    uneven();
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('سعر البيع');
+    expect(text).toContain('الكمية');
+  });
+});

@@ -79,21 +79,37 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
   const { products } = useProducts({ enabled: open });
 
   const offerName = order.offer?.name || null;
-  const lines: Line[] =
-    order.items?.length
-      ? order.items
-      : [
-          {
-            id: 'legacy',
-            productId: '',
-            productName: order.productNameSnapshot || order.product?.name || '—',
-            quantity: order.quantity ?? 1,
-            freeQuantity: 0,
-            unitPrice: (order.sellingPrice ?? 0) / Math.max(1, order.quantity ?? 1),
-            discountShare: order.discountAmount ?? 0,
-            lineTotal: order.sellingPrice ?? 0,
-          },
-        ];
+  /**
+   * THE LINES THE SERVER WROTE, AND NO LINE IT DID NOT.
+   *
+   * A synthetic line stood here for an order with no `items`, and its unit
+   * price was `sellingPrice / quantity` — rounded by nothing.
+   * `the-frontend-invariants.test.ts` carried it on the DIVERGED list, and
+   * its entry ends «the remedy is to delete the branch, not to re-justify
+   * it».
+   *
+   * THE DISAGREEMENT, measured by restoring the branch rather than quoted
+   * from the old entry: 3 units over a selling price of 50 drew
+   * «3 × 16.667 JOD», while the server derives a unit price as
+   * `lineTotal / quantity` to TWO places (`settlement.ts`) and stores
+   * 16.67. The «50.01» the DIVERGED entry named was the OTHER half of this
+   * branch — `unitPrice × quantity` — deleted on 2026-10-03; repeating it
+   * here would have been a number carried over from a different
+   * expression.
+   *
+   * Deleted. And it was not reachable while it stood: measured on this
+   * database, **0 of 56 orders have no items** — `assertReadyToShip`
+   * refuses a lineless order and `e92df25` closed the last door that could
+   * make one. A second copy of a money rule that cannot currently run is
+   * still a second copy; it waits for the day something makes a lineless
+   * order and then prints a figure nobody can trace.
+   *
+   * AN ORDER WITH NO LINES NOW SAYS SO. The summary underneath already
+   * shows `sellingPrice`, `quantity` and the discount as the SERVER holds
+   * them, so nothing a reader needs is lost — what goes is a per-unit
+   * breakdown this card was inventing.
+   */
+  const lines: Line[] = order.items ?? [];
 
   async function openForm() {
     // The button says إغلاق once the form is open, so pressing it again has
@@ -205,6 +221,12 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
       </div>
 
       <div className="border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
+        {lines.length === 0 && (
+          <p className="px-3 py-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            لا أسطرَ مسجَّلةٌ على هذا الطلب. الأرقام أدناه هي ما يحمله الطلب نفسه —
+            اضغط «تعديل» لتسجيل ما فيه.
+          </p>
+        )}
         {lines.map((line) => (
           <div key={line.id} className="flex items-center gap-3 px-3 py-2.5">
             <ProductThumb
