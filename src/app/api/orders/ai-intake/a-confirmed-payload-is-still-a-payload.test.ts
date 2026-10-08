@@ -175,20 +175,25 @@ describe('the confirmed payload, and what the create door would have said to it'
   });
 
   /**
-   * WHAT THIS CHANGE DOES TO THE PENDING DECISION AT `p.finalPrice ||
-   * product.basePrice`, WHICH IS NOT TOUCHED HERE.
+   * THE QUESTION THIS FILE NARROWED, AND HOW IT WAS ANSWERED.
    *
-   * Before: `''`, `null`, `[]`, `false` and `'   '` all arrived as `0`
-   * through `z.coerce.number()`, and every one of them fell through the
-   * `||` to the base price silently. After: every one of them is a 400, and
-   * the ONLY value that can still reach the `||` falsy is a well-formed,
-   * deliberate `0`. So the open question narrows from «what should happen
-   * when the figure is unreadable» — answered: a 400 — to the single
-   * remaining one: «does a reviewer who types 0 mean free, or mean use the
-   * base price?». That is the owner's to answer, and it is now the only
-   * thing that branch decides.
+   * Before the strict reader: `''`, `null`, `[]`, `false` and `'   '` all
+   * arrived as `0` through `z.coerce.number()`, and every one of them fell
+   * through `p.finalPrice || product.basePrice` to the base price in
+   * silence. This file made every one of them a 400, which left exactly one
+   * value able to reach that `||`: a well-formed, deliberate zero. So the
+   * open question narrowed to «does a reviewer who types 0 mean free, or
+   * mean use the base price?».
+   *
+   * It is answered, and not by this file inventing a policy: `offers.ts`
+   * already ruled in writing that «a free bundle is a pricing decision»,
+   * and named that same expression as the one door of four that disagreed.
+   * The `||` is gone. A typed zero is written as zero, and an absent price
+   * is still a 400 naming the field — which is what makes removing the
+   * fallback safe rather than reckless: the route never has to guess at a
+   * missing price, because it is never handed one.
    */
-  it('and the only value that can still reach the base-price fallback is a deliberate zero', async () => {
+  it('refuses every unreadable price, and writes a deliberate zero as zero', async () => {
     for (const value of ['', '   ', null, [], false, true, ['5'], {}]) {
       vi.clearAllMocks();
       requireContext.mockResolvedValue({
@@ -202,9 +207,9 @@ describe('the confirmed payload, and what the create door would have said to it'
       expect(res.status, `finalPrice=${String(value)}`).toBe(400);
     }
 
-    // And the zero itself: accepted by the schema, and the branch this test
-    // does NOT change then substitutes the base price. Recorded as the
-    // CURRENT behaviour so that deciding it is deliberate.
+    // And the zero itself: accepted by the schema, and written through.
+    // `basePrice` is 14 in this fixture — the number the old `||` charged
+    // for an order the reviewer had just confirmed at nothing.
     vi.clearAllMocks();
     requireContext.mockResolvedValue({
       user: { id: 'u1', name: 'هدى', role: 'CONFIRMATION_AGENT' },
@@ -224,7 +229,8 @@ describe('the confirmed payload, and what the create door would have said to it'
 
     const zero = await confirm({ finalPrice: 0 });
     expect(amount(100_000).safeParse(0).success, 'a typed zero is a price').toBe(true);
-    expect(stored('sellingPrice'), 'صفرٌ مقصودٌ لا يَصِلُ الفرعَ المعلَّق').toBe('14');
+    expect(stored('sellingPrice'), 'سعرُ المنتجِ حلَّ محلَّ صفرٍ مقصود').not.toBe('14');
+    expect(stored('sellingPrice')).toBe('0');
     expect(zero.status).toBe(200);
   });
 });

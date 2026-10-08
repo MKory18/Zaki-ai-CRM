@@ -520,28 +520,42 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
 
     /*
      * `parseFloat('') || 0` is what the box used to put here, and
-     * `ai-intake/route.ts` reads `p.finalPrice || product.basePrice`. So the
+     * `ai-intake/route.ts` read `p.finalPrice || product.basePrice`. So the
      * cleared box did not record a free order: it recorded an order at 14,
-     * a figure the reviewer never saw and never typed. The route line is an
-     * OPEN OWNER DECISION and is deliberately untouched; what changed is
-     * that the browser can no longer manufacture the 0 that triggers it.
+     * a figure the reviewer never saw and never typed.
+     *
+     * THAT LINE IS GONE NOW, and this test keeps its name because what it
+     * measures is the gap between then and now. Two things closed it, and
+     * neither was a new policy:
+     *
+     *   · `offers.ts` already ruled, in writing, that «a free bundle is a
+     *     pricing decision», and named this very expression as the one door
+     *     of four that disagreed — three gave the bundle away, this one
+     *     charged the base price.
+     *   · `finalPrice` is a REQUIRED field, so an absent price is refused
+     *     by name (the test above). The fallback could therefore never be a
+     *     safety net for a missing price; it could only ever override a
+     *     zero somebody meant.
+     *
+     * AND A SECOND DEFECT IT CARRIED, which is why «just leave it» was the
+     * wrong answer: `finalPrice` is the LINE TOTAL on this door — the typed
+     * 30 below is stored as `sellingPrice: 30` for a quantity of two —
+     * while `basePrice` is PER UNIT. The `||` dropped a per-unit figure
+     * straight into a line-total slot, so the substituted order charged 14
+     * for TWO pieces rather than 28. Not one of those three numbers was
+     * asked for by anybody.
      */
-    const old = await atTheIntakeDoor({
+    const now = await atTheIntakeDoor({
       ...body,
       parsed: { ...body.parsed, finalPrice: 0 },
     });
-    expect(old.status).toBe(200);
-    expect(createdOrder().sellingPrice).toBe(PRODUCT.basePrice);
+    expect(now.status).toBe(200);
+    expect(createdOrder().sellingPrice, 'سعرُ المنتجِ عادَ ليحلَّ محلَّ صفر').not.toBe(
+      PRODUCT.basePrice
+    );
+    expect(createdOrder().sellingPrice).toBe(0);
     expect(PRODUCT.basePrice).not.toBe(0);
-    /*
-     * AND A SECOND THING THIS MEASURES, FOUND HERE AND NOT CHANGED.
-     *
-     * `finalPrice` is the LINE TOTAL on this door — the typed 30 above is
-     * stored as `sellingPrice: 30` for a quantity of two. `basePrice` is a
-     * PER-UNIT price, and the `||` drops it straight into that slot, so the
-     * substituted order charges 14 for TWO pieces, not 28. It belongs with
-     * the open decision about that line and is reported, not resolved.
-     */
+    // And the unit muddle goes with it: nothing is substituted at all.
     expect(createdOrder().quantity).toBe(2);
     expect(createdOrder().sellingPrice).not.toBe(PRODUCT.basePrice * 2);
   });
@@ -572,7 +586,7 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
     expect(createdOrder().quantity).toBe(2);
   });
 
-  it('and a TYPED zero is still read as the base price — the open decision, recorded as it stands', async () => {
+  it('and a TYPED zero is written as zero, like every other door', async () => {
     const body = await aiBodyFor({ ...PARSED, price: 20 }, async (user) => {
       await user.clear(screen.getByLabelText(/^السعر/));
       await user.type(screen.getByLabelText(/^السعر/), '0');
@@ -583,13 +597,15 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
     const res = await atTheIntakeDoor(body);
     expect(res.status).toBe(200);
     /*
-     * `p.finalPrice || product.basePrice` — so a reviewer who deliberately
-     * types 0 is still overridden. This is NOT what this change fixed and
-     * the route line is not touched; the difference is that reaching this
-     * branch now takes a person typing a zero, which is a decision somebody
-     * can be asked about, rather than a cleared box nobody can see.
+     * A reviewer who deliberately types 0 used to be overridden by
+     * `p.finalPrice || product.basePrice`. The change that first made this
+     * box able to SAY zero — rather than manufacture one from a cleared
+     * field — left that override standing and called it an open decision.
+     * It is closed now, against the ruling `offers.ts` already carried:
+     * three doors honoured a zero and this was the fourth.
      */
-    expect(createdOrder().sellingPrice).toBe(PRODUCT.basePrice);
+    expect(createdOrder().sellingPrice).toBe(0);
+    expect(createdOrder().sellingPrice).not.toBe(PRODUCT.basePrice);
   });
 
   it('and the button never names a price the form does not hold', async () => {

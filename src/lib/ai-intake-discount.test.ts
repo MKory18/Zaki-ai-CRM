@@ -349,6 +349,55 @@ describe('وبابُ الكتابةِ يقبض ما أكّدَه المراجع�
     expect(db.offer.findFirst).not.toHaveBeenCalled();
     expect(activeOffersFor).not.toHaveBeenCalled();
   });
+
+  /**
+   * AND A ZERO IS A PRICE, NOT A GAP.
+   *
+   * `const price = p.finalPrice || product.basePrice` stood here under a
+   * comment saying it matched `POST /orders`. It did not — that door writes
+   * `sellingPrice ?? 0` — and `offers.ts` names this exact expression as
+   * the one door of four that disagrees, while ruling in writing that «a
+   * free bundle is a pricing decision».
+   *
+   * The fixture's `basePrice` is 99, which is the number the old reading
+   * charged for an order a person had just confirmed at zero.
+   */
+  it('وصفرٌ مؤكَّدٌ يُكتَب صفراً — لا ٩٩، سعرَ المنتجِ الذي لم يَطلُبْه أحد', async () => {
+    const res = await confirm(0);
+    expect(res.status).toBe(200);
+    const data = db.order.create.mock.calls[0][0].data;
+    expect(data.totalAmount, 'سعرُ المنتجِ حلَّ محلَّ صفرٍ كتبَه المراجع').not.toBe(99);
+    expect(data.totalAmount).toBe(0);
+    expect(data.sellingPrice).toBe(0);
+  });
+
+  it('ومع ذلك يبقى غيابُ السعرِ مرفوضاً بالاسم — فالصفرُ ليس بديلاً عن الغياب', async () => {
+    /*
+     * This is what makes deleting the fallback safe rather than reckless:
+     * `finalPrice: amount(100000)` is REQUIRED, so the route never has to
+     * guess at a missing price — it refuses the payload and says which
+     * field. The two cases stay two cases all the way to the column.
+     */
+    const res = await post({
+      confirm: true,
+      parsed: {
+        customerName: 'سامر الأحمد',
+        phone: '0999111222',
+        address: 'شارع',
+        governorate: 'عمّان',
+        productId: 'p-axxxxxxxxxx',
+        quantity: 2,
+      },
+    });
+    expect(res.status).toBe(400);
+    expect(db.order.create).not.toHaveBeenCalled();
+  });
+
+  it('وسعرٌ موجبٌ يمرّ كما هو، فالحذفُ لم يَكسِرِ الحالةَ الشائعة', async () => {
+    const res = await confirm(45.5);
+    expect(res.status).toBe(200);
+    expect(db.order.create.mock.calls[0][0].data.totalAmount).toBe(45.5);
+  });
 });
 
 /**
@@ -373,5 +422,25 @@ describe('وحسابُ المالِ يبقى في money.ts', () => {
 
   it('ولا تدويرَ من عندِه', () => {
     expect(src()).not.toMatch(/Math\.round|toFixed/);
+  });
+
+  it('ولا سعرَ احتياطيٍّ خلفَ السعرِ المؤكَّد — ولا حتى بـ ??', () => {
+    /*
+     * THE NUMBERS ABOVE CANNOT SEE THIS ONE.
+     *
+     * Restoring `|| product.basePrice` dies by the number — 99 against 0.
+     * Restoring `?? product.basePrice` does NOT: `finalPrice` is a required
+     * field, so it is never null or undefined and that branch can never
+     * run. Every test passes and the line reads, to anyone opening the
+     * file, like a live fallback policy.
+     *
+     * That is the defect this repository has met before — a fallback that
+     * can never fire is worse than none, because it is believed. So the
+     * absence is pinned here rather than only its behaviour.
+     */
+    expect(src()).toContain('const price = p.finalPrice;');
+    expect(src(), 'سعرٌ احتياطيٌّ عادَ خلفَ ما أكّدَه المراجع').not.toMatch(
+      /p\.finalPrice\s*(?:\|\||\?\?)/
+    );
   });
 });

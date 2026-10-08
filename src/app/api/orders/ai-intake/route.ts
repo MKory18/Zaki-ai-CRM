@@ -168,9 +168,30 @@ export async function POST(req: Request) {
       }
 
       const qty = p.quantity;
-      // Same business rule as POST /orders: zero/absent price falls back to
-      // the product's own base price — the client never dictates the price.
-      const price = p.finalPrice || product.basePrice;
+      /**
+       * WHAT THE REVIEWER CONFIRMED, INCLUDING A ZERO.
+       *
+       * This was `p.finalPrice || product.basePrice`, under a comment
+       * claiming it matched `POST /orders`. It did not: that door writes
+       * `sellingPrice ?? 0` and stores the zero. And `offers.ts` names this
+       * very expression as the one door out of four that disagrees —
+       *
+       *   landing-page order (createPublicOrder)   0
+       *   cart quote                               0
+       *   AI intake's suggestion                   0
+       *   AI intake's WRITE                       99   ← here
+       *
+       * — and rules, in writing, that «a price of 0 included: a free bundle
+       * is a pricing decision», refusing to reinterpret one.
+       *
+       * ABSENT IS ALREADY REFUSED and that is what makes the fallback
+       * unreachable as a safety net: `finalPrice: amount(100000)` is a
+       * REQUIRED field, so a payload without it gets a 400 naming the
+       * field. The only value `||` could ever catch is a zero somebody
+       * typed on purpose — and turning that into 99 is money this route
+       * invented, on an order a person had just confirmed.
+       */
+      const price = p.finalPrice;
       /**
        * THE SAME ESTIMATE THE OTHER ORDER DOORS MAKE.
        *

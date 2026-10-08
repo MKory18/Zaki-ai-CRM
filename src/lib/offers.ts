@@ -68,14 +68,22 @@ const offerFields = z.object({
  *   cart quote                                0   the same clamp
  *   AI intake’s suggestion                    0   the same clamp
  *   AI intake’s WRITE                        99   `p.finalPrice || product.basePrice`
- *                                                 reads that clamped 0 as «absent»
- *                                                 and charges the base price
+ *                                                 read that clamped 0 as «absent»
+ *                                                 and charged the base price
  *
  * One slip of the keyboard: three doors give the bundle away and a fourth
  * charges full base price. There is no reading that makes them agree,
  * because nobody designs a free bundle by writing a discount larger than
  * the price — they write `sellingPrice: 0`. So the row is refused where it
  * enters instead of being reinterpreted four times downstream.
+ *
+ * AND THE FOURTH DOOR HAS SINCE BEEN BROUGHT INTO LINE. The refusal below
+ * closed the route to that particular 0, but not the legitimate one: a
+ * bundle priced at 0 outright still reached `p.finalPrice || basePrice`
+ * and was charged 99. That `||` is gone — the write stores what the
+ * reviewer confirmed, zero included — so all four now agree, and `absent`
+ * is refused by name rather than guessed at, because `finalPrice` is a
+ * required field. Pinned in `ai-intake-discount.test.ts`.
  *
  * ONLY A POSITIVE DISCOUNT IS MEASURED. `discount: 0` means «no reduction
  * at all» and stays legal at any price, a price of 0 included: a free
