@@ -302,6 +302,49 @@ async function orderBodyFor(fill: (u: ReturnType<typeof userEvent.setup>) => Pro
 }
 
 /** Parse a message in the AI modal, fill as described, and return THE BODY IT SENT. */
+/**
+ * The AI modal on screen with a parse already answered, and NOTHING sent.
+ *
+ * `aiBodyFor` below submits, because what it measures is the body on the
+ * wire. These two measure what the REVIEWER is looking at before they press
+ * anything — the label, the sentence under it, the box after the product
+ * changes — so they stop one step earlier.
+ */
+function renderModal(parsed: typeof PARSED = PARSED) {
+  const user = userEvent.setup();
+  apiFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    if (body?.confirm) {
+      sent.push({ url, body });
+      return new Response(JSON.stringify({ success: true, order: { id: 'ord-1' } }), { status: 200 });
+    }
+    return new Response(
+      JSON.stringify({
+        parsed,
+        engine: 'parser',
+        matchedProduct: { id: PRODUCT.id, name: PRODUCT.name, score: 1 },
+        productMatchConfident: true,
+        suggestedPrice: null,
+        suggestedOfferName: null,
+        existingCustomer: null,
+      }),
+      { status: 200 }
+    );
+  });
+  render(<AiOrderModal isOpen onClose={() => {}} onSuccess={() => {}} />);
+  lastUser = user;
+  return user;
+}
+
+let lastUser: ReturnType<typeof userEvent.setup>;
+
+/** Paste something, press analyse, and wait for the form to be drawn. */
+async function openForm() {
+  await lastUser.type(screen.getByRole('textbox'), 'الاسم: عبدالله');
+  await lastUser.click(screen.getByText(/تحليل الطلب بالذكاء الاصطناعي/));
+  await waitFor(() => expect(screen.getByLabelText('الكمية')).toBeTruthy());
+}
+
 async function aiBodyFor(
   parsed: typeof PARSED,
   fill: (u: ReturnType<typeof userEvent.setup>) => Promise<void>
@@ -501,7 +544,7 @@ describe('POST /api/orders — the quick-order form’s own body, at the real do
 describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real door', () => {
   it('an EMPTY price box is absent, and the door refuses instead of charging the base price', async () => {
     const body = await aiBodyFor({ ...PARSED, price: 20 }, async (user) => {
-      await user.clear(screen.getByLabelText(/^السعر/));
+      await user.clear(screen.getByLabelText(/^الإجمالي/));
     });
 
     // The door's sentence first: restore `parseFloat(box) || 0` and this
@@ -515,7 +558,7 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
 
   it('and THE SAME CLICK before this change charged the PRODUCT’S BASE PRICE', async () => {
     const body = await aiBodyFor({ ...PARSED, price: 20 }, async (user) => {
-      await user.clear(screen.getByLabelText(/^السعر/));
+      await user.clear(screen.getByLabelText(/^الإجمالي/));
     });
 
     /*
@@ -574,8 +617,8 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
 
   it('typed figures go through as characters, and the order is priced at what was typed', async () => {
     const body = await aiBodyFor({ ...PARSED, price: 20 }, async (user) => {
-      await user.clear(screen.getByLabelText(/^السعر/));
-      await user.type(screen.getByLabelText(/^السعر/), '30');
+      await user.clear(screen.getByLabelText(/^الإجمالي/));
+      await user.type(screen.getByLabelText(/^الإجمالي/), '30');
     });
     expect(body.parsed.finalPrice).toBe('30');
     expect(body.parsed.quantity).toBe('2');
@@ -588,8 +631,8 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
 
   it('and a TYPED zero is written as zero, like every other door', async () => {
     const body = await aiBodyFor({ ...PARSED, price: 20 }, async (user) => {
-      await user.clear(screen.getByLabelText(/^السعر/));
-      await user.type(screen.getByLabelText(/^السعر/), '0');
+      await user.clear(screen.getByLabelText(/^الإجمالي/));
+      await user.type(screen.getByLabelText(/^الإجمالي/), '0');
     });
     // The box can now say zero, and it says zero rather than nothing.
     expect(body.parsed.finalPrice).toBe('0');
@@ -606,6 +649,93 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
      */
     expect(createdOrder().sellingPrice).toBe(0);
     expect(createdOrder().sellingPrice).not.toBe(PRODUCT.basePrice);
+  });
+
+  /**
+   * «السعر» BESIDE «الكمية» IS A QUESTION WITH TWO ANSWERS.
+   *
+   * The door reads this field as the LINE TOTAL: `computeCod` is handed
+   * `unitPrice: price / qty`, and `offers.ts` says of the figure that
+   * pre-fills it that «25 is the bundle's total, never a unit price». But
+   * the box said only «السعر», sat beside a quantity of 2, and was filled
+   * from sources that do not agree about units — the offer's bundle total,
+   * and whatever number the parser lifted out of «السعر: 20» in a pasted
+   * message, where the sender's own meaning is unknown.
+   *
+   * So «الكمية: ٢ · السعر: ٢٠» was confirmed as an order of 20, when 20
+   * EACH was just as likely to be what the message meant.
+   */
+  it('names the field as the TOTAL, and says out loud how many pieces it covers', async () => {
+    renderModal();
+    await openForm();
+    // The label itself, not a tooltip: this is what a reviewer reads.
+    const box = screen.getByLabelText(/^الإجمالي/) as HTMLInputElement;
+    expect(box).toBeTruthy();
+    expect(screen.queryByLabelText(/^السعر/)).toBeNull();
+    // And the quantity is named in words, so «٢٠ للقطعتين» cannot be read
+    // as «٢٠ للقطعة».
+    expect(document.body.textContent).toContain('للكمية كلّها (2 قطعة)');
+    expect(document.body.textContent).toContain('لا لقطعة واحدة');
+  });
+
+  it('and for a single piece it says what the figure is, without a plural nobody needs', async () => {
+    renderModal({ ...PARSED, quantity: 1 });
+    await openForm();
+    expect(document.body.textContent).toContain('إجمالي ما يُحصَّل عن هذا السطر');
+    expect(document.body.textContent).not.toContain('لا لقطعة واحدة');
+  });
+
+  /**
+   * AND CHANGING THE PRODUCT NO LONGER INVENTS A PRICE.
+   *
+   * This read `prod.offers[0].sellingPrice`, which is the figure BEFORE the
+   * reduction — `/api/products` selects `id, name, quantity, sellingPrice,
+   * status` and NOT `discount`, so the number cannot be made right from
+   * what the screen is given. An offer of 25 with a discount of 3 put 25 in
+   * the box while the landing page, the cart quote and this door's own
+   * suggestion all charge 22: the defect `ai-intake-discount.test.ts`
+   * exists for, surviving on a second path that reaches a different
+   * endpoint for a raw column.
+   */
+  it('clears the price when the product changes, rather than filling in a pre-discount figure', async () => {
+    apiJson.mockImplementation(async (path: string) => {
+      if (path.startsWith('/api/products')) {
+        return {
+          products: [
+            PRODUCT,
+            {
+              ...PRODUCT,
+              id: 'prod-bbbbbbbbbb',
+              name: 'غسول',
+              // Exactly what the endpoint returns: no `discount` column.
+              offers: [{ id: 'off-1', name: 'قطعتان', quantity: 2, sellingPrice: 25, status: 'ACTIVE' }],
+            },
+          ],
+        };
+      }
+      if (path.startsWith('/api/geo/regions')) {
+        return {
+          country: { name: 'سوريا', currencyCode: 'JOD', minorUnit: 2 },
+          regions: [{ id: '11111111-1111-4111-8111-111111111111', name: 'دمشق' }],
+        };
+      }
+      return {};
+    });
+
+    const user = renderModal({ ...PARSED, price: 20 });
+    await openForm();
+    const box = () => screen.getByLabelText(/^الإجمالي/) as HTMLInputElement;
+    await user.clear(box());
+    await user.type(box(), '20');
+    expect(box().value).toBe('20');
+
+    await user.selectOptions(screen.getByLabelText('المنتج'), 'prod-bbbbbbbbbb');
+
+    // 25 is the offer's listed price; every other door charges 22 for it.
+    expect(box().value, 'سعرٌ ما قبلَ الخصمِ كُتِبَ في الخانة').not.toBe('25');
+    expect(box().value).toBe('');
+    // And the button stops naming a figure the form no longer holds.
+    expect(screen.getByText(/تسجيل الطلب/).textContent).toContain('—');
   });
 
   it('and the button never names a price the form does not hold', async () => {
@@ -632,7 +762,7 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
     await waitFor(() => expect(screen.getByLabelText('الكمية')).toBeTruthy());
 
     // `?? 0` opened this box at 0 and the button read «تسجيل الطلب (0.00)».
-    expect((screen.getByLabelText(/^السعر/) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/^الإجمالي/) as HTMLInputElement).value).toBe('');
     const btn = screen.getByText(/تسجيل الطلب/);
     expect(btn.textContent).toContain('—');
     expect(btn.textContent).not.toContain('0.00');

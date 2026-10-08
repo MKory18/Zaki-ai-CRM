@@ -112,6 +112,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const [quantityTyped, setQuantityTyped] = useState('');
   /** The price this screen prints on its own button — never a figure it invented. */
   const priceFigure = typedFigure(priceTyped);
+  /** Read only to SAY what the total covers — never to divide anything by. */
+  const quantityFigure = typedFigure(quantityTyped);
 
   // Reset ALL form state whenever the modal opens — no stale AI parse result
   // or previous text should persist between opens
@@ -328,9 +330,36 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                   placeholder="ابحث عن منتج…"
                   onChange={(id) => {
                     setProductId(id);
-                    const prod = products.find((x) => x.id === id);
-                    // The offer's own price, written into the box as digits.
-                    if (prod?.offers?.length) setPriceTyped(String(prod.offers[0].sellingPrice));
+                    /*
+                     * CHANGING THE PRODUCT NO LONGER FILLS IN A PRICE.
+                     *
+                     * This read `prod.offers[0].sellingPrice`, and that is
+                     * the figure BEFORE the reduction: `/api/products`
+                     * selects `id, name, quantity, sellingPrice, status`
+                     * and NOT `discount`, so the number is not merely
+                     * stale — it cannot be made right from what this
+                     * screen is given. An offer of 25 with a discount of 3
+                     * put 25 in the box, and the landing page, the cart
+                     * quote and this door's own suggestion all charge 22.
+                     *
+                     * That is the defect `ai-intake-discount.test.ts`
+                     * exists for, surviving on a second path: the fix
+                     * there made the PREVIEW hand over the net figure, and
+                     * this line reaches a different endpoint for a raw
+                     * column.
+                     *
+                     * It also took `offers[0]` — the first row, whatever
+                     * its `status` and whether or not it is the default.
+                     *
+                     * An empty box is the honest answer. A reviewer who
+                     * changes the product is telling us the parse was
+                     * wrong about WHAT is being sold, so the price it
+                     * suggested is wrong too, and inventing a replacement
+                     * from a column we cannot price is how 25 gets
+                     * confirmed for a 22 bundle. The door refuses an
+                     * absent price by name, so nothing is written blind.
+                     */
+                    setPriceTyped('');
                   }}
                 />
               </div>
@@ -344,13 +373,43 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 onChange={(e) => setQuantityTyped(e.target.value)}
               />
 
+              {/*
+                «السعر» BESIDE «الكمية» IS A QUESTION WITH TWO ANSWERS.
+
+                The door reads this field as the LINE TOTAL — `computeCod`
+                is handed `unitPrice: price / qty`, and `offers.ts` says of
+                the figure that pre-fills it that «25 is the bundle's total,
+                never a unit price». But the box said only «السعر», sat next
+                to a quantity of 2, and was filled from sources that do not
+                agree about units: the offer's bundle total, and whatever
+                number the parser lifted out of «السعر: 20» in a pasted
+                message, where the sender's own meaning is unknown.
+
+                So a reviewer handling «الكمية: ٢ · السعر: ٢٠» confirms 20
+                and records an order of 20 — when 20 each was just as likely
+                to be what was meant.
+
+                THE FIX IS A SENTENCE, NOT A SECOND NUMBER. A «÷ quantity»
+                echo was the obvious move and is the wrong one:
+                `the-frontend-invariants.test.ts` already measures that
+                exact shape in `OrderLinesCard` — a browser dividing without
+                the server's rounding reads 50.01 off a line the server
+                wrote as 50. A third derivation of a unit price is a third
+                thing to disagree. The label and the hint carry the meaning;
+                the number stays the server's.
+              */}
               <Input
-                label={`السعر${currency?.code ? ` (${currency.code})` : ''}`}
+                label={`الإجمالي${currency?.code ? ` (${currency.code})` : ''}`}
                 name="finalPrice"
                 type="number"
                 step="0.01"
                 value={priceTyped}
                 onChange={(e) => setPriceTyped(e.target.value)}
+                helperText={
+                  quantityFigure !== undefined && quantityFigure > 1
+                    ? `للكمية كلّها (${quantityFigure} قطعة) — لا لقطعة واحدة`
+                    : 'إجمالي ما يُحصَّل عن هذا السطر'
+                }
               />
             </div>
 

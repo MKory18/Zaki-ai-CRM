@@ -49,9 +49,34 @@ describe('the AI intake’s product box', () => {
   });
 
   it('labels the price in the store’s own currency, never a hard-coded dollar', () => {
+    /*
+     * THE RULE IS THE CURRENCY, NOT THE WORDING.
+     *
+     * This pinned the whole label string, «السعر» included, so renaming the
+     * field to «الإجمالي» — which is what it is, and what stopped a
+     * reviewer reading «٢٠» beside a quantity of 2 as twenty EACH — failed
+     * a test about hard-coded dollars. A guard that breaks on a word it was
+     * not written about is a guard people learn to edit without reading.
+     *
+     * So what is held is the interpolation: the code comes from the store,
+     * and no currency symbol is written by hand.
+     */
     const body = stripComments(src());
-    expect(body).toContain('label={`السعر${currency?.code ? ` (${currency.code})` : \'\'}`}');
-    expect(body, 'دولارٌ مكتوبٌ بيده').not.toContain('السعر ($)');
+    expect(body).toMatch(/label=\{`[^`]*\$\{currency\?\.code \? ` \(\$\{currency\.code\}\)` : ''\}`\}/);
+    expect(body, 'دولارٌ مكتوبٌ بيده').not.toMatch(/(?:السعر|الإجمالي) \(\$\)/);
+  });
+
+  it('and names that field as the LINE TOTAL, because the door reads it as one', () => {
+    /*
+     * `computeCod` is handed `unitPrice: price / qty`, so this box is the
+     * whole line. It said «السعر» beside a «الكمية» of 2 and was filled
+     * from two sources that disagree about units — the offer's bundle
+     * total, and a number the parser lifted out of a pasted message where
+     * the sender's meaning is unknown.
+     */
+    const body = stripComments(src());
+    expect(body).toMatch(/label=\{`الإجمالي/);
+    expect(body, 'الخانة تقول «السعر» والباب يقرأها إجمالي السطر').not.toMatch(/label=\{`السعر/);
   });
 
   it('is a whole dialog, not a stub that happens to contain the words', () => {
