@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { onTheWire } from '@/lib/typed-box';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -74,9 +75,6 @@ interface Offer {
  * `''` by name, so handing them what was typed is the only way their refusal
  * can be about what a person typed.
  */
-function onTheWire(raw: string): string | undefined {
-  return raw.trim() === '' ? undefined : raw;
-}
 
 /**
  * The draft of one offer. The three numeric boxes hold CHARACTERS so that

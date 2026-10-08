@@ -63,8 +63,13 @@ export function typedNumber(raw: string): number | undefined | typeof NOT_A_NUMB
  *
  * For the places that only want to know «is there a figure here», and for
  * arithmetic that must not be handed a symbol.
+ *
+ * `undefined` is accepted as well as `''`, because a box that has not been
+ * touched and a box that has been emptied are the same statement, and two
+ * call sites had written the same four lines twice over that difference.
  */
-export function typedFigure(raw: string): number | undefined {
+export function typedFigure(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
   const v = typedNumber(raw);
   return typeof v === 'number' ? v : undefined;
 }

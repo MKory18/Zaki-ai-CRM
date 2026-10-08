@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { NOT_A_NUMBER, typedNumber } from '@/lib/typed-box';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { RiAlertLine, RiLoader4Line, RiMagicLine, RiSaveLine } from '@remixicon/react';
@@ -64,12 +65,6 @@ interface FeesData {
  * this is the unreachable branch — named rather than folded into «empty»,
  * because folding it into «empty» is how `|| 0` got here.
  */
-const NOT_A_NUMBER = Symbol('NOT_A_NUMBER');
-function typedNumber(raw: string): number | undefined | typeof NOT_A_NUMBER {
-  if (raw.trim() === '') return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : NOT_A_NUMBER;
-}
 
 export function CourierFees({
   courierId,

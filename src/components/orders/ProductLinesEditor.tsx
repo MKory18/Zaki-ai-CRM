@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { onTheWire, typedFigure } from '@/lib/typed-box';
 import { ProductPicker } from '@/components/ui/ProductPicker';
 import { amount, type Currency } from '@/lib/format';
 import { RiAddCircleLine, RiDeleteBinLine, RiSubtractLine } from '@remixicon/react';
@@ -52,16 +53,8 @@ import { RiAddCircleLine, RiDeleteBinLine, RiSubtractLine } from '@remixicon/rea
  * case is the empty box; the characters are sent anyway, because a browser
  * that pre-repairs a number is a second rule for it.
  */
-function onTheWire(raw: string): string | undefined {
-  return raw.trim() === '' ? undefined : raw;
-}
 
 /** The figure a price box holds, for the line's own echo. Never a zero it invented. */
-function figure(raw: string | undefined): number | undefined {
-  if (raw === undefined || raw.trim() === '') return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 /**
  * «قيمة البضاعة» — AN INPUT ECHO, IN ONE PLACE, AND THE JUDGEMENT IS
@@ -88,7 +81,7 @@ function figure(raw: string | undefined): number | undefined {
  */
 export function goodsTotal(lines: DraftLine[]): number | undefined {
   const figures = lines
-    .map((l) => figure(l.price))
+    .map((l) => typedFigure(l.price))
     .filter((p): p is number => p !== undefined);
   return figures.length === 0 ? undefined : figures.reduce((sum, p) => sum + p, 0);
 }
@@ -201,7 +194,7 @@ export function ProductLinesEditor({
         const offers = product?.offers ?? [];
         const lockedByOffer = !!line.offerId;
         /** The figure this line's box holds, or nothing — never an invented 0. */
-        const lineFigure = figure(line.price);
+        const lineFigure = typedFigure(line.price);
 
         return (
           <div key={line.key} className="rounded-lg border border-[var(--sys-border)] p-2.5 space-y-2">

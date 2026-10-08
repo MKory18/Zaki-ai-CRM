@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
+import { onTheWire } from '@/lib/typed-box';
 import { Card, CardHeader, CardContent, KpiCard } from '@/components/ui/Card';
 import { Money } from '@/components/ui/Money';
 import { Button } from '@/components/ui/Button';
@@ -88,9 +89,6 @@ const DIRECTION_AR: Record<SpendDirection, { label: string; cls: string }> = {
  * `Number()`, so handing it the characters is the only way its refusal can
  * be about what a person actually typed.
  */
-function onTheWire(raw: string): string | undefined {
-  return raw.trim() === '' ? undefined : raw;
-}
 
 function SpendByType({
   spend,

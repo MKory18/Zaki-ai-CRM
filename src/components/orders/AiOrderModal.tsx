@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { onTheWire, typedFigure } from '@/lib/typed-box';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -40,16 +41,8 @@ import { useToast } from '@/components/ui/Toast';
  * AND IT IS THE CHARACTERS. `''` must never be sent: `z.coerce.number()` is
  * `Number()`, and `Number('')` is `0` — the free line again, one layer down.
  */
-function onTheWire(raw: string): string | undefined {
-  return raw.trim() === '' ? undefined : raw;
-}
 
 /** The figure a box holds, for this screen's own echo of it. Never an invented 0. */
-function figure(raw: string): number | undefined {
-  if (raw.trim() === '') return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 /**
  * A SERVER FIGURE FOR A BOX TO OPEN ON, or an empty box — never a `0`.
@@ -118,7 +111,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   const [priceTyped, setPriceTyped] = useState('');
   const [quantityTyped, setQuantityTyped] = useState('');
   /** The price this screen prints on its own button — never a figure it invented. */
-  const priceFigure = figure(priceTyped);
+  const priceFigure = typedFigure(priceTyped);
 
   // Reset ALL form state whenever the modal opens — no stale AI parse result
   // or previous text should persist between opens

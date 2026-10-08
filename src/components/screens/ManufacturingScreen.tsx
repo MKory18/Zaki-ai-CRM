@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { NOT_A_NUMBER, onTheWire, typedNumber } from '@/lib/typed-box';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -76,12 +77,6 @@ const COST_PRESETS = [
  * quietly repaired or quietly truncated here. A browser that pre-rejects it
  * is a second rule for the same number.
  */
-const NOT_A_NUMBER = Symbol('NOT_A_NUMBER');
-function typedNumber(raw: string): number | undefined | typeof NOT_A_NUMBER {
-  if (raw.trim() === '') return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : NOT_A_NUMBER;
-}
 
 /** The number a box holds, or nothing — the symbol is not a figure. */
 function figure(v: number | undefined | typeof NOT_A_NUMBER): number | undefined {
@@ -95,9 +90,6 @@ function figure(v: number | undefined | typeof NOT_A_NUMBER): number | undefined
  * than `Number()` — it refuses `'0x10'`, `''` and `[]` — so handing it the
  * characters is the only way its refusal can be about what a person typed.
  */
-function onTheWire(raw: string): string | undefined {
-  return raw.trim() === '' ? undefined : raw;
-}
 
 export function ManufacturingScreen() {
   const { t } = useApp();
