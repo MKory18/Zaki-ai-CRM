@@ -6,8 +6,9 @@ import { usePathname } from 'next/navigation';
 import type { NavGroup } from '@/lib/route-registry';
 import { mobileNav } from '@/lib/mobile-nav';
 import { iconFor } from './icons';
-import { RiCloseLine, RiMoreLine } from '@remixicon/react';
+import { RiCloseLine, RiLogoutBoxLine, RiMoreLine } from '@remixicon/react';
 import { useBulkActive } from './BulkBar';
+import { signOut } from '@/lib/sign-out';
 
 /**
  * THE BOTTOM OF A PHONE.
@@ -111,6 +112,36 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                   </ul>
                 </section>
               ))}
+            </div>
+
+            {/*
+              THE WAY OUT, WHICH A PHONE DID NOT HAVE.
+
+              The header's logout is `hidden md:block` — deliberately, and
+              the comment there gives the reason: «seven controls in a 375px
+              bar is how a bell gets missed and a logout gets hit». But
+              nothing took its place. The bottom bar is routes, this sheet
+              was routes, and the command palette opens on Ctrl+K, which a
+              phone does not have.
+
+              So a person working from a phone COULD NOT SIGN OUT. On a
+              shared warehouse handset that is not an inconvenience: the
+              next person to pick it up is still the last person logged in.
+
+              It sits at the BOTTOM, after the screens, separated by a rule
+              and coloured as the destructive thing it is — the opposite of
+              the header's problem, which was a logout within a thumb's
+              width of a notification bell.
+            */}
+            <div className="border-t border-[var(--sys-border)] p-2">
+              <button
+                type="button"
+                onClick={() => signOut('manual')}
+                className={`${TAP} flex w-full items-center gap-3 rounded-lg px-2 text-sm font-semibold text-[var(--sys-destructive)]`}
+              >
+                <RiLogoutBoxLine className="icon-mirror h-4 w-4 shrink-0" aria-hidden />
+                تسجيل الخروج
+              </button>
             </div>
           </div>
         </div>

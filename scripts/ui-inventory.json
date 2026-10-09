@@ -1400,12 +1400,12 @@
     "tabs": 0
   },
   "src/components/shell/MobileNav.tsx": {
-    "buttons": 2,
+    "buttons": 3,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 2,
+    "icons": 3,
     "links": 2,
     "tabs": 0
   },
