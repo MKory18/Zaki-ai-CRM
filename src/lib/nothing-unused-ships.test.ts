@@ -366,7 +366,19 @@ const NO_CALLER_FOUND: Record<string, string> = {
   '/api/orders/[id]/finance': 'لقطةُ مالِ الطلبِ ودفترُه — لا نافذةَ تطلبها، وشاشةُ الطلب تقرأ /api/orders/[id] وحدها',
   '/api/orders/[id]/call-logs': 'المسارُ باقٍ وتعليقُ OrderDetailModal نفسه يقول إنه عاش هناك ولم يرسمه شيء',
   '/api/orders/follow-ups': 'طوابيرُ المتابعةِ المحسوبةُ بساعةِ الخادم — لا شاشةَ تسألها، ولا اختبارَ يذكرها',
-  '/api/orders/confirmation/performance': 'شاشةُ الأداء تسأل /api/orders/confirmation/team؛ هذا الطريقُ الأقدمُ لنفسِ الأرقام',
+  /*
+   * `/api/orders/confirmation/performance` — STILL UNCALLED, BUT NO LONGER
+   * «الطريقُ الأقدمُ لنفسِ الأرقام».
+   *
+   * The old reason was right and was two things at once: nothing calls it,
+   * AND it computed the team screen's figures a second way. The second
+   * half is gone — it reads `teamPerformance()` now, the one calculator —
+   * so what is left is a capability no screen offers: an agent looking at
+   * their own week. Wiring that to a screen or dropping it is a product
+   * decision, the same shape as `SavedViews` was, and not this file's.
+   */
+  '/api/orders/confirmation/performance':
+    'يقرأ أرقامَه من الحاسبة المشتركة ولا يكرّرها — لكنه يَعرض أداءَ الموظف لنفسه ولا شاشةَ تسأله بعد',
   '/api/finance/summary': 'يُلخّص المالَ عبر محرّكِ التحليلاتِ الواحد، ولا شاشةَ تستدعيه — له اختبارُه فقط',
   '/api/public/stores/[store]/search': 'صفحةُ المتجر تبحث على الخادم بـsearchProducts مباشرةً؛ لا حقلَ اقتراحاتٍ يستدعي الطريق',
 

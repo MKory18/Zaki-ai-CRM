@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
+import { stripComments } from './guard-source';
 
 /**
  * A REGEX BUILT IN A TEMPLATE LITERAL NEEDS ITS BACKSLASHES DOUBLED, AND
@@ -52,7 +53,14 @@ function scan(): { scanned: number; broken: Hit[] } {
   const broken: Hit[] = [];
 
   for (const file of files) {
-    const lines = readFileSync(join(process.cwd(), file), 'utf8').split(/\r?\n/);
+    /*
+     * COMMENTS ARE STRIPPED FIRST, and this file is why: its own
+     * explanation quotes the broken pattern, so the first run reported
+     * itself as the repository's only offender. A sweep that reads prose
+     * is the defect `ui-inventory` already learned — «a census that counts
+     * prose is worse than one that counts nothing».
+     */
+    const lines = stripComments(readFileSync(join(process.cwd(), file), 'utf8')).split(/\r?\n/);
     for (const [i, line] of lines.entries()) {
       const at = line.indexOf('new RegExp(');
       if (at < 0) continue;

@@ -3,147 +3,158 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
-import { businessMinutesBetween } from '@/lib/business-calendar';
-import { median } from '@/lib/team-performance';
-
+import { getDateRange, type DateFilter } from '@/lib/analytics';
+import { teamPerformance } from '@/lib/team-performance';
 
 /**
- * GET /api/orders/confirmation/performance?employeeId=&scope=me|team
+ * GET /api/orders/confirmation/performance?employeeId=&from=&to=
  *
- * Company-isolated metrics. Employees see their own numbers;
- * users.view holders may request team/individual stats.
- * Definitions (no misleading math):
- *   processed  = orders that left NEW (any terminal or mid-workflow action by the employee)
- *   confirmationRate = confirmed / processed (NEW untouched NOT counted)
+ * ONE PERSON'S NUMBERS — and the same numbers the team screen shows.
+ *
+ * This route used to compute them itself: eight hand-written queries for
+ * `claimed`, `confirmed`, `rejected`, `noAnswer`, the decided count, the
+ * confirmation rate and the median confirm time, beside
+ * `teamPerformance()` in `team/route.ts` computing the same seven for the
+ * whole team. Two implementations of one person's week.
+ *
+ * AND THEY DID NOT AGREE. The shared one counts a pull of work from
+ * `orderClaimHistory`, with its own comment saying why: «an order released
+ * and re-claimed was two pulls of work, and `claimedAt` remembers only the
+ * second». This one counted `order.claimedById` — the CURRENT holder — so
+ * an order passed from one agent to another vanished from the first
+ * agent's workload entirely, and the median it timed ran from the LAST
+ * claim rather than the first.
+ *
+ * It also took no date window at all, so `claimed` here meant «ever» while
+ * `claimed` on the team screen meant «in the period being looked at». The
+ * same word, two meanings, on two screens about the same person.
+ *
+ * Latent today — `order_claim_history` has 0 rows and no order carries a
+ * `claimedById`, so the confirmation workflow has not been used on this
+ * database and both endpoints currently answer zero. A second
+ * implementation that cannot be reached is still a second implementation;
+ * it waits for the first week of real use.
+ *
+ * WHAT IS STILL COMPUTED HERE, and why it is not a second copy: follow-ups
+ * resolved, contact attempts, and today's tallies are not part of
+ * `EmployeeRow` and nothing else derives them. They are this route's own
+ * subject, not another reading of the team's.
  */
 export async function GET(req: Request) {
   try {
     const { user, companyId, storeId, country } = await requireContext();
     const { searchParams } = new URL(req.url);
     const requestedEmployeeId = searchParams.get('employeeId')?.trim();
-    const scope = searchParams.get('scope') || 'me';
 
+    /*
+     * WHOSE NUMBERS. Your own by default; somebody else's needs the
+     * permission to look at people. Unchanged — the guard was never the
+     * problem with this route.
+     */
     let employeeId = user.id;
-
-    if (scope === 'team' || (requestedEmployeeId && requestedEmployeeId !== user.id)) {
-      // Viewing others requires users.view OR global view roles
-      const mayViewTeam = can(user, 'users.view') ||
-        ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
+    if (requestedEmployeeId && requestedEmployeeId !== user.id) {
+      const mayViewTeam =
+        can(user, 'users.view') || ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
       if (!mayViewTeam) {
-        return NextResponse.json({ error: 'Forbidden: cannot view other employees\u2019 performance', errorAr: 'ترى أداءك وحدك — أداء الآخرين للمشرف.' }, { status: 403 });
-      }
-    }
-    if (requestedEmployeeId) {
-      const mayViewTeam = can(user, 'users.view') ||
-        ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER'].includes(user.role);
-      if (!mayViewTeam && requestedEmployeeId !== user.id) {
-        return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
+        return NextResponse.json(
+          {
+            error: 'Forbidden: cannot view other employees’ performance',
+            errorAr: 'ترى أداءك وحدك — أداء الآخرين للمشرف.',
+          },
+          { status: 403 }
+        );
       }
       employeeId = requestedEmployeeId;
     }
 
-    const now = new Date();
-    // Company-isolated base
-    const mine = (extra: Record<string, unknown> = {}) => ({
-      companyId,
-      storeId,
-      claimedById: employeeId,
-      ...extra,
-    });
-
-    const [
-      claimed, inProgress, confirmed, rejected, noAnswer, followUpsDue,
-      attemptsAgg, confirmedWithTime,
-    ] = await Promise.all([
-      // Orders claimed (total workload accepted)
-      db.order.count({ where: mine() }),
-      // Currently processing (mid-workflow, not terminal)
-      db.order.count({ where: mine({ confirmationStatus: { in: ['IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'] } }) }),
-      // Confirmed by this employee
-      db.order.count({ where: { companyId, storeId, confirmedById: employeeId, confirmationStatus: 'CONFIRMED' } }),
-      // Rejected (claimed by this employee, terminal rejected)
-      db.order.count({ where: mine({ confirmationStatus: 'REJECTED' }) }),
-      // No-answer cases
-      db.order.count({ where: mine({ confirmationStatus: 'NO_ANSWER' }) }),
-      // Follow-ups completed by this employee
-      db.order.count({ where: { companyId, storeId, followUpResolvedById: employeeId, followUpStatus: 'COMPLETED' } }),
-      // Contact attempts by this employee (for avg attempts per order)
-      db.orderContactAttempt.count({ where: { companyId, employeeId, order: { storeId } } }),
-      // Orders confirmed WITH timestamps (for avg confirmation time)
-      db.order.findMany({
-        where: { companyId, storeId, confirmedById: employeeId, confirmedAt: { not: null }, claimedAt: { not: null } },
-        select: { claimedAt: true, confirmedAt: true },
-        take: 500,
-        orderBy: { confirmedAt: 'desc' },
-      }),
-    ]);
-
-    const processed = confirmed + rejected; // processed = reached a decision
-    const confirmationRate = processed > 0 ? Number(((confirmed / processed) * 100).toFixed(1)) : null;
-    const avgAttempts = claimed > 0 ? Number((attemptsAgg / claimed).toFixed(2)) : null;
-
-    /**
-     * How long it takes this person to confirm, in WORKING minutes.
-     *
-     * It used to be wall-clock hours, which charged an agent for every
-     * night, weekend and holiday that happened to fall between pulling an
-     * order and calling about it. An order claimed at five on a Thursday
-     * and confirmed at ten on Saturday read as forty-one hours of somebody
-     * being slow; it is one working hour.
-     *
-     * That also made this endpoint disagree with the team screen and the
-     * performance score, which have always counted business minutes — two
-     * numbers for one person's week, and an argument nobody could settle.
-     * This is the reading that survives; the same calendar, the same
-     * median, from the same function.
+    /*
+     * THE SAME WINDOW THE TEAM SCREEN USES, read the same way. Absent means
+     * everything, which is what this route always did — but now it is a
+     * stated default rather than the absence of the idea.
      */
+    const filter: DateFilter = {
+      period: (searchParams.get('period') as DateFilter['period']) || undefined,
+      startDate: searchParams.get('startDate') || undefined,
+      endDate: searchParams.get('endDate') || undefined,
+    };
+    const { start, end } = getDateRange(filter);
+
     const calendar = {
       workHoursStart: country.workHoursStart,
       workHoursEnd: country.workHoursEnd,
       weekendDays: country.weekendDays,
       timezone: country.timezone,
     };
-    const medianConfirmMinutes = median(
-      confirmedWithTime.map((o) =>
-        businessMinutesBetween(new Date(o.claimedAt!), new Date(o.confirmedAt!), calendar)
-      )
-    );
 
-    // Today's action counts (claimed orders acted on today)
+    // The shared calculator, for every figure it already owns.
+    const team = await teamPerformance({ companyId, storeId, calendar, start, end });
+    const me = team.employees.find((e) => e.id === employeeId) ?? null;
+
+    /*
+     * THIS ROUTE'S OWN SUBJECT. Three things `EmployeeRow` does not carry
+     * and nothing else derives: what this person resolved, how many calls
+     * they made, and what they have done since midnight.
+     */
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const confirmedToday = await db.orderStatusLog.count({
-      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'CONFIRMED', createdAt: { gte: startOfToday } },
+    const sinceMidnight = { createdAt: { gte: startOfToday } };
+    const statusToday = (value: string) => ({
+      companyId,
+      order: { storeId },
+      changedById: employeeId,
+      statusType: 'CONFIRMATION',
+      newValue: value,
+      ...sinceMidnight,
     });
-    const rejectedToday = await db.orderStatusLog.count({
-      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'REJECTED', createdAt: { gte: startOfToday } },
-    });
-    const contactedToday = await db.orderContactAttempt.count({
-      where: { companyId, order: { storeId }, employeeId, createdAt: { gte: startOfToday } },
-    });
-    const noAnswerToday = await db.orderStatusLog.count({
-      where: { companyId, order: { storeId }, changedById: employeeId, statusType: 'CONFIRMATION', newValue: 'NO_ANSWER', createdAt: { gte: startOfToday } },
-    });
+
+    const [followUpsCompleted, attempts, confirmedToday, rejectedToday, contactedToday, noAnswerToday] =
+      await Promise.all([
+        db.order.count({
+          where: { companyId, storeId, followUpResolvedById: employeeId, followUpStatus: 'COMPLETED' },
+        }),
+        db.orderContactAttempt.count({ where: { companyId, employeeId, order: { storeId } } }),
+        db.orderStatusLog.count({ where: statusToday('CONFIRMED') }),
+        db.orderStatusLog.count({ where: statusToday('REJECTED') }),
+        db.orderContactAttempt.count({
+          where: { companyId, order: { storeId }, employeeId, ...sinceMidnight },
+        }),
+        db.orderStatusLog.count({ where: statusToday('NO_ANSWER') }),
+      ]);
+
+    /*
+     * A PERSON WITH NO WORK IN THE WINDOW IS NOT AN ERROR. They get zeros
+     * and nulls, the same shape as everyone else — `null` for a median
+     * nobody can compute, never a 0 that reads as «instant».
+     */
+    const claimed = me?.claimed ?? 0;
 
     return NextResponse.json({
       employeeId,
+      window: { start: start?.toISOString() ?? null, end: end?.toISOString() ?? null },
       metrics: {
-        claimed, inProgress, processed, confirmed, rejected, noAnswer,
-        followUpsCompleted: followUpsDue,
-        avgAttemptsPerOrder: avgAttempts,
-        medianConfirmMinutes,
-        confirmationRate, // confirmed/processed % — NEW untouched not counted
-        pendingWorkload: inProgress,
+        claimed,
+        inProgress: me?.openNow ?? 0,
+        processed: me?.decided ?? 0,
+        confirmed: me?.confirmed ?? 0,
+        rejected: me?.rejected ?? 0,
+        noAnswer: me?.noAnswer ?? 0,
+        followUpsCompleted,
+        avgAttemptsPerOrder: claimed > 0 ? Number((attempts / claimed).toFixed(2)) : null,
+        medianConfirmMinutes: me?.medianConfirmMinutes ?? null,
+        confirmationRate: me?.confirmationRate ?? null,
+        pendingWorkload: me?.openNow ?? 0,
         today: { confirmedToday, rejectedToday, contactedToday, noAnswerToday },
       },
       definitions: {
-        processed: 'orders that reached CONFIRMED or REJECTED (untouched NEW not counted)',
-        confirmationRate: 'confirmed / processed',
-        medianConfirmMinutes:
-          'typical WORKING minutes from claim to confirmation — the company calendar, not wall clock',
+        claimed: 'الطلبات التي سحبها الموظف من المجمّع خلال المدة — من سجل السحب، فإعادة السحب سحبةٌ ثانية',
+        processed: 'ما وصل إلى قرار (مؤكد أو مرفوض) خلال المدة — ما زال قيد العمل لا يُحسب',
+        confirmationRate: 'المؤكد ÷ ما وصل إلى قرار',
+        medianConfirmMinutes: 'وسيط دقائق العمل من سحب الطلب حتى تأكيده — خارج الدوام لا يُحتسب',
+        avgAttemptsPerOrder: 'محاولات الاتصال ÷ الطلبات المسحوبة في المدة',
+        today: 'ما سُجِّل منذ منتصف الليل، بصرف النظر عن المدة أعلاه',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return apiErrorResponse(error);
   }
 }
