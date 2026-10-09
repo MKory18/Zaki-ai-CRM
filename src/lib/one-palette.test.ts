@@ -85,6 +85,29 @@ describe('the colours on a dashboard screen', () => {
     '#ffffff', // Google's white mark
   ]);
 
+  /**
+   * A COLOUR THE SELLER PICKS IS DATA, NOT THE PRODUCT'S PALETTE.
+   *
+   * The page editor moved onto the theme — 141 hand-written hexes gone —
+   * and two things in it could not go with them, because they are not the
+   * look of the UI:
+   *
+   *   · `SWATCHES`, the twelve colours offered to a seller for their own
+   *     page. Converting them would change what is on offer.
+   *   · the rainbow on the selection bar's colour button, which is an icon
+   *     MEANING «colour». A colour wheel drawn in one theme token is not a
+   *     colour wheel.
+   *
+   * Both are named by LINE SHAPE rather than by file, so the exemption
+   * cannot spread to the rest of either file: every other hex in them is
+   * held to the rule, and the 141 are proof the rule bites.
+   */
+  const SELLER_OWN_COLOUR = [
+    /const SWATCHES = \[/,
+    /^\s*'#[0-9a-f]{6}',/i,
+    /bg-gradient-to-br from-\[#/,
+  ];
+
   it('and no screen writes a hex of its own', () => {
     const offenders: string[] = [];
     for (const { rel, src } of dashboardFiles()) {
@@ -113,6 +136,8 @@ describe('the colours on a dashboard screen', () => {
         for (const m of lines[i].matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
           if (OTHER_BRANDS.has(m[0].toLowerCase())) continue;
           if (themeExempt(rel)) continue;
+          // A swatch and a colour wheel are the seller's, not the theme's.
+          if (SELLER_OWN_COLOUR.some((re) => re.test(lines[i]))) continue;
           offenders.push(`${rel}:${i + 1}  ${m[0]}`);
         }
       }

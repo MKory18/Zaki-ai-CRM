@@ -6,8 +6,8 @@ import {
   Monitor, Smartphone, X, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { LookControls } from './LookControls';
-import { useInlineEdit } from './useInlineEdit';
+import { LookControls } from '@/components/landing/blocks/LookControls';
+import { useInlineEdit } from '@/components/landing/blocks/useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
@@ -16,10 +16,10 @@ import {
 import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
 } from '@/lib/landing-theme';
-import { PageBlocks } from './PageBlocks';
-import { FormPlaceholder } from './FormPlaceholder';
-import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from './styles';
-import { FontUploader, type StoreFontRow } from './FontUploader';
+import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
+import { FormPlaceholder } from '@/components/landing/blocks/FormPlaceholder';
+import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from '@/components/landing/blocks/styles';
+import { FontUploader, type StoreFontRow } from '@/components/landing/blocks/FontUploader';
 import { SelectionBar } from './SelectionBar';
 import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -276,7 +276,7 @@ export function BlockBuilder(props: Props) {
           to scroll past every decision the template was about to make for
           them before finding the thing that makes them.
         */}
-        <div className="rounded-xl border border-[#e3e8ef] bg-white p-3">
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
           {/*
             A blank builder is a worse problem than a badly designed page:
             a seller who does not know which blocks a page needs picks
@@ -294,15 +294,15 @@ export function BlockBuilder(props: Props) {
           <button
             type="button"
             onClick={() => setPickingTemplate((v) => !v)}
-            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#c9d2e0] px-2 py-1.5 text-[11px] font-semibold text-[#697586] transition hover:border-[#b8256e] hover:text-[#b8256e]"
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--sys-border-strong)] px-2 py-1.5 text-xs font-semibold text-[var(--sys-muted-foreground)] transition hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
           >
             <LayoutTemplate className="h-3.5 w-3.5" />
             {pickingTemplate ? 'إغلاق القوالب' : 'ابدأ من قالب جاهز'}
           </button>
 
           {pickingTemplate && (
-            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[#f8fafc] p-2">
-              <p className="text-[10px] leading-relaxed text-[#697586]">
+            <div className="mb-3 max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-[var(--sys-surface)] p-2">
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                 القالب يستبدل أقسام الصفحة الحالية. النصوص والصور التي كتبتها ستُفقد.
               </p>
               {PAGE_TEMPLATES.map((t) => (
@@ -330,7 +330,7 @@ export function BlockBuilder(props: Props) {
                     setPickingTemplate(false);
                     setOpenId(null);
                   }}
-                  className="flex w-full items-start gap-2 rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-2 text-start transition hover:border-[#b8256e] hover:bg-[#fdf2f7]"
+                  className="flex w-full items-start gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-2.5 py-2 text-start transition hover:border-[var(--sys-primary)] hover:bg-[var(--sys-primary-soft)]"
                 >
                   {/* Its own colour, so fifteen rows are scannable without
                       reading fifteen names. */}
@@ -339,9 +339,9 @@ export function BlockBuilder(props: Props) {
                     style={{ background: t.swatch }}
                   />
                   <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-[#364152]">{t.label}</span>
-                    <span className="block text-[9.5px] leading-relaxed text-[#9aa4b2]">{t.hint}</span>
-                    <span className="mt-0.5 block text-[9px] text-[#c9d2e0]">{t.bricks.length} أقسام</span>
+                    <span className="block text-xs font-semibold text-[var(--sys-heading)]">{t.label}</span>
+                    <span className="block text-xs leading-relaxed text-[var(--sys-muted)]">{t.hint}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--sys-border-strong)]">{t.bricks.length} أقسام</span>
                   </span>
                 </button>
               ))}
@@ -351,10 +351,10 @@ export function BlockBuilder(props: Props) {
         </div>
 
         {/* Theme */}
-        <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
-          <p className="mb-3 text-[10px] font-bold text-[#697586]">الهوية</p>
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+          <p className="mb-3 text-xs font-bold text-[var(--sys-muted-foreground)]">الهوية</p>
 
-          <label className="mb-1.5 block text-xs font-semibold text-[#364152]">اللون الأساسي</label>
+          <label className="mb-1.5 block text-xs font-semibold text-[var(--sys-heading)]">اللون الأساسي</label>
           <div className="mb-2 grid grid-cols-6 gap-1.5">
             {SWATCHES.map((hex) => (
               <button
@@ -364,7 +364,7 @@ export function BlockBuilder(props: Props) {
                 title={hex}
                 style={{ background: hex }}
                 className={`h-11 md:h-7 rounded-md border-2 transition ${
-                  theme.accent.toLowerCase() === hex ? 'border-[#121926] scale-105' : 'border-transparent'
+                  theme.accent.toLowerCase() === hex ? 'border-[var(--sys-heading)] scale-105' : 'border-transparent'
                 }`}
               />
             ))}
@@ -374,7 +374,7 @@ export function BlockBuilder(props: Props) {
               type="color"
               value={isValidHex(theme.accent) ? theme.accent : DEFAULT_THEME.accent}
               onChange={(e) => onTheme({ ...theme, accent: e.target.value })}
-              className="h-11 w-11 md:h-8 md:w-10 cursor-pointer rounded border border-[#e3e8ef]"
+              className="h-11 w-11 md:h-8 md:w-10 cursor-pointer rounded-sm border border-[var(--sys-border-input)]"
             />
             <Input
               dir="ltr"
@@ -383,30 +383,30 @@ export function BlockBuilder(props: Props) {
               className="font-mono text-xs"
             />
           </div>
-          <p className="-mt-3 mb-4 text-[10px] leading-relaxed text-[#9aa4b2]">
+          <p className="-mt-3 mb-4 text-xs leading-relaxed text-[var(--sys-muted)]">
             كل باقي الألوان — الزر، السعر، الشارات، الحدود — تُشتق من هذا اللون، فلا يمكن أن تتنافر.
           </p>
 
-          <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الطابع</label>
+          <label className="mb-1.5 block text-xs font-semibold text-[var(--sys-heading)]">الطابع</label>
           <div className="mb-4 grid grid-cols-2 gap-1.5">
             {MOODS.map((m) => (
               <button
                 key={m.key}
                 type="button"
                 onClick={() => onTheme({ ...theme, mood: m.key })}
-                className={`rounded-lg border px-2 py-1.5 text-start text-[11px] transition ${
+                className={`rounded-lg border px-2 py-1.5 text-start text-xs transition ${
                   theme.mood === m.key
-                    ? 'border-[#b8256e] bg-[#fdf2f7] font-bold text-[#b8256e]'
-                    : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/40'
+                    ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] font-bold text-[var(--sys-primary)]'
+                    : 'border-[var(--sys-border)] text-[var(--sys-heading)] hover:border-[var(--sys-primary)]/40'
                 }`}
               >
                 {m.label}
-                <span className="block text-[9px] font-normal text-[#9aa4b2]">{m.hint}</span>
+                <span className="block text-xs font-normal text-[var(--sys-muted)]">{m.hint}</span>
               </button>
             ))}
           </div>
 
-          <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الخط</label>
+          <label className="mb-1.5 block text-xs font-semibold text-[var(--sys-heading)]">الخط</label>
           {/*
             A specimen list, not a list of names: every face is drawn in
             itself, because "لاله زار" tells a seller nothing and the shape
@@ -421,14 +421,14 @@ export function BlockBuilder(props: Props) {
                 onClick={() => onTheme({ ...theme, font: f.key })}
                 className={`flex w-full items-baseline justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-start transition ${
                   theme.font === f.key
-                    ? 'border-[#b8256e] bg-[#fdf2f7] text-[#b8256e]'
-                    : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/40'
+                    ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
+                    : 'border-[var(--sys-border)] text-[var(--sys-heading)] hover:border-[var(--sys-primary)]/40'
                 }`}
               >
-                <span className="text-[15px] leading-tight" style={{ fontFamily: f.stack }}>
+                <span className="text-base leading-tight" style={{ fontFamily: f.stack }}>
                   {f.label}
                 </span>
-                <span className="shrink-0 text-[9px] text-[#9aa4b2]">{f.note}</span>
+                <span className="shrink-0 text-xs text-[var(--sys-muted)]">{f.note}</span>
               </button>
             ))}
           </div>
@@ -436,21 +436,21 @@ export function BlockBuilder(props: Props) {
           {/* The seller's own typefaces, beneath the library — a brand that
               bought a font should not have to settle for the nearest free
               one. Uploading is per store, like everything a store owns. */}
-          <div className="mb-4 border-t border-[#f1f3f6] pt-3">
+          <div className="mb-4 border-t border-[var(--sys-surface)] pt-3">
             <FontUploader onChanged={setStoreFonts} />
           </div>
 
-          <label className="mb-1.5 block text-xs font-semibold text-[#364152]">الزوايا</label>
+          <label className="mb-1.5 block text-xs font-semibold text-[var(--sys-heading)]">الزوايا</label>
           <div className="grid grid-cols-2 gap-1.5">
             {([['soft', 'ناعمة'], ['sharp', 'حادّة']] as const).map(([k, label]) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => onTheme({ ...theme, corners: k })}
-                className={`rounded-lg border px-2 py-1.5 text-[11px] transition ${
+                className={`rounded-lg border px-2 py-1.5 text-xs transition ${
                   theme.corners === k
-                    ? 'border-[#b8256e] bg-[#fdf2f7] font-bold text-[#b8256e]'
-                    : 'border-[#e3e8ef] text-[#364152] hover:border-[#b8256e]/40'
+                    ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] font-bold text-[var(--sys-primary)]'
+                    : 'border-[var(--sys-border)] text-[var(--sys-heading)] hover:border-[var(--sys-primary)]/40'
                 }`}
               >
                 {label}
@@ -464,7 +464,7 @@ export function BlockBuilder(props: Props) {
             page — setting the same photograph on nine blocks and keeping
             them in step is not a feature, it is a chore.
           */}
-          <div className="mt-4 border-t border-[#f1f3f6] pt-3">
+          <div className="mt-4 border-t border-[var(--sys-surface)] pt-3">
             <ImageField
               label="خلفية الصفحة كلها"
               value={theme.pageImage ?? ''}
@@ -473,7 +473,7 @@ export function BlockBuilder(props: Props) {
             />
             {theme.pageImage ? (
               <div className="mt-2">
-                <label className="mb-1 flex items-center justify-between text-[10px] font-semibold text-[#697586]">
+                <label className="mb-1 flex items-center justify-between text-xs font-semibold text-[var(--sys-muted-foreground)]">
                   <span>تغطية الصورة</span>
                   <span className="tabular-nums">{Math.round((theme.pageVeil ?? 0.82) * 100)}%</span>
                 </label>
@@ -484,13 +484,13 @@ export function BlockBuilder(props: Props) {
                   step={0.05}
                   value={theme.pageVeil ?? 0.82}
                   onChange={(e) => onTheme({ ...theme, pageVeil: Number(e.target.value) })}
-                  className="w-full accent-[#b8256e]"
+                  className="w-full accent-[var(--sys-primary)]"
                 />
                 {/* Not decoration. Body text straight on a photograph is
                     unreadable exactly as often as the photograph is busy,
                     and the seller is looking at the picture, not the text. */}
-                <p className="mt-1 text-[10px] leading-relaxed text-[#9aa4b2]">
-                  كل ما زادت، صار النص أوضح والصورة أخفت. تحت ٥٠٪ غالباً بتصير القراءة صعبة.
+                <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
+                  كل ما زادت، صار النص أوضح والصورة أخفت. تحت 50٪ غالباً بتصير القراءة صعبة.
                 </p>
               </div>
             ) : null}
@@ -498,10 +498,10 @@ export function BlockBuilder(props: Props) {
         </div>
 
         {/* Sections */}
-        <div className="rounded-xl border border-[#e3e8ef] bg-white p-4">
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-[10px] font-bold text-[#697586]">أقسام الصفحة</p>
-            <span className="text-[10px] text-[#9aa4b2]">{sections.length}</span>
+            <p className="text-xs font-bold text-[var(--sys-muted-foreground)]">أقسام الصفحة</p>
+            <span className="text-xs text-[var(--sys-muted)]">{sections.length}</span>
           </div>
 
           <ul className="space-y-1.5">
@@ -522,10 +522,10 @@ export function BlockBuilder(props: Props) {
                 }}
                 className={`rounded-lg border transition-colors ${
                   dragFrom === i
-                    ? 'border-[#b8256e] opacity-40'
+                    ? 'border-[var(--sys-primary)] opacity-40'
                     : dragOver === i && dragFrom !== null
-                      ? 'border-[#b8256e] bg-[#fdf5fa]'
-                      : 'border-[#e3e8ef]'
+                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)]'
+                      : 'border-[var(--sys-border)]'
                 }`}
               >
                 <div className="flex items-center gap-1 px-2 py-1.5">
@@ -556,7 +556,7 @@ export function BlockBuilder(props: Props) {
                     }}
                     title="اسحب لترتيب البلوك — أو الأسهم من لوحة المفاتيح"
                     aria-label={`رتّب ${SECTION_LABEL[s.type]}`}
-                    className="cursor-grab active:cursor-grabbing p-0.5 text-[#c3c8d4] hover:text-[#b8256e] focus:outline-none focus:text-[#b8256e]"
+                    className="cursor-grab active:cursor-grabbing p-0.5 text-[var(--sys-muted)] hover:text-[var(--sys-primary)] focus:outline-none focus:text-[var(--sys-primary)]"
                   >
                     <GripVertical className="h-4 w-4" />
                   </button>
@@ -566,17 +566,17 @@ export function BlockBuilder(props: Props) {
                     onClick={() => setOpenId(openId === s.id ? null : s.id)}
                     className="flex-1 cursor-pointer text-start"
                   >
-                    <span className={`text-xs font-bold ${s.enabled ? 'text-[#121926]' : 'text-[#9aa4b2] line-through'}`}>
+                    <span className={`text-xs font-bold ${s.enabled ? 'text-[var(--sys-heading)]' : 'text-[var(--sys-muted)] line-through'}`}>
                       {SECTION_LABEL[s.type]}
                     </span>
-                    <span className="block text-[9.5px] text-[#9aa4b2]">{SECTION_HINT[s.type]}</span>
+                    <span className="block text-xs text-[var(--sys-muted)]">{SECTION_HINT[s.type]}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => patch(s.id, { enabled: !s.enabled })}
                     title={s.enabled ? 'إخفاء' : 'إظهار'}
-                    className="cursor-pointer p-1 text-[#697586] hover:text-[#b8256e]"
+                    className="cursor-pointer p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
                   >
                     {s.enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
@@ -591,7 +591,7 @@ export function BlockBuilder(props: Props) {
                       }}
                       title="حذف"
                       aria-label="احذف هذا القسم"
-                      className="cursor-pointer p-1 text-[#9aa4b2] hover:text-rose-600"
+                      className="cursor-pointer p-1 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -599,7 +599,7 @@ export function BlockBuilder(props: Props) {
                 </div>
 
                 {openId === s.id && (
-                  <div className="space-y-2 border-t border-[#e3e8ef] bg-[#f8fafc] p-3">
+                  <div className="space-y-2 border-t border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
                     <SectionFields section={s} patch={(f) => patch(s.id, f)} onUpload={props.onUpload} />
 
                   </div>
@@ -613,9 +613,9 @@ export function BlockBuilder(props: Props) {
               <Plus className="h-3.5 w-3.5" /> إضافة قسم
             </Button>
             {adding && (
-              <div className="absolute bottom-full z-20 mb-1 max-h-72 w-full overflow-auto rounded-lg border border-[#e3e8ef] bg-white py-1 shadow-lg">
+              <div className="absolute bottom-full z-20 mb-1 max-h-72 w-full overflow-auto rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] py-1 shadow-raised">
                 {available.length === 0 && (
-                  <p className="px-3 py-2 text-[11px] text-[#9aa4b2]">كل الأقسام مضافة.</p>
+                  <p className="px-3 py-2 text-xs text-[var(--sys-muted)]">كل الأقسام مضافة.</p>
                 )}
                 {available.map((t) => (
                   <button
@@ -627,10 +627,10 @@ export function BlockBuilder(props: Props) {
                       setOpenId(s.id);
                       setAdding(false);
                     }}
-                    className="block w-full cursor-pointer px-3 py-1.5 text-start hover:bg-[#f8fafc]"
+                    className="block w-full cursor-pointer px-3 py-1.5 text-start hover:bg-[var(--sys-surface)]"
                   >
-                    <span className="text-xs font-semibold text-[#364152]">{SECTION_LABEL[t]}</span>
-                    <span className="block text-[9.5px] text-[#9aa4b2]">{SECTION_HINT[t]}</span>
+                    <span className="text-xs font-semibold text-[var(--sys-heading)]">{SECTION_LABEL[t]}</span>
+                    <span className="block text-xs text-[var(--sys-muted)]">{SECTION_HINT[t]}</span>
                   </button>
                 ))}
               </div>
@@ -640,9 +640,9 @@ export function BlockBuilder(props: Props) {
       </div>
 
       {/* ─── Live preview, drawn by the public renderer ─── */}
-      <div className="flex min-h-[500px] flex-col overflow-hidden rounded-xl border border-[#e3e8ef] bg-white">
-        <div className="flex items-center justify-between border-b border-[#e3e8ef] px-3 py-2">
-          <span className="text-xs font-semibold text-[#364152]">معاينة مباشرة</span>
+      <div className="flex min-h-[500px] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+        <div className="flex items-center justify-between border-b border-[var(--sys-border)] px-3 py-2">
+          <span className="text-xs font-semibold text-[var(--sys-heading)]">معاينة مباشرة</span>
           <div className="flex items-center gap-1">
             {/* How large the page is DRAWN, not how large it is. Checking
                 the spacing of a long page means seeing the whole of it;
@@ -653,7 +653,7 @@ export function BlockBuilder(props: Props) {
               title="تصغير المعاينة"
               disabled={zoom <= 0.5}
               onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+              className="cursor-pointer rounded-sm p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] disabled:opacity-40"
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -661,7 +661,7 @@ export function BlockBuilder(props: Props) {
               type="button"
               title="حجم طبيعي"
               onClick={() => setZoom(1)}
-              className="min-w-[2.75rem] cursor-pointer rounded px-1 py-1 text-[11px] font-semibold tabular-nums text-[#697586] hover:bg-[#f8fafc]"
+              className="min-w-[2.75rem] cursor-pointer rounded-sm px-1 py-1 text-xs font-semibold tabular-nums text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]"
             >
               {Math.round(zoom * 100)}%
             </button>
@@ -670,18 +670,18 @@ export function BlockBuilder(props: Props) {
               title="تكبير المعاينة"
               disabled={zoom >= 1.5}
               onClick={() => setZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 10) / 10))}
-              className="cursor-pointer rounded p-1.5 text-[#697586] hover:bg-[#f8fafc] disabled:opacity-40"
+              className="cursor-pointer rounded-sm p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] disabled:opacity-40"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
-            <span className="mx-1 h-4 w-px bg-[#e3e8ef]" />
+            <span className="mx-1 h-4 w-px bg-[var(--sys-border)]" />
             {([['desktop', Monitor], ['mobile', Smartphone]] as const).map(([d, Icon]) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => setDevice(d)}
-                className={`cursor-pointer rounded p-1.5 ${
-                  device === d ? 'bg-[#fdf2f7] text-[#b8256e]' : 'text-[#697586] hover:bg-[#f8fafc]'
+                className={`cursor-pointer rounded-sm p-1.5 ${
+                  device === d ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -701,12 +701,12 @@ export function BlockBuilder(props: Props) {
           behaves here exactly as it does on a phone.
         */}
         <div
-          className="flex flex-1 justify-center overflow-auto bg-[#eef2f6] p-3"
+          className="flex flex-1 justify-center overflow-auto bg-[var(--sys-surface)] p-3"
           style={{ transform: 'translateZ(0)' }}
         >
           <div
             ref={setCanvas}
-            className="lp-root overflow-hidden rounded-lg border border-[#e3e8ef] shadow-sm"
+            className="lp-root overflow-hidden rounded-lg border border-[var(--sys-border)] shadow-raised"
             dir="rtl"
             style={{
               ...(paletteVars(palette) as React.CSSProperties),
@@ -910,8 +910,8 @@ function SectionFields({
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} placeholder="اختياري" />
 
           <div className="space-y-1">
-            <span className="block text-[11px] font-semibold text-[#364152]">ماذا يُعرض</span>
-            <div className="flex gap-1 rounded-md bg-[#f1f5f9] p-0.5">
+            <span className="block text-xs font-semibold text-[var(--sys-heading)]">ماذا يُعرض</span>
+            <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
               {([
                 ['pages', 'صفحات الهبوط'],
                 ['products', 'المنتجات'],
@@ -921,8 +921,8 @@ function SectionFields({
                   key={v}
                   type="button"
                   onClick={() => patch({ source: v })}
-                  className={`flex-1 rounded px-2 py-1.5 text-[11px] font-bold transition ${
-                    s.source === v ? 'bg-white text-[#0f172a] shadow-sm' : 'text-[#64748b] hover:text-[#0f172a]'
+                  className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                    s.source === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
                   }`}
                 >
                   {label}
@@ -931,26 +931,26 @@ function SectionFields({
             </div>
           </div>
 
-          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+          <label className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--sys-heading)]">
             أعمدة على الشاشة الكبيرة
             <select
               value={s.columns}
               onChange={(e) => patch({ columns: Number(e.target.value) })}
-              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
             >
               {[2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>
           {/* The phone always shows two. Saying so stops the seller
               choosing four and calling the result a bug. */}
-          <p className="text-[10px] leading-relaxed text-[#94a3b8]">على الهاتف عمودان دائماً — ثلاثة أو أربعة لا تُقرأ على شاشة صغيرة.</p>
+          <p className="text-xs leading-relaxed text-[var(--sys-muted)]">على الهاتف عمودان دائماً — ثلاثة أو أربعة لا تُقرأ على شاشة صغيرة.</p>
 
-          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+          <label className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--sys-heading)]">
             حجم البطاقة
             <select
               value={s.cardSize}
               onChange={(e) => patch({ cardSize: e.target.value as 'sm' | 'md' | 'lg' })}
-              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
             >
               <option value="sm">صغير</option>
               <option value="md">متوسط</option>
@@ -958,12 +958,12 @@ function SectionFields({
             </select>
           </label>
 
-          <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+          <label className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--sys-heading)]">
             أكثر عدد يُعرض
             <select
               value={s.limit}
               onChange={(e) => patch({ limit: Number(e.target.value) })}
-              className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+              className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
             >
               <option value={0}>الكل</option>
               {[4, 6, 8, 12, 16, 24].map((n) => <option key={n} value={n}>{n}</option>)}
@@ -974,7 +974,7 @@ function SectionFields({
           <Check label="أظهر شريط التصنيفات" checked={s.showCategories} onChange={(v) => patch({ showCategories: v })} />
           {/* The chips are drawn only where there is something to filter;
               a shop whose products carry no category shows none. */}
-          <p className="text-[10px] leading-relaxed text-[#94a3b8]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
             شريط التصنيفات يظهر فقط إن كانت لمنتجات هذا المتجر تصنيفات.
           </p>
         </div>
@@ -987,19 +987,19 @@ function SectionFields({
           <GalleryField images={s.images} onChange={(images) => patch({ images: images.slice(0, 10) })} onUpload={onUpload} />
           <Check label="تتقلّب وحدها" checked={s.autoplay} onChange={(v) => patch({ autoplay: v })} />
           {s.autoplay && (
-            <label className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#364152]">
+            <label className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--sys-heading)]">
               ثوانٍ لكل صورة
               <select
                 value={s.seconds}
                 onChange={(e) => patch({ seconds: Number(e.target.value) })}
-                className="h-11 md:h-8 rounded-md border border-[#e3e8ef] bg-white px-2 text-xs"
+                className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs"
               >
                 {[2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </label>
           )}
-          <p className="text-[10px] leading-relaxed text-[#697586]">
-            حتى ١٠ صور. تتوقف حين يلمسها الزائر، ولا تتقلّب أبداً لمن طلب من جهازه حركة أقل.
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            حتى 10 صور. تتوقف حين يلمسها الزائر، ولا تتقلّب أبداً لمن طلب من جهازه حركة أقل.
           </p>
         </div>
       );
@@ -1009,7 +1009,7 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
           <Field label="الرسالة" value={s.message} onChange={(v) => patch({ message: v })} area rows={4} />
-          <p className="text-[10px] leading-relaxed text-[#697586]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             تظهر مكان النموذج بعد إرسال الطلب. رقم الطلب وعروض ما بعد الطلب تظهر تحتها تلقائياً —
             لا تكتبها هنا.
           </p>
@@ -1028,7 +1028,7 @@ function SectionFields({
       return (
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
-          <p className="text-[10px] leading-relaxed text-[#697586]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             العروض نفسها تُدار من تبويب «العروض» في الصفحة — الأسعار تأتي من هناك،
             ولا تُكتب هنا، حتى لا يكون للسعر مصدران.
           </p>
@@ -1049,15 +1049,15 @@ function SectionFields({
                 <Field label="الاسم" value={item.name} onChange={(v) => set({ ...item, name: v })} />
                 <Field label="الرأي" value={item.text} onChange={(v) => set({ ...item, text: v })} area />
                 <div>
-                  <label className="mb-1 block text-[10px] font-semibold text-[#697586]">النجوم</label>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">النجوم</label>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
                         key={n}
                         type="button"
                         onClick={() => set({ ...item, stars: n })}
-                        className={`h-6 w-6 cursor-pointer rounded text-xs ${
-                          n <= item.stars ? 'bg-[#b8256e] text-white' : 'bg-white text-[#9aa4b2] border border-[#e3e8ef]'
+                        className={`h-6 w-6 cursor-pointer rounded-sm text-xs ${
+                          n <= item.stars ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]' : 'bg-[var(--sys-card)] text-[var(--sys-muted)] border border-[var(--sys-border)]'
                         }`}
                       >
                         {n}
@@ -1221,7 +1221,7 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="الملاحظة" value={s.text} onChange={(v) => patch({ text: v })} placeholder="العرض ساري اليوم فقط" />
           <div>
-            <label className="mb-1 block text-[10px] font-semibold text-[#697586]">عدّاد (دقائق، 0 = بلا عدّاد)</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">عدّاد (دقائق، 0 = بلا عدّاد)</label>
             <Input
               type="number" min="0" max="1440" dir="ltr"
               value={s.minutes}
@@ -1234,9 +1234,9 @@ function SectionFields({
             checked={s.showRealStock}
             onChange={(v) => patch({ showRealStock: v })}
           />
-          <p className="text-[10px] leading-relaxed text-[#697586]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             الرقم يُقرأ من المخزون الفعلي ولا يظهر إلا إذا كان منخفضاً حقاً — لا يوجد حقل
-            لكتابة «بقي ٣» بينما المخزون مئة.
+            لكتابة «بقي 3» بينما المخزون مئة.
           </p>
         </div>
       );
@@ -1270,9 +1270,9 @@ function SectionFields({
         <div className="space-y-2.5">
           {/* The logo and the phone are the store's, set once — not a
               copy per page that drifts from the waybill and the shop. */}
-          <p className="rounded-lg bg-[#f8fafc] p-2 text-[10.5px] leading-relaxed text-[#697586]">
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             الشعار ورقم التواصل من <b>هوية المتجر</b> — تُعدَّل مرة واحدة من{' '}
-            <a href="/settings/geo" target="_blank" rel="noopener noreferrer" className="font-bold text-[#b8256e] hover:underline">
+            <a href="/settings/geo" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--sys-primary)] hover:underline">
               «البلدان والمتاجر»
             </a>{' '}
             وتظهر في كل صفحات المتجر.
@@ -1280,7 +1280,7 @@ function SectionFields({
           <Field label="نص التذييل" value={s.text} onChange={(v) => patch({ text: v })} placeholder="جميع الحقوق محفوظة" />
 
           <div>
-            <label className="mb-1 block text-[10px] font-semibold text-[#697586]">أعمدة الروابط</label>
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">أعمدة الروابط</label>
             <Repeater
               items={s.columns}
               max={4}
@@ -1313,7 +1313,7 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="نص الزر" value={s.text} onChange={(v) => patch({ text: v })} />
           <Check label="إظهار السعر على الزر" checked={s.showPrice} onChange={(v) => patch({ showPrice: v })} />
-          <p className="text-[10px] leading-relaxed text-[#697586]">
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يلاحق الزائر أسفل الشاشة، وبالضغط عليه ينزل مباشرة إلى تعبئة البيانات.
             موقعه في الترتيب لا يغيّر شيئاً — هو مثبّت على الشاشة لا على الصفحة.
           </p>
@@ -1333,15 +1333,15 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
   const ok = value === '' || /^https?:\/\//i.test(value) || /^\/[^/]/.test(value) || /^(mailto|tel):/i.test(value);
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-semibold text-[#697586]">الرابط</label>
+      <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">الرابط</label>
       <Input
         dir="ltr"
         value={value}
         placeholder="https://… أو /page"
         onChange={(e) => onChange(e.target.value)}
-        className={`text-xs ${ok ? '' : 'border-rose-400'}`}
+        className={`text-xs ${ok ? '' : 'border-[var(--sys-destructive-border)]'}`}
       />
-      {!ok && <p className="mt-1 text-[10px] text-rose-600">رابط غير صالح — يبدأ بـ https:// أو /</p>}
+      {!ok && <p className="mt-1 text-xs text-[var(--sys-destructive)]">رابط غير صالح — يبدأ بـ https:// أو /</p>}
     </div>
   );
 }
@@ -1358,14 +1358,14 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-semibold text-[#697586]">{label}</label>
+      <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">{label}</label>
       {area ? (
         <textarea
           value={value}
           rows={rows}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full resize-y rounded-lg border border-[#e3e8ef] bg-white px-2.5 py-1.5 text-xs text-[#121926] outline-none focus:border-[#b8256e]"
+          className="w-full resize-y rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2.5 py-1.5 text-xs text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]"
         />
       ) : (
         <Input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="text-xs" />
@@ -1376,12 +1376,12 @@ function Field({
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[#364152]">
+    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--sys-heading)]">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-3.5 w-3.5 cursor-pointer accent-[#b8256e]"
+        className="h-3.5 w-3.5 cursor-pointer accent-[var(--sys-primary)]"
       />
       {label}
     </label>
@@ -1413,15 +1413,15 @@ function ImageField({
 
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-semibold text-[#697586]">{label}</label>
+      <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">{label}</label>
       {value ? (
         <div className="relative mb-1.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" className="h-28 w-full rounded-lg border border-[#e3e8ef] object-cover" />
+          <img src={value} alt="" className="h-28 w-full rounded-lg border border-[var(--sys-border)] object-cover" />
           <button
             type="button"
             onClick={() => onChange('')}
-            className="absolute left-1.5 top-1.5 cursor-pointer rounded-full bg-white/90 p-1 text-[#697586] hover:text-rose-600"
+            className="absolute left-1.5 top-1.5 cursor-pointer rounded-full bg-[var(--sys-card)]/90 p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
             title="إزالة"
             aria-label="أزل هذه الصورة"
           >
@@ -1473,11 +1473,11 @@ function GalleryField({
           {images.map((src, i) => (
             <div key={i} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="aspect-square w-full rounded-md border border-[#e3e8ef] object-cover" />
+              <img src={src} alt="" className="aspect-square w-full rounded-md border border-[var(--sys-border)] object-cover" />
               <button
                 type="button"
                 onClick={() => onChange(images.filter((_, n) => n !== i))}
-                className="absolute left-0.5 top-0.5 cursor-pointer rounded-full bg-white/90 p-0.5 text-[#697586] hover:text-rose-600"
+                className="absolute left-0.5 top-0.5 cursor-pointer rounded-full bg-[var(--sys-card)]/90 p-0.5 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
               >
                 <X className="h-2.5 w-2.5" />
               </button>
@@ -1513,11 +1513,11 @@ function Repeater<T>({
   return (
     <div className="space-y-2">
       {items.map((item, i) => (
-        <div key={i} className="relative space-y-2 rounded-lg border border-[#e3e8ef] bg-white p-2.5">
+        <div key={i} className="relative space-y-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-2.5">
           <button
             type="button"
             onClick={() => onChange(items.filter((_, n) => n !== i))}
-            className="absolute left-1.5 top-1.5 cursor-pointer text-[#9aa4b2] hover:text-rose-600"
+            className="absolute left-1.5 top-1.5 cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
             title="حذف"
             aria-label="احذف هذا العنصر"
           >

@@ -67,49 +67,65 @@ describe('every file this repository draws from is governed by something', () =>
   });
 });
 
-describe('the look rules the page editor is excused from', () => {
-  it('is a named list of two, not a growing one', () => {
-    /*
-     * An exemption that can be extended quietly is a hole with a comment on
-     * it. Adding a third file has to be a deliberate change to this number
-     * and to the reason written in `guard-source.ts`.
-     */
-    expect(THEME_EXEMPT).toHaveLength(2);
-    expect(THEME_EXEMPT.join('|')).toContain('BlockBuilder.tsx');
-    expect(THEME_EXEMPT.join('|')).toContain('SelectionBar.tsx');
+describe('the page editor, which no longer needs excusing', () => {
+  /**
+   * THIS SECTION HELD AN EXEMPTION. The editor stood on its own slate
+   * palette — 141 hand-written hexes and 43 type sizes off the scale — and
+   * two files were held off the LOOK rules while that was true, named here
+   * so the hole could not grow.
+   *
+   * The owner asked for the conversion and it was done, so the list is
+   * empty. What replaced the exemption is better than an empty list: the
+   * files MOVED. They sat in `/components/landing/`, the shopper's tree,
+   * because they edit landing blocks — and that path was the root of every
+   * special case about them. It made them invisible to both sweeps, and it
+   * made the theme tokens they now carry a violation of
+   * `theme-isolation`'s rule that «the system's look never reaches a shop».
+   *
+   * In `/components/landing-editor/` the path tells the truth, so
+   * `dashboardFiles` finds them with no help and `shopperFiles` passes
+   * them by. The hole, the exemption and the special case all go together.
+   */
+  it('keeps no exemption at all', () => {
+    expect(THEME_EXEMPT).toEqual([]);
+    expect(themeExempt('/src/components/landing-editor/BlockBuilder.tsx')).toBe(false);
   });
 
-  it('and they are IN the dashboard sweep — excused from the look, not from the rules', () => {
+  it('and is in the dashboard sweep by its PATH, not by a carve-out', () => {
     const dash = dashboardFiles('both').map((f) => f.rel);
-    for (const name of ['BlockBuilder.tsx', 'SelectionBar.tsx']) {
-      expect(
-        dash.some((f) => f.includes(name)),
-        `${name}: خارج المسح من جديد — الثغرة عادت`
-      ).toBe(true);
+    for (const name of ['landing-editor/BlockBuilder.tsx', 'landing-editor/SelectionBar.tsx']) {
+      expect(dash.some((f) => f.includes(name)), `${name}: خارج مسح لوحة التحكم`).toBe(true);
+    }
+    // And the shopper's sweep does not also claim them — Ⅰ above forbids
+    // a file being in both, but naming these two says WHICH side they are.
+    const shop = shopperFiles('both').map((f) => f.rel);
+    for (const name of ['landing-editor/BlockBuilder.tsx', 'landing-editor/SelectionBar.tsx']) {
+      expect(shop.some((f) => f.includes(name)), `${name}: محسوب على المتسوّق`).toBe(false);
     }
   });
 
-  it('and the excuse reaches exactly those files and nothing else', () => {
-    expect(themeExempt('/src/components/landing/blocks/BlockBuilder.tsx')).toBe(true);
-    expect(themeExempt('/src/components/landing/blocks/SelectionBar.tsx')).toBe(true);
-    // The neighbours in the same folder are not excused.
-    expect(themeExempt('/src/components/landing/blocks/PageBlocks.tsx')).toBe(false);
-    expect(themeExempt('/src/components/screens/OrdersScreen.tsx')).toBe(false);
+  it('and nothing is left under the old path', () => {
+    // A move that leaves a copy behind is two editors, one of them stale.
+    const all = dashboardFiles('both').concat(shopperFiles('both')).map((f) => f.rel);
+    expect(all.filter((f) => f.includes('landing/blocks/BlockBuilder'))).toEqual([]);
+    expect(all.filter((f) => f.includes('landing/blocks/SelectionBar'))).toEqual([]);
   });
 
-  it('is used by the three look rules and by nothing else', () => {
+  it('and no guard is still skipping a file by name', () => {
     /*
-     * The exemption must not spread. If a fourth guard starts skipping
-     * these files, that is a rule quietly switched off — so the users are
-     * counted, and the count is the thing that has to change on purpose.
+     * `themeExempt` survives as a function so the mechanism is there if a
+     * future look rule genuinely needs one — but nothing may be using it
+     * while the list is empty, because a call that can never fire reads as
+     * live policy.
      */
-    const users = ['src/lib/one-palette.test.ts', 'src/lib/quality-gates.test.ts', 'src/lib/icons.test.ts'];
     const { execSync } = require('node:child_process') as typeof import('node:child_process');
     const found = execSync('git grep -l "themeExempt" -- src', { encoding: 'utf8' })
       .trim()
       .split(/\r?\n/)
       .map((f) => f.replace(/\\/g, '/'))
       .filter((f) => !f.endsWith('guard-source.ts') && !f.includes('no-file-falls-between'));
-    expect(found.sort(), 'حارسٌ رابع بدأ يستثني المحرِّر').toEqual(users.sort());
+    // The three look rules may still CALL it; with an empty list the call
+    // is a no-op, and that is the state this test records.
+    expect(found.length, 'حُرّاسٌ يَستعملون استثناءً فارغاً').toBeLessThanOrEqual(3);
   });
 });

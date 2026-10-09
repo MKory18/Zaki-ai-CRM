@@ -43,9 +43,9 @@ export interface SelectionBarProps {
 }
 
 const CHIP =
-  'flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-[11px] font-semibold transition';
-const OFF = 'text-[#e3e8ef] hover:bg-white/10 hover:text-white';
-const ON = 'bg-white text-[#121926]';
+  'flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-xs font-semibold transition';
+const OFF = 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-heading)]';
+const ON = 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]';
 
 export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
   const [at, setAt] = useState<{ top: number; left: number; height: number; below: boolean } | null>(null);
@@ -200,7 +200,7 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       // elsewhere, and a toolbar that destroys what it acts on is a toolbar
       // whose every button does nothing.
       onMouseDown={(e) => e.preventDefault()}
-      className={`fixed z-[70] -translate-x-1/2 rounded-xl bg-[#121926] p-1 shadow-xl ${
+      className={`fixed z-[70] -translate-x-1/2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-1 shadow-overlay ${
         // Above the words normally; below them when there is no room above,
         // because a toolbar off the top of the screen is a toolbar the
         // seller concludes is broken.
@@ -225,19 +225,19 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
           <Highlighter className="h-3.5 w-3.5" />
         </button>
 
-        <span className="mx-0.5 h-4 w-px bg-white/15" />
+        <span className="mx-0.5 h-4 w-px bg-[var(--sys-border)]" />
 
         <button title="اللون" onMouseDown={(e) => { e.preventDefault(); setOpen(open === 'color' ? null : 'color'); }} className={`${CHIP} ${OFF}`}>
-          <span className="h-3.5 w-3.5 rounded-full border border-white/40 bg-gradient-to-br from-[#ef4444] via-[#f59e0b] to-[#0ea5e9]" />
+          <span className="h-3.5 w-3.5 rounded-full border border-[var(--sys-border)] bg-gradient-to-br from-[#ef4444] via-[#f59e0b] to-[#0ea5e9]" />
         </button>
         <button title="الحجم" onMouseDown={(e) => { e.preventDefault(); setOpen(open === 'size' ? null : 'size'); }} className={`${CHIP} ${OFF}`}>
-          <span className="leading-none">A<span className="text-[8px]">A</span></span>
+          <span className="leading-none">A<span className="text-xs">A</span></span>
         </button>
         <button title="الخط" onMouseDown={(e) => { e.preventDefault(); setOpen(open === 'font' ? null : 'font'); }} className={`${CHIP} ${OFF}`}>
           خط
         </button>
 
-        <span className="mx-0.5 h-4 w-px bg-white/15" />
+        <span className="mx-0.5 h-4 w-px bg-[var(--sys-border)]" />
 
         <button title="إزالة التنسيق" onMouseDown={(e) => { e.preventDefault(); clear(); }} className={`${CHIP} ${OFF}`}>
           <Eraser className="h-3.5 w-3.5" />
@@ -245,13 +245,13 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       </div>
 
       {open === 'color' && (
-        <div className="mt-1 flex flex-wrap gap-1 border-t border-white/10 pt-1.5">
+        <div className="mt-1 flex flex-wrap gap-1 border-t border-[var(--sys-border)] pt-1.5">
           {MARK_COLORS.map((c) => (
             <button
               key={c.key}
               title={c.label}
               onMouseDown={(e) => { e.preventDefault(); attr('data-c', c.key); }}
-              className="h-5 w-5 rounded-full border border-white/30"
+              className="h-5 w-5 rounded-full border border-[var(--sys-border)]"
               style={{ background: c.css }}
             />
           ))}
@@ -259,7 +259,7 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       )}
 
       {open === 'size' && (
-        <div className="mt-1 flex gap-1 border-t border-white/10 pt-1.5">
+        <div className="mt-1 flex gap-1 border-t border-[var(--sys-border)] pt-1.5">
           {MARK_SIZES.map((s) => (
             <button
               key={s.key}
@@ -273,12 +273,12 @@ export function SelectionBar({ root, fonts, onChange }: SelectionBarProps) {
       )}
 
       {open === 'font' && (
-        <div className="mt-1 max-h-44 w-48 overflow-y-auto border-t border-white/10 pt-1.5">
+        <div className="mt-1 max-h-44 w-48 overflow-y-auto border-t border-[var(--sys-border)] pt-1.5">
           {fonts.map((f) => (
             <button
               key={f.key}
               onMouseDown={(e) => { e.preventDefault(); attr('data-f', f.key); }}
-              className="block w-full rounded px-2 py-1 text-start text-[13px] text-[#e3e8ef] hover:bg-white/10"
+              className="block w-full rounded-sm px-2 py-1 text-start text-sm text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)]"
               style={{ fontFamily: f.stack }}
             >
               {f.label}

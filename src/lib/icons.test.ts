@@ -22,14 +22,42 @@ function code(src: string): string {
 }
 
 describe('one icon family', () => {
+  /**
+   * THE PAGE EDITOR DRAWS WITH LUCIDE, AND THAT IS NOT DRIFT.
+   *
+   * It used to be excused through `THEME_EXEMPT`, alongside its colours.
+   * The colours were converted — the exemption is empty now — and this
+   * one survives it, because it is a different question with a different
+   * answer.
+   *
+   * The editor's palette shows the SAME icon beside a block that the block
+   * itself draws, and the blocks are the shopper's page: lucide, by the
+   * rule one line below this one. An editor drawing a Remix icon for a
+   * lucide block would be two pictures for one thing, which is the defect
+   * this file exists to prevent, arrived at from the other side.
+   *
+   * Two files, named rather than matched by folder, so the licence does
+   * not extend to the next screen somebody puts near them.
+   */
+  const DRAWS_WITH_THE_BLOCKS = [
+    '/src/components/landing-editor/BlockBuilder.tsx',
+    '/src/components/landing-editor/SelectionBar.tsx',
+  ];
+
   it('and the dashboard draws from it alone', () => {
     const strays = dashboardFiles()
-      // The page editor draws with lucide because the BLOCKS it edits do.
-      // Moving it to Remix is part of the same restyle. See `THEME_EXEMPT`.
-      .filter((f) => !themeExempt(f.rel))
+      .filter((f) => !DRAWS_WITH_THE_BLOCKS.includes(f.rel))
       .filter((f) => f.src.includes("from 'lucide-react'"))
       .map((f) => f.rel);
     expect(strays, `عائلة أيقونات ثانية في لوحة التحكم:\n${strays.join('\n')}`).toEqual([]);
+  });
+
+  it('and the two that are excused really are the editor, still', () => {
+    // An excuse for a file that moved or went is dead policy.
+    const swept = new Set(dashboardFiles().map((f) => f.rel));
+    for (const f of DRAWS_WITH_THE_BLOCKS) {
+      expect(swept.has(f), `${f}: سببٌ مكتوبٌ لملفٍّ لم يعد في المسح`).toBe(true);
+    }
   });
 
   it('while a seller’s own pages keep theirs untouched', () => {

@@ -7,7 +7,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
 import { findMediaUrls, inlineMedia, toDataUrl } from '@/lib/preview-media';
 import { buildBehaviorScript, BEHAVIOR_CSS } from '@/lib/landing-dynamic';
-import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
+import { BlockBuilder } from '@/components/landing-editor/BlockBuilder';
 import { HtmlPromptButtons } from '@/components/landing/HtmlPromptButtons';
 import { type LandingTheme, DEFAULT_THEME } from '@/lib/landing-theme';
 import {

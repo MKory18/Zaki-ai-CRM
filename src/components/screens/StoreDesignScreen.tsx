@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
-import { BlockBuilder } from '@/components/landing/blocks/BlockBuilder';
+import { BlockBuilder } from '@/components/landing-editor/BlockBuilder';
 import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';

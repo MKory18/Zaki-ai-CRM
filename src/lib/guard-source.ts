@@ -168,19 +168,32 @@ const EDITOR_ONLY = [
  * screen reader announces as «button», six controls under 44px with no
  * desk twin, and one icon imported and never drawn. All fixed.
  *
- * WHAT IS EXEMPT, AND ONLY FROM THE LOOK RULES. The editor was built on its
- * own slate palette — 100 hand-written hexes and 43 type sizes off the
- * scale — and the product's theme is not those greys, it is a blue-green
- * set. Bringing the editor onto the theme is a RESTYLE that changes how it
- * looks, not a substitution: `#364152` has no equivalent to swap in. That
- * is the owner's call, so it is written down and named here rather than
- * left as a silent hole. Every other rule now reaches these files.
+ * AND THE EXEMPTION IS EMPTY NOW — the restyle was asked for and done.
  *
- * The defect it leaves standing, stated plainly: the page editor does not
- * follow the theme, so in dark mode its labels are near-black on a dark
- * card.
+ * It held two files off the LOOK rules while the editor stood on its own
+ * slate palette: 141 hand-written hexes and 43 type sizes off the scale,
+ * against a product theme that is blue-green. The note here said the
+ * conversion was «a RESTYLE that changes how it looks, not a
+ * substitution», and the owner's answer was to convert it.
+ *
+ * WHAT THE CONVERSION HAD TO BE CAREFUL ABOUT, because a blind replace
+ * would have broken two things that share the chrome's hexes:
+ *
+ *   · `SWATCHES` — the twelve colours a seller PICKS from. Data, not
+ *     chrome, and `#b8256e`, `#0f172a` and `#be123c` appear in both.
+ *   · the rainbow on the selection bar's colour button, which is an icon
+ *     MEANING «colour» rather than a colour of the UI.
+ *
+ * Both are skipped by line, and the rainbow keeps a named exception in
+ * `one-palette` for the same reason.
+ *
+ * TWO THINGS THE CONVERSION ITSELF GOT WRONG AND THE GUARDS CAUGHT:
+ * mapping the floating toolbar's near-black to `--sys-heading` made it a
+ * near-WHITE bar with white text under the `ops` theme, and giving six
+ * controls the divider token put their edge at 1.25:1 where WCAG asks
+ * 3:1. Both fixed before this list was emptied.
  */
-export const THEME_EXEMPT = [...EDITOR_ONLY];
+export const THEME_EXEMPT: string[] = [];
 
 /** True for a file exempt from the LOOK rules, and from nothing else. */
 export const themeExempt = (rel: string): boolean =>

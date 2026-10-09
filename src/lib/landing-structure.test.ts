@@ -541,7 +541,7 @@ describe('the five blocks keep their rules by having no field for breaking them'
   it('every one of the five is drawn, and drawn in the shop’s own colours', () => {
     const css = repoFile('src/components/landing/blocks/styles.ts');
     const renderer = repoFile('src/components/landing/blocks/PageBlocks.tsx');
-    const editor = repoFile('src/components/landing/blocks/BlockBuilder.tsx');
+    const editor = repoFile('src/components/landing-editor/BlockBuilder.tsx');
     for (const type of Object.keys(SECTIONS_THE_TEN_NEED)) {
       expect(renderer, `renderer: ${type}`).toContain(`case '${type}'`);
       expect(editor, `editor: ${type}`).toContain(`case '${type}'`);
