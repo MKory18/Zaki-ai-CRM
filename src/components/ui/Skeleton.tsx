@@ -21,7 +21,7 @@ import clsx from 'clsx';
  * is a quiet block, which still holds the space. That is the half that
  * matters.
  */
-export function Skeleton({ className }: { className?: string }) {
+function Skeleton({ className }: { className?: string }) {
   return (
     <span
       aria-hidden

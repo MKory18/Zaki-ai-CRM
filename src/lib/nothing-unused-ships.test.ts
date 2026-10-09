@@ -235,8 +235,31 @@ function exportedComponents(src: string): string[] {
  * to make it. What it IS allowed to do is stop the number growing quietly.
  */
 const RENDERED_BY_NOTHING: Record<string, string> = {
-  'src/components/ui/Skeleton.tsx:Skeleton': 'الهيكلُ المفرد: تستعمله SkeletonRows داخل ملفه، ولا يستدعيه أحدٌ من الخارج',
-  'src/components/storefront/ShopSkeleton.tsx:ProductSkeleton': 'تصديرٌ لا يستعمله حتى ملفه — ShopSkeleton ترسم بلاطاتها بنفسها',
+  /*
+   * `Skeleton` CAME OFF THIS LIST BY STOPPING BEING AN EXPORT.
+   *
+   * Its entry read «the single bar: SkeletonRows uses it inside its own
+   * file, and nobody calls it from outside» — which is a description of a
+   * needless `export`, not of unused code. The keyword is gone and the
+   * function is module-private, so there is nothing left to classify.
+   */
+  /*
+   * AND `ProductSkeleton` STAYS, after being deleted and put back.
+   *
+   * Its entry read «an export its own file does not even use», and on
+   * that reading I removed it — then two guards in `shop-budget.test.ts`
+   * failed. One of them pins, in writing, that this file holds **two**
+   * skeletons and that each carries `aria-busy`; the other requires the
+   * `.sf-product` container so the product page's placeholder lays out
+   * where the real page does.
+   *
+   * «Nothing imports it» is not «nothing depends on it». It is a built
+   * loading state for the product page, already held to the layout rules,
+   * waiting for the route that renders it — and the entry now says that
+   * instead of implying it is spare.
+   */
+  'src/components/storefront/ShopSkeleton.tsx:ProductSkeleton':
+    'هيكلُ تحميلِ صفحةِ المنتج — مبنيٌّ ومحروسٌ في shop-budget (وجودُه و aria-busy و sf-product)، ولا مسارَ يرسمه بعد',
 };
 
 describe('كلُّ مكوّنٍ إمّا تعرضه شاشة أو يُقال إنه بُني ولم يُوصَل', () => {

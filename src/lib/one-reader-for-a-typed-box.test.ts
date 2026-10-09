@@ -33,13 +33,24 @@ import { NOT_A_NUMBER, onTheWire, typedFigure, typedNumber } from './typed-box';
 const NOT_A_COPY: Record<string, string> = {
   'src/components/screens/finance/WalletsScreen.tsx:typedNumber':
     'بلا فحصِ isFinite عن قصد: NaN يُكتَبُ null في JSON فيَرفُضُه البابُ بالاسم، ولا يُطوى في «فارغ» فيَصيرَ صفراً صامتاً — والشرحُ مكتوبٌ فوقَها',
-  'src/components/screens/ManufacturingScreen.tsx:figure':
+  'src/components/screens/ManufacturingScreen.tsx:numberOnly':
     'تَفُكُّ الرمزَ NOT_A_NUMBER ولا تَقرأُ نصّاً — وظيفةٌ أخرى تَشترِكُ بالاسمِ فقط',
-  'src/lib/ai.ts:figure':
+  'src/lib/ai.ts:moneyLine':
     'تُنسِّقُ مبلغاً كنصٍّ للعرض — لا علاقةَ لها بقراءةِ خانة',
 };
 
-const LOCAL = /^(?:const NOT_A_NUMBER\b|function (?:typedNumber|onTheWire|typedFigure|figure)\b)/gm;
+/*
+ * `figure` IS STILL SWEPT FOR, although no function carries the name now.
+ *
+ * There were three of them doing three unrelated jobs — parse a typed
+ * string, unwrap the NOT_A_NUMBER symbol, format an amount for display —
+ * and a reader who learned one meaning carried it into the next file. The
+ * two survivors were renamed to `numberOnly` and `moneyLine`, which say
+ * what they do; the name stays in this pattern so a fourth `figure` is
+ * caught the day somebody writes it.
+ */
+const LOCAL =
+  /^(?:const NOT_A_NUMBER\b|function (?:typedNumber|onTheWire|typedFigure|figure|numberOnly|moneyLine)\b)/gm;
 
 function localDefinitions(): string[] {
   const files = execSync('git ls-files "src/**/*.ts" "src/**/*.tsx"', { encoding: 'utf8' })

@@ -239,7 +239,7 @@ ${note ? `ملاحظة: ${note}\n\n` : ''}سؤال المستخدم: ${question}
 }
 
 /** A figure, or a plain sentence saying it is not there to give. */
-function figure(value: number | undefined, currency: string): string | null {
+function moneyLine(value: number | undefined, currency: string): string | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return currency ? `${value.toFixed(2)} ${currency}` : value.toFixed(2);
 }
@@ -266,7 +266,7 @@ function groundedAnswer(
     if (value !== null && value !== undefined && value !== '') lines.push(`* **${label}:** ${value}`);
   };
 
-  const money = (v: number | undefined) => figure(v, currency);
+  const money = (v: number | undefined) => moneyLine(v, currency);
   const pct = (v: number | undefined) => (typeof v === 'number' ? `${v.toFixed(1)}%` : null);
 
   const asksMoney = /profit|revenue|ربح|أرباح|ايراد|إيراد|دخل/.test(q);

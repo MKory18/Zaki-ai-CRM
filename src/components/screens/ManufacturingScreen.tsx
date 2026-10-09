@@ -79,7 +79,7 @@ const COST_PRESETS = [
  */
 
 /** The number a box holds, or nothing — the symbol is not a figure. */
-function figure(v: number | undefined | typeof NOT_A_NUMBER): number | undefined {
+function numberOnly(v: number | undefined | typeof NOT_A_NUMBER): number | undefined {
   return typeof v === 'number' ? v : undefined;
 }
 
@@ -178,15 +178,15 @@ export function ManufacturingScreen() {
   );
 
   const { total: totalProductionCost } = batchTotal({
-    manufacturingCost: figure(typedMfg),
-    packagingCost: figure(typedPack),
-    rawMaterialCost: figure(typedRaw),
-    otherCosts: figure(typedOther),
+    manufacturingCost: numberOnly(typedMfg),
+    packagingCost: numberOnly(typedPack),
+    rawMaterialCost: numberOnly(typedRaw),
+    otherCosts: numberOnly(typedOther),
     costLines: typedAmounts
       .filter((a): a is number => typeof a === 'number')
       .map((amount) => ({ amount })),
   });
-  const quantityProduced = figure(typedQuantity);
+  const quantityProduced = numberOnly(typedQuantity);
   const costPerUnit =
     !unreadable && quantityProduced !== undefined && quantityProduced > 0
       ? String(batchUnitCost(totalProductionCost, quantityProduced))
