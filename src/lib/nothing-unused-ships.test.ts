@@ -369,7 +369,7 @@ const NO_CALLER_FOUND: Record<string, string> = {
   '/api/orders/confirmation/performance': 'شاشةُ الأداء تسأل /api/orders/confirmation/team؛ هذا الطريقُ الأقدمُ لنفسِ الأرقام',
   '/api/finance/summary': 'يُلخّص المالَ عبر محرّكِ التحليلاتِ الواحد، ولا شاشةَ تستدعيه — له اختبارُه فقط',
   '/api/public/stores/[store]/search': 'صفحةُ المتجر تبحث على الخادم بـsearchProducts مباشرةً؛ لا حقلَ اقتراحاتٍ يستدعي الطريق',
-  '/api/public/landing-pages/[slug]/form.js': 'منقوضٌ بالتصميم: lp/[slug]/raw يقول «NO form injection» والمُنقِّي يحذف كلَّ <script> مرفوع',
+
 };
 
 describe('كلُّ صفحةٍ يقود إليها رابط', () => {
