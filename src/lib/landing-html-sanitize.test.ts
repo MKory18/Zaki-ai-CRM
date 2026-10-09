@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeLandingHtml } from './landing-html-sanitize';
+import { sanitizeLandingCss, sanitizeLandingHtml } from './landing-html-sanitize';
 
 /**
  * AN EVENT HANDLER IS REMOVED WHEREVER A PARSER WOULD SEE ONE.
@@ -207,5 +207,166 @@ describe('a javascript: URL hidden in character references', () => {
     const out = sanitizeLandingHtml('<a href="/x?a=1&amp;b=2" title="&#1575;">x</a>');
     expect(out).toContain('href="/x?a=1&amp;b=2"');
     expect(out).toContain('title="&#1575;"');
+  });
+});
+
+/**
+ * THE SECOND SWEEP — thirty-one known evasions, run against the function
+ * rather than reasoned about. Five got through; each is a tag or an
+ * attribute the list simply did not name, and the reason it mattered is on
+ * each test.
+ */
+describe('tags the list did not name', () => {
+  /*
+   * `String.raw` IS LOAD-BEARING, and this helper was written without it.
+   *
+   * In a template literal, a backslash-s is an unrecognised escape and
+   * evaluates to a plain «s», while a backslash-b is the BACKSPACE
+   * character. So the pattern this built was «less-than, s, star, slash,
+   * question, s, star, frameset, U+0008» — a thing that matches nothing —
+   * inside a helper whose whole job is to say «this tag is not here».
+   *
+   * Every test below passed with the strip removed. That is how it was
+   * caught: four mutations in a row came back MISSED while the function
+   * was demonstrably still emitting a frameset, so the next step was to
+   * doubt the test rather than the verdict.
+   *
+   * A guard that cannot fail is worse than no guard — it is a green tick
+   * over an unprotected rule.
+   */
+  const gone = (html: string, tag: string) =>
+    !new RegExp(String.raw`<\s*/?\s*${tag}\b`, 'i').test(html);
+
+  it('`<frame>` and `<frameset>` — an iframe with a shorter name', () => {
+    const out = sanitizeLandingHtml('<frameset><frame src="https://evil"></frameset>');
+    expect(gone(out, 'frame')).toBe(true);
+    expect(gone(out, 'frameset')).toBe(true);
+    expect(out).not.toContain('evil');
+  });
+
+  it('`<plaintext>`, which has no closing tag and eats the rest of the page', () => {
+    const out = sanitizeLandingHtml('<p>عرضنا</p><plaintext>كل ما بعده نصٌّ خام');
+    expect(gone(out, 'plaintext')).toBe(true);
+    // And what came before it is still a page.
+    expect(out).toContain('<p>عرضنا</p>');
+  });
+
+  it('`<link>`, which fetches — the one thing an uploaded file may not do', () => {
+    for (const rel of ['stylesheet', 'import', 'prefetch']) {
+      const out = sanitizeLandingHtml(`<link rel="${rel}" href="https://evil/x">`);
+      expect(gone(out, 'link'), rel).toBe(true);
+      expect(out, rel).not.toContain('evil');
+    }
+  });
+
+  it('`<applet>`, dead everywhere, removed with the rest', () => {
+    expect(gone(sanitizeLandingHtml('<applet code="Evil.class"></applet>'), 'applet')).toBe(true);
+  });
+
+  it('and `<meta name="referrer">`, which overrides the header the route sends', () => {
+    /*
+     * `raw/route.ts` sends `Referrer-Policy: no-referrer`. A meta referrer
+     * in the document overrides it, and `unsafe-url` then hands the full
+     * URL of the seller's page to every third party the page touches. The
+     * old rule matched `http-equiv` only, and this is not one.
+     */
+    const out = sanitizeLandingHtml('<meta name="referrer" content="unsafe-url">');
+    expect(out).not.toMatch(/referrer/i);
+    // The ordinary one is left alone — this strips a policy, not all metas.
+    expect(sanitizeLandingHtml('<meta charset="utf-8">')).toContain('charset');
+  });
+});
+
+describe('the submit target, both halves of it', () => {
+  it('drops `action` on the form, as it always did', () => {
+    const out = sanitizeLandingHtml('<form action="https://evil"><input name=a></form>');
+    expect(out).not.toContain('action=');
+    expect(out).toContain('<input name=a>');
+  });
+
+  it('and `formaction` on the button, which overrides it one tag down', () => {
+    /*
+     * The comment on that step promised «action/submit hijacking vectors»
+     * and removed one of the two. A button's `formaction` wins over the
+     * form's `action` when that button submits, so stripping the form's
+     * alone left the hijack in place.
+     */
+    const out = sanitizeLandingHtml('<form><button formaction="https://evil">go</button></form>');
+    expect(out).not.toMatch(/formaction/i);
+    expect(out).not.toContain('evil');
+    expect(out).toContain('go');
+  });
+});
+
+describe('a <style> block is CSS, and is held to the CSS rules', () => {
+  it('loses its @import, exactly as the CSS field does', () => {
+    /*
+     * The header says CSS is stripped of `@import` and friends, and that
+     * was true of the style ATTRIBUTE and of the page's CSS field — not of
+     * a `<style>` block in the uploaded HTML, which went through whole.
+     * One rule was being enforced in one of its two places.
+     */
+    const out = sanitizeLandingHtml('<style>@import url("https://evil/x.css");body{color:red}</style>');
+    expect(out).not.toMatch(/@import/i);
+    expect(out).not.toContain('evil');
+    // And the legitimate CSS beside it survives.
+    expect(out).toContain('body{color:red}');
+  });
+
+  it('and its expression() too, with the block still a block', () => {
+    const out = sanitizeLandingHtml('<style>a{width:expression(alert(1))}</style>');
+    expect(out).not.toMatch(/expression/i);
+    expect(out).toContain('<style>');
+    expect(out).toContain('</style>');
+  });
+});
+
+describe('a null byte is not whitespace, and the scheme test now knows', () => {
+  it('neutralises a scheme split by a control character', () => {
+    expect(sanitizeLandingHtml('<a href="java\u0000script:alert(1)">x</a>')).toContain('href="#"');
+    expect(sanitizeLandingHtml('<a href="java\u000Bscript:alert(1)">x</a>')).toContain('href="#"');
+  });
+
+  it('and leaves an ordinary value alone', () => {
+    expect(sanitizeLandingHtml('<a href="/عروض?a=1">x</a>')).toContain('href="/عروض?a=1"');
+  });
+});
+
+describe('what the sanitizer removes, it removes WHOLE', () => {
+  /*
+   * `[^)]*` stopped at the FIRST `)`, which in `expression(alert(1))` is
+   * the inner one. The vector went and a stray bracket stayed, so a parser
+   * reading unbalanced CSS swallowed the declaration after it. A sanitizer
+   * that leaves broken syntax breaks the pages it approved.
+   */
+  it('leaves no orphan bracket behind an expression()', () => {
+    const out = sanitizeLandingCss('a{width:expression(alert(1))}');
+    expect(out).not.toContain(')}');
+    expect(out).toBe('a{width:}');
+  });
+
+  it('nor behind a url(javascript:…)', () => {
+    const out = sanitizeLandingCss('a{background:url(javascript:alert(1))}');
+    expect(out).toBe('a{background:url("#")}');
+    expect(out).not.toContain('))');
+  });
+});
+
+/**
+ * AND WHAT IS DELIBERATELY NOT REMOVED, so nobody reads its absence as an
+ * oversight on the next sweep.
+ *
+ * A remote font and a remote image both reach a third party from a
+ * customer's browser. Neither is stripped, because `RAW_HTML_CSP` allows
+ * them on purpose — `font-src 'self' data: https:` and
+ * `img-src 'self' data: https:`. Sellers' pages use remote images as a
+ * matter of course, and a sanitizer that contradicts the CSP is a second
+ * policy. The leak they allow is an IP and a user agent, and it is the
+ * platform's decision, not this function's.
+ */
+describe('remote media, allowed on purpose', () => {
+  it('keeps a remote font and a remote image, as the CSP does', () => {
+    expect(sanitizeLandingCss('@font-face{src:url(https://cdn/x.woff2)}')).toContain('cdn/x.woff2');
+    expect(sanitizeLandingHtml('<img src="https://cdn/x.jpg">')).toContain('cdn/x.jpg');
   });
 });

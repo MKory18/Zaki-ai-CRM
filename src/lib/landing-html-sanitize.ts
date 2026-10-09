@@ -41,7 +41,16 @@ export interface LandingPageSettings {
  * ordinary pages.
  */
 function decodeCharRefs(value: string): string {
-  return value.replace(/&#(x[0-9a-f]+|[0-9]+);?/gi, (whole, body: string) => {
+  /*
+   * CONTROL CHARACTERS GO FIRST. The scheme pattern tolerates whitespace
+   * between the letters, and a NUL or a vertical tab is not whitespace to a
+   * regex — `href="java\u0000script:…"` came back untouched. Browsers mangle
+   * a raw NUL in an attribute, so this is depth rather than a live hole, but
+   * «probably mangled» is not the standard the rest of this file holds.
+   */
+  return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/&#(x[0-9a-f]+|[0-9]+);?/gi, (whole, body: string) => {
     const code = body[0]?.toLowerCase() === 'x' ? parseInt(body.slice(1), 16) : parseInt(body, 10);
     // Surrogates and out-of-range code points make `fromCodePoint` throw;
     // they are not letters of a scheme, so the original text is kept.
@@ -92,8 +101,38 @@ export function sanitizeLandingHtml(html: string): string {
     out = out.replace(/<\/?object\b[^>]*\/?>/gi, '');
     out = out.replace(/<\/?embed\b[^>]*\/?>/gi, '');
     out = out.replace(/<base\b[^>]*>/gi, '');
+    /*
+     * `<frame>` IS `<iframe>` WITH A SHORTER NAME, and the list named only
+     * the long one. `<frameset>` replaces the document's body outright, so
+     * it is a defacement of the whole page on top of being a loader.
+     *
+     * `<plaintext>` has no closing tag by definition: everything after it
+     * is raw text, so one of them destroys the rest of a seller's page and
+     * nothing can undo it.
+     *
+     * `<link>` fetches — a stylesheet, an import, a prefetch — which is the
+     * one thing this function exists to stop an uploaded file doing.
+     *
+     * `<applet>` is dead in every browser; removed with the others because
+     * a list that is right except for the dead ones is a list people stop
+     * reading.
+     */
+    out = out.replace(/<\/?frameset\b[^>]*>/gi, '');
+    out = out.replace(/<\/?frame\b[^>]*\/?>/gi, '');
+    out = out.replace(/<\/?plaintext\b[^>]*>/gi, '');
+    out = out.replace(/<\/?link\b[^>]*\/?>/gi, '');
+    out = out.replace(/<applet\b[\s\S]*?<\/applet\s*>/gi, '');
+    out = out.replace(/<\/?applet\b[^>]*\/?>/gi, '');
     // meta refresh / meta with http-equiv
     out = out.replace(/<meta\b[^>]*http-equiv\b[^>]*>/gi, '');
+    /*
+     * AND `<meta name="referrer">`, which is not an http-equiv and so was
+     * not matched. The raw route sends `Referrer-Policy: no-referrer` as a
+     * header; a meta referrer in the document OVERRIDES it, and
+     * `unsafe-url` then sends the full URL of the seller's page to every
+     * third party the page touches.
+     */
+    out = out.replace(/<meta\b[^>]*\sname\s*=\s*["']?referrer\b[^>]*>/gi, '');
   }
 
   // 3) Strip ALL inline event handlers (on*).
@@ -122,14 +161,41 @@ export function sanitizeLandingHtml(html: string): string {
   // href/src/action with javascript: written without quotes
   out = out.replace(/(href|src|action|formaction)\s*=\s*(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l)[^>\s]*/gi, '$1="#"');
 
-  // 5) Forms may exist (the public form.js flow uses a host div, not uploaded
-  //    forms) — strip their action/submit hijacking vectors.
+  /*
+   * 5) Forms may exist — the trusted Zaki order form is rendered by the app
+   *    outside this iframe and never relies on an uploaded one — so what is
+   *    stripped is the submit TARGET, not the form.
+   *
+   *    `formaction` WAS MISSED. It sits on the button, not the form, and it
+   *    overrides the form's action when that button submits — so stripping
+   *    `action` alone left the hijack intact one tag down. The comment here
+   *    already claimed to remove «action/submit hijacking vectors»; this is
+   *    the other half of that sentence.
+   */
   out = out.replace(/<form\b([^>]*)>/gi, (m, attrs: string) => `<form${attrs.replace(/\saction\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')}>`);
+  out = out.replace(/\sformaction\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 
   // 6) style attributes with expression()/javascript: are dead in modern
   //    browsers, stripped anyway for depth:
   out = out.replace(/\sstyle\s*=\s*("([^"]*)")/gi, (m, q: string, val: string) =>
     /expression\s*\(|javascript\s*:|@import/i.test(val) ? ' style=""' : m
+  );
+
+  /*
+   * 7) AND A `<style>` BLOCK IS CSS, so it is held to the CSS rules.
+   *
+   * The header above says «CSS is stripped of expression()/behavior/@import
+   * /javascript: vectors», and step 6 did that for the style ATTRIBUTE
+   * only. A `<style>` block in the uploaded HTML went through untouched,
+   * while the very same declarations in the page's CSS field were cleaned
+   * by `sanitizeLandingCss`. One rule, enforced in one of its two places.
+   *
+   * MEASURED: `<style>@import url("https://evil/x.css")</style>` survived
+   * here and was stripped there.
+   */
+  out = out.replace(
+    /(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi,
+    (_m, open: string, css: string, close: string) => `${open}${sanitizeLandingCss(css)}${close}`
   );
 
   return out;
@@ -138,14 +204,27 @@ export function sanitizeLandingHtml(html: string): string {
 /** Sanitize untrusted landing CSS. Returns cleaned CSS string. */
 export function sanitizeLandingCss(css: string): string {
   let out = css ?? '';
-  // expression(), behavior, -moz-binding (old IE vectors, dead but stripped)
-  out = out.replace(/expression\s*\([^)]*\)/gi, '');
+  /*
+   * expression(), behavior, -moz-binding (old IE vectors, dead but stripped).
+   *
+   * ONE LEVEL OF NESTING, because `[^)]*` stopped at the FIRST `)` — which
+   * in `expression(alert(1))` is the inner one. MEASURED: the output was
+   * `a{width:)}` — the vector removed and a stray bracket left behind, so
+   * the declaration after it was swallowed by a parser reading unbalanced
+   * CSS. A sanitizer that leaves broken syntax breaks pages it approved.
+   */
+  out = out.replace(/expression\s*\((?:[^()]|\([^()]*\))*\)/gi, '');
   out = out.replace(/behavior\s*:[^;}]+;?/gi, '');
   out = out.replace(/-moz-binding\s*:[^;}]+;?/gi, '');
   // @import can fetch remote CSS (and old-IE javascript: URLs)
   out = out.replace(/@import[^;]+;?/gi, '');
-  // javascript: / data:text/html URLs in url(...)
-  out = out.replace(/url\s*\(\s*(['"]?)\s*(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l)[^)]*\)/gi, 'url("#")');
+  // javascript: / data:text/html URLs in url(...) — one level of nesting,
+  // for the same reason as `expression` above: `url(javascript:alert(1))`
+  // left `url("#"))` and an unbalanced bracket in the sheet.
+  out = out.replace(
+    /url\s*\(\s*(['"]?)\s*(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l)(?:[^()]|\([^()]*\))*\)/gi,
+    'url("#")'
+  );
   // comments can be used to split tokens in old filters — normalize
   out = out.replace(/\/\*[\s\S]*?\*\//g, '');
   return out;
