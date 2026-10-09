@@ -27,23 +27,74 @@ export interface LandingPageSettings {
   fontFamily?: string;
 }
 
+/**
+ * NUMERIC CHARACTER REFERENCES, DECODED FOR THE SCHEME TEST ONLY.
+ *
+ * A browser decodes `&#106;` to `j` before it parses an attribute as a URL,
+ * so `href="&#106;avascript:alert(1)"` is a javascript: URL however it
+ * looks in the source. Decimal, hex and zero-padded forms all work, and the
+ * trailing semicolon is optional in HTML.
+ *
+ * The decoded text is used to JUDGE the value and is never written back:
+ * a clean value keeps its original bytes, entities and all, because a
+ * sanitizer that rewrites what it approves is a sanitizer that corrupts
+ * ordinary pages.
+ */
+function decodeCharRefs(value: string): string {
+  return value.replace(/&#(x[0-9a-f]+|[0-9]+);?/gi, (whole, body: string) => {
+    const code = body[0]?.toLowerCase() === 'x' ? parseInt(body.slice(1), 16) : parseInt(body, 10);
+    // Surrogates and out-of-range code points make `fromCodePoint` throw;
+    // they are not letters of a scheme, so the original text is kept.
+    if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return whole;
+    if (code >= 0xd800 && code <= 0xdfff) return whole;
+    return String.fromCodePoint(code);
+  });
+}
+
 /** Sanitize untrusted landing HTML. Returns cleaned HTML string. */
 export function sanitizeLandingHtml(html: string): string {
   let out = html ?? '';
 
-  // 1) Remove script blocks entirely (multiline, case-insensitive)
-  out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
-  // stray script open/close leftovers
-  out = out.replace(/<\/?script\b[^>]*>/gi, '');
-
-  // 2) Remove dangerous containers entirely (with their content for base/meta)
-  out = out.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
-  out = out.replace(/<iframe\b[^>]*\/?>/gi, '');
-  out = out.replace(/<object\b[\s\S]*?<\/object\s*>/gi, '');
-  out = out.replace(/<embed\b[^>]*\/?>/gi, '');
-  out = out.replace(/<base\b[^>]*>/gi, '');
-  // meta refresh / meta with http-equiv
-  out = out.replace(/<meta\b[^>]*http-equiv\b[^>]*>/gi, '');
+  /*
+   * 1+2) REMOVE ACTIVE TAGS — REPEATEDLY, FOR THE REASON STEP 3 ALREADY
+   *      GIVES ABOUT HANDLERS.
+   *
+   * These ran once each. Step 3 loops «so removing one handler cannot
+   * splice two fragments into a new one», and that is a property of
+   * removal itself, not of handlers — but the lesson had only been applied
+   * to half the function. MEASURED against the single pass:
+   *
+   *   <scr<script>ipt>alert(1)</scr<script>ipt>   →  <script>alert(1)</script>
+   *   <obj<object></object>ect data="x">          →  <object data="x">
+   *
+   * Removing the inner tag rejoined `<scr` with `ipt>` into a working
+   * script tag, and the result went to the database as sanitized. The
+   * sandbox and the CSP are still the primary boundary — an opaque origin
+   * cannot reach ours — but `allow-scripts` and `allow-popups` are granted,
+   * and the page this HTML becomes is where a customer types their phone
+   * number and address.
+   *
+   * `<object>` had a second hole of its own: a PAIR rule and no lone-tag
+   * rule, where `<iframe>` has both. The splice left a lone `<object …>`
+   * that nothing then matched.
+   *
+   * The loop terminates because every rule only ever deletes characters.
+   */
+  for (let before = ''; before !== out; ) {
+    before = out;
+    // Script blocks (multiline, case-insensitive), then stray halves.
+    out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+    out = out.replace(/<\/?script\b[^>]*>/gi, '');
+    // Dangerous containers, each with a PAIR rule and a LONE-TAG rule.
+    out = out.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
+    out = out.replace(/<\/?iframe\b[^>]*\/?>/gi, '');
+    out = out.replace(/<object\b[\s\S]*?<\/object\s*>/gi, '');
+    out = out.replace(/<\/?object\b[^>]*\/?>/gi, '');
+    out = out.replace(/<\/?embed\b[^>]*\/?>/gi, '');
+    out = out.replace(/<base\b[^>]*>/gi, '');
+    // meta refresh / meta with http-equiv
+    out = out.replace(/<meta\b[^>]*http-equiv\b[^>]*>/gi, '');
+  }
 
   // 3) Strip ALL inline event handlers (on*).
   //    An attribute starts after ANY separator an HTML parser accepts, not
@@ -60,7 +111,12 @@ export function sanitizeLandingHtml(html: string): string {
   //    (javascript:, vbscript:, data:text/html — incl. encoded variants)
   const dangerousUrl = /(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l)/i;
   out = out.replace(/(\w+\s*=\s*)(["']?)([^"'>]*)/gi, (m, attr: string, q: string, val: string) => {
-    if (dangerousUrl.test(val)) return `${attr}${q}#`;
+    // The pattern tolerates whitespace BETWEEN the letters, which is the
+    // old trick. It does not tolerate the letters being written as
+    // character references, which is the other one — and a browser decodes
+    // those before it reads the scheme. MEASURED: `&#106;avascript:alert(1)`
+    // and `&#x6a;avascript:alert(1)` both came back untouched in an `href`.
+    if (dangerousUrl.test(decodeCharRefs(val))) return `${attr}${q}#`;
     return m;
   });
   // href/src/action with javascript: written without quotes

@@ -109,3 +109,103 @@ describe('the other active content the header promises to remove', () => {
     expect(out).not.toMatch(/javascript\s*:/i);
   });
 });
+
+/**
+ * REMOVING A TAG CAN BUILD A NEW ONE — THE LESSON STEP 3 ALREADY KNEW.
+ *
+ * The handler strip loops «so removing one handler cannot splice two
+ * fragments into a new one». That is a property of REMOVAL, not of
+ * handlers, and the tag strips above it ran once each. MEASURED against
+ * the single pass:
+ *
+ *   <scr<script>ipt>alert(1)</scr<script>ipt>  →  <script>alert(1)</script>
+ *   <obj<object></object>ect data="x">         →  <object data="x">
+ *
+ * The first is a working script tag written into the database as
+ * sanitized. The sandbox and the CSP remain the primary boundary — an
+ * opaque origin cannot reach ours — but `allow-scripts` and
+ * `allow-popups` are granted, and the page this becomes is where a
+ * customer types their phone number and address.
+ *
+ * `<object>` carried a second hole: a pair rule and no lone-tag rule,
+ * where `<iframe>` has both, so the spliced `<object …>` matched nothing.
+ */
+describe('a tag spliced out of two halves', () => {
+  const noActive = (html: string) =>
+    !/<\s*\/?\s*(script|iframe|object|embed|base)\b/i.test(html);
+
+  it('does not leave a script behind', () => {
+    const out = sanitizeLandingHtml('<scr<script>ipt>alert(1)</scr<script>ipt>');
+    expect(out, 'نصفان التحما بعد الحذف فصارا وسماً عاملاً').not.toContain('<script>');
+    expect(noActive(out)).toBe(true);
+  });
+
+  it('nor an object, which also had no lone-tag rule of its own', () => {
+    const out = sanitizeLandingHtml('<obj<object></object>ect data="x">');
+    expect(out).not.toContain('<object');
+    expect(noActive(out)).toBe(true);
+  });
+
+  it('nor an iframe, an embed or a base', () => {
+    for (const bad of [
+      '<ifr<iframe></iframe>ame src="https://evil">',
+      '<emb<embed>ed src="x">',
+      '<ba<base>se href="https://evil/">',
+    ]) {
+      expect(noActive(sanitizeLandingHtml(bad)), bad).toBe(true);
+    }
+  });
+
+  it('and keeps going until nothing changes, however deep the nesting', () => {
+    // Three layers: one pass fixes none of it, two fix part.
+    const out = sanitizeLandingHtml('<scr<scr<script></script>ipt></script>ipt>alert(1)');
+    expect(noActive(out)).toBe(true);
+  });
+
+  it('while ordinary markup around it is untouched', () => {
+    const out = sanitizeLandingHtml('<p class="a">نص</p><scr<script>ipt>x</script><p>ب</p>');
+    expect(out).toContain('<p class="a">نص</p>');
+    expect(out).toContain('<p>ب</p>');
+    expect(noActive(out)).toBe(true);
+  });
+});
+
+/**
+ * A SCHEME WRITTEN AS CHARACTER REFERENCES IS STILL THAT SCHEME.
+ *
+ * The scheme test tolerates whitespace between the letters — the old
+ * trick — and did not tolerate the letters being written as `&#106;`,
+ * which a browser decodes before it reads the URL. MEASURED: both
+ * `&#106;avascript:alert(1)` and `&#x6a;avascript:alert(1)` came back
+ * untouched in an `href`.
+ */
+describe('a javascript: URL hidden in character references', () => {
+  const dead = (html: string) => /href="#"/.test(html);
+
+  it('is neutralised in decimal, hex and zero-padded form', () => {
+    for (const bad of [
+      '<a href="&#106;avascript:alert(1)">x</a>',
+      '<a href="&#x6a;avascript:alert(1)">x</a>',
+      '<a href="&#0000106;avascript:alert(1)">x</a>',
+      '<a href="&#106avascript:alert(1)">x</a>', // the semicolon is optional
+    ]) {
+      expect(dead(sanitizeLandingHtml(bad)), bad).toBe(true);
+    }
+  });
+
+  it('and so is the plain form, which already worked', () => {
+    expect(dead(sanitizeLandingHtml('<a href="javascript:alert(1)">x</a>'))).toBe(true);
+    expect(dead(sanitizeLandingHtml('<a href="java\tscript:alert(1)">x</a>'))).toBe(true);
+  });
+
+  it('but an ordinary entity in an ordinary attribute is left exactly as written', () => {
+    /*
+     * The decode judges the value and is never written back. A sanitizer
+     * that rewrites what it approves corrupts ordinary pages — `&amp;` in
+     * a query string, `&#1575;` in a title.
+     */
+    const out = sanitizeLandingHtml('<a href="/x?a=1&amp;b=2" title="&#1575;">x</a>');
+    expect(out).toContain('href="/x?a=1&amp;b=2"');
+    expect(out).toContain('title="&#1575;"');
+  });
+});
