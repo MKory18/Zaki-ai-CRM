@@ -35,6 +35,12 @@ const {
     orderItem: { create: vi.fn() },
     customer: { update: vi.fn() },
     orderActivity: { create: vi.fn() },
+    // One transaction: the order and its line are one fact, so a failure
+    // between them cannot leave a lineless order. The fake hands itself
+    // back as the client rather than the door being split again.
+    $transaction: vi.fn(async (fn: unknown) =>
+      typeof fn === 'function' ? (fn as (tx: unknown) => unknown)(db) : fn
+    ),
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),

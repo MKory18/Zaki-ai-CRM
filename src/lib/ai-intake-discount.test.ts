@@ -62,6 +62,26 @@ const {
     orderItem: { create: vi.fn() },
     customer: { update: vi.fn(), findFirst: vi.fn() },
     orderActivity: { create: vi.fn() },
+    // The opening row of the state history, which this door now writes
+    // beside the order — see `an-order-and-its-lines-are-one-write`.
+    orderStatusLog: { create: vi.fn() },
+    /*
+     * THE DOUBLE IS GIVEN THE TRANSACTION, NOT THE CODE A WAY AROUND IT.
+     *
+     * `ai-intake` writes the order, its line, the customer's counters, the
+     * activity and the opening state row in ONE transaction, because a
+     * failure between the first two leaves a LINELESS ORDER — the one shape
+     * no money rule in this product can price.
+     *
+     * So the fake hands the same object back as the transaction client, the
+     * way six other doubles in this repository already do. The alternative
+     * was to accommodate the fake by splitting the writes again, and that
+     * is the mistake this repository has a name for: a test double is not a
+     * reason to make the product worse.
+     */
+    $transaction: vi.fn(async (fn: unknown) =>
+      typeof fn === 'function' ? (fn as (tx: unknown) => unknown)(db) : fn
+    ),
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),

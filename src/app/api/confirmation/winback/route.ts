@@ -322,9 +322,28 @@ export async function POST(req: Request) {
     });
     const totalAmount = money.cod;
 
+    /**
+     * THE ORDER NUMBER RETRIES HERE TOO, which it could not before.
+     *
+     * The attempt was the literal `0`, and nothing caught a P2002 — so two
+     * orders created in the same second raced for one number and the loser
+     * handed a raw Prisma conflict to whoever pressed «اعرض استرجاعاً».
+     * `nextOrderNumber` takes an attempt precisely so the retry asks for
+     * the NEXT number instead of the same one again, and a constant 0 asks
+     * for the same one forever.
+     *
+     * Four of the six order doors already looped this way; this was the
+     * fifth, found by the walk in `an-order-and-its-lines-are-one-write`
+     * rather than by reading — a guard that counted ARGUMENTS was happy
+     * with `0`, which is the lesson: an argument is not an attempt.
+     */
+    const now = new Date();
     const created = await db.$transaction(async (tx) => {
-      const refs = await orderRefFields(tx, companyId, country.orderPrefix, 0);
-      const fresh = await tx.order.create({
+      let fresh: { id: string; orderNumber: string } | null = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const refs = await orderRefFields(tx, companyId, country.orderPrefix, attempt, now);
+          fresh = await tx.order.create({
         data: {
           companyId,
           countryId: order.countryId,
@@ -362,7 +381,14 @@ export async function POST(req: Request) {
           version: 1,
         },
         select: { id: true, orderNumber: true },
-      });
+          });
+          break;
+        } catch (e: unknown) {
+          if ((e as { code?: string })?.code === 'P2002' && attempt < 4) continue;
+          throw e;
+        }
+      }
+      if (!fresh) throw new Error('Failed to generate a unique order number');
 
       /**
        * AND ITS LINES, IN THE SAME TRANSACTION AS THE ORDER.
