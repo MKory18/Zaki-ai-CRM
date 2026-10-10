@@ -6,6 +6,7 @@ import {
   proofDisposition,
   proofDispositionHeader,
   proofHash,
+  proofName,
   proofStorageKey,
   safeProofName,
   sniffProof,
@@ -163,6 +164,56 @@ describe('Ⅳ · the name that comes back out — a header boundary', () => {
   it('and a quote cannot break out of the ASCII fallback either', () => {
     const h = proofDispositionHeader('image/jpeg', 'a"b.jpg');
     expect(/filename="([^"]*)"/.exec(h)![1]).not.toContain('"');
+  });
+});
+
+describe('Ⅳ.b · and the owner is the one who names it — «لازم أنا اسميه»', () => {
+  /**
+   * A phone calls its photos `IMG_20261010_143052.jpg`, and a month later
+   * that tells nobody which handover it was. So the owner's name wins.
+   *
+   * OFFERED, NOT DEMANDED: a required field stands between a person and
+   * recording money that has already arrived, and a receipt that cannot be
+   * saved is worse than a receipt called `IMG_2026…`.
+   */
+  it('the typed name beats the file’s own', () => {
+    expect(proofName('image/jpeg', 'IMG_20261010_143052.jpg', 'تحصيل أرامكس ١٠ تشرين')).toBe(
+      'تحصيل أرامكس ١٠ تشرين.jpg'
+    );
+  });
+
+  it('and the owner is not asked to know the extension', () => {
+    // They type «حوالة بنكية»; the bytes say PDF; the name gets `.pdf`.
+    expect(proofName('application/pdf', 'scan001.jpg', 'حوالة بنكية')).toBe('حوالة بنكية.pdf');
+  });
+
+  it('and typing nothing keeps the file’s own name', () => {
+    expect(proofName('image/jpeg', 'IMG_4821.jpg')).toBe('IMG_4821.jpg');
+    expect(proofName('image/jpeg', 'IMG_4821.jpg', '')).toBe('IMG_4821.jpg');
+  });
+
+  it('and typing only spaces is typing nothing', () => {
+    // The distinction a sanitiser that substitutes its own fallback cannot
+    // make — which is why `clean` may return empty and the caller decides.
+    expect(proofName('image/jpeg', 'IMG_4821.jpg', '   ')).toBe('IMG_4821.jpg');
+    expect(proofName('image/jpeg', 'IMG_4821.jpg', '..')).toBe('IMG_4821.jpg');
+  });
+
+  it('and the owner’s name is cleaned too, because the header does not care who typed it', () => {
+    const out = proofName('image/jpeg', 'x.jpg', 'إيصال"؛\r\nX-Evil: 1');
+    for (const ch of ['"', ';', '\r', '\n']) {
+      expect(out, `بقي ${JSON.stringify(ch)} في الاسم المكتوب بيد`).not.toContain(ch);
+    }
+    expect(out).toContain('إيصال');
+  });
+
+  it('and a typed name is never a path', () => {
+    expect(proofName('image/png', 'x.png', '../../etc/passwd')).toBe('passwd.png');
+  });
+
+  it('and describeProof passes the chosen name through', () => {
+    expect(describeProof(PDF, 'scan001.pdf', 'حوالة أرامكس').name).toBe('حوالة أرامكس.pdf');
+    expect(describeProof(PDF, 'scan001.pdf').name).toBe('scan001.pdf');
   });
 });
 

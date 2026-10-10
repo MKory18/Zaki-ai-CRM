@@ -93,7 +93,7 @@ export interface ProofFacts {
   /** SHA-256 of the bytes as stored — a proof swapped later stops matching. */
   hash: string;
   sizeBytes: number;
-  /** The person's own filename, cleaned of everything that is not a name. */
+  /** What the owner called it, or the file's own name if they called it nothing. */
   name: string;
 }
 
@@ -110,19 +110,31 @@ export function proofHash(buffer: Buffer): string {
 }
 
 /**
- * THE NAME THAT COMES BACK OUT, and it is a security boundary.
+ * ONE SANITISER, BECAUSE THE NAME IS A HEADER BOUNDARY WHOEVER TYPED IT.
  *
- * This string is put in a `Content-Disposition` header. A name holding a
+ * The result goes into a `Content-Disposition` header. A name holding a
  * quote, a semicolon, a CR or an LF can end the header's value early or
  * start a header of its own, so none of those survive. Path separators go
  * too: a name is a name, never a route to a directory.
  *
- * Arabic is KEPT — the owner names files in Arabic and a proof called
- * «إيصال أرامكس» must come back called that. It is the header's encoding
- * that handles non-ASCII (`filename*=UTF-8''…`), not a transliteration.
+ * It runs on the OWNER'S name as well as on the uploaded one. Not because
+ * the owner is suspected — because the sanitiser is what keeps the header
+ * well-formed, and a rule that applies to one of two inputs is a rule with
+ * a way around it. A name typed by hand can hold a stray quote by accident
+ * just as easily.
+ *
+ * Arabic is KEPT — the owner names things in Arabic and «إيصال أرامكس»
+ * must come back called that. It is the header's encoding that carries
+ * non-ASCII (`filename*=UTF-8''…`), not a transliteration.
+ *
+ * Returns the empty string when nothing is left, so the CALLER decides
+ * what an empty name means. That distinction is the whole reason this is
+ * separate: «the owner typed only spaces» and «the owner typed nothing»
+ * have to be told apart, and a function that silently substitutes a
+ * fallback cannot tell them apart.
  */
-export function safeProofName(originalName: string, mime: ProofMime): string {
-  const base = originalName
+function clean(name: string): string {
+  return name
     .split(/[\\/]/)
     .pop()!
     // Control characters first, so a CR cannot survive as whitespace.
@@ -134,12 +146,43 @@ export function safeProofName(originalName: string, mime: ProofMime): string {
     .replace(/^\.+/, '')
     .slice(0, 80)
     .trim();
+}
 
+/** Puts the extension the BYTES deserve on a cleaned name. */
+function withExtension(base: string, mime: ProofMime): string {
   const ext = EXT[mime];
-  if (!base) return `إثبات-التحصيل.${ext}`;
-  // The extension must match what the bytes ARE, not what the sender typed:
-  // a PDF uploaded as `slip.jpg` comes back as `slip.pdf`.
-  return new RegExp(`\\.${ext}$`, 'i').test(base) ? base : `${base.replace(/\.[A-Za-z0-9]{1,8}$/, '')}.${ext}`;
+  // A PDF uploaded as `slip.jpg` comes back as `slip.pdf`, and a name the
+  // owner typed — «إيصال أرامكس» — gets the extension without being asked
+  // to know what it is.
+  return new RegExp(`\\.${ext}$`, 'i').test(base)
+    ? base
+    : `${base.replace(/\.[A-Za-z0-9]{1,8}$/, '')}.${ext}`;
+}
+
+export function safeProofName(originalName: string, mime: ProofMime): string {
+  const base = clean(originalName);
+  return base ? withExtension(base, mime) : `إثبات-التحصيل.${EXT[mime]}`;
+}
+
+/**
+ * THE OWNER NAMES IT — «لازم أنا اسميه».
+ *
+ * A phone calls its photos `IMG_20261010_143052.jpg`, and a month later
+ * that tells nobody which handover it was. So the dialog offers a name,
+ * and what the owner types wins.
+ *
+ * IT IS OFFERED, NOT DEMANDED. A proof uploaded with no name typed keeps
+ * the file's own name, because the alternative is a required field between
+ * a person and recording money that has already arrived — and a receipt
+ * that cannot be saved is worse than a receipt called `IMG_2026…`.
+ *
+ * The owner's name does NOT reach the storage path. That is still built
+ * from the receipt id; this is only what the file is CALLED when it comes
+ * back out.
+ */
+export function proofName(mime: ProofMime, uploadedName: string, chosenName?: string): string {
+  const chosen = clean(chosenName ?? '');
+  return chosen ? withExtension(chosen, mime) : safeProofName(uploadedName, mime);
 }
 
 /**
@@ -149,7 +192,7 @@ export function safeProofName(originalName: string, mime: ProofMime): string {
  * the same answer to a bad file — hand the sentence to the person who
  * chose it. The sentences are written for them, not for a log.
  */
-export function describeProof(buffer: Buffer, originalName: string): ProofFacts {
+export function describeProof(buffer: Buffer, originalName: string, chosenName?: string): ProofFacts {
   if (buffer.length === 0) throw new Error('الملف فارغ');
   if (buffer.length > MAX_PROOF_BYTES) {
     throw new Error(`حجم الملف يتجاوز الحد المسموح (${Math.round(MAX_PROOF_BYTES / 1024 / 1024)} ميجابايت)`);
@@ -161,7 +204,7 @@ export function describeProof(buffer: Buffer, originalName: string): ProofFacts 
     mime,
     hash: proofHash(buffer),
     sizeBytes: buffer.length,
-    name: safeProofName(originalName, mime),
+    name: proofName(mime, originalName, chosenName),
   };
 }
 
