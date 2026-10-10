@@ -36,6 +36,14 @@ const PATCH_DOORS = [
       name: 'حملة الشتاء',
       platform: 'TIKTOK',
       landingPageId: null,
+      /*
+       * «اقدر احدد كل حملة لاي منتج» — the campaign's own product, for an
+       * ad that points at no landing page. Nullable because clearing it is
+       * a real edit, which is exactly what the walk below has to prove it
+       * can do: a `.default()` here would turn an omitted product into a
+       * written one and move a campaign onto something it never advertised.
+       */
+      productId: null,
       status: 'PAUSED',
       startDate: '2026-01-01',
       endDate: null,

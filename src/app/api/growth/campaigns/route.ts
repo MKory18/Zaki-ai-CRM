@@ -14,6 +14,7 @@ import {
   generateCampaignCode,
   datesMakeSense,
   wasRunning,
+  productConflict,
 } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
 
@@ -48,7 +49,15 @@ export async function GET(req: Request) {
         where: inStore(companyId, storeId),
         orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
         include: {
-          landingPage: { select: { id: true, name: true, slug: true } },
+          landingPage: {
+            select: {
+              id: true, name: true, slug: true,
+              // The page's product IS the campaign's product when there is
+              // a page — see `campaignProductId`.
+              product: { select: { id: true, name: true } },
+            },
+          },
+          product: { select: { id: true, name: true } },
           adAccount: { select: { id: true, accountName: true, accountId: true, status: true } },
         },
       }),
@@ -80,7 +89,22 @@ export async function GET(req: Request) {
         startDate: c.startDate.toISOString(),
         endDate: c.endDate?.toISOString() ?? null,
         notes: c.notes,
-        landingPage: c.landingPage,
+        landingPage: { id: c.landingPage?.id, name: c.landingPage?.name, slug: c.landingPage?.slug },
+        /*
+         * THE PRODUCT, ANSWERED ONCE AND SENT AS ONE FIELD.
+         *
+         * The screen is given the ANSWER, not the two sources to work it
+         * out from. A browser deciding this would be a second copy of
+         * `campaignProductId` — and the first screen to round the
+         * precedence differently would print a different product from the
+         * export beside it.
+         *
+         * `productId` goes too, because the FORM needs to know what is
+         * stored on the row in order to offer it back; `product` is what
+         * the row MEANS.
+         */
+        product: c.landingPage?.product ?? c.product ?? null,
+        productId: c.productId,
         link: campaignLink(
           origin,
           c.code,
@@ -162,13 +186,48 @@ export async function POST(req: Request) {
 
     // A page from another store would put this campaign's link on somebody
     // else's shop.
+    //
+    // The page's own product is read here as well, because it is what
+    // decides whether the chosen product contradicts it.
+    let pageProduct: { id: string; name: string } | null = null;
     if (input.landingPageId) {
       const lp = await db.landingPage.findFirst({
         where: { id: input.landingPageId, ...inStore(companyId, storeId) },
-        select: { id: true },
+        select: { id: true, product: { select: { id: true, name: true } } },
       });
       if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة في هذا المتجر' }, { status: 400 });
+      pageProduct = lp.product ?? null;
     }
+
+    /*
+     * THE PRODUCT, AND THE CONTRADICTION REFUSED RATHER THAN RESOLVED.
+     *
+     * A product id from a browser: looked up WITH the store, because
+     * another store's product is a REAL product and the foreign key would
+     * take it — and the campaign would then be reported against something
+     * it never advertised.
+     *
+     * And if the linked page sells something else, that is somebody having
+     * made a mistake, almost always by changing the page after choosing the
+     * product. `campaignProductId` would quietly answer the PAGE's product
+     * and the screen would print it beside a dropdown reading the other —
+     * which teaches a person that the screen lies.
+     */
+    let chosenProduct: { id: string; name: string } | null = null;
+    if (input.productId) {
+      const prod = await db.product.findFirst({
+        where: { id: input.productId, ...inStore(companyId, storeId) },
+        select: { id: true, name: true },
+      });
+      if (!prod) return NextResponse.json({ error: 'المنتج غير موجود في هذا المتجر' }, { status: 400 });
+      chosenProduct = prod;
+    }
+
+    const clash = productConflict(chosenProduct?.id, pageProduct?.id, {
+      chosen: chosenProduct?.name,
+      page: pageProduct?.name,
+    });
+    if (clash) return NextResponse.json({ error: clash, code: 'PRODUCT_CONFLICT' }, { status: 400 });
 
     // A seller may name the code; otherwise one is made. Either way it must
     // be free — a reused code would move old orders onto new spend.
@@ -193,6 +252,13 @@ export async function POST(req: Request) {
         platform: input.platform,
         code,
         landingPageId: input.landingPageId ?? null,
+        /*
+         * STORED ONLY WHEN IT ADDS SOMETHING. With a page linked, the
+         * product is already derivable from it and `campaignProductId`
+         * reads it there — so writing it here too would be the second copy
+         * this column exists specifically not to be.
+         */
+        productId: pageProduct ? null : (chosenProduct?.id ?? null),
         status: input.status,
         startDate: input.startDate,
         endDate: input.endDate ?? null,

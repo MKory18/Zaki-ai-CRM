@@ -123,8 +123,29 @@ describe('an edit that really is about one of those fields', () => {
   });
 
   it('clears a nullable field the caller explicitly nulled', async () => {
+    /*
+     * `productId: null` RIDES ALONG, and that is the rule rather than a
+     * leak into the written object.
+     *
+     * Unlinking the page CHANGES WHICH PRODUCT the campaign advertises:
+     * with a page, the page's product is the answer; without one, the
+     * row's own column is. So a campaign that had a page and an explicit
+     * product must not keep the column behind it — `campaignProductId`
+     * would ignore it forever while the next person to read the row
+     * believes it. `scopeMoved` is what writes it, and it fires on either
+     * side of the pair moving.
+     */
     await patch({ landingPageId: null, notes: null, endDate: null });
-    expect(written()).toEqual({ landingPageId: null, notes: null, endDate: null });
+    expect(written()).toEqual({ landingPageId: null, productId: null, notes: null, endDate: null });
+  });
+
+  it('and an edit that touches neither side of the pair leaves the product alone', () => {
+    // The other half of the same rule: `scopeMoved` must be FALSE here, or
+    // renaming a campaign would clear what it advertises — the exact family
+    // of defect `dad59c9` and `323e95a` were about.
+    return patch({ name: 'اسم جديد' }).then(() => {
+      expect(written()).toEqual({ name: 'اسم جديد' });
+    });
   });
 });
 

@@ -398,6 +398,7 @@ model Product {
   orders             Order[]
   orderItems         OrderItem[]
   landingPages       LandingPage[]
+  campaigns          Campaign[]
   recommendations    LandingPageRecommendation[]
   addOns             OrderAddOn[]
   images             ProductImage[]
@@ -3022,6 +3023,24 @@ model Campaign {
   /// Which page the ad points at. Optional — a campaign may send traffic
   /// to a storefront, or to a page that was later deleted.
   landingPageId String?   @map("landing_page_id")
+  /// WHICH PRODUCT THIS CAMPAIGN ADVERTISES — «اقدر احدد كل حملة لاي منتج».
+  ///
+  /// AND IT IS NOT A SECOND COPY OF `landingPageId`'s ANSWER. Measured
+  /// before this column existed: 44 of 44 landing pages name a product, so
+  /// for any campaign pointing at a page the product is already KNOWN, and
+  /// deriving it is the only honest thing to do. A column that re-states a
+  /// derivable fact is a figure that can disagree with itself.
+  ///
+  /// THIS EXISTS FOR WHAT DERIVATION CANNOT REACH: a campaign with NO
+  /// landing page — an ad pointing at a storefront product page, or at a
+  /// WhatsApp thread. `landingPageId` is nullable, so such a campaign is a
+  /// real one, and before this it could never say what it was selling.
+  ///
+  /// `campaignProductId()` in `campaigns.ts` is the ONE place that answers
+  /// the question. A campaign whose page names product A while this column
+  /// names B is REFUSED at the door rather than resolved: a contradiction
+  /// that quietly picks a winner is a figure nobody can trust.
+  productId     String?   @map("product_id")
   status        String    @default("ACTIVE") // ACTIVE | PAUSED | ENDED
   startDate     DateTime  @map("start_date")
   endDate       DateTime? @map("end_date")
@@ -3046,6 +3065,9 @@ model Campaign {
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   landingPage LandingPage? @relation(fields: [landingPageId], references: [id], onDelete: SetNull)
+  /// `SetNull`, like the page above it: deleting a product must not delete
+  /// the campaign, because the spend it recorded was real money that left.
+  product     Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
   adAccount   AdAccount?   @relation(fields: [adAccountId], references: [id], onDelete: SetNull)
   orders      Order[]
 

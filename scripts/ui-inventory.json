@@ -471,7 +471,7 @@
   },
   "src/components/screens/CampaignsScreen.tsx": {
     "buttons": 16,
-    "inputs": 9,
+    "inputs": 10,
     "columns": 4,
     "cards": 0,
     "modals": 0,

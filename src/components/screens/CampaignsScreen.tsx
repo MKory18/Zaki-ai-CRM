@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { apiJson } from '@/lib/api-client';
 import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
 import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
@@ -44,7 +45,22 @@ interface Campaign {
   externalId: string | null;
   lastSyncAt: string | null;
   startDate: string; endDate: string | null; notes: string | null;
-  landingPage: { id: string; name: string; slug: string } | null;
+  landingPage: { id?: string; name?: string; slug?: string } | null;
+  /**
+   * THE ANSWER, worked out by the server.
+   *
+   * `product` is what this campaign ADVERTISES — the linked page's product
+   * when there is a page, the row's own otherwise. `productId` is what the
+   * ROW stores, which the form needs in order to offer it back. They differ
+   * exactly when a page is linked, and that difference is the whole shape
+   * of the rule: see `campaignProductId`.
+   *
+   * The browser is handed the answer rather than the two sources, because a
+   * second copy of the precedence here is a screen that prints a different
+   * product from the export beside it.
+   */
+  product: { id: string; name: string } | null;
+  productId: string | null;
   link: string; ranInWindow: boolean; funnel: Funnel; money: Money;
 }
 interface Payload {
@@ -76,6 +92,7 @@ export function CampaignsScreen() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [pages, setPages] = useState<{ id: string; name: string }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [linking, setLinking] = useState<Campaign | null>(null);
@@ -125,6 +142,23 @@ export function CampaignsScreen() {
       .then((r) => r.json())
       .then((j) => setPages((j.pages || j.landingPages || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))))
       .catch(() => setPages([]));
+  }, []);
+
+  /*
+   * THE PRODUCTS A CAMPAIGN MAY NAME — «اقدر احدد كل حملة لاي منتج».
+   *
+   * Only needed for a campaign with no landing page, which is the one case
+   * the product cannot be derived for. Loaded anyway and unconditionally,
+   * because a dropdown that populates when you pick «واجهة المتجر» is a
+   * dropdown that is empty the first time somebody looks for it.
+   */
+  useEffect(() => {
+    // `apiJson`, not a bare `fetch`: the ratchet in `bare-fetch-ratchet`
+    // only lets that debt go DOWN, and the helper is what carries the
+    // store context and turns a refusal into an Arabic sentence.
+    void apiJson<{ products: { id: string; name: string }[] }>('/api/products?pageSize=200')
+      .then((j) => setProducts((j.products ?? []).map((x) => ({ id: x.id, name: x.name }))))
+      .catch(() => setProducts([]));
   }, []);
 
   async function copy(link: string, id: string) {
@@ -252,6 +286,7 @@ export function CampaignsScreen() {
         <Editor
           campaign={editing}
           pages={pages}
+          products={products}
           currency={currency}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={async () => { setCreating(false); setEditing(null); await load(); }}
@@ -308,7 +343,8 @@ function Row({
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
-            {c.landingPage ? c.landingPage.name : 'واجهة المتجر'} · الرمز {c.code}
+            {c.landingPage?.name ?? 'واجهة المتجر'}
+            {c.product ? ` · ${c.product.name}` : ''} · الرمز {c.code}
           </p>
         </div>
 
@@ -413,10 +449,12 @@ function Empty({ onCreate }: { onCreate: () => void }) {
 }
 
 function Editor({
-  campaign, pages, currency, onClose, onSaved,
+  campaign, pages, products, currency, onClose, onSaved,
 }: {
   campaign: Campaign | null;
   pages: { id: string; name: string }[];
+  /** Only reachable when no page is linked — see the field below. */
+  products: { id: string; name: string }[];
   currency: string;
   onClose: () => void;
   onSaved: () => void;
@@ -426,6 +464,10 @@ function Editor({
     name: campaign?.name ?? '',
     platform: campaign?.platform ?? 'META',
     landingPageId: campaign?.landingPage?.id ?? '',
+    // The ROW's product, not the derived one: with a page linked the row
+    // holds null, and offering the page's product back here would make the
+    // form look as though the campaign stores something it does not.
+    productId: campaign?.productId ?? '',
     status: campaign?.status ?? 'ACTIVE',
     startDate: campaign?.startDate?.slice(0, 10) ?? today,
     endDate: campaign?.endDate?.slice(0, 10) ?? '',
@@ -443,6 +485,7 @@ function Editor({
         name: form.name,
         platform: form.platform,
         landingPageId: form.landingPageId || null,
+        productId: form.productId || null,
         status: form.status,
         startDate: form.startDate,
         endDate: form.endDate || null,
@@ -502,11 +545,49 @@ function Editor({
           </div>
 
           <Field label="تذهب إلى" hint="اتركها فارغة لتذهب إلى واجهة المتجر">
-            <select value={form.landingPageId} onChange={(e) => setForm({ ...form, landingPageId: e.target.value })} className={INPUT}>
+            <select
+              value={form.landingPageId}
+              onChange={(e) =>
+                // Linking a page CLEARS the chosen product, because the page
+                // answers the question from then on. Leaving it set would
+                // let somebody save a contradiction the door then refuses —
+                // a form that collects a refusal is a form that wastes a
+                // person's time to teach them a rule.
+                setForm({ ...form, landingPageId: e.target.value, productId: e.target.value ? '' : form.productId })
+              }
+              className={INPUT}
+            >
               <option value="">واجهة المتجر</option>
               {pages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
+
+          {/*
+            THE PRODUCT — asked only when it cannot be derived.
+            With a page linked, the page NAMES the product and this field
+            would be a second answer. So the field is replaced by the
+            sentence saying where the answer comes from.
+          */}
+          {form.landingPageId ? (
+            <Field label="المنتج" hint="مأخوذ من صفحة الهبوط المرتبطة">
+              <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs text-[var(--sys-muted-foreground)]">
+                {products.find((x) => x.id === campaign?.product?.id)?.name ??
+                  campaign?.product?.name ??
+                  'يُقرأ من الصفحة بعد الحفظ'}
+              </p>
+            </Field>
+          ) : (
+            <Field label="المنتج" hint="للإعلانات التي لا تذهب إلى صفحة هبوط — اتركه فارغاً إن كان الإعلان للمتجر كلّه">
+              <select
+                value={form.productId}
+                onChange={(e) => setForm({ ...form, productId: e.target.value })}
+                className={INPUT}
+              >
+                <option value="">غير محدَّد</option>
+                {products.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+            </Field>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="تبدأ">

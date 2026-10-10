@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
+import { productConflict } from '@/lib/campaigns';
 import { campaignPatchSchema, datesMakeSense } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
 import { z } from 'zod';
@@ -30,7 +31,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
     const existing = await db.campaign.findFirst({
       where: { id, ...inStore(companyId, storeId) },
-      select: { id: true, name: true, spend: true, status: true, code: true },
+      // `landingPageId` and `productId` are read because the product rule
+      // is measured on the state AFTER the merge, not on the input — a
+      // PATCH that changes only the page still changes which product the
+      // campaign advertises.
+      select: {
+        id: true, name: true, spend: true, status: true, code: true,
+        landingPageId: true, productId: true,
+      },
     });
     if (!existing) return NextResponse.json({ error: 'الحملة غير موجودة' }, { status: 404 });
 
@@ -86,13 +94,62 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'تاريخ الانتهاء قبل تاريخ البدء' }, { status: 400 });
     }
 
-    if (input.landingPageId) {
+    /*
+     * THE PRODUCT RULE IS MEASURED ON THE STATE AFTER THE MERGE.
+     *
+     * This is the trap in a partial PATCH that a per-field `!== undefined`
+     * cannot see: a body carrying only `{ landingPageId }` changes which
+     * product the campaign advertises, and a body carrying only
+     * `{ productId }` has to be judged against the page ALREADY on the row.
+     * Reading the input alone answers neither.
+     *
+     * So the effective values are worked out first — the caller's where
+     * they said something, the row's where they did not — and everything
+     * below is judged on those.
+     */
+    const nextPageId =
+      input.landingPageId !== undefined ? (input.landingPageId ?? null) : existing.landingPageId;
+    const nextProductId =
+      input.productId !== undefined ? (input.productId ?? null) : existing.productId;
+
+    let pageProduct: { id: string; name: string } | null = null;
+    if (nextPageId) {
       const lp = await db.landingPage.findFirst({
-        where: { id: input.landingPageId, ...inStore(companyId, storeId) },
-        select: { id: true },
+        where: { id: nextPageId, ...inStore(companyId, storeId) },
+        select: { id: true, product: { select: { id: true, name: true } } },
       });
       if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة في هذا المتجر' }, { status: 400 });
+      pageProduct = lp.product ?? null;
     }
+
+    // A product id from a browser: another store's product is a REAL
+    // product, so the foreign key would take it and the campaign would be
+    // reported against something it never advertised.
+    let chosenProduct: { id: string; name: string } | null = null;
+    if (nextProductId) {
+      const prod = await db.product.findFirst({
+        where: { id: nextProductId, ...inStore(companyId, storeId) },
+        select: { id: true, name: true },
+      });
+      if (!prod) return NextResponse.json({ error: 'المنتج غير موجود في هذا المتجر' }, { status: 400 });
+      chosenProduct = prod;
+    }
+
+    const clash = productConflict(chosenProduct?.id, pageProduct?.id, {
+      chosen: chosenProduct?.name,
+      page: pageProduct?.name,
+    });
+    if (clash) return NextResponse.json({ error: clash, code: 'PRODUCT_CONFLICT' }, { status: 400 });
+
+    /*
+     * AND THE COLUMN IS WRITTEN WHENEVER EITHER SIDE MOVED, not only when
+     * `productId` was sent. Linking a page to a campaign that had an
+     * explicit product must clear that column — otherwise the row keeps a
+     * stale second answer that `campaignProductId` then ignores forever,
+     * and the next person to read the row sees a product the campaign is
+     * not advertising.
+     */
+    const scopeMoved = input.landingPageId !== undefined || input.productId !== undefined;
 
     const updated = await db.campaign.update({
       where: { id: existing.id },
@@ -100,13 +157,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.platform !== undefined ? { platform: input.platform } : {}),
         ...(input.landingPageId !== undefined ? { landingPageId: input.landingPageId ?? null } : {}),
+        ...(scopeMoved ? { productId: pageProduct ? null : (chosenProduct?.id ?? null) } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
         ...(input.endDate !== undefined ? { endDate: input.endDate ?? null } : {}),
         ...(input.spend !== undefined ? { spend: input.spend } : {}),
         ...(input.notes !== undefined ? { notes: input.notes ?? null } : {}),
       },
-      select: { id: true, name: true, spend: true, status: true },
+      select: { id: true, name: true, spend: true, status: true, productId: true },
     });
 
     await logAudit({

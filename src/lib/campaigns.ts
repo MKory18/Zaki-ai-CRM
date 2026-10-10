@@ -68,6 +68,17 @@ export const campaignInputSchema = z.object({
   platform: z.enum(['META', 'TIKTOK', 'SNAPCHAT', 'GOOGLE', 'OTHER']).default('META'),
   code: campaignCodeSchema.optional(),
   landingPageId: z.string().uuid().nullable().optional(),
+  /**
+   * WHICH PRODUCT THIS CAMPAIGN ADVERTISES — «اقدر احدد كل حملة لاي منتج».
+   *
+   * Offered, and usually unnecessary: 44 of 44 landing pages name a
+   * product, so a campaign pointing at a page already knows. This is for a
+   * campaign with NO page — an ad to a storefront product, or to WhatsApp.
+   *
+   * Nullable as well as optional, because clearing it is a real edit and a
+   * schema that only took a uuid could set one and never unset it.
+   */
+  productId: z.string().uuid().nullable().optional(),
   status: z.enum(['ACTIVE', 'PAUSED', 'ENDED']).default('ACTIVE'),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().nullable().optional(),
@@ -130,6 +141,56 @@ export const campaignPatchSchema = z.object(
 );
 
 export type CampaignPatch = z.infer<typeof campaignPatchSchema>;
+
+/**
+ * WHICH PRODUCT A CAMPAIGN ADVERTISES — ONE PLACE, ONE ANSWER.
+ *
+ * The question has two possible sources and therefore needs exactly one
+ * function, or it becomes a figure that disagrees with itself depending on
+ * which screen asked:
+ *
+ *   1. the landing page the ad points at, which NAMES a product
+ *      (measured: 44 of 44 pages do)
+ *   2. the campaign's own `productId`, for a campaign with no page at all
+ *
+ * The PAGE WINS when there is one, and that is not arbitrary: the page is
+ * what the click actually lands on, so it is what the visitor is being
+ * sold. A column saying otherwise would be a note about intent, and intent
+ * does not take an order.
+ *
+ * `null` means «not stated», which is a real answer for an ad pointing at a
+ * shop front rather than at anything in particular — not a missing value to
+ * be filled in with a guess.
+ */
+export function campaignProductId(campaign: {
+  productId?: string | null;
+  landingPage?: { productId: string | null } | null;
+}): string | null {
+  return campaign.landingPage?.productId ?? campaign.productId ?? null;
+}
+
+/**
+ * AND A CONTRADICTION IS REFUSED, NOT RESOLVED.
+ *
+ * A campaign whose page sells product A while its own column names B is
+ * somebody having made a mistake — almost certainly by changing the page
+ * after setting the product. `campaignProductId` would quietly answer A and
+ * the screen would show A beside a dropdown reading B, which teaches a
+ * person that the screen lies.
+ *
+ * So the door refuses it and says which two things disagree. Returns the
+ * Arabic sentence to show, or null when there is nothing wrong.
+ */
+export function productConflict(
+  chosen: string | null | undefined,
+  pageProductId: string | null | undefined,
+  names: { chosen?: string | null; page?: string | null } = {}
+): string | null {
+  if (!chosen || !pageProductId || chosen === pageProductId) return null;
+  const a = names.page ?? 'منتجاً آخر';
+  const b = names.chosen ?? 'منتجاً مختلفاً';
+  return `صفحة الهبوط المرتبطة تبيع ${a}، والمنتج المختار ${b} — صحِّح أحدهما`;
+}
 
 /** A campaign cannot end before it starts. */
 export function datesMakeSense(start: Date, end: Date | null | undefined): boolean {
