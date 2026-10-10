@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { RiAddCircleLine, RiAlertLine, RiArrowDownSLine, RiCheckLine, RiDeleteBinLine, RiFocus3Line, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
 
@@ -368,12 +369,14 @@ export function CustomConversionsCard() {
                   <RiKey2Line className="h-4 w-4 text-[var(--sys-primary)]" />
                   رمز واجهة التحويلات
                 </label>
-                <input
+                {/* The shared field, so the eye comes with it — see the
+                    sentence under this box: once saved it is never shown
+                    again, so before saving is the only chance to read it. */}
+                <Input
                   type="password"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   placeholder="EAAG..."
-                  className={INPUT}
                   dir="ltr"
                   autoComplete="off"
                 />

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
 import { arDateTime } from '@/lib/format';
@@ -252,12 +253,14 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
           {active.fields.map((f) => (
             <div key={f.key}>
               <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">{f.label}</label>
-              <input
+              {/* The shared field, so a secret one gets the eye. A token
+                  pasted blind is a token the owner cannot check before it
+                  is encrypted and never shown again. */}
+              <Input
                 type={f.secret ? 'password' : 'text'}
                 value={values[f.key] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className={INPUT}
                 dir="ltr"
                 autoComplete="off"
               />

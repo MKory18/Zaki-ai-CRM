@@ -4,6 +4,7 @@ import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
 import { tierOf } from '@/lib/ai-provider';
 import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
@@ -387,12 +388,15 @@ export function AiSettingsScreen() {
                       </span>
                     )}
                   </div>
-                  <input
+                  {/* Drawn by the shared field, not by hand: a key pasted
+                      into a box with no eye is a key nobody can check before
+                      pressing save, and the hand-written version also drew
+                      its edge with the divider token at 1.25:1. */}
+                  <Input
                     type="password"
                     value={keyDrafts[p.id] ?? ''}
                     onChange={(e) => setKeyDrafts({ ...keyDrafts, [p.id]: e.target.value })}
                     placeholder={system.providerKeys[p.id]?.configured ? 'الصق مفتاحاً جديداً ليحلّ محلّه' : 'الصق المفتاح هنا'}
-                    className={INPUT}
                     dir="ltr"
                     autoComplete="off"
                   />
