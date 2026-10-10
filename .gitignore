@@ -65,6 +65,7 @@ backups/
 واجهة/
 # scratch files
 tmp*.cjs
+tmp*.mjs
 
 # Fonts licensed for this machine only.
 #

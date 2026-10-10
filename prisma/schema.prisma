@@ -266,7 +266,7 @@ model User {
   /// On the user rather than in browser storage: somebody who works from
   /// the counter and from a laptop chose once, not twice.
   systemTheme        String?   @map("system_theme")
-  salaryAmount       Decimal?  @map("salary_amount") @db.Decimal(12, 2)
+  salaryAmount       Decimal?  @map("salary_amount") @db.Decimal(14, 3)
   salaryCurrency     String?   @map("salary_currency")
   shiftStart         String?   @map("shift_start") @db.VarChar(5)
   shiftEnd           String?   @map("shift_end") @db.VarChar(5)
@@ -720,17 +720,17 @@ model Order {
   deliveryNote              String?
   returnReason              String? // CUSTOMER_REFUSED, FAILED_DELIVERY, DAMAGED_PRODUCT, WRONG_PRODUCT, CUSTOMER_REQUEST, OTHER
   // Phase D3: financial snapshot (Decimal never floats for money)
-  subtotal                  Decimal?  @db.Decimal(12, 2)
-  discount                  Decimal?  @db.Decimal(12, 2)
-  shippingRevenue           Decimal?  @db.Decimal(12, 2)
-  totalRevenue              Decimal?  @db.Decimal(12, 2)
-  productCost               Decimal?  @db.Decimal(12, 2)
-  packagingCost             Decimal?  @db.Decimal(12, 2)
-  advertisingCost           Decimal?  @db.Decimal(12, 2)
-  otherCost                 Decimal?  @db.Decimal(12, 2)
-  refundAmount              Decimal?  @db.Decimal(12, 2)
-  grossProfit               Decimal?  @db.Decimal(12, 2)
-  netProfit                 Decimal?  @db.Decimal(12, 2)
+  subtotal                  Decimal?  @db.Decimal(14, 3)
+  discount                  Decimal?  @db.Decimal(14, 3)
+  shippingRevenue           Decimal?  @db.Decimal(14, 3)
+  totalRevenue              Decimal?  @db.Decimal(14, 3)
+  productCost               Decimal?  @db.Decimal(14, 3)
+  packagingCost             Decimal?  @db.Decimal(14, 3)
+  advertisingCost           Decimal?  @db.Decimal(14, 3)
+  otherCost                 Decimal?  @db.Decimal(14, 3)
+  refundAmount              Decimal?  @db.Decimal(14, 3)
+  grossProfit               Decimal?  @db.Decimal(14, 3)
+  netProfit                 Decimal?  @db.Decimal(14, 3)
   financeFinalizedAt        DateTime?
   financeFinalizedById      String?
   source                    String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
@@ -769,7 +769,25 @@ model Order {
   // travelled whether or not every line was taken, so the fee is never
   // prorated. Null everywhere else, which is what lets settlement tell a
   // partial from a whole one.
-  collectedAmount           Decimal?  @db.Decimal(12, 2)
+  /// AND THE COLUMN HOLDS THREE DECIMALS BECAUSE THE DINAR HAS THREE.
+  ///
+  /// This was `Decimal(12, 2)` — along with twenty-five other money
+  /// columns — while the product serves Jordan, whose JOD has a
+  /// `minorUnit` of 3. PROVED IN POSTGRES ITSELF: `2.555::numeric(12,2)`
+  /// is `2.56`, so five fils were lost on the way INTO the column, every
+  /// time, silently.
+  ///
+  /// And this column is the worst place for it: it is the statement
+  /// figure, the one that WINS over what was counted at the door. The
+  /// screens were already right — `money-decimals.test.ts` holds every
+  /// screen to the currency's own decimals — so a JOD figure was printed
+  /// as `2.560` with three confident digits, the last of them invented by
+  /// a rounding nobody chose.
+  ///
+  /// `a-fils-is-not-a-rounding-error.test.ts` now walks the schema and
+  /// refuses a money column with fewer decimals than the widest currency
+  /// the product serves — so the twenty-seventh cannot be added quietly.
+  collectedAmount           Decimal?  @db.Decimal(14, 3)
   // A split order's parent. Children carry a suffixed number (SY-0044-A).
   parentOrderId             String?
   labelPrintedAt            DateTime?
@@ -1302,7 +1320,7 @@ model FinancialTransaction {
   companyId   String
   orderId     String?
   type        String // REVENUE, REFUND, EXPENSE, COMMISSION, SETTLEMENT, ADJUSTMENT
-  amount      Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(14, 3)
   currency    String   @default("USD")
   note        String?
   createdById String
@@ -1927,9 +1945,9 @@ model OrderItem {
   productName   String // snapshot at creation
   quantity      Int
   freeQuantity  Int      @default(0) // gift units: real stock, zero price
-  unitPrice     Decimal  @db.Decimal(12, 2)
-  discountShare Decimal  @default(0) @db.Decimal(12, 2) // proportional share of the order discount
-  lineTotal     Decimal  @db.Decimal(12, 2) // quantity * unitPrice - discountShare
+  unitPrice     Decimal  @db.Decimal(14, 3)
+  discountShare Decimal  @default(0) @db.Decimal(14, 3) // proportional share of the order discount
+  lineTotal     Decimal  @db.Decimal(14, 3) // quantity * unitPrice - discountShare
   reservedQty   Int      @default(0)
   // Stage 9 — partial delivery. What the customer actually took of this
   // line. Null until the parcel is settled at the door; after that
@@ -2050,11 +2068,11 @@ model DeliveryFee {
   countryId          String
   deliveryProviderId String
   regionId           String
-  fee                Decimal  @db.Decimal(12, 2)
+  fee                Decimal  @db.Decimal(14, 3)
   /// Days in transit after which tracking marks the shipment late.
   lateThresholdDays  Int      @default(3)
   /// Fee charged by the courier for a returned shipment.
-  returnFee          Decimal  @default(0) @db.Decimal(12, 2)
+  returnFee          Decimal  @default(0) @db.Decimal(14, 3)
   isActive           Boolean  @default(true)
   /// The courier's OWN id for this region, required on every shipment they
   /// accept. This row already means "this courier, this region", so their
@@ -2086,7 +2104,7 @@ model ReturnReceipt {
   damagedQty        Int      @default(0)
   missingQty        Int      @default(0)
   courierFeeCharged Boolean  @default(false)
-  courierFeeAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  courierFeeAmount  Decimal  @default(0) @db.Decimal(14, 3)
   /// Set only when the receiver confirms they counted and inspected the goods.
   inspectedById     String
   inspectedAt       DateTime @default(now())
@@ -2590,7 +2608,7 @@ model PenaltyRule {
   /// Units forgiven before anything is charged.
   grace         Int       @default(0)
   /// The most this rule may take from one person in one period.
-  periodCap     Decimal?  @map("period_cap") @db.Decimal(12, 2)
+  periodCap     Decimal?  @map("period_cap") @db.Decimal(14, 3)
   currencyCode  String    @map("currency_code")
   effectiveFrom DateTime  @map("effective_from")
   effectiveTo   DateTime? @map("effective_to")
@@ -2638,7 +2656,7 @@ model Penalty {
   units        Int
   /// What was charged after grace and cap.
   chargedUnits Int       @map("charged_units")
-  amount       Decimal   @db.Decimal(12, 2)
+  amount       Decimal   @db.Decimal(14, 3)
   currencyCode String    @map("currency_code")
   /// PROPOSED | APPLIED | WAIVED | REVERSED
   status       String    @default("PROPOSED")
@@ -2687,12 +2705,12 @@ model Payslip {
   periodStart  DateTime @map("period_start") @db.Date
   periodEnd    DateTime @map("period_end") @db.Date
   /// The salary as it stood when this was paid.
-  salaryAmount Decimal  @map("salary_amount") @db.Decimal(12, 2)
+  salaryAmount Decimal  @map("salary_amount") @db.Decimal(14, 3)
   currencyCode String   @map("currency_code")
-  penaltyTotal Decimal  @default(0) @map("penalty_total") @db.Decimal(12, 2)
-  netAmount    Decimal  @map("net_amount") @db.Decimal(12, 2)
+  penaltyTotal Decimal  @default(0) @map("penalty_total") @db.Decimal(14, 3)
+  netAmount    Decimal  @map("net_amount") @db.Decimal(14, 3)
   /// Deductions that exceeded the salary and were NOT settled here.
-  carriedOver  Decimal  @default(0) @map("carried_over") @db.Decimal(12, 2)
+  carriedOver  Decimal  @default(0) @map("carried_over") @db.Decimal(14, 3)
   walletId     String   @map("wallet_id")
   /// What actually left, in the WALLET's currency, at the rate the owner
   /// wrote at payment. Stored and never recalculated.
@@ -3047,7 +3065,11 @@ model Campaign {
   /// What was spent. Typed by the seller, or pulled from the ad account
   /// when one is linked — `spendSource` says which, so nobody wonders why
   /// a number they typed changed overnight.
-  spend         Decimal   @default(0) @db.Decimal(14, 2)
+  /// Three decimals, like every other money column — see the note on
+  /// `Order.collectedAmount`. This one was `Decimal(14, 2)` and a sweep
+  /// over `Decimal(12, 2)` passed straight over it: fourteen digits and
+  /// two decimals is still two decimals, and the dinar has three.
+  spend         Decimal   @default(0) @db.Decimal(14, 3)
   /// MANUAL | SYNCED
   spendSource   String    @default("MANUAL") @map("spend_source")
   /// The ad account this campaign's spend comes from, when it is synced.
