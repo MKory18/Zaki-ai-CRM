@@ -651,12 +651,12 @@
   },
   "src/components/screens/finance/CollectionScreen.tsx": {
     "buttons": 9,
-    "inputs": 8,
-    "columns": 6,
+    "inputs": 10,
+    "columns": 7,
     "cards": 0,
     "modals": 2,
-    "icons": 6,
-    "links": 0,
+    "icons": 7,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/finance/DifferenceActions.tsx": {

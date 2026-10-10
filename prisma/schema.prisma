@@ -2338,6 +2338,35 @@ model StatementReceipt {
   createdById  String
   createdAt    DateTime @default(now())
 
+  /// THE PAPER BEHIND THE COLLECTION — «حط رفع ملف صورة او ملف عشان اتحقق
+  /// من التحصيل». A photo of the handover slip or the bank's transfer PDF.
+  ///
+  /// All five are nullable and move together: a receipt with no paper is
+  /// still a real receipt — a cash handover in a doorway has none — and
+  /// making the file compulsory would stand between a person and recording
+  /// money that has already arrived. The database holds the all-or-nothing
+  /// part, because a half-written proof (a key with no hash) is worse than
+  /// no proof: it looks present and cannot be checked.
+  ///
+  /// Written only by `POST .../receipts`, read only by the proof route, and
+  /// the rules that decide what may be stored live in
+  /// `src/lib/settlement-proof.ts`.
+  ///
+  /// The storage key. Built from the RECEIPT id, never from the uploaded
+  /// filename, so a name that came from outside never reaches a path.
+  proofKey   String?
+  /// What the owner called it, or the file's own name if they called it
+  /// nothing. This is what a download is named — never what it is stored as.
+  proofName  String?
+  /// Sniffed from the first bytes, never taken from the extension or from
+  /// what the browser claimed. One of four: jpeg, png, webp, pdf.
+  proofMime  String?
+  proofSize  Int?
+  /// SHA-256 of the bytes as stored, the same way `CourierStatement.fileHash`
+  /// remembers the statement file: a proof replaced on disk — by a mistake,
+  /// a restore, or a hand — stops matching the row that points at it.
+  proofHash  String?
+
   statement CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
   wallet    Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
 

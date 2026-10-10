@@ -4,7 +4,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAlertLine, RiCheckboxCircleLine, RiFileExcel2Line, RiLoader4Line, RiUpload2Line } from '@remixicon/react';
+import {
+  RiAlertLine,
+  RiCheckboxCircleLine,
+  RiFileExcel2Line,
+  RiLoader4Line,
+  RiAttachmentLine,
+  RiUpload2Line,
+} from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
@@ -43,8 +50,42 @@ interface StatementRow {
   totalAmount: number;
   createdAt: string;
   counts: { lines: number; receipts: number; matches: number };
+  receipts: ReceiptRow[];
   gap: Gap;
 }
+
+interface ReceiptRow {
+  id: string;
+  amount: number;
+  currencyCode: string;
+  receivedAt: string;
+  note: string | null;
+  wallet: string;
+  /** Null when the collection was recorded with no paper behind it. */
+  proof: { name: string; mime: string | null; size: number | null } | null;
+}
+
+/**
+ * THE SAME CEILING THE SERVER HOLDS, AND IT IS WRITTEN TWICE ON PURPOSE.
+ *
+ * `MAX_PROOF_BYTES` in `settlement-proof.ts` is the real rule, and importing
+ * it here is what I tried first. It cannot be done: that module opens with
+ * `import fs from 'fs'` because it writes the file, and this is a `'use
+ * client'` screen — pulling a node builtin into the browser bundle is a trap
+ * even on the days a bundler happens to shake it out.
+ *
+ * So the number is written again, and `the-paper-behind-a-collection`
+ * reads BOTH files and fails the moment they disagree. That is the same
+ * answer this repository already gives for the shared field's height, which
+ * `touch-targets` pins across `Button.tsx` and `Input.tsx` for the same
+ * reason: a constant that cannot cross a boundary is held equal by a test
+ * rather than by hope.
+ *
+ * Why it matters that they agree: a browser refusing at 4 while the server
+ * refuses at 2 is a form that lies; the other way round is a 4 MB upload
+ * that travels over a phone connection before being refused.
+ */
+const MAX_PROOF_MB = 4;
 
 const STATUS_AR: Record<string, string> = {
   IMPORTED: 'مستورد',
@@ -223,6 +264,47 @@ export function CollectionScreen() {
                     {s.counts.lines} سطر · {s.counts.receipts} إيصال · {s.counts.matches} مطابقة
                   </span>
                 ),
+              },
+              {
+                key: 'collected',
+                label: 'ما وصل، ومن أين',
+                render: (s) =>
+                  s.receipts.length === 0 ? (
+                    <span className="text-xs text-[var(--sys-muted)]">—</span>
+                  ) : (
+                    /*
+                      WHAT WAS COLLECTED, ONE LINE EACH, AND ITS PAPER.
+                      The column used to be a count. «٣ إيصال» cannot be
+                      checked by anybody, and a proof uploaded against one of
+                      the three had nowhere to be opened — which would have
+                      made the upload a write-only feature.
+                    */
+                    <ul className="space-y-1">
+                      {s.receipts.map((r) => (
+                        <li key={r.id} className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <Money value={r.amount} currency={r.currencyCode} />
+                          <span className="text-[var(--sys-muted-foreground)]">{r.wallet}</span>
+                          {r.proof ? (
+                            <a
+                              href={`/api/finance/statements/${s.id}/receipts/${r.id}/proof`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={r.proof.name}
+                              className="inline-flex min-h-11 items-center gap-1 text-[var(--sys-primary)] hover:underline md:min-h-0"
+                            >
+                              <RiAttachmentLine className="h-4 w-4 shrink-0" aria-hidden />
+                              إثبات
+                            </a>
+                          ) : (
+                            /* Said out loud: a collection with no paper is
+                               the thing this feature exists to make visible,
+                               so it is not left as an absence. */
+                            <span className="text-[var(--sys-warning)]">بلا إثبات</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ),
               },
             ]}
             actions={(s) => {
@@ -442,6 +524,22 @@ function ReceiptDialog({
   const [saving, setSaving] = useState(false);
 
   /**
+   * THE PAPER BEHIND THE COLLECTION — «حط رفع ملف صورة او ملف عشان اتحقق
+   * من التحصيل».
+   *
+   * Held as base64 in state because that is how it is sent: in the same
+   * body as the receipt, so the row and its paper are one transaction. A
+   * separate upload call would allow a receipt saved with a proof that then
+   * failed to arrive, which is the state this feature exists to prevent.
+   *
+   * `proofName` is the owner's own name for it. Empty means «keep the
+   * file's own name», which the server decides — the browser does not
+   * invent a fallback, or there would be two answers to one question.
+   */
+  const [proof, setProof] = useState<{ fileName: string; content: string; size: number } | null>(null);
+  const [proofName, setProofName] = useState('');
+
+  /**
    * ONE ID PER ATTEMPT, KEPT ACROSS RETRIES.
    *
    * Many receipts on one statement are normal — a courier pays part in
@@ -472,6 +570,15 @@ function ReceiptDialog({
                 amount: Number(amount),
                 ...(needsRate && rate ? { exchangeRate: Number(rate) } : {}),
                 ...(note.trim() ? { note: note.trim() } : {}),
+                ...(proof
+                  ? {
+                      proof: {
+                        fileName: proof.fileName,
+                        content: proof.content,
+                        ...(proofName.trim() ? { name: proofName.trim() } : {}),
+                      },
+                    }
+                  : {}),
               }),
             });
             onSaved('سُجِّل إيصال الاستلام — لم تتحرك المحفظة بعد، الحركة تُكتب عند الاعتماد');
@@ -543,6 +650,70 @@ function ReceiptDialog({
             className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
           />
         </label>
+
+        {/*
+          THE PROOF. Offered, not demanded — a cash handover in a doorway has
+          no paper, and a required field here would stand between somebody
+          and recording money that has already arrived.
+
+          The size is checked in the browser as well as on the server, and
+          not because the server's check is in doubt: a 9 MB phone photo
+          refused after a 12 MB upload is a refusal that cost the person
+          their time, on a connection that is often a phone's.
+        */}
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 space-y-2">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">
+              إثبات التحصيل (اختياري) — صورة الإيصال أو ملف PDF للحوالة
+            </span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={async (e) => {
+                const picked = e.target.files?.[0];
+                setError(null);
+                if (!picked) return setProof(null);
+                if (picked.size > MAX_PROOF_MB * 1024 * 1024) {
+                  setProof(null);
+                  e.target.value = '';
+                  setError(`حجم الملف ${Math.round(picked.size / 1024 / 1024)} ميجابايت — الحد ${MAX_PROOF_MB}`);
+                  return;
+                }
+                /*
+                 * Chunked, because `String.fromCharCode(...bytes)` on a
+                 * four-megabyte array blows the argument limit and throws —
+                 * the same trap the statement importer above already walked
+                 * into with a spreadsheet.
+                 */
+                const bytes = new Uint8Array(await picked.arrayBuffer());
+                let binary = '';
+                for (let i = 0; i < bytes.length; i += 8192) {
+                  binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+                }
+                setProof({ fileName: picked.name, content: btoa(binary), size: picked.size });
+              }}
+              className="w-full text-xs file:h-8 file:px-3 file:rounded-md file:border-0 file:bg-[var(--sys-card)] file:text-[var(--sys-foreground)] file:ml-2"
+            />
+          </label>
+
+          {proof && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[var(--sys-foreground)]">
+                سمِّ الإثبات (اختياري)
+              </span>
+              <input
+                value={proofName}
+                onChange={(e) => setProofName(e.target.value)}
+                placeholder={proof.fileName}
+                maxLength={120}
+                className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm"
+              />
+              <span className="mt-1 block text-xs text-[var(--sys-muted-foreground)]">
+                اتركه فارغاً ليبقى باسم الملف. الامتداد يُضبط من محتوى الملف نفسه.
+              </span>
+            </label>
+          )}
+        </div>
 
         {error && <p className="text-sm text-[var(--sys-destructive)]">{error}</p>}
 

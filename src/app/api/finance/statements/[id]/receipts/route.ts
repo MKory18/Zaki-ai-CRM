@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -8,6 +9,12 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { receiptGap } from '@/lib/settlement';
 import { zodMessage } from '@/lib/zod-message';
+import {
+  MAX_PROOF_BYTES,
+  describeProof,
+  proofStorageKey,
+  writeProofFile,
+} from '@/lib/settlement-proof';
 
 /**
  * POST /api/finance/statements/:id/receipts — step 2 of settlement.
@@ -41,6 +48,43 @@ const createSchema = z.object({
   /** Required when the wallet currency differs from the statement currency. */
   exchangeRate: z.number().positive().max(1_000_000).optional(),
   note: z.string().trim().max(300).optional(),
+  /**
+   * THE PAPER BEHIND THE COLLECTION — «حط رفع ملف صورة او ملف عشان اتحقق
+   * من التحصيل».
+   *
+   * It travels in THIS body, base64, rather than in a multipart request or
+   * a second call — the same way the courier's statement file arrives on
+   * the route next door. The reason is atomicity: the receipt and its paper
+   * are written in one transaction, so a receipt saved with a proof that
+   * then failed to upload is not a state this feature can reach.
+   *
+   * Base64 costs a third, so a 4 MB photo is about 5.6 MB of body. The
+   * ceiling is checked on the DECODED bytes, below, because that is the
+   * figure a person can act on.
+   *
+   * OPTIONAL, AND THAT IS THE DECISION: a cash handover in a doorway has no
+   * paper, and a required field would stand between somebody and recording
+   * money that has already arrived.
+   */
+  proof: z
+    .object({
+      /**
+       * What the OWNER calls it. Optional — with nothing typed the file
+       * keeps its own name, which a phone spells `IMG_20261010_143052.jpg`.
+       */
+      name: z.string().trim().max(120).optional(),
+      /** The file's own name, for the fallback and for nothing else. */
+      fileName: z.string().trim().max(255),
+      /**
+       * Bounded here as CHARACTERS so an enormous body is refused before it
+       * is decoded. Four thirds of the byte ceiling, plus padding.
+       */
+      content: z
+        .string()
+        .min(1)
+        .max(Math.ceil((MAX_PROOF_BYTES * 4) / 3) + 1024),
+    })
+    .optional(),
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +125,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     /*
+     * THE FILE IS READ AND JUDGED BEFORE ANYTHING IS WRITTEN.
+     *
+     * `describeProof` sniffs the first bytes, refuses anything that is not
+     * one of four types, caps the size and hashes what is left — and it
+     * throws in Arabic, because the sentence goes to the person who chose
+     * the file. Doing it here rather than inside the transaction means a
+     * bad file costs nothing: no row, no statement status change, and no
+     * transaction held open while a 4 MB buffer is examined.
+     */
+    let proof: { facts: ReturnType<typeof describeProof>; bytes: Buffer } | null = null;
+    if (parsed.data.proof) {
+      let bytes: Buffer;
+      try {
+        bytes = Buffer.from(parsed.data.proof.content, 'base64');
+      } catch {
+        return NextResponse.json({ error: 'تعذّر قراءة الملف', code: 'BAD_PROOF' }, { status: 400 });
+      }
+      try {
+        proof = {
+          facts: describeProof(bytes, parsed.data.proof.fileName, parsed.data.proof.name),
+          bytes,
+        };
+      } catch (e) {
+        return NextResponse.json(
+          { error: e instanceof Error ? e.message : 'تعذّر قبول الملف', code: 'BAD_PROOF' },
+          { status: 400 }
+        );
+      }
+    }
+
+    /*
      * A REPLAY FINDS ITS OWN ROW AND CHANGES NOTHING.
      *
      * Checked before the write rather than only catching the conflict,
@@ -105,12 +180,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
      * recorded against a statement that still says nobody has paid — and
      * the screen offers «record a receipt» again for a receipt that exists.
      */
+    /*
+     * THE ID IS DECIDED BEFORE THE WRITE, because the storage key is built
+     * from it. A key named after the receipt — never after the uploaded
+     * filename — is what makes path traversal moot rather than defended
+     * against, and it means one receipt has exactly one proof: a second
+     * upload for the same receipt replaces a bad photo rather than leaving
+     * two files and a row pointing at one of them.
+     */
+    const receiptId = parsed.data.receiptId ?? randomUUID();
+
     let receipt;
     try {
       receipt = await db.$transaction(async (tx) => {
         const created = await tx.statementReceipt.create({
           data: {
-            ...(parsed.data.receiptId ? { id: parsed.data.receiptId } : {}),
+            id: receiptId,
             companyId,
             statementId: id,
             walletId: wallet.id,
@@ -120,8 +205,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             receivedAt: parsed.data.receivedAt ? new Date(parsed.data.receivedAt) : new Date(),
             note: parsed.data.note ?? null,
             createdById: user.id,
+            /*
+             * ALL FIVE OR NONE — the database holds that invariant too
+             * (`statement_receipts_proof_all_or_none`), because a proof
+             * with a key and no hash looks present and cannot be checked.
+             */
+            ...(proof
+              ? {
+                  proofKey: proofStorageKey(companyId, id, receiptId, proof.facts.mime),
+                  proofName: proof.facts.name,
+                  proofMime: proof.facts.mime,
+                  proofSize: proof.facts.sizeBytes,
+                  proofHash: proof.facts.hash,
+                }
+              : {}),
           },
         });
+
+        /*
+         * THE BYTES GO TO DISK INSIDE THE TRANSACTION, and the order is
+         * deliberate: the row first, the file second. If the write fails,
+         * the transaction rolls the row back and there is no receipt
+         * pointing at a file that is not there. The other order would leave
+         * an orphaned file on every failure — harmless but accumulating,
+         * and with nothing in the database to find it by.
+         *
+         * A file left behind by a LATER failure is still possible (the
+         * statement update below), and that is the direction to fail in: a
+         * file nobody references costs disk, a reference to a missing file
+         * costs a person their proof.
+         */
+        if (proof) {
+          await writeProofFile(created.proofKey!, proof.bytes);
+        }
+
         await tx.courierStatement.update({ where: { id }, data: { status: 'RECEIPTED' } });
         return created;
       });
@@ -140,7 +257,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await logAudit({
       companyId, userId: user.id, action: 'STATEMENT_RECEIPT_ADDED',
       entity: 'CourierStatement', entityId: id,
-      newData: { receiptId: receipt.id, wallet: wallet.name, amount: parsed.data.amount },
+      newData: {
+        receiptId: receipt.id,
+        wallet: wallet.name,
+        amount: parsed.data.amount,
+        // Whether a collection was evidenced is exactly the question this
+        // feature exists to answer, so the audit row answers it too.
+        proof: proof ? { name: proof.facts.name, mime: proof.facts.mime, hash: proof.facts.hash } : null,
+      },
     });
 
     const gap = await receiptGap(db, id, country.minorUnit);

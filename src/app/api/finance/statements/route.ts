@@ -45,7 +45,33 @@ export async function GET() {
       take: 100,
       include: {
         _count: { select: { lines: true, receipts: true, matches: true } },
-        receipts: { select: { amount: true } },
+        /*
+         * THE RECEIPTS THEMSELVES, because a count cannot be checked.
+         *
+         * `amount` alone was selected here and nothing read it. The screen
+         * showed «٣ إيصال» and no way to see which three, so a proof
+         * uploaded against one of them had nowhere to be looked at — and a
+         * proof nobody can open is not a proof, it is a file.
+         *
+         * `proofKey` is NOT sent. It is a storage path and the browser has
+         * no use for one: the link is built from the receipt's id, and the
+         * server reads the key off the row. Sending it would publish the
+         * layout of the uploads directory to every screen.
+         */
+        receipts: {
+          orderBy: { receivedAt: 'asc' },
+          select: {
+            id: true,
+            amount: true,
+            currencyCode: true,
+            receivedAt: true,
+            note: true,
+            proofName: true,
+            proofMime: true,
+            proofSize: true,
+            wallet: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -66,6 +92,17 @@ export async function GET() {
           periodFrom: s.periodFrom,
           periodTo: s.periodTo,
           counts: s._count,
+          receipts: s.receipts.map((r) => ({
+            id: r.id,
+            amount: Number(r.amount),
+            currencyCode: r.currencyCode,
+            receivedAt: r.receivedAt,
+            note: r.note,
+            wallet: r.wallet.name,
+            // `hasProof` rather than the key: what the screen needs to know
+            // is whether there is something to open.
+            proof: r.proofName ? { name: r.proofName, mime: r.proofMime, size: r.proofSize } : null,
+          })),
           gap: await receiptGap(db, s.id, country.minorUnit),
         }))
       ),
