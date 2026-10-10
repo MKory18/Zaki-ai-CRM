@@ -1471,7 +1471,7 @@
   },
   "src/components/shell/SecondFactor.tsx": {
     "buttons": 6,
-    "inputs": 2,
+    "inputs": 3,
     "columns": 0,
     "cards": 0,
     "modals": 0,

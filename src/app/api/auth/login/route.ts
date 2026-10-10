@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { verifyPassword } from '@/lib/auth';
+import { verifyPassword, verifyDeviceToken } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { UserStatus } from '@/types/auth';
 import { issueSession } from '@/lib/sign-in';
 import { issueChallenge } from '@/lib/two-factor-challenge';
 import { stepFor } from '@/lib/two-factor';
+import { DEVICE_COOKIE, judgeTrust, noteBadPassword, recentBadPassword } from '@/lib/trusted-device';
 
 export async function POST(req: Request) {
   try {
@@ -40,6 +42,11 @@ export async function POST(req: Request) {
 
     const isMatch = await verifyPassword(password, user.passwordHash);
     if (!isMatch) {
+      // Remembered for a quarter of an hour, and it is what makes a trusted
+      // device ask for the six digits anyway. Noted AFTER the account was
+      // found, so a wrong email cannot be used to make a stranger's login
+      // stricter.
+      noteBadPassword(email);
       return NextResponse.json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' }, { status: 401 });
     }
 
@@ -73,7 +80,42 @@ export async function POST(req: Request) {
      * nothing but the two endpoints that set it up.
      */
     const step = stepFor({ role: user.role, totpEnabledAt: user.totpEnabledAt });
-    if (step !== 'none') {
+    if (step === 'verify') {
+      /**
+       * A DEVICE THAT ALREADY PROVED THE SECOND FACTOR DOES NOT PROVE IT
+       * AGAIN — «بس اذا صار نشاط مشبوه يطلبو».
+       *
+       * The password has just been accepted; this decides only whether the
+       * SIX DIGITS are also asked for. Somebody holding this device without
+       * the password never reached this line.
+       *
+       * The verdict is a pure function in `trusted-device.ts`, and its
+       * `why` goes on the audit row: a sign-in that skipped the code must
+       * say so, and one that was asked must say what asked for it.
+       */
+      const verdict = judgeTrust({
+        claims: await verifyDeviceToken((await cookies()).get(DEVICE_COOKIE)?.value),
+        user: { id: user.id, totpEnabledAt: user.totpEnabledAt },
+        suspicious: recentBadPassword(email),
+      });
+
+      if (verdict.trusted) {
+        return issueSession({ user, remember: !!remember, ip, factor: 'password+device' });
+      }
+
+      const challenge = await issueChallenge({ userId: user.id, purpose: step, remember: !!remember });
+      return NextResponse.json({
+        twoFactor: step,
+        challenge,
+        email: user.email,
+        // The screen says WHY the code is being asked for. «نشاطٌ غير
+        // معتاد» after a wrong password is the difference between a
+        // person trusting the measure and a person thinking it is broken.
+        askedBecause: verdict.why,
+      });
+    }
+
+    if (step === 'enrol') {
       const challenge = await issueChallenge({ userId: user.id, purpose: step, remember: !!remember });
       return NextResponse.json({
         twoFactor: step,

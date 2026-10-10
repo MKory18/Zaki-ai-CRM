@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { TRUST_DAYS } from '@/lib/trusted-device';
 import Image from 'next/image';
 import { RiFingerprintLine, RiLoader4Line, RiShieldKeyholeLine } from '@remixicon/react';
 import { passkeySupported, signWithPasskey } from '@/lib/passkey-browser';
@@ -24,13 +25,27 @@ interface Props {
   step: 'enrol' | 'verify';
   challenge: string;
   email: string;
+  /**
+   * WHY THE CODE IS BEING ASKED FOR, from the server's own verdict.
+   *
+   * A trusted device skips the six digits, so being asked ON a device that
+   * was trusted needs a reason — otherwise the measure looks broken and
+   * somebody asks for it to be switched off. `suspicious` is the one the
+   * owner will meet: a wrong password at this account minutes ago.
+   */
+  askedBecause?: string;
   onSignedIn: (status: string) => void;
   onCancel: () => void;
 }
 
-export function SecondFactor({ step, challenge, email, onSignedIn, onCancel }: Props) {
+export function SecondFactor({ step, challenge, email, askedBecause, onSignedIn, onCancel }: Props) {
   return step === 'verify' ? (
-    <VerifyStep challenge={challenge} onSignedIn={onSignedIn} onCancel={onCancel} />
+    <VerifyStep
+      challenge={challenge}
+      askedBecause={askedBecause}
+      onSignedIn={onSignedIn}
+      onCancel={onCancel}
+    />
   ) : (
     <EnrolStep challenge={challenge} email={email} onCancel={onCancel} />
   );
@@ -38,14 +53,23 @@ export function SecondFactor({ step, challenge, email, onSignedIn, onCancel }: P
 
 function VerifyStep({
   challenge,
+  askedBecause,
   onSignedIn,
   onCancel,
 }: {
   challenge: string;
+  askedBecause?: string;
   onSignedIn: (status: string) => void;
   onCancel: () => void;
 }) {
   const [code, setCode] = useState('');
+  /**
+   * Ticked by default, because the owner asked for this feature and a box
+   * they have to find every time is a box that does not solve the problem.
+   * The cookie is still only set AFTER the code is accepted — asking to be
+   * trusted is not what makes a device trusted.
+   */
+  const [trustDevice, setTrustDevice] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,7 +142,7 @@ function VerifyStep({
       const res = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challenge, code }),
+        body: JSON.stringify({ challenge, code, trustDevice }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'تعذّر التحقّق');
@@ -137,6 +161,30 @@ function VerifyStep({
         <RiShieldKeyholeLine className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sys-primary)]" aria-hidden />
         <span>افتح تطبيق المصادقة واكتب الرمز المعروض. أو اكتب أحد رموز الاسترداد إن لم يكن الهاتف بيدك.</span>
       </p>
+
+      {askedBecause === 'suspicious' && (
+        /*
+          THE ONE REASON A PERSON WILL MEET ON THEIR OWN DEVICE.
+          Without this sentence the feature reads as unreliable — «it said
+          it would not ask and it asked» — and an unreliable security
+          measure is one somebody asks to have removed.
+        */
+        <p
+          data-testid="asked-because"
+          className="rounded-lg border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] p-2.5 text-xs leading-relaxed text-[var(--sys-warning)]"
+        >
+          طُلب الرمز هذه المرة لأنَّ كلمة مرور خاطئة جُرِّبت على هذا الحساب خلال الربع ساعة الماضية — جهازك ما زال موثوقاً.
+        </p>
+      )}
+
+      {askedBecause === 're-enrolled' && (
+        <p
+          data-testid="asked-because"
+          className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]"
+        >
+          أُعيد ضبط التحقّق الثنائيّ، فسقطت ثقة كل الأجهزة. اكتب الرمز مرّة واحدة ليُوثَّق هذا الجهاز من جديد.
+        </p>
+      )}
 
       {offer && (
         <>
@@ -169,6 +217,28 @@ function VerifyStep({
           dir="ltr"
           className="h-11 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-center text-lg tracking-[0.4em] tabular-nums"
         />
+      </label>
+
+      {/*
+        THIRTY DAYS, AND IT REPLACES THE CODE — NEVER THE PASSWORD.
+        Said on the box itself, because a person agreeing to «remember this
+        device» deserves to know exactly what they are agreeing to.
+      */}
+      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+          <input
+            type="checkbox"
+            checked={trustDevice}
+            onChange={(e) => setTrustDevice(e.target.checked)}
+            className="h-4 w-4 rounded-sm border-[var(--sys-border-input)] bg-[var(--sys-card)] accent-[var(--sys-primary)]"
+          />
+        </span>
+        <span className="text-xs leading-relaxed text-[var(--sys-foreground)]">
+          لا تطلب الرمز على هذا الجهاز لمدة {TRUST_DAYS} يوماً
+          <span className="mt-0.5 block text-[var(--sys-muted-foreground)]">
+            كلمة المرور تبقى مطلوبة في كل مرة، والرمز يُطلب فوراً إن حدث نشاط غير معتاد أو أُعيد ضبط التحقّق.
+          </span>
+        </span>
       </label>
 
       {error && (

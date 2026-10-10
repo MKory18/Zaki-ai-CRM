@@ -4,6 +4,8 @@ import { COOKIE_NAME, createSessionToken, sessionCookieOptions } from './auth';
 import { ROLE_PERMISSIONS, type UserRole, type UserStatus } from '@/types/auth';
 import { logAudit } from './audit';
 import { markLogin } from './attendance';
+import { createDeviceToken } from './auth';
+import { DEVICE_COOKIE, TRUST_DAYS, claimsFor, deviceCookieOptions } from './trusted-device';
 
 /**
  * ISSUING A SESSION — ONE PLACE, BECAUSE THERE ARE NOW TWO DOORS.
@@ -49,7 +51,39 @@ export async function issueSession(input: {
    *   it is possession and inherence together. It is written differently
    *   from the others precisely so the audit can tell them apart.
    */
-  factor: 'password' | 'password+totp' | 'password+recovery' | 'password+passkey' | 'passkey';
+  /**
+   *   `password+device` — the password, and a device that proved the six
+   *   digits within the last thirty days standing where the six digits
+   *   stand. Written as its own word so the audit can answer «how many
+   *   sign-ins skipped the code, and on whose devices» — which is the
+   *   question somebody will ask of this feature first.
+   */
+  factor:
+    | 'password'
+    | 'password+totp'
+    | 'password+recovery'
+    | 'password+device'
+    | 'password+passkey'
+    | 'passkey';
+  /**
+   * «لا تطلب الرمز على هذا الجهاز» — the person ticked the box.
+   *
+   * IT IS SET HERE AND NOT IN THE ROUTE, and the rule that put it here is
+   * worth repeating: `two-factor.test.ts` forbids either door writing a
+   * cookie of its own, because the day one route is allowed to set one is
+   * the day a route sets the SESSION cookie without the `tokenVersion`
+   * bump. So everything a successful sign-in grants is granted in this one
+   * function, and «no cookies in the routes» stays a rule with no
+   * exception rather than a rule with one.
+   */
+  trustDevice?: boolean;
+  /**
+   * The moment the authenticator was enrolled, which the trust token
+   * carries so that resetting 2FA revokes every device at once. Passed in
+   * rather than re-read: the caller has the row already, and a second read
+   * is a second chance to read a different one.
+   */
+  totpEnabledAt?: Date | null;
 }): Promise<NextResponse> {
   const { user, remember, ip } = input;
 
@@ -101,5 +135,41 @@ export async function issueSession(input: {
   });
 
   response.cookies.set({ name: COOKIE_NAME, value: token, ...sessionCookieOptions(remember) });
+
+  /**
+   * THE TRUSTED DEVICE, GRANTED ONLY BY PROVING THE SECOND FACTOR.
+   *
+   * Two independent reasons have to agree before a device is trusted, and
+   * that is deliberate on a security rule:
+   *
+   *   · the caller asked for it — the person ticked the box, and the only
+   *     caller that passes it is the one that just accepted a six-digit
+   *     code;
+   *   · and the factor is not a recovery code. A recovery code means the
+   *     authenticator was not to hand, which is also what it means when
+   *     somebody else is holding the account. One printed code must not buy
+   *     thirty days of skipping the second factor, and printed codes are
+   *     exactly what gets photographed.
+   *
+   * Either reason alone refuses. A caller that forgets the second is still
+   * refused here; a function that forgot it would still be refused by the
+   * caller.
+   */
+  if (input.trustDevice && input.factor === 'password+totp' && input.totpEnabledAt) {
+    response.cookies.set(
+      DEVICE_COOKIE,
+      await createDeviceToken(claimsFor({ id: user.id, totpEnabledAt: input.totpEnabledAt })),
+      deviceCookieOptions()
+    );
+    await logAudit({
+      companyId: user.companyId || 'platform',
+      userId: user.id,
+      action: 'TWO_FACTOR_DEVICE_TRUSTED',
+      entity: 'User',
+      entityId: user.id,
+      newData: { ip, days: TRUST_DAYS },
+    });
+  }
+
   return response;
 }

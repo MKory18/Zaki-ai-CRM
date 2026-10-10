@@ -80,7 +80,13 @@ export default function LoginPage() {
    * URL or a cookie, and a ticket the browser sends everywhere is one some
    * other route eventually gets asked to interpret.
    */
-  const [second, setSecond] = useState<{ step: 'enrol' | 'verify'; challenge: string; email: string } | null>(null);
+  const [second, setSecond] = useState<{
+    step: 'enrol' | 'verify';
+    challenge: string;
+    email: string;
+    /** The server's verdict on why the code is being asked for. */
+    askedBecause?: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -111,7 +117,12 @@ export default function LoginPage() {
 
       // The password was right and is not enough. Nothing has been issued.
       if (data.twoFactor) {
-        setSecond({ step: data.twoFactor, challenge: data.challenge, email: data.email });
+        setSecond({
+          step: data.twoFactor,
+          challenge: data.challenge,
+          email: data.email,
+          askedBecause: data.askedBecause,
+        });
         return;
       }
 
@@ -175,6 +186,7 @@ export default function LoginPage() {
                 step={second.step}
                 challenge={second.challenge}
                 email={second.email}
+                askedBecause={second.askedBecause}
                 onSignedIn={(status) => {
                   router.push(status === 'PENDING' ? '/pending' : '/');
                   router.refresh();

@@ -24,7 +24,9 @@ import type { UserStatus } from '@/types/auth';
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const { challenge, code } = await req.json().catch(() => ({}));
+    const { challenge, code, trustDevice } = await req.json().catch(() => ({}));
+    // It arrives from a browser, so it is a yes/no and nothing else.
+    const trustThisDevice = trustDevice === true;
 
     const ticket = await readChallenge(challenge, 'verify');
     if (!ticket) {
@@ -75,11 +77,35 @@ export async function POST(req: Request) {
       throw e;
     }
 
+    /**
+     * «لا تطلب الرمز على هذا الجهاز» — ASKED FOR, AND ONLY AFTER PROVING.
+     *
+     * The box was ticked before the code was typed; the trust is granted
+     * only on the far side of `checkSecondFactor`, so a device cannot
+     * become trusted by asking to be. It becomes trusted by proving the
+     * second factor once.
+     *
+     * NOT AFTER A RECOVERY CODE, and it is refused twice over: here,
+     * because `usedRecovery` is known here, and again inside
+     * `issueSession`, which only trusts on a `password+totp` factor. A
+     * recovery code means the authenticator was not to hand — which is
+     * also what it means when somebody else is holding the account.
+     *
+     * The cookie is written by `issueSession` and not here: the rule in
+     * `two-factor.test.ts` is that neither door writes a cookie of its
+     * own, so that the day one of them does, it is not the session cookie
+     * going out without the `tokenVersion` bump.
+     *
+     * `user.totpEnabledAt` is non-null on this line — `checkSecondFactor`
+     * refuses with NOT_ENROLLED otherwise, and that returned above.
+     */
     const response = await issueSession({
       user,
       remember: ticket.remember,
       ip,
       factor: result.usedRecovery ? 'password+recovery' : 'password+totp',
+      trustDevice: trustThisDevice && !result.usedRecovery,
+      totpEnabledAt: user.totpEnabledAt,
     });
 
     if (result.usedRecovery) {

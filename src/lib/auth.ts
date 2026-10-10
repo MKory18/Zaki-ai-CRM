@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { SessionUser, UserRole, UserStatus, Permission, ROLE_PERMISSIONS } from '@/types/auth';
+import { TRUST_DAYS, type DeviceTrustClaims } from './trusted-device';
 
 /**
  * Resolved lazily on first use (request time), never at module load.
@@ -54,6 +55,49 @@ export async function createSessionToken(payload: {
     .sign(getJwtSecret());
 }
 
+/**
+ * THE TRUSTED-DEVICE TOKEN, SIGNED HERE BECAUSE THE KEY LIVES HERE.
+ *
+ * The policy — who may be trusted, for how long, and what ends it — is in
+ * `trusted-device.ts` and has no secret and no clock, so it can be tested.
+ * This is only the signature, and it is next to `createSessionToken` on
+ * purpose: one module holds `JWT_SECRET`, and the day a second one wants it
+ * is the day it gets exported and read from somewhere nobody expects.
+ *
+ * `typ: 'device'` IS NOT DECORATION. Both tokens are signed with the same
+ * key, so without it a device token is a structurally valid session token.
+ * `getCurrentUser` would reject it today — it has no `tv`, and `undefined`
+ * never equals a tokenVersion — but that is luck, not a rule.
+ * `verifySessionToken` now refuses it by name, and so does the reverse.
+ */
+export async function createDeviceToken(claims: {
+  typ: 'device';
+  sub: string;
+  enr: number;
+}): Promise<string> {
+  return new SignJWT(claims)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(`${TRUST_DAYS}d`)
+    .sign(getJwtSecret());
+}
+
+export async function verifyDeviceToken(token: string | undefined): Promise<DeviceTrustClaims | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    // A session token presented as a device token is refused for the same
+    // reason, from the other side.
+    if (payload.typ !== 'device' || typeof payload.sub !== 'string' || typeof payload.enr !== 'number') {
+      return null;
+    }
+    return { typ: 'device', sub: payload.sub, enr: payload.enr };
+  } catch {
+    // Expired, re-signed, or signed with a key this server does not hold.
+    return null;
+  }
+}
+
 export async function verifySessionToken(token: string): Promise<{
   userId: string;
   email: string;
@@ -64,6 +108,8 @@ export async function verifySessionToken(token: string): Promise<{
 } | null> {
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
+    // A trusted-device token is not a session, whatever else is true of it.
+    if (payload.typ === 'device') return null;
     return payload as unknown as {
       userId: string;
       email: string;
