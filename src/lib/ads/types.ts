@@ -125,6 +125,20 @@ export interface AdsAdapter {
   normalizeAccountId(raw: string): string | null;
   /** Does this open that account? Run BEFORE anything is stored. */
   verifyAccount(creds: AdCredentials, accountId: string): Promise<AdAccountInfo>;
+  /**
+   * EVERY AD ACCOUNT THIS TOKEN CAN REACH.
+   *
+   * Needed because signing in does not name an account: a token from an
+   * OAuth consent reaches whatever the person administers, which may be
+   * one account or fourteen. The paste-a-token form knows the id because
+   * the seller typed it; a sign-in has to ask.
+   *
+   * Returns the inactive ones too, with `active: false`. A disabled
+   * account a seller is expecting to see is better named and greyed than
+   * silently absent — «my account is missing» is a support call, «your
+   * account is disabled» is an answer.
+   */
+  listAccounts(creds: AdCredentials): Promise<AdAccountInfo[]>;
   /** The campaigns in the account, for the seller to match ours against. */
   listCampaigns(creds: AdCredentials, accountId: string): Promise<RemoteCampaign[]>;
   /** What each campaign spent between two `YYYY-MM-DD` dates. */

@@ -111,6 +111,39 @@ export const tiktokAdapter: AdsAdapter = {
     };
   },
 
+  /**
+   * THE ADVERTISERS THIS TOKEN ADMINISTERS.
+   *
+   * TikTok answers `/oauth2/advertiser/get/` with ids and names, and it is
+   * the ONLY way to learn them: an access token from a consent carries no
+   * advertiser, and every other endpoint requires one.
+   *
+   * `app_id` and `secret` are required by this endpoint specifically —
+   * unlike every other TikTok call, which takes only the token. They are
+   * read from the environment rather than from the stored credentials
+   * because they are the PRODUCT's app, not the seller's.
+   */
+  async listAccounts(creds: AdCredentials): Promise<AdAccountInfo[]> {
+    const data = await call<{ list: { advertiser_id: string; advertiser_name: string }[] }>(
+      '/oauth2/advertiser/get/',
+      creds.token,
+      {
+        app_id: process.env.TIKTOK_APP_ID ?? '',
+        secret: process.env.TIKTOK_APP_SECRET ?? '',
+      }
+    );
+
+    return (data?.list ?? []).map((a) => ({
+      id: a.advertiser_id,
+      name: a.advertiser_name || a.advertiser_id,
+      // This endpoint does not report currency or status; both are learned
+      // by `verifyAccount` on the account the seller keeps. Reporting a
+      // guess here would be a figure nobody measured.
+      currency: '',
+      active: true,
+    }));
+  },
+
   async listCampaigns(creds: AdCredentials, accountId: string): Promise<RemoteCampaign[]> {
     const id = normalizeAccountId(accountId);
     if (!id) throw new AdsError('رقم المعلن غير صالح');

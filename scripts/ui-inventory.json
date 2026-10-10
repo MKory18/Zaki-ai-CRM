@@ -1225,8 +1225,8 @@
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 8,
-    "links": 1,
+    "icons": 9,
+    "links": 3,
     "tabs": 0
   },
   "src/components/settings/CourierCredentials.tsx": {

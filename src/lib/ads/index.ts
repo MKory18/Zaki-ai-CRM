@@ -5,6 +5,7 @@ import { tiktokAdapter } from './tiktok';
 import { snapchatAdapter } from './snapchat';
 
 export * from './types';
+import { oauthConfig, oauthMissing } from './oauth';
 
 /**
  * THE ONE PLACE THAT KNOWS WHICH PLATFORMS EXIST.
@@ -44,7 +45,27 @@ export function adapterFor(platform: string): AdsAdapter | null {
 export function adPlatformOptions() {
   return AD_PLATFORMS.map((p) => {
     const a = ADAPTERS[p];
-    return { platform: a.platform, label: a.label, short: a.short, fields: a.fields, help: a.help };
+    /*
+     * AND WHETHER SIGNING IN IS EVEN POSSIBLE.
+     *
+     * OAuth needs an app registered with the platform — a client id and
+     * secret belonging to the PRODUCT, set as env vars. Without them there
+     * is no authorize URL to send anybody to, and a «sign in» button would
+     * lead to a platform's error page.
+     *
+     * So the screen is told per platform and draws either the button or a
+     * sentence naming what an administrator has to set. The NAMES are not
+     * secrets; the values are, and they never leave the server.
+     */
+    const configured = oauthConfig(a.platform) !== null;
+    return {
+      platform: a.platform,
+      label: a.label,
+      short: a.short,
+      fields: a.fields,
+      help: a.help,
+      oauth: configured ? { available: true as const } : { available: false as const, ...oauthMissing(a.platform)! },
+    };
   });
 }
 

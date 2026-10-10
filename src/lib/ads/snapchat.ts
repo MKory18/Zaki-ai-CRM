@@ -148,6 +148,36 @@ export const snapchatAdapter: AdsAdapter = {
     };
   },
 
+  /**
+   * SNAPCHAT NESTS ITS ACCOUNTS UNDER ORGANISATIONS.
+   *
+   * There is no flat «my ad accounts» endpoint: the organisations come
+   * first, and each carries its ad accounts when asked for them. One call
+   * with `with_ad_accounts`, rather than one per organisation — a shop
+   * belonging to three agencies would otherwise be three round trips to
+   * draw one list.
+   */
+  async listAccounts(creds: AdCredentials): Promise<AdAccountInfo[]> {
+    const token = await accessToken(creds);
+    const data = await call<{
+      organizations: {
+        organization: {
+          id: string;
+          ad_accounts?: { id: string; name?: string; currency?: string; status?: string }[];
+        };
+      }[];
+    }>('/me/organizations', token, { with_ad_accounts: 'true' });
+
+    return (data?.organizations ?? []).flatMap((o) =>
+      (o.organization.ad_accounts ?? []).map((a) => ({
+        id: a.id,
+        name: a.name || a.id,
+        currency: a.currency ?? '',
+        active: a.status === 'ACTIVE',
+      }))
+    );
+  },
+
   async listCampaigns(creds: AdCredentials, accountId: string): Promise<RemoteCampaign[]> {
     const id = normalizeAccountId(accountId);
     if (!id) throw new AdsError('رقم الحساب الإعلاني غير صالح');

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
-import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
+import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiLoginBoxLine, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
 import { arDateTime } from '@/lib/format';
 
 /**
@@ -40,6 +40,19 @@ interface Platform {
   short: string;
   fields: Field[];
   help: { url: string; urlLabel: string; steps: string[] };
+  /**
+   * WHETHER SIGNING IN IS POSSIBLE AT ALL — «اربط الحساب الاعلاني عن طريق
+   * تسجيل الدخول بالحساب».
+   *
+   * OAuth needs an app registered with the platform, whose client id and
+   * secret belong to the PRODUCT and live in env vars. Without them there
+   * is no authorize URL, so the server says so and this draws a sentence
+   * naming what an administrator must set — never a button that leads to a
+   * platform error page.
+   */
+  oauth:
+    | { available: true }
+    | { available: false; envKeys: string[]; register: { url: string; note: string } };
 }
 
 interface Account {
@@ -236,6 +249,47 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                   {p.short}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/*
+            SIGNING IN, OR THE REASON IT IS NOT OFFERED.
+
+            Above the paste-a-token form and never instead of it: the form
+            keeps working, and a shop whose platform has no app registered
+            is not left without a way to connect. The two are the same act
+            with different amounts of reading.
+          */}
+          {active.oauth.available ? (
+            <a
+              href={`/api/settings/ad-accounts/oauth/${active.platform}/start`}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--sys-primary)] px-4 text-sm font-semibold text-[var(--sys-primary-foreground)]"
+            >
+              <RiLoginBoxLine className="icon-mirror h-4 w-4 shrink-0" aria-hidden />
+              سجّل الدخول بحساب {active.short}
+            </a>
+          ) : (
+            <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-2.5">
+              <p className="text-xs font-semibold text-[var(--sys-foreground)]">
+                الربط بتسجيل الدخول غير مهيّأ بعد
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                يحتاج تطبيقاً مسجَّلاً عند {active.short}، ومتغيّرَي بيئة على الخادم:{' '}
+                <span dir="ltr" className="font-mono">{active.oauth.envKeys.join('، ')}</span>.
+                {' '}
+                {active.oauth.register.note}
+              </p>
+              <a
+                href={active.oauth.register.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-[var(--sys-primary)] hover:underline md:min-h-0"
+              >
+                مكان التسجيل
+              </a>
+              <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
+                وحتى ذلك الحين، الصق الرمز بالأسفل — يعمل تماماً.
+              </p>
             </div>
           )}
 

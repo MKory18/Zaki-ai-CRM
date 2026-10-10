@@ -121,6 +121,31 @@ export async function verifyAccount(token: string, accountId: string): Promise<M
   };
 }
 
+/**
+ * EVERY AD ACCOUNT THE TOKEN REACHES — `/me/adaccounts`.
+ *
+ * `account_status` is Meta's own numbering: 1 is active, everything else is
+ * disabled, unsettled, pending or closed. Only the first is reported active,
+ * and the rest come back named rather than dropped, because a seller looking
+ * for an account that is not in the list cannot tell «not mine» from
+ * «disabled».
+ */
+export async function listAccounts(token: string, limit = 100): Promise<MetaAccount[]> {
+  const data = await call<{
+    data: { id: string; name?: string; currency?: string; account_status?: number }[];
+  }>('me/adaccounts', token, {
+    fields: 'id,name,currency,account_status',
+    limit: String(Math.min(limit, 200)),
+  });
+
+  return (data.data ?? []).map((a) => ({
+    id: a.id,
+    name: a.name ?? a.id,
+    currency: a.currency ?? '',
+    active: a.account_status === 1,
+  }));
+}
+
 export interface MetaCampaign {
   id: string;
   name: string;
@@ -279,6 +304,7 @@ export const metaAdapter: AdsAdapter = {
 
   normalizeAccountId,
   verifyAccount: (creds, accountId) => verifyAccount(creds.token, accountId),
+  listAccounts: (creds) => listAccounts(creds.token),
   listCampaigns: (creds, accountId) => listCampaigns(creds.token, accountId),
   fetchSpend: (creds, accountId, since, until) => fetchSpend(creds.token, accountId, since, until),
   explainError: explainMetaError,
