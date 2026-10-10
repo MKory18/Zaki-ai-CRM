@@ -74,7 +74,10 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
     if (only.length === 1) redirect(`/s/${store.slug}/p/${only[0].sku}${carryQuery(await searchParams)}`);
   }
 
-  const pixelsForHome = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
+  const pixelsForHome = await getTrackingPixelsForPage(store.companyId, 'PUBLIC', {
+    storeId: store.id,
+    countryId: store.countryId,
+  });
 
   // ── A home page the seller built ──
   // Only what was PUBLISHED: the draft is the seller's own workbench, and a

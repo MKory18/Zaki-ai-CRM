@@ -179,7 +179,10 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
 
   // A storefront page is a selling page: the store's company's pixels, the
   // ones not limited to landing pages.
-  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
+  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC', {
+    storeId: store.id,
+    countryId: store.countryId,
+  });
 
   return (
     <StorefrontShell store={store} back={back}>

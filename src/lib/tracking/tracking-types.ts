@@ -52,6 +52,76 @@ export function scopeChoice(scope: string): TrackingScope {
   return scope === 'LANDING_PAGES' ? 'LANDING_PAGES' : 'GLOBAL';
 }
 
+/**
+ * WHOSE VISITORS A PIXEL IS TOLD ABOUT — «فصل البيكسل لكل متجر وبلد».
+ *
+ * Three states, and they are mutually exclusive by construction as well as
+ * by a database CHECK:
+ *
+ *   · `{}`                 — every store in the company
+ *   · `{ countryId }`      — every store in that country, now and later
+ *   · `{ storeId }`        — that store alone
+ *
+ * A row naming both would be two answers to one question: if the store is
+ * not in that country, which decides? There is no good answer, so the
+ * state is refused rather than resolved.
+ */
+export interface PixelScope {
+  storeId?: string | null;
+  countryId?: string | null;
+}
+
+/** Where a page is being rendered, so the rule has something to compare to. */
+export interface PageOrigin {
+  storeId: string | null;
+  countryId: string | null;
+}
+
+/**
+ * DOES THIS PIXEL FIRE ON THIS PAGE?
+ *
+ * Pure, so every branch below is reachable from a test — including the
+ * ones that must never happen. The whole feature is this function; the
+ * query that fetches rows is an optimisation of it, and the guard checks
+ * the two agree.
+ *
+ * ── THE CASE THE OWNER ASKED ABOUT ──
+ *
+ * «حتى لو ح اولد بلد او متجر جديد» — a store opened tomorrow. It is
+ * reached by a company-wide pixel (both NULL) and by its own country's
+ * pixel, and by nothing else. That is not an accident of NULL handling: a
+ * company-wide pixel is a seller SAYING «all my shops», which the screen
+ * names out loud, and a country pixel is a seller saying «everything I
+ * open in Jordan». A pixel scoped to one store never follows.
+ *
+ * ── AND A PAGE THAT BELONGS TO NO STORE ──
+ *
+ * `LandingPage.storeId` is nullable: a campaign page can exist without a
+ * shop. Such a page is reached by company-wide pixels ONLY. Not because
+ * that is convenient — because a page with no store is in no country
+ * either, so there is nothing for a narrower scope to match, and the
+ * alternative (treating unknown as «matches everything») is how a pixel
+ * belonging to one shop starts reporting another's sales.
+ */
+export function pixelReaches(pixel: PixelScope, page: PageOrigin): boolean {
+  // A store scope matches one store and nothing else — never a page whose
+  // store is unknown.
+  if (pixel.storeId) return pixel.storeId === page.storeId;
+  // A country scope matches any store in it, including ones opened later.
+  if (pixel.countryId) return pixel.countryId === page.countryId;
+  // Neither: the company's own, everywhere it sells.
+  return true;
+}
+
+/** What a seller picked, for the screen. Derived, never stored. */
+export type PixelScopeKind = 'COMPANY' | 'COUNTRY' | 'STORE';
+
+export function pixelScopeKind(pixel: PixelScope): PixelScopeKind {
+  if (pixel.storeId) return 'STORE';
+  if (pixel.countryId) return 'COUNTRY';
+  return 'COMPANY';
+}
+
 /** Serializable pixel as delivered to the client engine. */
 export interface TrackingPixelView {
   id: string;
@@ -60,6 +130,9 @@ export interface TrackingPixelView {
   pixelId: string; // re-validated before use
   scope: TrackingScope;
   enabled: boolean;
+  /** Null for a company-wide pixel. Sent so a screen can say where it fires. */
+  storeId?: string | null;
+  countryId?: string | null;
 }
 
 /** Neutral event payload — adapters map it to each platform's format. */

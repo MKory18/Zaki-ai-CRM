@@ -17,6 +17,22 @@ const { requireCompanyTenant, requirePermission, db, logAudit } = vi.hoisted(() 
       update: vi.fn(),
       delete: vi.fn(),
     },
+    /*
+     * THE SHOPS AND COUNTRIES A PIXEL MAY BE SCOPED TO — «فصل البيكسل لكل
+     * متجر وبلد».
+     *
+     * The GET returns them beside the pixels so the settings screen can
+     * offer the choice without also holding `geo.view`, and `POST`
+     * validates a store id from the body by looking it up WITH the company:
+     * another company's store is a REAL store, so the foreign key would
+     * accept it and the pixel would then report somebody else's sales into
+     * this company's ad account.
+     *
+     * The double is given those two readers rather than the route being
+     * made to do without them.
+     */
+    store: { findMany: vi.fn(), findFirst: vi.fn() },
+    country: { findMany: vi.fn(), findFirst: vi.fn() },
   },
   logAudit: vi.fn(),
 }));
@@ -32,6 +48,12 @@ import { PATCH, DELETE } from '@/app/api/settings/tracking-pixels/[id]/route';
 const session = { user: { id: 'u1', name: 'Admin' }, companyId: 'company-1' };
 
 beforeEach(() => {
+    // Nothing is scoped in these tests, so the lists are empty and the
+    // validators find nothing — which is exactly «كل المتاجر».
+    db.store.findMany.mockResolvedValue([]);
+    db.country.findMany.mockResolvedValue([]);
+    db.store.findFirst.mockResolvedValue(null);
+    db.country.findFirst.mockResolvedValue(null);
   vi.clearAllMocks();
   requireCompanyTenant.mockResolvedValue(session);
   requirePermission.mockResolvedValue(session.user);

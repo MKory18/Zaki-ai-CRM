@@ -79,6 +79,29 @@ model TrackingPixel {
   pixelId   String // validated per-platform (digits / alphanumeric / uuid)
   enabled   Boolean  @default(true)
   scope     String   @default("GLOBAL") // GLOBAL | PUBLIC | LANDING_PAGES
+
+  /// WHICH SHOP'S VISITORS THIS PIXEL IS TOLD ABOUT — «فصل البيكسل لكل متجر
+  /// وبلد حتى لو ح اولد بلد او متجر جديد».
+  ///
+  /// One pixel per (company, platform, pixelId) still — the unique index
+  /// below is unchanged — and this row says WHERE that pixel fires. The
+  /// same Meta pixel cannot be scoped two ways at once, because it is one
+  /// pixel: two scopes would be two rows claiming one ad account's data.
+  ///
+  /// THE THREE SCOPES, AND THEY ARE MUTUALLY EXCLUSIVE (the migration holds
+  /// a CHECK so only one may be set):
+  ///
+  ///   · both NULL — every store in the company. A DELIBERATE choice the
+  ///     seller makes and the screen names out loud, not a default that
+  ///     quietly swallows the next store somebody opens.
+  ///   · countryId — every store in that country, including ones opened
+  ///     later. That is the point of a country scope.
+  ///   · storeId — that store alone.
+  ///
+  /// `scope` above is a different question entirely and stays: it says
+  /// WHICH KIND OF PAGE (landing pages, storefronts, both). These say WHOSE.
+  storeId   String?
+  countryId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -106,9 +129,15 @@ model TrackingPixel {
   capiDatasetId String?
 
   company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// `Restrict`, not `Cascade`: deleting a store must not silently delete
+  /// the pixel that was reporting its sales. Somebody has to decide where
+  /// that pixel points now.
+  store       Store?             @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  country     Country?           @relation(fields: [countryId], references: [id], onDelete: Restrict)
   conversions CustomConversion[]
 
   @@unique([companyId, platform, pixelId])
+  @@index([companyId, storeId, enabled])
   @@index([companyId, enabled, scope])
   @@index([companyId, platform, enabled])
   @@map("tracking_pixels")
@@ -1592,6 +1621,7 @@ model Country {
   updatedAt          DateTime @updatedAt
 
   company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  trackingPixels TrackingPixel[]
   regions      Region[]
   stores       Store[]
   deliveryFees DeliveryFee[]
@@ -1748,6 +1778,7 @@ model Store {
   fonts             StoreFont[]
   campaigns         Campaign[]
   adAccounts        AdAccount[]
+  trackingPixels    TrackingPixel[]
   wallets           Wallet[]
   products          Product[]
   customers         Customer[]

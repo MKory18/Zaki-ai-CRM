@@ -32,6 +32,86 @@ interface PixelRow {
   enabled: boolean;
   scope: TrackingScope;
   createdAt: string;
+  /** Null + null = every store in the company. At most one is ever set. */
+  storeId: string | null;
+  countryId: string | null;
+}
+
+interface StoreOption { id: string; name: string; countryId: string }
+interface CountryOption { id: string; name: string }
+
+/**
+ * WHOSE VISITORS — «فصل البيكسل لكل متجر وبلد حتى لو ح اولد بلد او متجر جديد».
+ *
+ * One `<select>` over three kinds of value, because they are one question
+ * and two dropdowns would let somebody answer it twice. The value is the
+ * kind and the id joined, which the handler splits — a shape chosen so the
+ * «both at once» state the database refuses cannot be expressed here either.
+ *
+ * AND THE FIRST OPTION SAYS WHAT IT MEANS. It used to be the absence of a
+ * field; now it is a sentence a seller reads and picks — «كل المتاجر» — so
+ * a store opened next month is covered because somebody SAID so, not
+ * because a column was left empty.
+ */
+const COMPANY_WIDE = 'COMPANY:';
+
+/**
+ * The picker, written once because the row and the add-form ask the SAME
+ * question — and two copies of a dropdown are two chances for one of them
+ * to offer a country the other does not.
+ */
+function WherePicker({
+  value,
+  stores,
+  countries,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  stores: StoreOption[];
+  countries: CountryOption[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      aria-label="على أي متجر يعمل"
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
+    >
+      <option value={COMPANY_WIDE}>كل المتاجر</option>
+      {countries.length > 0 && (
+        <optgroup label="كل متاجر بلد — ومنها ما يُفتح لاحقاً">
+          {countries.map((c) => (
+            <option key={c.id} value={`COUNTRY:${c.id}`}>{c.name}</option>
+          ))}
+        </optgroup>
+      )}
+      {stores.length > 0 && (
+        <optgroup label="متجر واحد">
+          {stores.map((st) => (
+            <option key={st.id} value={`STORE:${st.id}`}>{st.name}</option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  );
+}
+
+function scopeValue(p: { storeId: string | null; countryId: string | null }): string {
+  if (p.storeId) return `STORE:${p.storeId}`;
+  if (p.countryId) return `COUNTRY:${p.countryId}`;
+  return COMPANY_WIDE;
+}
+
+/** The body a PATCH or POST carries for a chosen scope. Both keys, always. */
+function scopeBody(value: string): { storeId: string | null; countryId: string | null } {
+  const [kind, id] = value.split(':');
+  if (kind === 'STORE' && id) return { storeId: id, countryId: null };
+  if (kind === 'COUNTRY' && id) return { storeId: null, countryId: id };
+  return { storeId: null, countryId: null };
 }
 
 const PLATFORMS: {
@@ -57,6 +137,9 @@ export function TrackingPixelsSection() {
   const [platform, setPlatform] = useState<TrackingPlatform>('META');
   const [newId, setNewId] = useState('');
   const [newScope, setNewScope] = useState<TrackingScope>('GLOBAL');
+  const [newWhere, setNewWhere] = useState<string>(COMPANY_WIDE);
+  const [stores, setStores] = useState<StoreOption[]>([]);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -65,6 +148,8 @@ export function TrackingPixelsSection() {
       const res = await fetch('/api/settings/tracking-pixels');
       const data = await res.json().catch(() => ({}));
       setPixels(res.ok ? data.pixels ?? [] : []);
+      setStores(res.ok ? data.stores ?? [] : []);
+      setCountries(res.ok ? data.countries ?? [] : []);
     } catch {
       setPixels([]);
     }
@@ -117,6 +202,7 @@ export function TrackingPixelsSection() {
           pixelId: id,
           scope: newScope,
           enabled: true,
+          ...scopeBody(newWhere),
         }),
       },
       'أُضيف البكسل.'
@@ -217,6 +303,9 @@ export function TrackingPixelsSection() {
                 <p className="truncate font-mono text-xs text-[var(--sys-muted-foreground)]" dir="ltr">{p.pixelId}</p>
               </div>
 
+              {/* WHICH KIND of page, and WHOSE visitors. Two different
+                  questions that used to be one field, because only the
+                  first of them existed. */}
               <select
                 aria-label="أين يعمل"
                 value={scopeChoice(p.scope)}
@@ -230,6 +319,23 @@ export function TrackingPixelsSection() {
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
+
+              <WherePicker
+                value={scopeValue(p)}
+                stores={stores}
+                countries={countries}
+                disabled={!canEdit}
+                onChange={(v) =>
+                  // BOTH keys travel, always. A PATCH naming one would leave
+                  // the other behind, and the row would then claim a store
+                  // AND a country — the state the database refuses.
+                  void send(
+                    `/api/settings/tracking-pixels/${p.id}`,
+                    { method: 'PATCH', body: JSON.stringify(scopeBody(v)) },
+                    'حُفظ.'
+                  )
+                }
+              />
 
               {canEdit && (
                 <div className="flex items-center gap-0.5">
@@ -275,6 +381,13 @@ export function TrackingPixelsSection() {
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
+
+              <WherePicker
+                value={newWhere}
+                stores={stores}
+                countries={countries}
+                onChange={setNewWhere}
+              />
               <Button type="submit" variant="outline" disabled={busy || !newId.trim()} className="h-10">
                 {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiAddCircleLine className="h-4 w-4" />}
                 أضف

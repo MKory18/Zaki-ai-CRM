@@ -59,7 +59,10 @@ export default async function ThanksPage({ params, searchParams }: Props) {
 
   const { o } = await searchParams;
   const reference = o && REFERENCE.test(o) ? o : null;
-  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC');
+  const pixels = await getTrackingPixelsForPage(store.companyId, 'PUBLIC', {
+    storeId: store.id,
+    countryId: store.countryId,
+  });
 
   return (
     <StorefrontShell store={store} back={{ href: `/s/${store.slug}`, label: store.name }}>

@@ -235,7 +235,13 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   // ── Tracking — server-resolved pixels of the page's company, re-validated
   // before any script may load. A preview loads none: the seller checking
   // their own page is not a PageView to report to their ad account.
-  const trackingPixels = previewing ? [] : await getTrackingPixelsForPage(companyId, 'LANDING_PAGES');
+  const trackingPixels = previewing ? [] : await getTrackingPixelsForPage(companyId, 'LANDING_PAGES', {
+        // A campaign page may belong to no shop — `LandingPage.storeId` is
+        // nullable. Then only company-wide pixels reach it, because there
+        // is no store and no country for a narrower scope to match.
+        storeId: lp.storeId ?? null,
+        countryId: lp.store?.countryId ?? null,
+      });
   const viewContent = lp.product
     ? { contentIds: [lp.product.id], contentName: lp.product.name || null, value: lp.product.basePrice ?? null, currency }
     : null;
