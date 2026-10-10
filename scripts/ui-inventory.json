@@ -470,12 +470,12 @@
     "tabs": 0
   },
   "src/components/screens/CampaignsScreen.tsx": {
-    "buttons": 16,
+    "buttons": 17,
     "inputs": 10,
     "columns": 4,
     "cards": 0,
     "modals": 0,
-    "icons": 19,
+    "icons": 21,
     "links": 0,
     "tabs": 0
   },

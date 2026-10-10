@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
-import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 
@@ -95,6 +95,7 @@ export function CampaignsScreen() {
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const [linking, setLinking] = useState<Campaign | null>(null);
   const confirm = useConfirm();
 
@@ -123,6 +124,54 @@ export function CampaignsScreen() {
       setSyncMsg(e instanceof Error ? e.message : 'تعذر السحب');
     } finally {
       setSyncing(false);
+    }
+  }
+
+  /**
+   * PULLING THE CAMPAIGNS THEMSELVES — «يسحب منو الداتا تبع الحملات».
+   *
+   * Separate from «اسحب الإنفاق» beside it because they do different
+   * things: that one updates figures on rows that exist, this one brings
+   * rows that do not. One button doing both would mean a seller who wanted
+   * today's spend also got nine archived campaigns they had deliberately
+   * not typed in.
+   *
+   * The message names what arrived rather than counting it. «أُضيفت ٣
+   * حملات» cannot be checked by anybody; the names can.
+   */
+  async function importCampaigns() {
+    setImporting(true);
+    setSyncMsg(null);
+    try {
+      const json = await apiJson<{
+        created: number;
+        message?: string;
+        accounts: { account: string; created: { name: string }[]; existing: number; skipped: number; error: string | null }[];
+      }>('/api/growth/campaigns/import', { method: 'POST' });
+      await load();
+
+      const failed = json.accounts.filter((a) => a.error);
+      if (failed.length) {
+        setSyncMsg(failed.map((a) => `${a.account}: ${a.error}`).join(' · '));
+      } else if (json.created === 0) {
+        // «Nothing new» is a real and common answer — said out loud, with
+        // what was looked at, so it does not read as a failure.
+        const seen = json.accounts.reduce((n, a) => n + a.existing, 0);
+        const skipped = json.accounts.reduce((n, a) => n + a.skipped, 0);
+        setSyncMsg(
+          json.message ??
+            `لا حملات جديدة — ${seen} موجودة أصلاً${skipped ? ` و${skipped} منتهية أو محذوفة تُرِكت` : ''}.`
+        );
+      } else {
+        const names = json.accounts.flatMap((a) => a.created.map((c) => c.name));
+        setSyncMsg(
+          `أُضيفت ${json.created}: ${names.slice(0, 4).join(' · ')}${names.length > 4 ? ' …' : ''} — حدِّد منتج كل حملة.`
+        );
+      }
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : 'تعذر السحب');
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -210,10 +259,20 @@ export function CampaignsScreen() {
             ))}
           </div>
           {(data?.adAccounts?.length ?? 0) > 0 && (
-            <Button size="sm" variant="outline" onClick={sync} disabled={syncing}>
-              {syncing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
-              اسحب الإنفاق
-            </Button>
+            <>
+              {/* Two buttons, not one. «اسحب الحملات» brings rows that do
+                  not exist; «اسحب الإنفاق» updates figures on rows that do.
+                  One button doing both would mean a seller who wanted
+                  today's spend also got nine archived campaigns. */}
+              <Button size="sm" variant="outline" onClick={() => void importCampaigns()} disabled={importing}>
+                {importing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiDownloadLine className="h-4 w-4" />}
+                اسحب الحملات
+              </Button>
+              <Button size="sm" variant="outline" onClick={sync} disabled={syncing}>
+                {syncing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
+                اسحب الإنفاق
+              </Button>
+            </>
           )}
           <Button size="sm" onClick={() => setCreating(true)}>
             <RiAddCircleLine className="h-4 w-4" /> حملة جديدة

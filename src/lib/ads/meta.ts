@@ -1,4 +1,4 @@
-import type { AdsAdapter } from './types';
+import { adTime, type AdsAdapter } from './types';
 /**
  * READING SPEND OUT OF META ADS.
  *
@@ -126,6 +126,8 @@ export interface MetaCampaign {
   name: string;
   status: string;
   objective: string | null;
+  /** `start_time` as Meta sends it — null on a campaign never scheduled. */
+  startedAt: Date | null;
 }
 
 /**
@@ -140,10 +142,14 @@ export async function listCampaigns(token: string, accountId: string, limit = 20
   const id = normalizeAccountId(accountId);
   if (!id) throw new MetaError('رقم الحساب الإعلاني غير صالح');
 
-  const data = await call<{ data: { id: string; name: string; status: string; objective?: string }[] }>(
+  const data = await call<
+    { data: { id: string; name: string; status: string; objective?: string; start_time?: string }[] }
+  >(
     `${id}/campaigns`,
     token,
-    { fields: 'id,name,status,objective', limit: String(Math.min(limit, 500)) }
+    // `start_time` is asked for because an imported campaign's window
+    // decides which spend is attributed to it — see `RemoteCampaign`.
+    { fields: 'id,name,status,objective,start_time', limit: String(Math.min(limit, 500)) }
   );
 
   return (data.data ?? []).map((c) => ({
@@ -151,6 +157,7 @@ export async function listCampaigns(token: string, accountId: string, limit = 20
     name: c.name,
     status: c.status,
     objective: c.objective ?? null,
+    startedAt: adTime(c.start_time),
   }));
 }
 

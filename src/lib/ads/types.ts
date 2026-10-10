@@ -38,6 +38,52 @@ export interface RemoteCampaign {
   name: string;
   /** Normalised to ACTIVE / PAUSED / other, so the screen needs no per-platform map. */
   status: string;
+  /**
+   * WHEN THE PLATFORM SAYS IT STARTED, and it is not decoration.
+   *
+   * An imported campaign needs a start date because `syncAdSpend` asks the
+   * platform for spend over the campaign's OWN WINDOW — so the date decides
+   * which money is attributed to it. Importing with «today» would charge a
+   * campaign that has been running for a month with nothing, and then with
+   * one day's spend, for as long as nobody noticed.
+   *
+   * All three platforms expose it. `null` is still possible — a draft that
+   * was never scheduled — and the importer says what it does then rather
+   * than silently picking a day.
+   */
+  startedAt: Date | null;
+}
+
+/**
+ * A DATE OUT OF AN API THAT RETURNS TIMES AS TEXT, in several shapes.
+ *
+ * Meta sends `2026-09-01T10:00:00+0300`, TikTok sends `2026-09-01 10:00:00`
+ * (no zone, and `Date` reads that as LOCAL, which is close enough for a
+ * day-grained window), Snapchat sends ISO with `Z`. All three sometimes
+ * send an empty string or omit the field on a draft.
+ *
+ * An `Invalid Date` reaching a `DateTime` column is a write that throws
+ * halfway through an import — some campaigns created, some not, and nothing
+ * to say which without reading the rows. So this returns null instead, the
+ * same way `money()` above returns 0 rather than NaN.
+ */
+export function adTime(v: unknown): Date | null {
+  /*
+   * THE EMPTY-STRING CHECK WAS HERE AND WAS DEAD CODE.
+   *
+   * A mutation removed `v.trim() === ''` and every test stayed green — so I
+   * checked why rather than tightening the test: `new Date('')` is an
+   * Invalid Date, and so is `new Date('   ')`, so the `Number.isNaN` line
+   * below already answered both. A branch that can never change the answer
+   * reads as live policy, and this repository has a name for that.
+   *
+   * The TYPE check is not redundant and stays: `new Date(0)` is a VALID
+   * date (the epoch), so `adTime(0)` without it would return 1970 for a
+   * platform that sent a number where a timestamp was expected.
+   */
+  if (typeof v !== 'string') return null;
+  const d = new Date(v.includes(' ') && !v.includes('T') ? v.replace(' ', 'T') : v);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 export interface SpendRow {

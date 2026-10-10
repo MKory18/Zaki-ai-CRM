@@ -1,5 +1,5 @@
 import {
-  AdsError, adDate, money,
+  AdsError, adDate, money, adTime,
   type AdsAdapter, type AdCredentials, type AdAccountInfo, type RemoteCampaign, type SpendRow,
 } from './types';
 
@@ -115,17 +115,32 @@ export const tiktokAdapter: AdsAdapter = {
     const id = normalizeAccountId(accountId);
     if (!id) throw new AdsError('رقم المعلن غير صالح');
 
-    const data = await call<{ list: { campaign_id: string; campaign_name: string; operation_status: string }[] }>(
-      '/campaign/get/',
-      creds.token,
-      { advertiser_id: id, page_size: '200' }
-    );
+    const data = await call<{
+      list: {
+        campaign_id: string;
+        campaign_name: string;
+        operation_status: string;
+        schedule_start_time?: string;
+        create_time?: string;
+      }[];
+    }>('/campaign/get/', creds.token, { advertiser_id: id, page_size: '200' });
 
     return (data?.list ?? []).map((c) => ({
       id: c.campaign_id,
       name: c.campaign_name,
       // Normalised here so the screen needs no per-platform vocabulary.
       status: c.operation_status === 'ENABLE' ? 'ACTIVE' : 'PAUSED',
+      /*
+       * THE SCHEDULED START, falling back to when it was created.
+       *
+       * TikTok returns both, and they differ: a campaign built on Monday to
+       * begin on Friday has a `create_time` of Monday. The window we want
+       * is when it started SPENDING, so the schedule wins — and the
+       * creation time is a floor rather than nothing, because a window
+       * starting a few days early reports the same spend, while one
+       * starting LATE loses the first days of it.
+       */
+      startedAt: adTime(c.schedule_start_time) ?? adTime(c.create_time),
     }));
   },
 

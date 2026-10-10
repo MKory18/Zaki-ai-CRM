@@ -1,5 +1,5 @@
 import {
-  AdsError, money,
+  AdsError, money, adTime,
   type AdsAdapter, type AdCredentials, type AdAccountInfo, type RemoteCampaign, type SpendRow,
 } from './types';
 
@@ -153,16 +153,15 @@ export const snapchatAdapter: AdsAdapter = {
     if (!id) throw new AdsError('رقم الحساب الإعلاني غير صالح');
 
     const token = await accessToken(creds);
-    const data = await call<{ campaigns: { campaign: { id: string; name: string; status: string } }[] }>(
-      `/adaccounts/${id}/campaigns`,
-      token,
-      { limit: '200' }
-    );
+    const data = await call<{
+      campaigns: { campaign: { id: string; name: string; status: string; start_time?: string } }[];
+    }>(`/adaccounts/${id}/campaigns`, token, { limit: '200' });
 
     return (data?.campaigns ?? []).map((c) => ({
       id: c.campaign.id,
       name: c.campaign.name,
       status: c.campaign.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED',
+      startedAt: adTime(c.campaign.start_time),
     }));
   },
 
