@@ -26,6 +26,44 @@ import { EmptyState } from './EmptyState';
  * lines is the sideways scroll again, turned vertical.
  */
 
+/**
+ * HOW BADLY A ROW NEEDS READING — AND IN WHICH COLOUR.
+ *
+ * `alert` was a boolean, so every row that needed attention was the same
+ * red. The owner's note: «تمييزُ الصفوف: أحمر للملغى، برتقاليّ لمن فيه
+ * تعديل». Those are two different sentences to the person scanning forty
+ * rows — a cancelled order means STOP CHASING THIS, and a changed one
+ * means the address you just read is not the one that is true now. One
+ * colour for both says only «something», which is what a reader learns to
+ * ignore.
+ *
+ * `true` still means red, so every screen that passes a boolean keeps the
+ * tint it had. Nothing, `false` or `null` means an untouched row.
+ */
+export type RowTone = 'danger' | 'warn';
+
+/**
+ * The tint, per tone, in both shapes this component renders.
+ *
+ * The card carries the border too: a card has no neighbours above and
+ * below to read a background against, so a tinted card with a grey border
+ * reads as a rendering accident rather than a warning.
+ *
+ * `/40` on the fill in both, so the text on top keeps its contrast — these
+ * are the same soft tokens the chips inside the row already use, and a row
+ * at full strength would compete with the chip it contains.
+ */
+const ROW_TONE: Record<RowTone, { desk: string; card: string }> = {
+  danger: {
+    desk: 'bg-[var(--sys-destructive-soft)]/40',
+    card: 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40',
+  },
+  warn: {
+    desk: 'bg-[var(--sys-warning-soft)]/40',
+    card: 'border-[var(--sys-warning)]/40 bg-[var(--sys-warning-soft)]/40',
+  },
+};
+
 export interface Column<T> {
   key: string;
   /** The column heading, and the label on the card. */
@@ -72,8 +110,13 @@ export interface RowsProps<T> {
      */
     onToggleAll?: (next: boolean) => void;
   };
-  /** Marks a row as needing attention — red on the desk, red on the card. */
-  alert?: (row: T) => boolean;
+  /**
+   * Marks a row as needing attention, and says in which colour.
+   *
+   * `'danger'` is red, `'warn'` is orange, `true` is red — see `RowTone`.
+   * A row with nothing to say returns nothing and is left alone.
+   */
+  alert?: (row: T) => boolean | RowTone | null | undefined;
   /**
    * THE ONE THING ABOUT THIS ROW THAT MUST BE READ BEFORE ITS FIELDS.
    *
@@ -98,6 +141,23 @@ export interface RowsProps<T> {
 }
 
 export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, selection, alert, notice }: RowsProps<T>) {
+  /**
+   * ONE READING OF `alert`, used by both shapes.
+   *
+   * The table and the cards each used to write their OWN class string off
+   * it. Two renderings of one rule is how a tone ends up red on a desk and
+   * orange in a hand — the defect this file exists to avoid in the first
+   * place, repeated inside it.
+   *
+   * It is still called once per row PER SHAPE, because the table and the
+   * cards are two separate loops and both are in the DOM. That is unchanged
+   * and is not what this fixes.
+   */
+  const toneOf = (row: T): RowTone | null => {
+    const v = alert?.(row);
+    if (v === true) return 'danger';
+    return v === 'danger' || v === 'warn' ? v : null;
+  };
   /**
    * A LIST THAT HAS NOT ARRIVED IS NOT A CRASH.
    *
@@ -172,7 +232,9 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
             put a tab stop on every line of every table in the product.
           */}
           <tbody className="divide-y divide-[var(--sys-border)]">
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const tone = toneOf(row);
+              return (
               <tr
                 key={keyOf(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -192,7 +254,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
                     : undefined
                 }
                 className={`${onRowClick ? 'cursor-pointer hover:bg-[var(--sys-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)] focus-visible:ring-inset' : ''} ${
-                  alert?.(row) ? 'bg-[var(--sys-destructive-soft)]/40' : ''
+                  tone ? ROW_TONE[tone].desk : ''
                 }`}
               >
                 {selection && (
@@ -218,7 +280,8 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
                 ))}
                 {actions && <td className="px-3 py-2">{actions(row)}</td>}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -240,6 +303,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
       <ul className="space-y-2 md:hidden">
         {rows.map((row) => {
           const flag = notice?.(row);
+          const tone = toneOf(row);
           return (
           <li
             key={keyOf(row)}
@@ -261,11 +325,7 @@ export function Rows<T>({ columns, rows, keyOf, onRowClick, empty, actions, sele
               onRowClick
                 ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sys-primary)]'
                 : ''
-            } ${
-              alert?.(row)
-                ? 'border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)]/40'
-                : 'border-[var(--sys-border)]'
-            }`}
+            } ${tone ? ROW_TONE[tone].card : 'border-[var(--sys-border)]'}`}
           >
             {/* Above the heading, because a reader who has already read the
                 reference and rung the customer has been told too late. */}

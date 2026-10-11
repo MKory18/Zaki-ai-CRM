@@ -243,9 +243,26 @@ describe('the tracking card on a phone', () => {
   });
 
   it('gives the alert the red channel, not lateness', () => {
-    // 89% of rows are late, so tinting late rows red tinted nine rows in
-    // ten. The tint has to mean the thing that is rare and wrong.
-    expect(src).toMatch(/alert=\{\(o\)\s*=>\s*!!o\.alert\s*&&\s*!o\.alert\.acknowledged\}/);
+    /*
+     * 89% of rows are late, so tinting late rows red tinted nine rows in
+     * ten. The tint has to mean the thing that is rare and wrong.
+     *
+     * THIS USED TO PIN THE LAMBDA ITSELF —
+     * `/alert=\{\(o\) => !!o\.alert && !o\.alert\.acknowledged\}/`.
+     * It fired the day the prop started sending a COLOUR instead of a
+     * boolean, although the rewrite tints exactly the same rows; and it
+     * would have passed on a lambda that read `o.alert` and then returned
+     * a tone chosen by lateness anyway.
+     *
+     * So the EXPRESSION is read and the rule asserted over it: lateness
+     * must not reach the tint, and the alert must. Which rows end up which
+     * colour is proved by rendering the screen, in
+     * `components/screens/the-cancelled-row-and-the-changed-row.test.tsx`.
+     */
+    const prop = /alert=\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/.exec(src);
+    expect(prop, 'الصفُّ لا يَأخذُ تلويناً أصلاً').toBeTruthy();
+    expect(prop![1], 'التلوينُ لا يَقرأُ التنبيه').toMatch(/alert/);
+    expect(prop![1], 'التلوينُ عادَ يَقرأُ التأخير — تسعةُ صفوفٍ من عشرة').not.toMatch(/late/i);
   });
 
   it('puts the alert and its button at the top of the card, full width', () => {

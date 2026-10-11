@@ -11,7 +11,7 @@ import { DeliverDialog } from '@/components/screens/tracking/DeliverDialog';
 import { WriteOffDialog } from '@/components/screens/tracking/WriteOffDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { Rows } from '@/components/ui/Rows';
+import { Rows, type RowTone } from '@/components/ui/Rows';
 import { RiAlertLine, RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
@@ -90,6 +90,38 @@ const ALERT_TONE: Record<TrackingAlertKind, { live: string; seen: string }> = {
     seen: 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]',
   },
 };
+
+/**
+ * THE SAME TWO MEANINGS, AS THE ROW'S OWN TINT.
+ *
+ * Beside `ALERT_TONE` and keyed by the same union, so a third alert kind
+ * added to `TrackingAlertKind` fails to compile here rather than quietly
+ * tinting its rows nothing.
+ */
+const ROW_TONE_FOR: Record<TrackingAlertKind, RowTone> = {
+  CANCELLED: 'danger',
+  CHANGED: 'warn',
+};
+
+/**
+ * THE ROW'S TINT, AS A FUNCTION RATHER THAN A LAMBDA IN THE JSX.
+ *
+ * Exported and pure because the lambda it replaced could not be reached by
+ * a test: mutating `CHANGED` to red, or swapping the two colours, broke
+ * nothing — `Rows` was guarded and its CALLER was not, which is a guard on
+ * a door nobody walks through.
+ *
+ * The fade is part of the rule, not a detail of the markup. An
+ * acknowledged alert still SAYS what happened — the chip stays, greyed —
+ * it just stops tinting the whole row, because a reader who has already
+ * dealt with forty rows should see the ones still waiting.
+ */
+export function rowToneFor(
+  alert: { kind: TrackingAlertKind; acknowledged: boolean } | null | undefined
+): RowTone | null {
+  if (!alert || alert.acknowledged) return null;
+  return ROW_TONE_FOR[alert.kind];
+}
 
 /*
  * The words come from `SHIPPING_STATUS_AR`. This screen was the only one
@@ -482,7 +514,20 @@ export function TrackingScreen() {
             red as everything else. Lateness is still said, loudly, in its own
             column: destructive colour, the day count, and «متأخرة N يوماً».
           */
-          alert={(o) => !!o.alert && !o.alert.acknowledged}
+          /*
+            AND THE TWO ALERTS ARE TWO COLOURS, NOT ONE.
+            «أحمر للملغى، برتقاليّ لمن فيه تعديل». They are two different
+            sentences to the person scanning forty rows: cancelled means
+            STOP CHASING THIS, changed means the address you just read is
+            no longer the one that is true. `alert` returned a boolean, so
+            both were the same red — and one colour for two meanings is a
+            colour a reader learns to ignore.
+
+            The tones come from `ALERT_TONE`'s own keys, not from a second
+            list written here: the row and the chip inside it must never
+            disagree about which of the two this is.
+          */
+          alert={(o) => rowToneFor(o.alert)}
           /*
             AND THE ALERT IS THE FIRST THING ON THE CARD, WITH ITS BUTTON.
             On a phone it used to be a small chip beside the reference and the
