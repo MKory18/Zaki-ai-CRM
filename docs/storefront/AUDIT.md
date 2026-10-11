@@ -488,3 +488,113 @@ separate acts.
 **D8 lands in its own stage after Stage 2** — it carries the only new tables,
 and mixing a schema change into the template work would put a review migration
 behind a design review.
+
+---
+
+## 9 · Addendum 3 — D5 on the growth side
+
+Measured on the same checkout. **Report only; nothing fixed.** These screens
+belong to the other task.
+
+### 9.1 The scope columns
+
+| Model | companyId | storeId | countryId | Note |
+|---|---|---|---|---|
+| `AdAccount` | ✅ | ✅ **NOT NULL** | — | `tokenEncrypted` lives here |
+| `Campaign` | ✅ | ✅ **NOT NULL** | — | one store each, as the addendum says |
+| `TrackingPixel` | ✅ | `String?` | `String?` | three levels on purpose: this store · this country · all stores |
+| `CustomConversion` | ✅ | ❌ | ❌ | `pixelId` only — see the gap below |
+
+### 9.2 Reads and writes
+
+| Route | Methods | Scoped by |
+|---|---|---|
+| `settings/ad-accounts/route.ts` | GET, POST | company + store |
+| `settings/ad-accounts/[id]/route.ts` | GET, DELETE | company + store (`inStore()`) |
+| `settings/ad-accounts/oauth/[platform]/start` · `callback` | GET | company + store |
+| `growth/campaigns/route.ts` · `import` · `sync` · `[id]` | all | company + store |
+| `settings/tracking-pixels/route.ts` · `[id]` | GET, POST, PATCH, DELETE | company + store + country |
+| `settings/tracking-pixels/[id]/capi` | PUT | company + pixel |
+| **`settings/conversions/route.ts:70,83,91`** | **GET** | **company only** |
+| **`settings/conversions/[id]/route.ts:39`** | **PATCH, DELETE** | **company only** |
+
+### 9.3 The one gap — custom conversions do not follow their pixel
+
+`CustomConversion` carries `pixelId` and nothing else that narrows it. Both
+its list (`conversions/route.ts:70`) and its write
+(`conversions/[id]/route.ts:39`) filter by `companyId` alone.
+
+A `TrackingPixel` may be scoped to one store (`storeId String?`). A conversion
+hanging off a store-A pixel is therefore **listed to, and editable by**,
+somebody whose context is store B — same company, different shop.
+
+It is consistent across read and write, so it is a **design gap, not a
+write-side hole**: the UI is not hiding something the API allows. The fix
+belongs with whoever owns these screens — narrow both queries through the
+pixel's `storeId`/`countryId`, honouring «all stores» when both are null.
+
+🔧 Suggested shape, not applied: reuse `pixelReaches()` /
+`resolvePixelScope()` in `src/lib/tracking/` rather than writing a second
+scope rule.
+
+### 9.4 Does each screen say which scope it shows?
+
+| Screen | Says the scope |
+|---|---|
+| `settings/TrackingPixelsSection.tsx` | ✅ says «كل المتاجر» and «متاجر هذا البلد» — **but never «هذا المتجر»** for a store-scoped pixel |
+| `settings/AdAccountsCard.tsx` | ✅ names the store |
+| `screens/CampaignsScreen.tsx` | ❌ **says nothing** — campaigns are `storeId NOT NULL`, and the screen never says which store's campaigns these are |
+
+⚠️ `CampaignsScreen` shows one store's campaigns and does not say so.
+🔧 The same «عم تعدّل: &lt;المتجر&gt;» bar §3 asks for.
+
+⚠️ `TrackingPixelsSection` names the two wide scopes and not the narrow one, so
+a store-only pixel reads as if it were everywhere.
+🔧 Add the third label «هذا المتجر فقط».
+
+### 9.5 Ad tokens — no leak found
+
+A sweep flagged three `select`s carrying a token-ish name. **All three are
+clear, verified by reading them:**
+
+- `ad-accounts/route.ts` × 2 select `tokenHint` — a masked hint, not a token.
+- `ad-accounts/[id]/route.ts:31` selects `tokenEncrypted`, and
+  `:41` passes it through `readCredentials()` into one adapter call. The
+  response is `{ campaigns }`. The file says so at `:39-40`: «Decrypted for
+  this one call and never returned.»
+
+No ad token reaches the browser, and none reaches a model: the only
+model-facing payloads in this repo are the assistants in `ai-assistants.ts`,
+and none of them has an ads scope.
+
+*(This is the third name-matching over-report in this audit — recorded with
+the others in §3 and §6 so a reader weighs the sweeps accordingly.)*
+
+---
+
+## 10 · The owner's answers to Stage 0 — recorded 2026-10-11
+
+| # | Question | Answer |
+|---|---|---|
+| ① | The catalogue switch | **Approved, on one condition: the store is never empty, not even for a moment.** Until the owner presses «اعرض كل الصفحات المنشورة» the store keeps showing exactly what it shows today; that press shows all published pages **and** switches the catalogue **in the same moment**. |
+| ② | Trial cost | **Stays counted** — the money really went out. **No new column now.** |
+| ③ | Automatic reviews | **Approved**: review table · signed single-use rating link · publish consent · moderation view. **Additive only, with a rollback, in core (not an app), in their own stage after Stage 2.** `ChatRequest.localOnly` is **not** on this list — it comes from the ecosystem task. |
+| ④ | «الوحدة المخزنيّة» | **Pending** — the owner will answer. |
+| ⑤ | Stage order | **Approved**: 1 store → 2 templates and conversion → 3 management → 4 editors; reviews in their own stage after 2. |
+
+**This changes Stage 1's plan in §8.** The ⚠️ risk recorded there — «the store
+empties the moment the catalogue switches» — is now **closed by design**:
+the catalogue change and the one-press are **one atomic act**, not two
+releases. Stage 1 must therefore ship `storefrontCatalog`'s new behaviour
+**behind** the press, with the old behaviour serving until it happens. Add a
+test: before the press, the catalogue is byte-for-byte what it is today.
+
+**Further notes for the later stages:**
+- The round «N» badge in `shots/*` is **Next.js dev mode**, not a production
+  defect. Disregard it in the before/after comparisons.
+- **«منصّة التجريب» stays under النمو** — it does not move into the storefront
+  menu. §7.1's proposal is corrected accordingly: the storefront group is
+  **المتجر** + **صفحات الهبوط**, two entries, not three.
+- A store wearing a **merged or retired** skin (§7.3) **keeps its look** until
+  the owner changes it himself. Retiring hides a skin from the picker; it
+  never repaints a live shop.
