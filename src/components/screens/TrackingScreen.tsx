@@ -12,6 +12,7 @@ import { WriteOffDialog } from '@/components/screens/tracking/WriteOffDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows, type RowTone } from '@/components/ui/Rows';
+import { Input, Select } from '@/components/ui/Input';
 import { RiAlertLine, RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
@@ -396,28 +397,49 @@ export function TrackingScreen() {
         }}
         className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end"
       >
-        <label className="flex-1 min-w-[220px]">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">بحث</span>
+        {/*
+          THE SYSTEM'S OWN FIELDS, AND THIS IS A PHONE DEFECT.
+
+          Both of these were hand-rolled, and both named a border and no
+          BACKGROUND — so the browser used its own, white, whatever theme
+          the person was in. `ReturnsScreen` carries the same lesson in
+          writing after the same thing happened there.
+
+          The half that matters on a phone is the other one: neither named
+          a focus style, and system.css styles `:focus-visible` only — on
+          purpose, so a mouse click does not leave a ring behind. A field
+          TAPPED with a thumb raises `:focus` and not `:focus-visible`, so
+          the warehouse hand searching a waybill on a phone tapped the box
+          and NOTHING happened on screen. «إذا كانت بيضا فتكون أزرق».
+
+          `Input` and `Select` bring both — `--sys-card` and the primary
+          ring at 25% — and bring the label and its `htmlFor` with them,
+          which the hand-rolled `<span>` above each field was not.
+        */}
+        <div className="flex-1 min-w-[220px]">
           <div className="relative">
-            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3" />
-            <input
+            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute end-3 top-[2.3rem] md:top-[2.1rem] z-10" />
+            <Input
+              label="بحث"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
-              className="w-full h-11 md:h-10 pr-9 pl-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
+              className="pe-9 ps-3"
             />
           </div>
-        </label>
-        <label>
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الحالة</span>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm">
-            <option value="">قيد الشحن</option>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-            <option value="all">الكل</option>
-          </select>
-        </label>
+        </div>
+        <Select
+          label="الحالة"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-auto"
+        >
+          <option value="">قيد الشحن</option>
+          {Object.entries(STATUS_LABEL).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+          <option value="all">الكل</option>
+        </Select>
         <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
         {data && data.lateCount > 0 && (
           <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 h-10">

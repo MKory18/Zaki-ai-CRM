@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -138,5 +140,91 @@ describe('the screen hands the row its colour', () => {
     expect(rowOf('TRK-A').className, 'ما زالَ يَصرخُ بعدَ أن رآه أحد').toBe(rowOf('TRK-C').className);
     // And it still SAYS what happened — the chip stays, greyed.
     expect(screen.getAllByText(/رآه/).length, 'الشارةُ اختفت مع اللون').toBeGreaterThan(0);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * AND THE SEARCH BOX IS THE SYSTEM'S FIELD, NOT A HAND-ROLLED ONE.
+ *
+ * «نسخةُ الموبايل لمتابعة الشحن — تنظيمٌ أعمق». The two fields at the top
+ * of this screen were written by hand, and what they were missing is
+ * stated here as MEASURED and not as assumed:
+ *
+ *   NO BACKGROUND. Read in the browser on the dark palette: the
+ *   hand-rolled field computed `rgba(0, 0, 0, 0)` — transparent — while
+ *   every other field in the product computes `rgb(10, 26, 46)`, the card
+ *   colour, against a page of `rgb(5, 15, 31)`. So it read as a flat
+ *   outline drawn on the page where the rest of the product reads as a
+ *   raised box. NOT a white box: `color-scheme` is declared per palette at
+ *   the root already, and `ReturnsScreen` records that half being fixed.
+ *
+ *   NO LABEL. A `<span>` above a field is not a label. It is not clickable,
+ *   it is not announced with the field, and it does not extend the field's
+ *   hit area — which on a phone is the difference between a tap that lands
+ *   and a tap that does nothing. `Input` and `Select` render a real
+ *   `<label htmlFor>`, which is what is asserted below.
+ *
+ * WHAT IS NOT CLAIMED: that a TAPPED field now shows a focus ring.
+ * `system.css` styles `:focus-visible` only, deliberately, and whether a
+ * browser grants that to a text field focused by touch is the browser's
+ * own heuristic. Tried to measure it; a synthetic click does not trigger
+ * the heuristic, so it is not provable here and is not asserted.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+describe('the search box at the top of the screen', () => {
+  /**
+   * A REAL `<label htmlFor>`, CHECKED AS ONE.
+   *
+   * `getByLabelText` is satisfied by an `aria-label` too — found by
+   * mutation: turning `label="بحث"` into `aria-label="بحث"` passed every
+   * assertion this test first made. An `aria-label` is announced, and it
+   * is NOT clickable and does NOT extend the field's hit area, which on a
+   * phone is the whole point. So the element is looked up and then its
+   * label element is found by `for`, which only a real one has.
+   */
+  const labelFor = (el: HTMLElement) =>
+    el.id ? document.querySelector(`label[for="${el.id}"]`) : null;
+
+  it('is a real labelled field, not a span above an input', async () => {
+    await show([parcel('a', 'TRK-A', null)]);
+    const search = screen.getByLabelText('بحث');
+    expect(search.tagName).toBe('INPUT');
+    expect(search.id, 'الحقلُ بلا مُعرِّف').toBeTruthy();
+    expect(labelFor(search), 'لا تسميةَ تُشيرُ إلى الحقل — aria-label وحدَها لا تُوسِّعُ مساحةَ اللمس').toBeTruthy();
+    expect(labelFor(search)!.textContent).toContain('بحث');
+  });
+
+  it('and so is the status picker', async () => {
+    await show([parcel('a', 'TRK-A', null)]);
+    const status = screen.getByLabelText('الحالة');
+    expect(status.tagName).toBe('SELECT');
+    expect(labelFor(status), 'القائمةُ بلا تسميةٍ مربوطة').toBeTruthy();
+  });
+
+  it('and it carries the product’s own field background', async () => {
+    await show([parcel('a', 'TRK-A', null)]);
+    // The token, not a colour: jsdom computes no custom properties, so what
+    // is checkable here is that the field asks for the card surface at all.
+    expect(screen.getByLabelText('بحث').className).toMatch(/bg-\[var\(--sys-card\)\]/);
+    expect(screen.getByLabelText('الحالة').className).toMatch(/bg-\[var\(--sys-card\)\]/);
+  });
+
+  it('and nothing on this screen hand-rolls a field any more', () => {
+    /*
+     * The screen's own source, because a render cannot see a field that
+     * was replaced — it can only see the one that is there. This is what
+     * fails if somebody adds a bare `<input>` to this screen next month.
+     */
+    const src = readFileSync(join(process.cwd(), 'src/components/screens/TrackingScreen.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const bare = [...src.matchAll(/<(input|select|textarea)\s/g)].filter((m) => {
+      const tag = src.slice(m.index, m.index + 400);
+      return !/type="checkbox"|type="radio"/.test(tag);
+    });
+    expect(
+      bare.map((m) => src.slice(0, m.index).split(/\r?\n/).length),
+      'حقلٌ مكتوبٌ بيدٍ في شاشةٍ لها حقولُ النظام'
+    ).toEqual([]);
   });
 });
