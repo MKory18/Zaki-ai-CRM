@@ -128,12 +128,27 @@ describe('the return fee the loss report charges', () => {
   });
 
   /**
-   * AND THE TWO HALVES STILL DISAGREE ABOUT NOTHING ELSE.
+   * AND THE GOODS ON A DAMAGED RETURN — THIS TEST USED TO PIN THE DEFECT.
    *
-   * The damaged-goods branch multiplies productCost by quantity, and the
-   * fees are charged to the return once. 2.5 outbound + 0 return + 3 goods.
+   * It read `productCost: 1, quantity: 3` and expected 5.5, because the
+   * branch did `Number(productCost ?? 0) * quantity` — and the comment
+   * above it said so out loud: «the damaged-goods branch multiplies
+   * productCost by quantity». It was describing a bug as though it were a
+   * rule.
+   *
+   * TWO THINGS WERE WRONG WITH THE BRANCH:
+   *
+   *   · `productCost` is NULL on all 56 live orders — it is written only by
+   *     a finance route that has no screen — so the goods on a damaged
+   *     return were priced at ZERO in production, every time. The fixture
+   *     hid that by supplying a value no real row has.
+   *   · and both cost columns hold the WHOLE ORDER's cost, so the `×
+   *     quantity` charged a three-unit order three times over.
+   *
+   * So the fixture is now the row a real order actually produces, and a
+   * second case covers the typed column.
    */
-  it('adds the goods on a damaged return and still no phantom return fee', async () => {
+  it('charges the estimate on a damaged return — the column a real row has', async () => {
     given({ fee: '4', returnFee: '0' });
     db.order.findMany.mockResolvedValue([
       {
@@ -141,12 +156,57 @@ describe('the return fee the loss report charges', () => {
         deliveryFailureReason: null,
         returnReason: 'DAMAGED_PRODUCT',
         deliveryFee: OUTBOUND,
-        productCost: 1,
+        // What every live row looks like: nobody has typed a per-order
+        // cost, and the estimate was written at creation for the WHOLE
+        // order (every door does `unitCost * quantity`).
+        productCost: null,
+        estimatedCostOfGoods: 3,
         quantity: 3,
         regionId: REGION,
         deliveryProviderId: COURIER,
       },
     ]);
+    // 2.5 outbound + 0 return + 3 goods. Not 9: the estimate is already
+    // the order's total.
     expect(await afterShippingMoney()).toBe(5.5);
+  });
+
+  it('and the typed figure wins when somebody has typed one — still not multiplied', async () => {
+    given({ fee: '4', returnFee: '0' });
+    db.order.findMany.mockResolvedValue([
+      {
+        rejectionReason: null,
+        deliveryFailureReason: null,
+        returnReason: 'DAMAGED_PRODUCT',
+        deliveryFee: OUTBOUND,
+        productCost: 4,
+        estimatedCostOfGoods: 3,
+        quantity: 3,
+        regionId: REGION,
+        deliveryProviderId: COURIER,
+      },
+    ]);
+    // 2.5 + 4, not 2.5 + 12 and not 2.5 + 3.
+    expect(await afterShippingMoney()).toBe(6.5);
+  });
+
+  it('and a typed ZERO is a free sample, not a missing cost', async () => {
+    given({ fee: '4', returnFee: '0' });
+    db.order.findMany.mockResolvedValue([
+      {
+        rejectionReason: null,
+        deliveryFailureReason: null,
+        returnReason: 'DAMAGED_PRODUCT',
+        deliveryFee: OUTBOUND,
+        productCost: 0,
+        estimatedCostOfGoods: 3,
+        quantity: 3,
+        regionId: REGION,
+        deliveryProviderId: COURIER,
+      },
+    ]);
+    // The fees only. Falling through a typed 0 to the estimate would
+    // charge for a gift — the `|| 0` family, closed here too.
+    expect(await afterShippingMoney()).toBe(2.5);
   });
 });

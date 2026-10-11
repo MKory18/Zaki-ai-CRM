@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { orderGoodsCost } from '@/lib/finance-workflow';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -68,6 +69,10 @@ export async function GET(req: Request) {
           returnReason: true,
           deliveryFee: true,
           productCost: true,
+          // The column every order door actually fills in — see the
+          // note beside `goods` below. Without it the goods on a
+          // damaged return were priced at zero on every row.
+          estimatedCostOfGoods: true,
           quantity: true,
           regionId: true,
           deliveryProviderId: true,
@@ -134,8 +139,28 @@ export async function GET(req: Request) {
         o.deliveryProviderId && o.regionId
           ? (returnFeeOf.get(`${o.deliveryProviderId}:${o.regionId}`) ?? 0)
           : 0;
+      /*
+       * WHAT A DAMAGED PARCEL COST US, FROM A COLUMN THAT IS ACTUALLY
+       * FILLED IN.
+       *
+       * This read `Number(o.productCost ?? 0) * (o.quantity ?? 1)` and was
+       * wrong twice over. MEASURED: `productCost` is null on all 56 live
+       * orders — it is written only by a finance route that has no screen —
+       * so the goods on a damaged return were priced at ZERO, every time.
+       * And `estimatedCostOfGoods`, which every order door fills in, holds
+       * the answer on all 56.
+       *
+       * The second half was the multiplication: both columns hold the
+       * WHOLE ORDER's cost, so `× quantity` charged a three-unit order
+       * three times over had the first column ever been filled.
+       *
+       * `orderGoodsCost` is the one place that answers this now, and it is
+       * the same answer the profit snapshot uses.
+       */
       const goods =
-        o.returnReason === 'DAMAGED_PRODUCT' ? Number(o.productCost ?? 0) * (o.quantity ?? 1) : 0;
+        o.returnReason === 'DAMAGED_PRODUCT'
+          ? Number(orderGoodsCost({ productCost: o.productCost, estimatedCostOfGoods: o.estimatedCostOfGoods }))
+          : 0;
 
       /**
        * ONE PARCEL, ONE BILL.

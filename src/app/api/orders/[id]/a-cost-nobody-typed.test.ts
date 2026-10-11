@@ -225,8 +225,21 @@ describe('a cost written in a notation nobody meant', () => {
 
     expect(stored('productCost'), 'تكلفةٌ صحيحةٌ لم تُكتَب').toBe('12.5');
     expect(savedRow()!.productCost).toBeInstanceOf(Prisma.Decimal);
-    // And the recompute ran off it: 20000 × 3 − 12.5 × 3 = 59962.5
-    expect(String(savedRow()!.grossProfit)).toBe('59962.5');
+    /*
+     * AND THIS LINE USED TO READ `59962.5` — «20000 × 3 − 12.5 × 3».
+     *
+     * It was pinning a defect. `computeFinancials` multiplied both the
+     * selling price and the cost by the quantity, and both are ALREADY
+     * whole-order totals: `Order.sellingPrice` is the subtotal (it equals
+     * the sum of its own lines on every multi-unit row in the live
+     * database), and every writer of the cost columns multiplies by
+     * quantity itself.
+     *
+     * So this three-unit order's gross profit was reported at three times
+     * what it is. 20000 − 12.5 = 19987.5, and the function no longer takes
+     * a quantity to multiply by.
+     */
+    expect(String(savedRow()!.grossProfit)).toBe('19987.5');
     expect(res.status).toBe(200);
   });
 
@@ -237,10 +250,10 @@ describe('a cost written in a notation nobody meant', () => {
   });
 
   /**
-   * THE CEILING, which the door did not have. `Decimal(12, 2)` is refused
+   * THE CEILING, which the door did not have. `Decimal(14, 3)` is refused
    * by Postgres at 10^10 — measured as
-   * `22003 numeric field overflow: a field with precision 12, scale 2 must
-   * round to an absolute value less than 10^10` — so without a bound the
+   * `22003 numeric field overflow: a field with precision 14, scale 3 must
+   * round to an absolute value less than 10^11` — so without a bound the
    * door answers 500 for a figure it could name in a 400.
    */
   it('and a figure past the column is refused by the door, not by Postgres', async () => {

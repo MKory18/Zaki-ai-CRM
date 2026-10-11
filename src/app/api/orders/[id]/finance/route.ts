@@ -3,7 +3,12 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable } from '@/lib/rbac';
-import { isValidSettlementTransition, computeFinancials, TRANSACTION_TYPES } from '@/lib/finance-workflow';
+import {
+  isValidSettlementTransition,
+  computeFinancials,
+  orderGoodsCost,
+  TRANSACTION_TYPES,
+} from '@/lib/finance-workflow';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can } from '@/lib/authorization';
@@ -48,7 +53,7 @@ const toMoney = (v: any) => (v === null || v === undefined ? null : new Prisma.D
  * two look alike and are not: `new Prisma.Decimal('1e400')` is a FINITE
  * Decimal with a large exponent, Prisma passes it through, and Postgres
  * refuses it with `22003 numeric field overflow — a field with precision
- * 12, scale 2 must round to an absolute value less than 10^10`. Same 500,
+ * 14, scale 3 must round to an absolute value less than 10^11`. Same 500,
  * one step later.)
  *
  * THE FIGURE THAT REALLY WAS STORED is the other half of the same gap:
@@ -61,8 +66,8 @@ const toMoney = (v: any) => (v === null || v === undefined ? null : new Prisma.D
  * doors use. The notation is decided there, once; this constant decides
  * only the BOUND.
  *
- * THE BOUND, 100_000_000: the six columns are `Decimal(12, 2)`, which
- * Postgres refuses at 10^10 — so a door with no ceiling hands a 500 back
+ * THE BOUND, 100_000_000: the six columns are `Decimal(14, 3)`, which
+ * Postgres refuses at 10^11 — so a door with no ceiling hands a 500 back
  * for a figure it could have refused with a 400 and a field name. 10^8 sits
  * an order of magnitude inside that, and it is not a new number in this
  * system: `production/route.ts` and `campaigns.ts` already declare
@@ -252,11 +257,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (needsRecompute) {
       const fin = computeFinancials({
-        sellingPrice: order.sellingPrice,
-        quantity: order.quantity,
+        /*
+         * THE SUBTOTAL, NOT A UNIT PRICE, AND NO QUANTITY PASSED.
+         *
+         * `Order.sellingPrice` IS the subtotal — proved against the lines:
+         * a three-unit order stores 36 and its lines sum to 36. This used
+         * to pass it with `quantity: order.quantity` and the function
+         * multiplied, so a three-unit order's revenue came out 108.
+         */
+        subtotal: order.sellingPrice,
         discount: updateData.discount ?? order.discount ?? 0,
         shippingRevenue: updateData.shippingRevenue ?? order.shippingRevenue ?? 0,
-        productCost: updateData.productCost ?? order.productCost ?? order.estimatedCostOfGoods,
+        /*
+         * And the goods cost for the WHOLE order, answered in one place.
+         * The old `productCost ?? order.productCost ?? estimatedCostOfGoods`
+         * chain fell between a per-unit column and an order total, and was
+         * then multiplied by quantity a second time.
+         */
+        goodsCost: orderGoodsCost({
+          productCost: updateData.productCost ?? order.productCost,
+          estimatedCostOfGoods: order.estimatedCostOfGoods,
+        }),
         packagingCost: updateData.packagingCost ?? order.packagingCost ?? 0,
         shippingCost: order.shippingCost,
         advertisingCost: updateData.advertisingCost ?? order.advertisingCost ?? 0,

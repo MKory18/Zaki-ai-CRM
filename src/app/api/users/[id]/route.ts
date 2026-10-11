@@ -304,7 +304,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
            *
            *   min 0           — a month paid at nothing is a real entry,
            *                     and the column's own default side is zero.
-           *   max 100_000_000 — the column is `Decimal(12, 2)`, which holds
+           *   max 100_000_000 — the column is `Decimal(14, 3)`, which holds
            *                     9,999,999,999.99; a hundred million is the
            *                     tighter, deliberate business ceiling that
            *                     was already written here, and no monthly
