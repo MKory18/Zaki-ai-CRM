@@ -19,6 +19,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
 import { healthOf } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
+import type { CourierScore } from '@/lib/courier-score';
 import { rowCostStated, type Trust } from '@/lib/cod-vitals';
 
 /** The last thirty days, which is what "how are we doing" nearly always means. */
@@ -32,6 +33,42 @@ function lastThirtyDays() {
 }
 
 type Tab = 'team' | 'landing' | 'scores';
+
+/** One courier as `/api/orders/shipping/performance` answers it. */
+interface CourierRow {
+  provider: { id: string; name: string; code?: string; kind?: string; isActive?: boolean };
+  metrics: {
+    assigned: number;
+    shipped: number;
+    delivered: number;
+    failed: number;
+    returned: number;
+    settled: number;
+    successRate: number | null;
+    failureRate: number | null;
+    returnRate: number | null;
+    avgDeliveryHours: number | null;
+  };
+  score: CourierScore;
+  whyNoScore: string | null;
+}
+
+/**
+ * BEST FIRST, AND THE UNMEASURED ONES LAST RATHER THAN WORST.
+ *
+ * A courier with no finished parcels has no score, and sorting `null` as a
+ * zero would rank a courier nobody has tried below one that fails half its
+ * parcels — which is the opposite of true. They go to the end, in their own
+ * arrival order, and are drawn with «—» instead of a rank.
+ */
+function rankCouriers(rows: readonly CourierRow[]): CourierRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.score.total === null && b.score.total === null) return 0;
+    if (a.score.total === null) return 1;
+    if (b.score.total === null) return -1;
+    return b.score.total - a.score.total;
+  });
+}
 
 export function PerformanceScreen() {
   const { t, currentUser } = useApp();
@@ -70,7 +107,16 @@ export function PerformanceScreen() {
   // "which courier".
   const [team, setTeam] = useState<any[] | null>(null);
   const [totals, setTotals] = useState<any>(null);
-  const [couriers, setCouriers] = useState<any[] | null>(null);
+  const [couriers, setCouriers] = useState<CourierRow[] | null>(null);
+  /**
+   * WHETHER «COLLECTED» MAY BE SCORED AT ALL, for the whole shop. Kept
+   * beside the list rather than inside each row: it is a fact about the
+   * settlement process, and repeating it on three rows would read as three
+   * separate problems.
+   */
+  const [collection, setCollection] = useState<Trust | null>(null);
+  /** Best first; the unmeasured ones last rather than worst. */
+  const ranked = rankCouriers(couriers ?? []);
   // Who brought the business, and through which door. Same window as
   // everything else on this screen.
   const [moderators, setModerators] = useState<AttributionRow[] | null>(null);
@@ -121,8 +167,11 @@ export function PerformanceScreen() {
   }, [dateQuery]);
 
   useEffect(() => {
-    apiJson<{ providers: any[] }>('/api/orders/shipping/performance')
-      .then((d) => setCouriers(d.providers ?? []))
+    apiJson<{ providers: CourierRow[]; collection: Trust }>('/api/orders/shipping/performance')
+      .then((d) => {
+        setCouriers(d.providers ?? []);
+        setCollection(d.collection ?? null);
+      })
       .catch(() => setCouriers([]));
   }, []);
 
@@ -476,38 +525,109 @@ export function PerformanceScreen() {
 
         {/* Couriers */}
         <Card>
-          <CardHeader title="أداء شركات الشحن" subtitle="نسبة النجاح والمرتجعات ومتوسط زمن التوصيل" />
+          <CardHeader
+            title="أداء شركات الشحن"
+            subtitle="سكور من 100 على ما أنجزه كلُّ مندوب — ومعه الأرقام التي بُني منها"
+          />
           <CardContent className="p-0">
             {couriers === null ? (
               <div className="p-4"><SkeletonRows rows={5} /></div>
             ) : couriers.length === 0 ? (
               <p className="p-6 text-sm text-[var(--sys-muted)] text-center">لا شركات شحن بعد.</p>
             ) : (
-              <ul className="divide-y divide-[var(--sys-border)]">
-                {couriers.map((c) => (
-                  <li key={c.provider.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-xs">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--sys-heading)] min-w-[130px]">
-                      {c.provider.kind === 'AGENT' ? (
-                        <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
-                      ) : (
-                        <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
+              <>
+                {/*
+                  WHY A SCORE IS OUT OF LESS THAN A HUNDRED, said once above
+                  the list. Without it a reader sees «70 من 70» and assumes
+                  the engine is broken.
+
+                  AND IT NAMES NO FIGURE. The first version of this sentence
+                  said «يُحسب كل سكور من 80» — which is wrong whenever a
+                  SECOND band is also unmeasured, and on this database speed
+                  always is, so every row read «من 70» under a sentence
+                  promising 80. Each row carries its own «من X»; this says
+                  only which band is out and why.
+                */}
+                {collection?.level === 'WITHHELD' && (
+                  <p className="mx-5 mb-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs text-[var(--sys-muted-foreground)]">
+                    <span className="font-semibold text-[var(--sys-heading)]">التحصيل خارج السكور: </span>
+                    {collection.ar} لذلك يبقى بند «نسبة التحصيل» بلا نقاط حتى تُسوّى أول شحنة — وكل سكور
+                    يُحسب من المجموع الظاهر بجانبه، لا من 100.
+                  </p>
+                )}
+                <ul className="divide-y divide-[var(--sys-border)]">
+                  {ranked.map((c, i) => (
+                    <li key={c.provider.id} className="px-5 py-3">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        {/*
+                          The rank is drawn only for a courier that HAS one.
+                          Numbering the ungraded ones 2 and 3 reads as
+                          «worse», and they are not worse — they are
+                          unmeasured.
+                        */}
+                        <span className="w-5 text-xs font-black tabular-nums text-[var(--sys-muted)]">
+                          {c.score.total === null ? '—' : i + 1}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
+                          {c.provider.kind === 'AGENT' ? (
+                            <RiEBike2Line className="w-4 h-4 text-[var(--sys-primary)]" />
+                          ) : (
+                            <RiTruckLine className="w-4 h-4 text-[var(--sys-muted)]" />
+                          )}
+                          {c.provider.name}
+                        </span>
+
+                        {c.score.total === null ? (
+                          <span className="ms-auto text-xs text-[var(--sys-muted-foreground)]">{c.whyNoScore}</span>
+                        ) : (
+                          <span className="ms-auto inline-flex items-baseline gap-1 tabular-nums">
+                            <span className="text-lg font-black text-[var(--sys-heading)]">{c.score.total}</span>
+                            <span className="text-xs text-[var(--sys-muted-foreground)]">من {c.score.possible}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/*
+                        WHICH BAND COST THE POINTS, always. Somebody told
+                        «your courier scored 72» can do nothing with it;
+                        somebody told the returns cost eight of twenty can.
+                      */}
+                      {c.score.total !== null && (
+                        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                          {c.score.bands.map((b) => (
+                            <li key={b.key} className="text-xs text-[var(--sys-muted-foreground)]">
+                              {b.ar}{' '}
+                              <span className="tabular-nums text-[var(--sys-foreground)]">
+                                {b.value === null
+                                  ? 'لم يُقَس'
+                                  : b.unit === 'hours'
+                                    ? `${b.value} س`
+                                    : `${Math.round(b.value)}%`}
+                              </span>{' '}
+                              <span className="tabular-nums font-semibold text-[var(--sys-heading)]">
+                                {b.points === null ? '—' : `${b.points}/${b.weight}`}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
-                      {c.provider.name}
-                    </span>
-                    <Metric label="مُسند" value={c.metrics.assigned} />
-                    <Metric label="مسلَّم" value={c.metrics.delivered} tone="text-[var(--sys-success)]" />
-                    <Metric label="مرتجع" value={c.metrics.returned} tone="text-[var(--sys-destructive)]" />
-                    <Metric
-                      label="متوسط التوصيل"
-                      value={c.metrics.avgDeliveryHours === null ? '—' : `${c.metrics.avgDeliveryHours} س`}
-                    />
-                    <span className="ms-auto tabular-nums font-bold text-[var(--sys-heading)]">
-                      {c.metrics.successRate ?? '—'}%
-                      <span className="text-xs text-[var(--sys-muted)] font-normal"> نجاح</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+
+                      {/* The plain counts, so the score can be checked against
+                          the parcels it was built from. */}
+                      <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--sys-muted)] tabular-nums">
+                        <span>{c.metrics.assigned} مُسند</span>
+                        <span className="text-[var(--sys-success)]">{c.metrics.delivered} مسلَّم</span>
+                        <span className="text-[var(--sys-destructive)]">{c.metrics.returned} مرتجع</span>
+                        <span>{c.metrics.settled} مسوّى</span>
+                        <span>
+                          متوسط التوصيل{' '}
+                          {c.metrics.avgDeliveryHours === null ? '—' : `${c.metrics.avgDeliveryHours} س`}
+                        </span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </CardContent>
         </Card>
