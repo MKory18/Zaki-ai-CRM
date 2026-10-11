@@ -25,7 +25,7 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 61 unique routes', () => {
+  it('lists 62 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
@@ -35,13 +35,15 @@ describe('navigation contract', () => {
     // screen: a courier's fees are a panel inside the courier, because a fee
     // row has always belonged to one company. 61 with /store/search —
     // the shop's own words and the questions each category is described
-    // by, which are one job and so one screen. A screen is registered
-    // when it is real — the
+    // by, which are one job and so one screen. 62 with /growth/bench,
+    // the test bench's results table — a growth screen whose numbers are
+    // deliberately outside every figure the rest of the product shows.
+    // A screen is registered when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(61);
-    expect(new Set(paths).size).toBe(61);
+    expect(paths).toHaveLength(62);
+    expect(new Set(paths).size).toBe(62);
   });
 
   it('the store section is its own group, and reads as one', () => {

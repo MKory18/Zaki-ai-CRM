@@ -147,6 +147,19 @@ export const NAV: NavGroup[] = [
        */
       r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
+      /*
+       * THE BENCH, BESIDE THE INTELLIGENCE CENTRE AND NOT UNDER PRODUCTS.
+       *
+       * «منتج تيست» is a growth question — what to try next — and its
+       * numbers are deliberately outside every figure the products and
+       * inventory screens show. Putting it under «المنتجات» would invite
+       * exactly the reading the whole feature refuses: that these products
+       * are part of the catalogue's totals.
+       *
+       * Same permission as the intelligence centre: both answer «what
+       * should I do next», and both are read by the person who decides it.
+       */
+      r('/growth/bench', 'منصّة التجريب', 'FlaskConical', ['growth.intelligence']),
       r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
       r('/growth/telegram/orders', 'طلبات تلجرام', 'Send', ['telegram.view']),
