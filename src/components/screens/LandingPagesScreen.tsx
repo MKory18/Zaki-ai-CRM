@@ -188,11 +188,15 @@ export function LandingPagesScreen() {
     return p ? { name: p.name, price: Number(p.basePrice ?? 0), currency: p.currency || '' } : null;
   }, [products, form.productId]);
 
-  /** The structure whose story the skin previews and the slots belong to. */
-  const chosenStructure = React.useMemo(
-    () => LANDING_STRUCTURES.find((x) => x.id === form.structure) ?? null,
-    [form.structure]
-  );
+  /**
+   * The structure whose story the skin previews and the slots belong to.
+   *
+   * A plain `find` over TEN items, not a `useMemo`: the compiler refused to
+   * preserve the memo (`react-hooks/preserve-manual-memoization`) and a
+   * memo it cannot preserve is a dependency array nobody is checking. The
+   * value is identical either way.
+   */
+  const chosenStructure = LANDING_STRUCTURES.find((x) => x.id === form.structure) ?? null;
 
   /**
    * THE STRUCTURE, DRAWN — ONCE, AND WORN TEN WAYS.

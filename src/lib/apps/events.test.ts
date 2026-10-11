@@ -11,7 +11,8 @@ const { db, decryptSecret } = vi.hoisted(() => ({
 vi.mock('../db', () => ({ db }));
 vi.mock('../secrets', () => ({ decryptSecret: (...a: unknown[]) => decryptSecret(...a) }));
 
-import { emitAppEvent, deliverOne, signPayload, MAX_ATTEMPTS } from './events';
+import { APP_EVENTS, emitAppEvent, deliverOne, signPayload, MAX_ATTEMPTS } from './events';
+import { goldenBodies, readContract, validate, type SignedDelivery } from './contract';
 
 /**
  * Telling an app what happened.
@@ -160,5 +161,102 @@ describe('delivering', () => {
     expect(headers['X-Zaki-Event']).toBe('order.created');
     expect(headers['X-Zaki-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
     expect(headers['X-Zaki-Timestamp']).toMatch(/^\d+$/);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * THE CONTRACT THE REPLIES SYSTEM READS.
+ *
+ * System 7 (`MKory18/AIresponse`) consumes these six events through a
+ * signed webhook, and its side of the bargain is written down at
+ * `contracts/oms-app-events.v1/` — copied into this repository verbatim
+ * (see `contracts/README.md`; never edited here).
+ *
+ * Everything below compares THIS code to THAT file. A test that restated
+ * the contract in its own words would pass while the two systems drifted,
+ * which is the only failure mode a contract test has.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+describe('the contract the replies system reads', () => {
+  const schema = readContract<Record<string, unknown>>('schema.json');
+  const envelope = schema.properties as Record<string, Record<string, unknown>>;
+
+  it('the six events this code emits are exactly the six the schema names', () => {
+    expect([...APP_EVENTS].sort()).toEqual([...(envelope.event.enum as string[])].sort());
+  });
+
+  it('and the signature reproduces the contract’s own worked example, byte for byte', () => {
+    /*
+     * The one assertion that cannot be satisfied by agreeing with myself:
+     * the secret, the timestamp, the body and the expected signature were
+     * all written on the other side.
+     */
+    const d = readContract<SignedDelivery>('signed-delivery.json');
+    expect(signPayload(d.secret, d.headers['X-Zaki-Timestamp'], d.body_raw)).toBe(d.signature_example);
+  });
+
+  it('and every golden body validates against the schema', () => {
+    const bad: string[] = [];
+    for (const { name, body } of goldenBodies()) {
+      const errors = validate(schema, body);
+      if (errors.length) bad.push(`${name}: ${errors.join(' · ')}`);
+    }
+    expect(goldenBodies().length, 'لم يُقرأ أيّ مثال — المسح لا يمسح').toBeGreaterThanOrEqual(6);
+    expect(bad, `مثال من العقد لا يطابق مخطّطه:\n${bad.join('\n')}`).toEqual([]);
+  });
+
+  it('and a broken body is refused — otherwise the validator proves nothing', () => {
+    const good = readContract<Record<string, unknown>>('order.created.json');
+    expect(validate(schema, { ...good, event: 'order.invented' }).length, 'حدث مخترَع مرّ').toBeGreaterThan(0);
+    expect(validate(schema, { ...good, extra: 1 }).length, 'حقل زائد في الغلاف مرّ').toBeGreaterThan(0);
+    const { at: _at, ...noAt } = good;
+    expect(validate(schema, noAt).length, 'غلاف بلا at مرّ').toBeGreaterThan(0);
+    const data = good.data as Record<string, unknown>;
+    expect(validate(schema, { ...good, data: { ...data, total: '185000' } }).length, 'مبلغ نصّي مرّ').toBeGreaterThan(0);
+    expect(validate(schema, { ...good, data: { ...data, currency: 'syp' } }).length, 'عملة بأحرف صغيرة مرّت').toBeGreaterThan(0);
+  });
+
+  it('and emitAppEvent queues exactly {event, at, data} — and it validates', async () => {
+    db.appInstall.findMany.mockResolvedValue([
+      { id: 'i1', app: { events: '["order.created"]', webhookUrl: 'https://a.test/h' } },
+    ]);
+    db.appDelivery.createMany.mockResolvedValue({ count: 1 });
+
+    const data = (readContract<Record<string, unknown>>('order.created.json').data) as Record<string, unknown>;
+    await emitAppEvent('c1', 'order.created', data);
+
+    const queued = db.appDelivery.createMany.mock.calls[0][0].data[0];
+    const body = JSON.parse(queued.payload);
+    expect(Object.keys(body).sort(), 'الغلاف ليس {event, at, data}').toEqual(['at', 'data', 'event']);
+    expect(validate(schema, body), 'ما يُرسَل لا يطابق العقد').toEqual([]);
+  });
+
+  it('and deliverOne sends the four headers, signed over «ts.body», with the body untouched', async () => {
+    const payload = readContract<SignedDelivery>('signed-delivery.json').body_raw;
+    /*
+     * THE ROW AS `deliverOne` SELECTS IT — `url`, `attempts`, `app.secret`.
+     *
+     * My first fixture invented `webhookUrl`, `secretEncrypted` and
+     * `attempt`, and the call never happened: a double that answers a
+     * shape the code does not read proves the code wrong about nothing.
+     */
+    db.appDelivery.findUnique.mockResolvedValue({
+      id: 'd1', url: 'https://a.test/h', payload, event: 'order.shipped', attempts: 0,
+      install: { app: { secret: 'enc', code: 'REPLIES' } },
+    });
+    fetchMock.mockResolvedValue({ status: 200 });
+
+    await deliverOne('d1');
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://a.test/h');
+    expect(init.body, 'الجسم أُعيد تنسيقه — والتوقيع على النصّ حرفيّاً').toBe(payload);
+
+    const h = init.headers as Record<string, string>;
+    expect(h['X-Zaki-Event']).toBe('order.shipped');
+    expect(h['X-Zaki-Delivery']).toBe('d1');
+    expect(h['X-Zaki-Timestamp'], 'الطابع ليس ميلي ثانية بـ13 خانة').toMatch(/^\d{13}$/);
+    expect(h['X-Zaki-Signature']).toBe(signPayload('s3cret', h['X-Zaki-Timestamp'], payload));
   });
 });
