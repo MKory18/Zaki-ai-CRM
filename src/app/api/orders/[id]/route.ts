@@ -849,13 +849,50 @@ export async function PATCH(
         lineProducts = new Map(rows.map((r) => [r.id, r]));
         nextLines = items.map((l) => ({ ...l }));
       } else {
-        // The single-line shorthand: price is the TOTAL for the quantity, the
-        // same meaning intake gives it.
+        /*
+         * THE SINGLE-LINE SHORTHAND: price is the TOTAL for the quantity,
+         * the same meaning intake gives it.
+         *
+         * AND THAT IS WHY A QUANTITY CHANGE HAS TO BE SCALED.
+         *
+         * This read `unitPrice: sellingPrice ?? existing.sellingPrice` and
+         * handed the OLD line total to a line whose quantity had changed.
+         * `computeCod` is given `unitPrice / quantity` just below, so the
+         * division by the NEW quantity cancelled the multiplication back
+         * out and the amount due never moved: a quantity raised from three
+         * to five kept the total at thirty-six, which is five pieces at
+         * 7.200 each instead of three at 12.000 — a discount nobody
+         * approved, applied by the act of asking for more.
+         *
+         * MEASURED on ORD-2026-0044 as it stands: quantity 3, sellingPrice
+         * 36.000, so the piece is 12.000. Raising it to 5 must read 60.000.
+         *
+         * So the piece price is recovered from the quantity it was SET for
+         * — the old one — and multiplied by the new. `freeQuantity` is not
+         * in this arithmetic and must not be: measured on the same rows,
+         * `quantity` is what is PAID for (3 x 12.000 = 36.000) and the free
+         * piece rides on top.
+         *
+         * WHEN A PRICE IS SENT TOO, it is taken as given and not scaled.
+         * It is the new line total for the new quantity — that is exactly
+         * what the screen says beside the field, «هذا سعر السطر كاملاً
+         * للكمية الحالية، لا سعر القطعة» — so scaling it as well would
+         * apply the quantity twice.
+         */
+        const nextQuantity = quantity ?? existing.quantity;
+        // The quantity the stored total was priced for. Zero cannot be a
+        // divisor, and an order with no quantity has no piece price to
+        // recover, so its total carries over untouched.
+        const pricedFor = Number(existing.quantity) || 0;
+        const storedTotal = Number(existing.sellingPrice ?? 0);
+        const lineTotal =
+          sellingPrice ??
+          (pricedFor > 0 ? (storedTotal / pricedFor) * nextQuantity : storedTotal);
         nextLines = [
           {
             productId: productId ?? existing.productId,
-            quantity: quantity ?? existing.quantity,
-            unitPrice: sellingPrice ?? existing.sellingPrice,
+            quantity: nextQuantity,
+            unitPrice: lineTotal,
           },
         ];
       }

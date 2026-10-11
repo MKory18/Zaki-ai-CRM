@@ -421,10 +421,15 @@ export function ChangeRequestDialog({
             </Field>
             {/* Changing how many changes what is owed. Said here, because
                 the person asking is on the phone with the customer and the
-                amount is the next thing they will be asked. */}
+                amount is the next thing they will be asked — and said with
+                the BASIS, because «يعيد الحساب» on its own does not tell her
+                whether the piece price holds. It does: the stored total is
+                divided by the quantity it was priced for and multiplied by
+                the new one. The free piece, if there is one, stays free. */}
             {field === 'quantity' && (
               <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-                تغيير الكمية يعيد حساب المبلغ المطلوب عند التسليم تلقائياً.
+                يعيد حساب المبلغ بسعر القطعة الحالي — مثال: 3 قطع بـ 36 تصير 5 قطع
+                بـ 60. القطعة المجانية تبقى مجانية.
               </p>
             )}
             {/* THE PRICE IS THE LINE'S TOTAL, NOT THE PRICE OF ONE UNIT —
