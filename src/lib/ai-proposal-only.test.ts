@@ -308,6 +308,17 @@ const { db, requireContext, requirePermission, logAudit, notify, findOrCreateCus
     db: {
       product: { findFirst: vi.fn(), findMany: vi.fn() },
       user: { findFirst: vi.fn() },
+      /*
+       * THE TWO ROWS THAT DECIDE WHICH MODEL IS ASKED.
+       *
+       * `ai-intake` no longer reaches a vendor by reading an environment
+       * key: it goes through `aiChat`, which asks `routeFor`, which reads
+       * the installation's own setting first and the company's second. A
+       * double without them routes to nothing and the whole section below
+       * would pass by asking no model at all.
+       */
+      company: { findUnique: vi.fn() },
+      systemSetting: { findUnique: vi.fn() },
       order: { create: vi.fn() },
       orderItem: { create: vi.fn() },
       customer: { update: vi.fn(), findFirst: vi.fn() },
@@ -370,8 +381,24 @@ beforeEach(() => {
   vi.resetAllMocks();
   calledHosts = [];
 
-  // المفتاح موجود، فمسارُ النموذج حيٌّ فعلاً — وإلا كان الاختبار السلبي فارغاً
+  /*
+   * المفتاحُ موجودٌ عن قصدٍ — وهو الآنَ شاهدٌ أقوى ممّا كان.
+   *
+   * قبلاً كان وجودُه يَعني أنّ البابَ سيَسألُ OpenRouter. الآنَ البابُ
+   * يَشترطُ نموذجاً محلّيّاً، فبقاءُ المفتاحِ يُثبِتُ أنّ وجودَه **لا
+   * يَكفي**: لولاه لَما عَرَفنا هل الطريقُ سَكتَ لأنّه رَفضَ المزوّد أم
+   * لأنّه لم يَجدْ مفتاحاً أصلاً.
+   */
   process.env.OPENROUTER_API_KEY = 'test-key-not-a-real-one';
+
+  /*
+   * والتثبيتُ: نموذجٌ محلّيٌّ على 11434 — وهو ما يَجعلُ الشاهدةَ أدناه
+   * تَضربُ عنواناً على جهازِ المالكِ لا عنوانَ مزوّد.
+   */
+  db.company.findUnique.mockResolvedValue({ settings: null });
+  db.systemSetting.findUnique.mockResolvedValue({
+    value: JSON.stringify({ provider: 'LOCAL', localBaseUrl: 'http://localhost:11434' }),
+  });
 
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
     calledHosts.push(String(input instanceof Request ? input.url : input));
@@ -456,10 +483,59 @@ describe('ai-intake — الوضعُ الذي يكتب لا يسأل نموذج�
 });
 
 describe('ai-intake — الوضعُ الذي يسأل النموذج لا يكتب', () => {
-  it('يسأل المزوّد فعلاً — هذه هي الشاهدة على أنّ الجاسوس يعمل', async () => {
+  it('يسأل النموذجَ المحلّيَّ فعلاً — هذه هي الشاهدة على أنّ الجاسوس يعمل', async () => {
+    /*
+     * العنوانُ مُطابَقٌ بالكامل لا بـ«يحتوي».
+     *
+     * «يحتوي» كانت تَمُرُّ لو ضَربَ البابُ العنوانَ المحلّيَّ **و** مزوّداً
+     * خارجيّاً في النداءِ نفسِه — وهذا بالضبطِ العطبُ الذي يَحرُسُه هذا
+     * الملفّ. المصفوفةُ كلُّها تُقارَن، فنداءٌ ثانٍ إلى أيِّ مكانٍ يُسقِطُها.
+     */
     const res = await post({ text: 'اسمي سامر ورقمي 0999111222 وبدي منتج واحد' });
     expect(res.status).toBe(200);
-    expect(calledHosts.some((u) => u.includes('openrouter.ai'))).toBe(true);
+    expect(calledHosts).toEqual(['http://localhost:11434/v1/chat/completions']);
+    expect((await res.json()).engine).toBe('ai');
+  });
+
+  it('ولا يُرسِلُ شيئاً إذا لم يكن النموذجُ محلّيّاً — ومفتاحُ البيئةِ موجود', async () => {
+    /*
+     * الحالةُ التي كانت تُسرِّب: لا إعدادَ تثبيتٍ إطلاقاً، ومفتاحُ
+     * `OPENROUTER_API_KEY` في البيئة. الكودُ القديمُ كان يَقرأُ المفتاحَ
+     * ويُرسِلُ نصَّ الطلبِ كلَّه — بالاسمِ والهاتفِ والعنوان — إلى
+     * OpenRouter على نموذجٍ مجّانيٍّ افتراضاً.
+     */
+    db.systemSetting.findUnique.mockResolvedValue(null);
+
+    const res = await post({ text: 'اسمي سامر ورقمي 0999111222 وبدي منتج واحد' });
+    const body = await res.json();
+
+    expect(calledHosts, 'خرجَ نداءٌ وفيه بياناتُ زبون').toEqual([]);
+    expect(body.engine).toBe('deterministic');
+    expect(body.aiSkipped).toBe('NOT_LOCAL');
+    expect(db.order.create).not.toHaveBeenCalled();
+  });
+
+  it('ولا حتى لو وُجِّهَ مستخرجُ الطلباتِ وحدَه إلى مزوّدٍ خارجيٍّ بمفتاحِه', async () => {
+    /*
+     * الطريقُ لكلِّ مساعدٍ على حدة: الشركةُ تَضبطُ `order_intake` على
+     * OPENAI بمفتاحِها الخاصّ، بينما التثبيتُ محلّيّ. الرفضُ يَقرأُ طريقَ
+     * **هذا المساعدِ** لا الطريقَ العامّ — وإلا لَمرَّ.
+     */
+    db.company.findUnique.mockResolvedValue({
+      settings: JSON.stringify({
+        ai: {
+          assistants: { order_intake: { provider: 'OPENAI' } },
+          keys: { OPENAI: { enc: 'not-a-real-encrypted-key' } },
+        },
+      }),
+    });
+
+    const res = await post({ text: 'اسمي سامر ورقمي 0999111222 وبدي منتج واحد' });
+    const body = await res.json();
+
+    expect(calledHosts, 'خرجَ نداءٌ إلى مزوّدٍ خارجيٍّ ومعه بياناتُ زبون').toEqual([]);
+    expect(body.aiSkipped).toBe('NOT_LOCAL');
+    expect(body.engine).toBe('deterministic');
   });
 
   it('ولا يكتب شيئاً وهو يسأل', async () => {
@@ -471,7 +547,7 @@ describe('ai-intake — الوضعُ الذي يسأل النموذج لا يك�
     expect(logAudit).not.toHaveBeenCalled();
   });
 
-  it('وإذا سقط المزوّد يرجع إلى المحلّل الحتمي، ولا يكتب أيضاً', async () => {
+  it('وإذا سقط النموذجُ المحلّيُّ يرجع إلى المحلّل الحتمي، ولا يكتب أيضاً', async () => {
     globalThis.fetch = vi.fn(async () => {
       calledHosts.push('boom');
       throw new Error('network down');

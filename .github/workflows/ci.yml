@@ -1,0 +1,59 @@
+# The gate every PR passes before it is merged.
+#
+# It runs the four things a person would run by hand, in the order that
+# fails cheapest first: types, lint, tests, then the production build.
+#
+# The build's environment mirrors the Dockerfile exactly (lines 36-37):
+# `NODE_ENV=production` and the same placeholder `JWT_SECRET`. Next collects
+# page data at build time, and some modules read the secret on import — so a
+# build without one fails for a reason that has nothing to do with the
+# change under review. The value is a placeholder and is never the one
+# production runs with; production's comes from Coolify.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only. Nothing here comments, labels, pushes or releases, and a token
+# that can only read cannot be talked into doing any of those by a pull
+# request from a fork.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `npm ci` and not `npm install`: the lockfile is the input, and a
+      # resolution that drifts between a developer's machine and this one
+      # is a green CI over different code.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # The suite reads a secret on import in a few places; the value is
+      # irrelevant to every assertion and only has to exist.
+      - name: Tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-secret-not-used-anywhere
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+          JWT_SECRET: build-time-secret-not-used-in-production
