@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { execSync } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { THEME_EXEMPT, dashboardFiles, shopperFiles, themeExempt } from './guard-source';
@@ -118,7 +119,6 @@ describe('the page editor, which no longer needs excusing', () => {
      * while the list is empty, because a call that can never fire reads as
      * live policy.
      */
-    const { execSync } = require('node:child_process') as typeof import('node:child_process');
     const found = execSync('git grep -l "themeExempt" -- src', { encoding: 'utf8' })
       .trim()
       .split(/\r?\n/)

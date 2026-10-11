@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * «WAS A RATE GIVEN» WAS ASKED AS «IS THE RATE TRUTHY».
@@ -203,8 +205,9 @@ describe('the door asks whether a rate was GIVEN, not whether it is truthy', () 
  */
 describe('the guard and the schema are a pair, and the pair is checked', () => {
   const source = () => {
-    const { readFileSync } = require('node:fs') as typeof import('node:fs');
-    const { join } = require('node:path') as typeof import('node:path');
+    // Imported at the top rather than required here: a lazy require inside
+    // a test buys nothing (the file is already loaded by the time it runs)
+    // and `no-require-imports` refuses it.
     return readFileSync(join(process.cwd(), 'src/app/api/finance/transfers/route.ts'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
       .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
