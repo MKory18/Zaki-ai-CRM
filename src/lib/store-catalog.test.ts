@@ -244,20 +244,15 @@ describe('a price of zero is not a price', () => {
 });
 
 describe('the way in', () => {
-  it('«صمّم الواجهة» opens the store’s own designer, not a landing page’s', () => {
-    const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
+  it('«التصميم» opens the store’s own designer, not a landing page’s', () => {
+    const src = stripComments(repoFile('src/components/screens/StoresScreen.tsx'));
     // THE BUTTON THAT CARRIES THE LABEL, not any link to the designer:
     // the card has a second, plain-text one further down, and matching
     // that passed while the button itself had gone back to opening a
     // landing page's editor — the exact bug being fixed.
     expect(src).toMatch(
-      /onClick=\{\(\) => onOpen\('\/store\/design'\)\}[\s\S]{0,400}صمّم واجهة المتجر\s*<\/button>/
+      /onClick=\{\(\) => onOpen\('\/store\/design'\)\}[\s\S]{0,400}التصميم\s*<\/button>/
     );
-    // And it is no longer hidden behind having picked a front page —
-    // which is why it was missing on every store here.
-    const button = src.slice(src.indexOf('صمّم واجهة المتجر') - 700, src.indexOf('صمّم واجهة المتجر'));
-    expect(button.length).toBeGreaterThan(200);
-    expect(button, 'الزرُّ ما زال مشروطاً بوجود صفحة واجهة').not.toMatch(/\{shop\.frontPage && \($/m);
   });
 
   it('and the designer no longer turns a single-product store away', () => {

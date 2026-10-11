@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عائلة «ترند» — نموذج</title>
+<!--
+  ════════════════════════════════════════════════════════════════════
+  العائلة ج — «ترند»  ·  العرض أوّلاً، ثمّ UGC، ثمّ الطلب
+  ════════════════════════════════════════════════════════════════════
+  لمن: تجميل واندفاع — الزائر جاي من ريل على تيك توك، عمره على الصفحة
+  ثوانٍ، وما بيقرأ فقرة.
+
+  ما يُميّزها عن أ و ب — ليست ألواناً مختلفة:
+  · الطباعة: عنوان عرضيّ عريض جداً (Changa 800) بسطر ضيّق، وجسم
+    قصير (Readex Pro 400). لا نسخ، لا هدوء.
+  · الهيدر: شفّاف فوق الهيرو، بلا خلفيّة، فيه العرض وحده — الاسم
+    صغير جانبيّ. أقصر هيدر في العائلات الثلاث.
+  · الهيرو: العرض **قبل** الوصف — شريط عروض ثلاثيّ هو أوّل ما يُرى،
+    وعدّاد مربوط بتاريخ انتهاء حقيقيّ (لا مؤقّت لكل زائر).
+  · البطاقة: بلاطات UGC مربّعة بلا إطار، نصّ فوق الصورة، مرصوفة
+    ثلاثاً على الهاتف — شبكة ريلز.
+  · الحركة: صفر. لا سلايدر تلقائيّ ولا وميض.
+
+  الوزن (مقيس): 10.8 ك.ب خاماً / 4.0 ك.ب مضغوطاً.
+  بخطّين من Google Fonts (عربي subset، swap): ~48 ك.ب.
+  المجموع المتوقّع لصفحة حقيقيّة ضمن ميزانيّة D7 (250 ك.ب).
+
+  كلّ رقم أو رأي هنا «مثال». العدّاد هنا مربوط بتاريخ ثابت للعرض فقط.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Changa:wght@600;800&family=Readex+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#131118; --ink-2:#6b6577; --line:#e7e3ee;
+    --bg:#ffffff; --dark:#171320; --accent:#e5114f; --accent-ink:#ffffff;
+    --lift:#fff1f5; --warn:#b45309;
+    --gut:16px; --max:1040px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:'Readex Pro',system-ui,sans-serif;font-size:16px;line-height:1.7;
+       color:var(--ink);background:var(--bg)}
+  .wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gut)}
+  h1,h2,.deal b{font-family:'Changa',system-ui,sans-serif;font-weight:800;line-height:1.15}
+  h1{font-size:clamp(30px,8.5vw,52px)}
+  h2{font-size:clamp(21px,5vw,30px)}
+  .muted{color:var(--ink-2)}
+  .ex{font-size:11px;color:var(--warn);background:#fff;border:1px solid var(--warn);
+      border-radius:3px;padding:1px 6px;margin-inline-start:6px;font-family:'Readex Pro'}
+
+  /* ── الهيدر الشفّاف فوق الهيرو ── */
+  .hero{background:var(--dark);color:#fff;padding-bottom:20px}
+  header.t{display:flex;align-items:center;justify-content:space-between;min-height:52px}
+  header.t .n{font-family:'Changa';font-weight:600;font-size:15px;opacity:.85}
+  header.t .live{font-size:12px;background:var(--accent);padding:4px 10px;border-radius:999px;font-weight:600}
+
+  .hero h1{margin:14px 0 8px}
+  .hero p{color:#cfc9da;font-size:16px}
+
+  /* ── شريط العروض: أوّل ما يُرى ── */
+  .deals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0 10px}
+  .deal{background:#221c2e;border:2px solid transparent;border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer}
+  .deal.best{border-color:var(--accent);background:#2b1a27;position:relative}
+  .deal.best::after{content:'الأكثر طلباً';position:absolute;top:-10px;inset-inline-start:50%;
+    transform:translateX(50%);background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .deal span{display:block;font-size:12px;color:#b9b1c7}
+  .deal b{display:block;font-size:21px;margin:4px 0 2px;color:#fff}
+  .deal .per{font-size:11px;color:#9b93aa}
+
+  .clock{display:flex;gap:6px;justify-content:center;align-items:center;margin:14px 0 4px;font-size:13px;color:#cfc9da}
+  .clock b{font-family:'Changa';background:#fff;color:var(--dark);border-radius:8px;padding:4px 9px;font-size:17px;min-width:40px;text-align:center}
+
+  .cta{display:block;width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;
+       min-height:56px;font-family:'Changa';font-weight:800;font-size:19px;cursor:pointer;margin-top:14px}
+  .under{font-size:13px;color:#b9b1c7;text-align:center;margin-top:8px}
+
+  /* ── صفّ الثقة ── */
+  .trust{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 4px}
+  .trust div{background:var(--lift);border-radius:10px;padding:10px 6px;text-align:center;font-size:12px;color:var(--ink)}
+  .trust b{display:block;font-family:'Changa';font-size:13px}
+
+  /* ── بلاطات UGC ── */
+  .ugc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0 22px}
+  .tile{position:relative;aspect-ratio:9/13;border-radius:10px;overflow:hidden;
+        background:linear-gradient(160deg,#f6e7ee,#e9e4f4)}
+  .tile figcaption{position:absolute;inset-inline:0;bottom:0;padding:8px 7px;font-size:11px;line-height:1.4;
+        color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+  .tile svg{position:absolute;inset:0;margin:auto}
+
+  section{padding:20px 0}
+  .faq details{border-bottom:1px solid var(--line);padding:12px 0}
+  .faq summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+
+  .order{border:2px solid var(--ink);border-radius:14px;padding:18px;margin:6px 0 96px}
+  .order label{display:block;font-size:14px;font-weight:600;margin:12px 0 6px}
+  .order input,.order select{width:100%;min-height:50px;font:inherit;font-size:16px;padding:0 12px;
+      border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+  .order input:focus,.order select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  .sticky{position:fixed;inset-inline:0;bottom:0;background:var(--dark);padding:9px var(--gut);
+          display:flex;gap:10px;align-items:center;z-index:9}
+  .sticky .p{font-family:'Changa';font-size:20px;color:#fff}
+  .sticky .cta{flex:1;min-height:48px;font-size:17px;margin:0}
+
+  @media (min-width:860px){
+    .ugc{grid-template-columns:repeat(6,1fr)}
+    .deals{max-width:620px}
+    .sticky{display:none}
+    .order{max-width:520px}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero"><div class="wrap">
+  <header class="t"><span class="n">GLOW — جلو</span><span class="live">عرض اليوم</span></header>
+
+  <h1>شفايف مرطّبة ١٢ ساعة بلمسة وحدة</h1>
+  <p>بلسم ملوّن بزبدة الكاكاو — بيعطي لون خفيف وترطيب بيضلّ طول الدوام.</p>
+
+  <div class="deals">
+    <div class="deal"><span>قطعة</span><b>7.5</b><span class="per">7.500 للقطعة</span></div>
+    <div class="deal best"><span>٣ قطع</span><b>18</b><span class="per">6.000 للقطعة</span></div>
+    <div class="deal"><span>٥ قطع</span><b>27</b><span class="per">5.400 للقطعة</span></div>
+  </div>
+
+  <div class="clock">
+    <span>العرض بينتهي</span><b>١٢</b><span>:</span><b>٤٠</b><span>:</span><b>٠٥</b>
+    <span class="ex">مثال</span>
+  </div>
+
+  <button class="cta">اطلب الآن — 18.000 JOD</button>
+  <p class="under">الدفع عند الاستلام · ما في بطاقة</p>
+</div></div>
+
+<main class="wrap">
+
+  <div class="trust">
+    <div><b>دفع عند الاستلام</b>تدفع لما يوصل</div>
+    <div><b>٢ — ٤ أيام</b>كل المحافظات</div>
+    <div><b>بدّلها</b>خلال ٧ أيام</div>
+  </div>
+
+  <section>
+    <h2>من البنات <span class="ex">مثال</span></h2>
+    <div class="ugc">
+      <figure class="tile"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="14" r="8" fill="#fff" opacity=".75"/><path d="M6 38c2-9 7-13 14-13s12 4 14 13z" fill="#fff" opacity=".75"/></svg><figcaption>لبسته ع الشغل وضلّ لآخر الدوام <span class="ex">مثال</span></figcaption></figure>
+      <figure class="tile"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="12" y="8" width="16" height="24" rx="8" fill="#fff" opacity=".75"/></svg><figcaption>اللون طبيعي مش صارخ <span class="ex">مثال</span></figcaption></figure>
+      <figure class="tile"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 32s-12-7-12-15a6 6 0 0 1 12-3 6 6 0 0 1 12 3c0 8-12 15-12 15z" fill="#fff" opacity=".75"/></svg><figcaption>طلبت ٣ ووزّعتهم هدايا <span class="ex">مثال</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>بصراحة</h2>
+    <p class="muted">ما بيغطّي زي أحمر الشفاه. هو بلسم بلون — إذا بدّك تغطية كاملة، هاد مش منتجك.</p>
+  </section>
+
+  <section class="faq">
+    <h2>أسئلة</h2>
+    <details><summary>بيجفّف الشفايف؟</summary><p class="muted">لأ. زبدة كاكاو وزيت جوز هند، بلا كحول.</p></details>
+    <details><summary>بدفع قبل؟</summary><p class="muted">لأ — بتدفع للمندوب لما يوصلك.</p></details>
+    <details><summary>إذا ما عجبني اللون؟</summary><p class="muted">بتبدّله خلال ٧ أيام، بتتواصل معنا على واتساب.</p></details>
+  </section>
+
+  <section id="order">
+    <h2>اطلبي</h2>
+    <form class="order" onsubmit="return false">
+      <label for="n">الاسم</label><input id="n" autocomplete="name">
+      <label for="p">رقم الهاتف</label><input id="p" inputmode="tel" dir="ltr" autocomplete="tel">
+      <label for="g">المحافظة</label><select id="g"><option>عمّان</option><option>الزرقاء</option><option>العقبة</option></select>
+      <label for="a">العنوان</label><input id="a" autocomplete="street-address">
+      <div style="margin-top:18px"><button class="cta">أكّدي الطلب — 18.000 JOD</button></div>
+      <p class="under" style="color:var(--ink-2)">بتدفعي عند الاستلام. ما بنطلب بطاقة ولا حساب.</p>
+    </form>
+  </section>
+
+</main>
+
+<div class="sticky">
+  <span class="p">18.000</span>
+  <button class="cta">اطلب الآن</button>
+</div>
+
+</body>
+</html>

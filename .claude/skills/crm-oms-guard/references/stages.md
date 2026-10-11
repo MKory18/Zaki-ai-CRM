@@ -168,6 +168,19 @@ Track `picking_error_rate` per warehouse user.
 
 ## Stage 11 — Single product store and landing pages
 
+> Revised 2026-10-11 (Stage 1 of the storefront overhaul): MULTI_PRODUCT
+> is the main path for new stores; SINGLE_PRODUCT stays supported for the
+> shops that already wear it but is no longer offered. A product appears
+> in the catalogue only through a published page with `showInStore`; its
+> card opens `/s/<store>/p/<handle>`, which renders that page inside the
+> store shell through the same `LandingPageView` `/lp/<slug>` uses, with
+> `?c=` carried and one canonical URL. Until the seller's one-press
+> («اعرض كل الصفحات المنشورة») the catalogue serves exactly what it
+> served before, and the press and the switch are one atomic act. Every
+> storefront screen names the store it edits with one shared bar.
+> New landing pages created with a product default to shown (unpublished
+> still never appears).
+
 Landing pages and bundle quantities ALREADY EXIST. Assemble them.
 Building a second landing page system is a failure of the task.
 

@@ -51,7 +51,10 @@ describe('navigation contract', () => {
     expect(group.label).toBe('واجهة المتجر');
     // Not «المتجر»: «متجر التطبيقات» is a different thing one group below.
     expect(group.label).not.toBe('المتجر');
-    for (const route of group.routes) expect(route.path.startsWith('/store/')).toBe(true);
+    // `/store` itself is the group's head — every other entry lives under it.
+    for (const route of group.routes) {
+      expect(route.path === '/store' || route.path.startsWith('/store/')).toBe(true);
+    }
   });
 
   it('no longer carries a separate labels page', () => {

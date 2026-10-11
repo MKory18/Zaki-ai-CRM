@@ -143,7 +143,7 @@ describe('the public address of a selling page is built in one place', () => {
   const SCREENS = [
     'src/components/screens/LandingPagesScreen.tsx',
     'src/components/screens/LandingPageDetailScreen.tsx',
-    'src/components/screens/StorefrontsScreen.tsx',
+    'src/components/screens/StoresScreen.tsx',
     'src/components/screens/StoreDomainScreen.tsx',
   ];
 

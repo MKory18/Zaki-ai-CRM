@@ -358,6 +358,47 @@ export async function storefrontCatalog(
   storeId: string,
   storeSlug: string
 ): Promise<{ items: CatalogItem[]; categories: { id: string; name: string }[] }> {
+  /**
+   * ONE CARD PER PRODUCT — ONLY ONCE A SHOWN PAGE EXISTS.
+   *
+   * A product is in the catalogue if and only if it has at least one
+   * published page with `showInStore`. Until the seller's one-press («اعرض
+   * كل الصفحات المنشورة») — and while no shown page exists at all — the
+   * catalogue below is byte-for-byte what it always was: pages and
+   * products side by side. The press flips every published page to shown
+   * in a single update, so the switch and the press are one moment, and
+   * the store is never empty in between.
+   */
+  const shown = await db.landingPage.findMany({
+    where: { companyId, storeId, showInStore: true, isPublished: true },
+    select: { productId: true },
+  });
+  const shownProductIds = new Set(
+    shown.map((p) => p.productId).filter((id): id is string => !!id)
+  );
+
+  if (shownProductIds.size > 0) {
+    const products = (await storefrontProducts(companyId, storeId)).filter((p) =>
+      shownProductIds.has(p.id)
+    );
+    const seen = new Map<string, string>();
+    for (const p of products) if (p.category) seen.set(p.category.id, p.category.name);
+    const items: CatalogItem[] = products.map((p) => ({
+      id: p.id,
+      kind: 'product' as const,
+      name: p.name,
+      image: p.image,
+      // The product's page renders inside the store shell at this address.
+      href: `/s/${storeSlug}/p/${p.handle}`,
+      price: p.fromPrice,
+      categoryId: p.category?.id ?? null,
+    }));
+    return {
+      items: publicizeMedia(items),
+      categories: [...seen].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'ar')),
+    };
+  }
+
   const [pages, products] = await Promise.all([
     db.landingPage.findMany({
       where: { companyId, storeId, showInStore: true, isPublished: true },

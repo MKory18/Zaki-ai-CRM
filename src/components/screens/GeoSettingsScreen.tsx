@@ -6,7 +6,7 @@ import { currencyLabel } from '@/lib/currencies';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
-import { STORE_TYPE_LABEL, storeTypeLabel } from '@/lib/store-types';
+import { storeTypeLabel } from '@/lib/store-types';
 import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -475,17 +475,12 @@ function AddStore({
       </p>
       <Input label="اسم المتجر" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
       <Input label="المعرّف" value={form.slug} onChange={(v) => setForm({ ...form, slug: v })} dir="ltr" />
-      <label className="block">
-        <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">النوع</span>
-        <select
-          value={form.type}
-          onChange={(e) => setForm({ ...form, type: e.target.value })}
-          className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm"
-        >
-          <option value="MULTI_PRODUCT">متعدد المنتجات</option>
-          <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT}</option>
-        </select>
-      </label>
+      {/* New stores are multi-product. Single Product is kept working for
+          the shops that already wear it, but it is no longer offered: its
+          address shows one landing page, and every new shop is a catalogue. */}
+      <p className="rounded-lg bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+        النوع: متعدد المنتجات — صفحة رئيسية بالمنتجات.
+      </p>
       <div className="md:col-span-3 flex gap-2">
         <button type="submit" disabled={busy} className="px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm disabled:opacity-60">
           {busy ? 'جارٍ الحفظ…' : 'حفظ'}

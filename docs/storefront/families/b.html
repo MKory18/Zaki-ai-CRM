@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عائلة «عطّار» — نموذج</title>
+<!--
+  ════════════════════════════════════════════════════════════════════
+  العائلة ب — «عطّار»  ·  أصل، حكاية، وصفة
+  ════════════════════════════════════════════════════════════════════
+  لمن: أعشاب، زيوت، عسل، صابون طبيعيّ — منتج تُشترى حكايته قبل تركيبته.
+
+  ما يُميّزها عن أ و ج — ليست ألواناً مختلفة:
+  · الطباعة: عنوان بخطّ نسخيّ (Amiri 700) وجسم بخطّ هندسيّ هادئ
+    (Tajawal 400) — تبايُن عائلتين، عكس عائلة «عيادة» تماماً.
+  · الهيدر: مُكدَّس ومتوسَّط، الاسم فوق وخطّ زخرفيّ تحته، والقائمة سطر
+    واحد — واجهة دكّان لا شريط تطبيق.
+  · الهيرو: لوح واحد بإطار زخرفيّ CSS (بلا صور)، النصّ متوسَّط،
+    والسعر داخل اللوح — لا عمودان.
+  · البطاقة: مربّعة بإطار مزدوج وشريط اسم أسفلها، مرصوفة اثنتين
+    على الهاتف — رفّ عطّار.
+  · الزخرفة كلّها CSS: تدرّج نقطيّ وإطار مزدوج. صفر بايت صور.
+
+  الوزن (مقيس): 11.9 ك.ب خاماً / 4.3 ك.ب مضغوطاً.
+  بخطّين من Google Fonts (عربي subset، swap): ~55 ك.ب (Amiri أثقل).
+  المجموع المتوقّع لصفحة حقيقيّة ضمن ميزانيّة D7 (250 ك.ب).
+
+  كلّ رقم أو رأي هنا «مثال».
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3a2f25; --ink-2:#6d5f52; --line:#e3d8c5;
+    --bg:#fcf8f1; --panel:#ffffff; --accent:#5a6b2f; --accent-ink:#ffffff;
+    --gold:#9a7b3f; --warn:#b45309;
+    --gut:18px; --max:1060px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:'Tajawal',system-ui,sans-serif;font-size:16px;line-height:1.85;
+       color:var(--ink);background:var(--bg)}
+  .wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gut)}
+  h1,h2,h3{font-family:'Amiri',serif;font-weight:700;line-height:1.45}
+  h1{font-size:clamp(28px,7vw,44px)}
+  h2{font-size:clamp(21px,4.6vw,30px)}
+  .muted{color:var(--ink-2)}
+  .ex{font-family:'Tajawal';font-size:11px;color:var(--warn);border:1px solid var(--warn);
+      border-radius:3px;padding:1px 6px;margin-inline-start:6px}
+
+  /* ── الهيدر المكدَّس المتوسَّط ── */
+  header.shop{text-align:center;padding:18px 0 14px;background:var(--bg)}
+  .shopname{font-family:'Amiri',serif;font-size:26px;font-weight:700}
+  .rule{height:14px;margin:8px auto 10px;max-width:220px;
+        background:radial-gradient(circle at 6px 7px,var(--gold) 1.6px,transparent 1.7px) repeat-x;
+        background-size:12px 14px;opacity:.65}
+  .shopnav{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .shopnav a{color:var(--ink-2);text-decoration:none;font-size:15px;min-height:44px;display:inline-flex;align-items:center}
+
+  /* ── الهيرو: لوح واحد بإطار مزدوج ── */
+  .panel{background:var(--panel);border:1px solid var(--line);
+         box-shadow:0 0 0 5px var(--bg),0 0 0 6px var(--line);
+         padding:26px 20px;text-align:center;margin:10px 0 26px}
+  .kicker{font-family:'Tajawal';font-size:13px;letter-spacing:0;color:var(--gold);font-weight:700}
+  .lede{color:var(--ink-2);margin-top:12px;font-size:17px}
+  .price{font-family:'Amiri',serif;font-size:36px;font-weight:700;margin:16px 0 4px}
+  .was{color:var(--ink-2);text-decoration:line-through;font-size:17px;margin-inline-start:8px}
+  .cta{display:inline-block;width:100%;max-width:420px;background:var(--accent);color:var(--accent-ink);
+       border:0;min-height:54px;font-family:'Tajawal';font-weight:700;font-size:17px;cursor:pointer}
+  .under{font-size:13px;color:var(--ink-2);margin-top:10px}
+
+  /* ── شريط الثقة: سطر واحد بفواصل زخرفيّة ── */
+  .trust{display:flex;justify-content:center;gap:0;flex-wrap:wrap;
+         border-block:1px solid var(--line);padding:12px 0;margin-bottom:24px;font-size:14px}
+  .trust span{padding:0 14px;position:relative}
+  .trust span+span::before{content:'';position:absolute;inset-inline-start:0;top:4px;bottom:4px;width:1px;background:var(--line)}
+
+  /* ── الرفّ: بطاقات مربّعة مُؤطَّرة ── */
+  .shelf{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0 26px}
+  .jar{background:var(--panel);border:1px solid var(--line);box-shadow:0 0 0 4px var(--bg),0 0 0 5px var(--line);text-align:center}
+  .jar .shot{aspect-ratio:1;display:grid;place-items:center;
+             background:radial-gradient(circle at 50% 42%,#fff 0 58%,#f6efe1 59% 100%)}
+  .jar .name{font-family:'Amiri',serif;font-size:17px;padding:10px 8px 2px}
+  .jar .p{font-size:15px;color:var(--ink-2);padding-bottom:12px}
+
+  /* ── الحكاية ── */
+  .story{columns:1;font-size:16.5px}
+  .story p{margin-bottom:14px}
+  .story p:first-letter{font-family:'Amiri',serif;font-size:2.1em;float:inline-start;line-height:.9;
+                        margin-inline-end:7px;color:var(--gold)}
+
+  .order{background:var(--panel);border:1px solid var(--line);padding:20px;margin:6px 0 92px}
+  .order label{display:block;font-size:14px;font-weight:700;margin:12px 0 6px}
+  .order input,.order select{width:100%;min-height:48px;font-family:'Tajawal';font-size:16px;padding:0 12px;
+      border:1px solid var(--line);border-radius:0;background:var(--bg);color:var(--ink)}
+  .order input:focus,.order select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  .sticky{position:fixed;inset-inline:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+          padding:10px var(--gut);display:flex;gap:12px;align-items:center;z-index:9}
+  .sticky .price{font-size:21px;margin:0}
+  .sticky .cta{flex:1;min-height:48px;font-size:16px}
+
+  section{padding:22px 0;border-top:1px dashed var(--line)}
+  .faq details{border-bottom:1px dashed var(--line);padding:12px 0}
+  .faq summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+
+  @media (min-width:860px){
+    .shelf{grid-template-columns:repeat(4,1fr)}
+    .story{columns:2;column-gap:36px}
+    .sticky{display:none}
+    .panel{padding:44px 40px}
+    .order{max-width:540px;margin-inline:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="shop">
+  <div class="shopname">عطّارة الجبل</div>
+  <div class="rule" aria-hidden="true"></div>
+  <nav class="shopnav"><a href="#">الأعشاب</a><a href="#">الزيوت</a><a href="#">العسل</a><a href="#order">اطلب</a></nav>
+</header>
+
+<main class="wrap">
+
+  <div class="panel">
+    <div class="kicker">من مزارع الشوبك · موسم هذا العام</div>
+    <h1>زيت أرغان مَعصور على البارد</h1>
+    <p class="lede">عصرة واحدة، بلا تكرير وبلا خلط. لونه ورائحته بيتغيّروا من موسم لموسم — وهاد دليل إنّه ما مرّ بمصنع.</p>
+    <div class="price">12.000 JOD<span class="was">16.000</span></div>
+    <button class="cta">اطلب الآن — الدفع عند الاستلام</button>
+    <p class="under">ما في دفع مسبق · التوصيل ٢ — ٤ أيام</p>
+  </div>
+
+  <div class="trust">
+    <span>الدفع عند الاستلام</span><span>٢ — ٤ أيام لكل المحافظات</span><span>ترجيع خلال ٧ أيام</span>
+  </div>
+
+  <section>
+    <h2>من وين بيجي</h2>
+    <div class="story">
+      <p>الشجرة اللي بنعصر منها عمرها فوق الثلاثين سنة، وبتعطي مرّة بالسنة. بنجمع الحبّ بالإيد، وبنتركه ينشف بالظلّ — لأنّ الشمس بتاخد الريحة.</p>
+      <p>العصر على البارد بيعطي كميّة أقلّ بكثير من العصر الحراريّ، وهاد سبب السعر. بس اللي بيطلع بيضلّ محتفظ بفيتامين هـ وبالحموضة الطبيعيّة.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>من الرفّ</h2>
+    <div class="shelf">
+      <article class="jar"><div class="shot"><svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true"><path d="M20 18h18v26a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6z" fill="none" stroke="#5a6b2f" stroke-width="2"/><rect x="24" y="8" width="10" height="10" rx="2" fill="#9a7b3f"/></svg></div><div class="name">زيت أرغان</div><div class="p">12.000 JOD</div></article>
+      <article class="jar"><div class="shot"><svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true"><circle cx="29" cy="32" r="16" fill="none" stroke="#5a6b2f" stroke-width="2"/><path d="M29 16c-5 6-5 10 0 16 5-6 5-10 0-16z" fill="#9a7b3f"/></svg></div><div class="name">عسل سدر</div><div class="p">24.000 JOD</div></article>
+      <article class="jar"><div class="shot"><svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true"><rect x="16" y="20" width="26" height="24" rx="4" fill="none" stroke="#5a6b2f" stroke-width="2"/><path d="M22 20c0-6 4-9 7-9s7 3 7 9" fill="none" stroke="#9a7b3f" stroke-width="2"/></svg></div><div class="name">صابون غار</div><div class="p">4.500 JOD</div></article>
+      <article class="jar"><div class="shot"><svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true"><path d="M29 10c7 8 11 14 11 20a11 11 0 0 1-22 0c0-6 4-12 11-20z" fill="none" stroke="#5a6b2f" stroke-width="2"/><path d="M29 24v14" stroke="#9a7b3f" stroke-width="2"/></svg></div><div class="name">زيت الزيتون</div><div class="p">9.000 JOD</div></article>
+    </div>
+  </section>
+
+  <section class="faq">
+    <h2>أسئلة</h2>
+    <details><summary>ليش اللون بيختلف عن الصورة؟</summary><p class="muted">لأنّه موسميّ وما بينفلتر. اللون الثابت بيجي من التكرير، والتكرير بياخد الريحة والفائدة.</p></details>
+    <details><summary>بصلح للشعر وللبشرة؟</summary><p class="muted">نفس الزيت للاثنين. للشعر نقطتين على الأطراف، وللبشرة نقطة بعد الغسيل.</p></details>
+  </section>
+
+  <section>
+    <h2>آراء <span class="ex">مثال</span></h2>
+    <p class="muted">«ريحته قويّة شوي بالبداية وبعدين بتروح — وهاد اللي خلّاني أصدّق إنّه طبيعيّ.» — أمّ خالد، إربد <span class="ex">مثال</span></p>
+  </section>
+
+  <section id="order">
+    <h2>اطلبه</h2>
+    <form class="order" onsubmit="return false">
+      <label for="n">الاسم</label><input id="n" autocomplete="name">
+      <label for="p">رقم الهاتف</label><input id="p" inputmode="tel" dir="ltr" autocomplete="tel">
+      <label for="g">المحافظة</label><select id="g"><option>عمّان</option><option>إربد</option><option>معان</option></select>
+      <label for="a">العنوان</label><input id="a" autocomplete="street-address">
+      <div style="margin-top:18px"><button class="cta">أكّد الطلب — 12.000 JOD</button></div>
+      <p class="under">بتدفع عند الاستلام. ما بنطلب بطاقة ولا حساب.</p>
+    </form>
+  </section>
+
+</main>
+
+<div class="sticky">
+  <span class="price">12.000</span>
+  <button class="cta">اطلب الآن</button>
+</div>
+
+</body>
+</html>

@@ -317,6 +317,38 @@ export function LandingPagesScreen() {
     } finally { setBusyId(null); }
   };
 
+  /**
+   * THE PRESS THAT FILLS THE SHOP — ONE UPDATE, SAME MOMENT AS THE SWITCH.
+   *
+   * The catalogue shows one card per product with a shown page, so until
+   * this press the shop keeps showing exactly what it showed. The server
+   * flips every published page of this store in a single updateMany and
+   * writes the audit row — the press and the switch are one act, and the
+   * store is never empty in between. Unpublished pages are not touched.
+   */
+  const showAllPublished = async () => {
+    const storeId = pages.length > 0 ? pages[0]?.storeId : null;
+    if (!storeId) return;
+    const hidden = pages.filter((p) => p.isPublished && !p.showInStore).length;
+    if (!(await confirm({
+      title: 'اعرض كل الصفحات المنشورة؟',
+      body: `ستظهر ${hidden} صفحة منشورة في المتجر، ويتحول الكتالوج لبطاقة واحدة لكل منتج له صفحة معروضة. الصفحات غير المنشورة تبقى مخفية.`,
+      confirmLabel: 'اعرضها كلها',
+      cancelLabel: 'إلغاء',
+    }))) return;
+    setBusyId('show-all');
+    try {
+      const d = await crmApi('/api/landing-pages/show-all', {
+        method: 'POST',
+        body: JSON.stringify({ storeId }),
+      });
+      setNotice(`ظهرت ${d.shown ?? 0} صفحة منشورة في المتجر — والكتالوج الآن بطاقة واحدة لكل منتج له صفحة معروضة.`);
+      await load();
+    } catch (e: any) {
+      void tell({ title: 'تعذر عرض الصفحات', body: e.message, tone: 'danger' });
+    } finally { setBusyId(null); }
+  };
+
   const createLandingPage = async () => {
     setFormError(null);
     setSaving(true);
@@ -368,9 +400,20 @@ export function LandingPagesScreen() {
           title={routeLabel('/store/landing-pages')}
           description="صفحات تسويق عامة تُنشئ طلبات حقيقية داخل CRM تلقائيًا"
           actions={
-            <Button onClick={() => { setForm(BLANK_FORM); setCopy({}); setFormError(null); setCreateOpen(true); }}>
-              <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
-            </Button>
+            <>
+              {pages.some((p) => p.isPublished && !p.showInStore) && (
+                <Button
+                  variant="outline"
+                  disabled={busyId === 'show-all'}
+                  onClick={() => { void showAllPublished(); }}
+                >
+                  اعرض كل الصفحات المنشورة
+                </Button>
+              )}
+              <Button onClick={() => { setForm(BLANK_FORM); setCopy({}); setFormError(null); setCreateOpen(true); }}>
+                <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
+              </Button>
+            </>
           }
         />
         {/* The numbers in this list are lifetime totals; a period, by

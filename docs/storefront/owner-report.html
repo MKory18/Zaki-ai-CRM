@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>واجهة المتجر — تقرير المرحلة صفر</title>
+<style>
+  @page { size: A4; margin: 10mm 10mm; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Tahoma,sans-serif;font-size:10.5pt;line-height:1.6;color:#17202a}
+  h1{font-size:18pt;margin-bottom:1.5mm}
+  h2{font-size:12.5pt;margin:4.5mm 0 2mm;padding-bottom:1mm;border-bottom:2px solid #0a7ea4;color:#0a7ea4}
+  h3{font-size:11pt;margin:3mm 0 1mm}
+  p{margin-bottom:1.8mm}
+  .sub{color:#5a6876;font-size:10.5pt}
+  .page{page-break-after:always}
+  .page:last-child{page-break-after:auto}
+  table{width:100%;border-collapse:collapse;margin:2.5mm 0;font-size:9pt}
+  th,td{border:1px solid #d7e0e8;padding:1.4mm 2mm;text-align:right;vertical-align:top}
+  th{background:#eef5f9;font-weight:600}
+  .bad{color:#c0392b;font-weight:600}
+  .ok{color:#17795e;font-weight:600}
+  .shots{display:flex;gap:3mm;margin:2mm 0}
+  .shots figure{flex:1;text-align:center}
+  .shots img{width:100%;max-height:92mm;object-fit:contain;border:1px solid #d7e0e8;border-radius:3px}
+  .shots figcaption{font-size:9pt;color:#5a6876;margin-top:1.5mm;line-height:1.5}
+  .box{border:1px solid #d7e0e8;border-right:4px solid #0a7ea4;padding:2mm 3mm;margin:2mm 0;background:#f7fbfd}
+  .warn{border-right-color:#b45309;background:#fffaf2}
+  .decide{border-right-color:#c0392b;background:#fdf4f3}
+  ul,ol{margin:0 5mm 2.5mm 0}
+  li{margin-bottom:1.2mm}
+  .ex{font-size:8.5pt;color:#b45309;border:1px solid #b45309;border-radius:2px;padding:0 1mm}
+  .foot{font-size:8.5pt;color:#5a6876;margin-top:3mm;border-top:1px solid #d7e0e8;padding-top:2mm}
+</style>
+</head>
+<body>
+
+<!-- ───────────── صفحة ١ ───────────── -->
+<section class="page">
+  <h1>واجهة المتجر — تقرير المرحلة صفر</h1>
+  <p class="sub">فحص بلا أي تعديل على الكود · فرع <code>feat/storefront-1-multi-product</code> · من <code>c675565</code></p>
+
+  <h2>الخلاصة بثلاثة سطور</h2>
+  <ol>
+    <li><b>صفحة الهبوط بتبيع، والمتجر لأ.</b> صوّرت الاثنين على الهاتف: صفحة الهبوط فيها عنوان وسعر وزر وسطر «الدفع عند الاستلام» بالشاشة الأولى. صفحة المنتج بالمتجر: <b>صندوق صورة فاضي</b> بيملا الشاشة، والسعر والزر <b class="bad">تحت الطيّة</b>.</li>
+    <li><b>القوالب العشرة بتعلن تنوّعاً ما بترسمه.</b> من ٢٧ خياراً معلناً، <b class="bad">٧ ما إلها رسم أبداً</b> — وصفحة الفئة <b class="bad">صفر من ٤</b>، يعني كل القوالب بتطلع نفس صفحة الفئة مهما اخترت.</li>
+    <li><b>الإدارة مزدحمة بالقياس:</b> ١٠ شاشات فيها <b>٨٩ فقرة</b> و<b>٦٠ جملة طويلة</b> و<b>٧٢ زرّاً</b> — وما في شاشة وحدة بتقول «هاد هو الزر الأساسي».</li>
+  </ol>
+
+  <h2>قبل — من متجرك الحقيقي</h2>
+  <div class="shots">
+    <figure><img src="shots/01-store-home-390.jpg" alt="الصفحة الرئيسية"><figcaption><b>الرئيسية</b><br>ما في هيرو · بطاقات بلا صور · زرّان عائمان فوق المحتوى</figcaption></figure>
+    <figure><img src="shots/02-product-page-390.jpg" alt="صفحة المنتج"><figcaption><b>صفحة المنتج</b><br>صندوق فاضي ٣٤٠ بكسل · السعر والزر تحت الطيّة</figcaption></figure>
+    <figure><img src="shots/03-landing-page-390.jpg" alt="صفحة هبوط"><figcaption><b>صفحة الهبوط</b><br>عنوان · سعر · زر · ثقة · شريط لاصق — <b>هاد اللي بيبيع</b></figcaption></figure>
+  </div>
+  <p class="sub">لقطات حقيقية من الخادم المحلي، متجر «المبارك ستور»، عرض ٣٩٠ بكسل.</p>
+</section>
+
+<!-- ───────────── صفحة ٢ ───────────── -->
+<section class="page">
+  <h2>ليش القوالب «ما فيها إبداع» — الجواب بالأرقام</h2>
+  <p>المحرّك بيعرض عليك خيارات، والعقد بيتحقّق منها، والقوالب بتختارها — <b>والراسم بتجاهل ٧ منها</b>.</p>
+  <table>
+    <tr><th>الجزء</th><th>معلَن</th><th>مرسوم</th><th>ميّت</th></tr>
+    <tr><td>الهيدر</td><td>٥</td><td>٤</td><td class="bad">minimal</td></tr>
+    <tr><td>الهيرو</td><td>٥</td><td class="ok">٥</td><td>—</td></tr>
+    <tr><td>قائمة الفئات</td><td>٤</td><td>٣</td><td class="bad">chips</td></tr>
+    <tr><td>بطاقة المنتج</td><td>٤</td><td class="ok">٤</td><td>—</td></tr>
+    <tr><td><b>صفحة الفئة</b></td><td><b>٤</b></td><td class="bad"><b>٠</b></td><td class="bad"><b>كلها الأربعة</b></td></tr>
+    <tr><td>صفحة المنتج</td><td>٣</td><td class="ok">٣</td><td>—</td></tr>
+    <tr><td>السلّة</td><td>٢</td><td>١</td><td class="bad">drawer</td></tr>
+  </table>
+  <div class="box warn">
+    <b>⚠️ متجرك الحالي مضبوط على خيار ميّت.</b> قالب «المبارك ستور» مكتوب فيه
+    <code>categoryNav: chips</code> — و<code>chips</code> ما إلها رسم، فبترجع للافتراضي بصمت.
+    <br>🔧 <b>الحل:</b> المرحلة ٢ بترسم الناقص أو بتشيله من القائمة — ما بتترك اسماً بلا شي وراه.
+  </div>
+
+  <h2>القائمة: من ١٠ مداخل إلى ٣</h2>
+  <table>
+    <tr><th>اليوم (١٠)</th><th>المقترح (٣)</th></tr>
+    <tr>
+      <td>متجر Single Product · صفحات الهبوط · التصميم · القوالب · القوائم · الصفحات التعريفية · البحث · اللغات · المسارات · الدومين</td>
+      <td>
+        <b>المتجر</b> — كل متاجرك، كل واحد ببطاقة؛ وجوّا المتجر تبويبات:<br>
+        &nbsp;&nbsp;الواجهة · المحتوى · العنوان · الحالة<br><br>
+        <b>صفحات الهبوط</b> — شغل يومي، بتضلّ لحالها<br><br>
+        <b>منصّة التجريب</b> — موجودة أصلاً
+      </td>
+    </tr>
+  </table>
+  <p><b>كل رابط قديم بيحوّل للجديد</b> — ما في صفحة بتضيع. و«فتح/إغلاق المتجر» و«الوصف» <b>بينتقلوا</b> من الإعدادات لجوّا المتجر، ما بينتسخوا.</p>
+  <div class="box warn">
+    <b>⚠️ ٨ من ١٠ شاشات ما بتقول أي متجر عم تعدّل.</b> أخطرها شاشة الدومين: بتربط اسم نطاق حقيقي بالمتجر المختار بالكوكي، وما بتسمّيه.
+    <br>🔧 شريط واحد «عم تعدّل: &lt;اسم المتجر&gt;» مع مبدّل، على كل الشاشات.
+  </div>
+</section>
+
+<!-- ───────────── صفحة ٣ ───────────── -->
+<section class="page">
+  <h2>العائلات الثلاث</h2>
+  <p>ثلاثة قوالب مختلفة <b>بالخط والهيدر والهيرو والبطاقة</b> — مش بس بالألوان. كل وحدة مفتوحة على الهاتف بلا أي تمرير أفقي.</p>
+  <div class="shots">
+    <figure><img src="shots/f-a-390.jpg" alt="عيادة"><figcaption><b>أ — عيادة</b></figcaption></figure>
+    <figure><img src="shots/f-b-390.jpg" alt="عطّار"><figcaption><b>ب — عطّار</b></figcaption></figure>
+    <figure><img src="shots/f-c-390.jpg" alt="ترند"><figcaption><b>ج — ترند</b></figcaption></figure>
+  </div>
+  <table>
+    <tr><th></th><th>أ — عيادة</th><th>ب — عطّار</th><th>ج — ترند</th></tr>
+    <tr><td><b>لأي منتج</b></td><td>علاجي بيحلّ وجع معروف: كريم تجاعيد، سيروم، مكمّل</td><td>طبيعي بحكاية: زيوت، أعشاب، عسل، صابون</td><td>تجميل واندفاع: بلسم، مكياج، شي من ريل</td></tr>
+    <tr><td><b>الخط</b></td><td>عائلة واحدة، هادئة</td><td>عنوان نسخي + جسم هندسي</td><td>عنوان عريض جداً + جسم قصير</td></tr>
+    <tr><td><b>الهيدر</b></td><td>شريط رفيع، الاسم وحده</td><td>مكدّس بالنص وخط زخرفي</td><td>شفّاف فوق الهيرو، فيه العرض</td></tr>
+    <tr><td><b>الهيرو</b></td><td>نصّ + كرت «ليش بيشتغل»</td><td>لوح واحد بإطار مزدوج</td><td><b>العروض أول شي</b> + عدّاد</td></tr>
+    <tr><td><b>البطاقة</b></td><td>أفقية — بتتقرا</td><td>مربّعة مؤطّرة — رفّ عطّار</td><td>بلاطات UGC — شبكة ريلز</td></tr>
+    <tr><td><b>الوزن</b></td><td>٤٫٣ ك.ب</td><td>٤٫٣ ك.ب</td><td>٤٫٠ ك.ب</td></tr>
+  </table>
+  <p class="sub">كل رأي أو رقم في النماذج مكتوب جنبه <span class="ex">مثال</span> — ما في دليل اجتماعي مختلَق.</p>
+  <h3>والعشر قوالب الحالية</h3>
+  <p><b>٦ بتضلّ</b> (lab · herbs · ritual · pulse · tender + واحد مدموج) · <b>٣ بتندمج</b> (pure في lab · heritage في herbs · souq في pulse · amber في ritual) · <b>١ بتتخبّى</b> (pearl) — <b>ولا واحد بينحذف</b>.</p>
+</section>
+
+<!-- ───────────── صفحة ٤ ───────────── -->
+<section class="page">
+  <h2>الآراء والعدّاد — يدوي وتلقائي</h2>
+  <h3>الآراء</h3>
+  <table>
+    <tr><th></th><th>يدوي (موجود اليوم)</th><th>تلقائي (جديد)</th></tr>
+    <tr><td><b>مين بيكتبه</b></td><td>إنت</td><td>العميل، بعد ما يستلم</td></tr>
+    <tr><td><b>كيف</b></td><td>بتكتبه بالمحرّر</td><td>رابط بترسله بالواتساب أو بيلاقيه بصفحة التتبّع</td></tr>
+    <tr><td><b>بيتسجّل معه</b></td><td>مصدره (واتساب · تعليق · مكالمة) ومين أضافه وإيمتى، وصورة إثبات <b>خاصة ما بتنعرض</b></td><td>رقم الطلب — <b>مرّة وحدة لكل طلب</b> وموافقة العميل على النشر</td></tr>
+    <tr><td><b>بيظهر</b></td><td>الاسم والنص اللي كتبته</td><td>الاسم الأول والمدينة بس — <b>لا هاتف ولا عنوان</b></td></tr>
+    <tr><td><b>شارة «مشتري مؤكَّد»</b></td><td class="bad">أبداً</td><td class="ok">نعم</td></tr>
+  </table>
+  <p><b>التبديل التلقائي:</b> لما يصير عند المنتج <b>٥ آراء موثّقة</b>، النظام بيحوّله لتلقائي لحاله وبيعلمك — وبتقدر ترجّعه.</p>
+  <h3>العدّاد</h3>
+  <div class="box warn">
+    <b>⚠️ العدّاد الحالي بيكذب.</b> بيرجع من أوله لكل زائر، والعرض ما بينتهي لما يوصل صفر.
+    <br>🔧 <b>الحل:</b> تحطّ <b>تاريخ انتهاء حقيقي</b> للعرض؛ العدّاد بيقراه، والعرض بيوقف فعلاً عند الصفر. العدّاد القديم بيضلّ موجود بس معلَّم بالأحمر.
+  </div>
+</section>
+
+<!-- ───────────── صفحة ٥ ───────────── -->
+<section class="page">
+  <h2>قرارات بدّي إيّاها منك</h2>
+
+  <div class="box decide">
+    <b>١ · المتجر بيعرض شو؟</b><br>
+    الاتفاق: المنتجات اللي إلها صفحة هبوط <b>منشورة ومعروضة</b> بس.<br>
+    <b class="bad">⚠️ انتبه:</b> عندك <b>٤٤ صفحة هبوط منشورة، وكلها مخفيّة عن المتجر</b> حالياً. يعني لحظة ما نحوّل، <b>المتجر بيفضى</b>.<br>
+    🔧 <b>الحل:</b> زرّ واحد «اعرض كل الصفحات المنشورة» بيشتغل بنفس الإصدار. <b>موافق؟</b>
+  </div>
+
+  <div class="box decide">
+    <b>٢ · تكلفة التجربة</b><br>
+    جدول المصاريف ما فيه عمود متجر، فإعلان منتج تجريبي بينحسب على عملك.<br>
+    رأيي: <b>يبقى محسوب</b> — المصاري طلعت فعلاً. إذا بدّك تطرحه، بدّه عمود جديد.
+  </div>
+
+  <div class="box decide">
+    <b>٣ · الآراء التلقائية — موافقة على جداول جديدة</b><br>
+    ما في بالنظام ولا جدول تقييم. التلقائي بدّه: جدول آراء · رابط تقييم موقّع · موافقة نشر · شاشة مراجعة.<br>
+    <b>بتوافق أبنيها؟</b> (لأنها <b>مش</b> تطبيق — التطبيقات ممنوعة تكتب بسجل التدقيق، والتقييم لازم يُسجَّل.)
+  </div>
+
+  <div class="box decide">
+    <b>٤ · «الوحدة المخزنيّة»</b><br>
+    من ورقتك القديمة، بند الـScore. ما فهمت شو تعني — وحدة قياس (قطعة/علبة)؟ رفّ؟ ولا الـSKU؟
+  </div>
+
+  <div class="box">
+    <b>٥ · ترتيب المراحل</b><br>
+    ١ المتجر ← ٢ القوالب والتحويل ← ٣ الإدارة ← ٤ المحرّرات، والآراء بمرحلة لحالها بعد ٢.<br>
+    المرحلة ١ <b>ما بدّها أي تعديل على قاعدة البيانات</b>.
+  </div>
+
+  <div class="foot">
+    المرحلة صفر: فحص فقط — ما تغيّر ولا سطر كود ولا جدول ولا إعداد.
+    الملفات: <code>docs/storefront/AUDIT.md</code> · <code>families/a,b,c.html</code> · <code>shots/</code>
+  </div>
+</section>
+
+</body>
+</html>
