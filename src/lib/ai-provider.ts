@@ -629,6 +629,21 @@ export interface ChatRequest {
   /** Ask for a JSON object back. Only OpenRouter and OpenAI honour it. */
   json?: boolean;
   timeoutMs?: number;
+  /**
+   * REFUSE THE CALL UNLESS THE MODEL RUNS ON THE OWNER'S OWN MACHINE.
+   *
+   * Set by a caller whose payload carries a CUSTOMER — a name, a phone, an
+   * address. The order-intake door is the one that does today: a seller
+   * pastes a WhatsApp message and the whole of it, the person included, is
+   * the prompt.
+   *
+   * It is a property of the CALL and not of the assistant, because the same
+   * company may route one assistant to a vendor and another to a local
+   * server, and an assistant row cannot refuse a route it does not choose.
+   *
+   * The check happens before the first byte leaves: see `aiChat`.
+   */
+  localOnly?: boolean;
 }
 
 export class AiNotConfigured extends Error {
@@ -645,6 +660,21 @@ export class AiEndpointMissing extends Error {
 }
 
 /**
+ * THE CALLER DEMANDED A LOCAL MODEL AND THE ROUTE POINTS SOMEWHERE ELSE.
+ *
+ * Thrown BEFORE any request is made, so a payload carrying a customer's
+ * name and phone never reaches a vendor. It carries the provider it found
+ * because the screen has to tell the seller what to change — «إعدادات
+ * الذكاء ← مستخرج الطلبات ← LOCAL» is only actionable if we know it is
+ * currently OPENROUTER.
+ */
+export class AiNotLocal extends Error {
+  constructor(readonly provider: AiProvider) {
+    super('AI_NOT_LOCAL');
+  }
+}
+
+/**
  * One call, three vendors.
  *
  * Anthropic's API differs enough to be worth naming: the system prompt is a
@@ -656,6 +686,19 @@ export async function aiChat(req: ChatRequest): Promise<string> {
   const settings = await aiSettings(req.companyId);
   // Vendor, model and key for THIS assistant — `req.job` is the assistant.
   const route = await routeFor(req.companyId, req.job);
+
+  /*
+   * BEFORE THE KEY, BEFORE THE URL, BEFORE ANYTHING LEAVES.
+   *
+   * Placed here and not lower because everything below this line is
+   * preparation for a network call: the moment the route is known is the
+   * last moment at which refusing costs nothing. A caller that passed
+   * `localOnly` is a caller whose prompt has a person in it.
+   */
+  if (req.localOnly && route.provider !== 'LOCAL') {
+    throw new AiNotLocal(route.provider);
+  }
+
   const key = route.key;
   /**
    * A LOCAL SERVER IS CONFIGURED BY ITS ADDRESS, NOT BY A KEY.

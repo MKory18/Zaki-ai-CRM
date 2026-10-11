@@ -17,6 +17,8 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { requirePermission } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
+import { AiEndpointMissing, AiNotConfigured, AiNotLocal, aiChat, aiSettings } from '@/lib/ai-provider';
+import { resolvePrompt } from '@/lib/ai-prompts';
 
 /**
  * POST /api/orders/ai-intake
@@ -24,64 +26,80 @@ import { zodMessage } from '@/lib/zod-message';
  * mode 2: { parsed, confirm: true } -> create customer + order from confirmed fields
  */
 
-async function aiAssistedParse(text: string): Promise<ParsedOrder | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+/** Why the model did not read the text, when it did not. */
+export type AiSkipped = 'NOT_LOCAL' | 'NOT_CONFIGURED' | 'FAILED' | null;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://salesflow.io',
-        'X-Title': 'SALESFLOW Order Intake',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an order-intake extraction engine for an Arabic e-commerce store.
-Extract order fields from the user's free text and return ONLY valid JSON:
+/**
+ * THE SHAPE THE MODEL MUST ANSWER IN, fixed here and not editable.
+ *
+ * The company's own wording for this assistant is the VOICE
+ * (`resolvePrompt('order_intake', …)`); this is the CONTRACT. A seller who
+ * rewrites the prompt must not be able to change the keys the parser reads,
+ * because the code below indexes them by name and a renamed key arrives as
+ * an empty field with no error anywhere.
+ */
+const INTAKE_SCHEMA = `
+Return ONLY a JSON object with exactly these keys:
 {"customerName":"","phone":"","governorate":"","address":"","productQuery":"","quantity":1,"price":null,"notes":"","source":""}
-Rules: keep original Arabic text, quantity is a number, price is a number without currency symbols, source = page name. If a field is missing use "" (or null for price, 1 for quantity).`,
-          },
-          { role: 'user', content: text },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0,
-      }),
-      signal: controller.signal,
+Keep the original Arabic text. quantity is a number. price is a number with no currency symbol. source is the page name.
+A missing field is "" — except price, which is null, and quantity, which is 1.`;
+
+/**
+ * READ THE PASTED ORDER WITH A MODEL — ON THE OWNER'S OWN MACHINE ONLY.
+ *
+ * This used to `fetch` OpenRouter directly with `OPENROUTER_API_KEY`, on a
+ * free model by default, and it sent the pasted text WHOLE: the customer's
+ * name, phone and address, to a vendor, on every paste. It also bypassed the
+ * AI settings every other assistant in this product obeys — so the
+ * `order_intake` assistant and its prompt existed and nothing used them.
+ *
+ * Now it goes through `aiChat` like the others, with `localOnly: true`. If
+ * the company has not pointed `order_intake` at a LOCAL server, `aiChat`
+ * throws BEFORE the first byte leaves and the deterministic parser does the
+ * work — which is the same answer the seller got on the day the key was
+ * missing, and a worse answer than a leak.
+ */
+async function aiAssistedParse(
+  companyId: string,
+  text: string
+): Promise<{ parsed: ParsedOrder | null; skipped: AiSkipped }> {
+  try {
+    const settings = await aiSettings(companyId);
+    const answer = await aiChat({
+      companyId,
+      job: 'order_intake',
+      system: resolvePrompt('order_intake', settings.prompts) + INTAKE_SCHEMA,
+      user: text,
+      json: true,
+      timeoutMs: 15000,
+      localOnly: true,
     });
 
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const json = await res.json();
-      const content = json.choices?.[0]?.message?.content;
-      if (content) {
-        const parsed = JSON.parse(content);
-        return {
-          customerName: parsed.customerName || '',
-          phone: parsed.phone || '',
-          governorate: parsed.governorate || '',
-          address: parsed.address || '',
-          productQuery: parsed.productQuery || '',
-          quantity: parseInt(parsed.quantity, 10) || 1,
-          price: parsed.price != null ? Number(parsed.price) : null,
-          notes: parsed.notes || '',
-          source: parsed.source || '',
-        };
-      }
-    }
+    // A local model fences its JSON more often than a vendor does.
+    const clean = answer.replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+    const parsed = JSON.parse(clean);
+    return {
+      parsed: {
+        customerName: parsed.customerName || '',
+        phone: parsed.phone || '',
+        governorate: parsed.governorate || '',
+        address: parsed.address || '',
+        productQuery: parsed.productQuery || '',
+        quantity: parseInt(parsed.quantity, 10) || 1,
+        price: parsed.price != null ? Number(parsed.price) : null,
+        notes: parsed.notes || '',
+        source: parsed.source || '',
+      },
+      skipped: null,
+    };
   } catch (e) {
+    if (e instanceof AiNotLocal) return { parsed: null, skipped: 'NOT_LOCAL' };
+    if (e instanceof AiNotConfigured || e instanceof AiEndpointMissing) {
+      return { parsed: null, skipped: 'NOT_CONFIGURED' };
+    }
     console.warn('AI parse failed, using deterministic parser:', e);
+    return { parsed: null, skipped: 'FAILED' };
   }
-  return null;
 }
 
 export async function POST(req: Request) {
@@ -415,7 +433,9 @@ export async function POST(req: Request) {
     }
 
     // Try AI first, fallback to deterministic parser
-    let parsed = await aiAssistedParse(text);
+    const attempt = await aiAssistedParse(companyId, text);
+    const aiSkipped = attempt.skipped;
+    let parsed = attempt.parsed;
     let engine = 'ai';
     if (!parsed) {
       parsed = parseOrderText(text);
@@ -490,6 +510,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       parsed,
       engine,
+      aiSkipped,
       matchedProduct: match,
       productMatchConfident: match ? match.score >= 16 : false,
       suggestedPrice,

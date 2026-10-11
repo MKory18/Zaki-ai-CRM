@@ -81,6 +81,14 @@ interface ParseResult {
   suggestedPrice: number | null;
   suggestedOfferName: string | null;
   existingCustomer: { fullName: string; totalOrders: number; city: string } | null;
+  /**
+   * WHY THE MODEL DID NOT READ THE TEXT, WHEN IT DID NOT.
+   *
+   * `null` means it did. The one the seller can act on is `'NOT_LOCAL'`:
+   * the extractor refuses any model that is not on the owner's own machine,
+   * because the pasted text carries the customer's name, phone and address.
+   */
+  aiSkipped?: 'NOT_LOCAL' | 'NOT_CONFIGURED' | 'FAILED' | null;
 }
 
 export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) {
@@ -265,9 +273,23 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 <span>2. تأكيد البيانات المستخرجة (قابلة للتعديل)</span>
               </h4>
               <span className="text-xs font-mono text-[var(--sys-muted)] bg-[var(--sys-card)] px-2 py-0.5 rounded-lg border">
-                {result.engine === 'ai' ? 'OpenRouter AI' : 'Smart Parser'}
+                {result.engine === 'ai' ? 'AI محلي' : 'Smart Parser'}
               </span>
             </div>
+
+            {/*
+              THE REFUSAL, SAID WHERE THE SELLER IS LOOKING.
+              Without it the extractor just «stops being clever» one day and
+              nobody knows why. Built like the duplicate-customer note above
+              it so the two read as one kind of message.
+            */}
+            {result.aiSkipped === 'NOT_LOCAL' && (
+              <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
+                <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
+                مستخرج الطلبات بالذكاء يعمل على نموذج محلي فقط حمايةً لبيانات الزبون، فقُرئ النص بالقواعد.
+                لتشغيله: إعدادات الذكاء ← مستخرج الطلبات ← LOCAL.
+              </div>
+            )}
 
             {result.existingCustomer && (
               <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">

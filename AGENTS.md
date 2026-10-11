@@ -7,3 +7,67 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+---
+
+# Zaki ecosystem — how work is done here
+
+> Everything below is BELOW the generated block above. `next dev` rewrites
+> that block; anything written inside it is lost on the next run.
+
+## The owner's rules
+
+- **Never push to `main`.** Every change, even one line, goes on a branch
+  with a PR, and is merged only when CI is green.
+- **One agent per branch.** Two agents on one branch is a merge conflict
+  nobody asked for.
+- **Work only on `MKory18/Zaki-ai-CRM`.** The other two repositories are
+  mirrors.
+- **Mirrors move only after a merge** — fast-forward them to the same `main`
+  commit. Never commit on them.
+- **No customer data to any external model.** A name, a phone or an address
+  may only reach a model running on the owner's own machine — see
+  `localOnly` below. Ad tokens reach no model at all.
+
+## The repositories
+
+| Repository | Role |
+|---|---|
+| `MKory18/Zaki-ai-CRM` | **the source of truth** — branches and PRs happen here |
+| `MKory18/zaki-ai-OSM-1` | ⚠️ mirror — fast-forward only, after a merge |
+| `iahmed30004000-wq/zaki-ai-OSM` | ⚠️ mirror — fast-forward only, after a merge |
+
+## System 7 — the replies system
+
+`MKory18/AIresponse` consumes this repository's six app events
+(`src/lib/apps/events.ts`) through a signed webhook. Its contract is copied
+verbatim into `contracts/oms-app-events.v1/` and is **never edited here** —
+see `contracts/README.md`.
+
+- Envelope: `{ event, at, data }`, literal. A new field at that level is v2.
+- Inside `data`: adding an optional field is allowed; removing, renaming or
+  retyping one is v2.
+- Headers: `X-Zaki-Event` · `X-Zaki-Delivery` · `X-Zaki-Timestamp`
+  (milliseconds) · `X-Zaki-Signature` = `sha256=<HMAC-SHA256(secret,
+  "<timestamp>.<body>")>`.
+- Enforced by `src/lib/apps/events.test.ts` («the contract the replies
+  system reads») and `src/lib/apps/events-sites.test.ts`.
+
+## Local-only AI
+
+`aiChat({ localOnly: true })` throws `AiNotLocal` **before any network
+call** when the route is not `LOCAL`. The order-intake door
+(`/api/orders/ai-intake`) sets it, because the text a seller pastes carries
+the customer's name, phone and address. When it refuses, the deterministic
+parser does the work and the screen says why.
+
+## Who owns what
+
+The storefront overhaul owns its own branch and these paths — another
+agent's work, not to be touched outside it:
+
+`docs/storefront/**` · `src/app/s/**` · `src/app/lp/**` ·
+`src/components/storefront/**` · `src/components/landing/**` ·
+`src/components/landing-editor/**` · `src/components/store/**` ·
+the `/store/*` screens · the store and landing libraries.
+
