@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عائلة «عيادة» — نموذج</title>
+<!--
+  ════════════════════════════════════════════════════════════════════
+  العائلة أ — «عيادة»  ·  مشكلة ← حلّ، علاج، إثبات
+  ════════════════════════════════════════════════════════════════════
+  لمن: منتج يَحُلّ مشكلة يعرفها الزائر ويريد دليلاً — كريم للتجاعيد،
+  سيروم، مكمّل، علاج موضعيّ.
+
+  ما يُميّزها عن ب و ج — ليست ألواناً مختلفة:
+  · الطباعة: سطر عنوان قصير ثقيل (IBM Plex Sans Arabic 700) وجسم
+    بنفس العائلة بوزن 400 — عائلة واحدة، وهذا نصف هدوئها.
+  · الهيدر: شريط رفيع ساكن، الاسم وحده، بلا بحث وبلا سلّة — عيادة
+    لا تُساوم.
+  · الهيرو: نصف النصّ نصف الدليل — عمودان على سطح المكتب، مكدّسان
+    على الهاتف، وبطاقة «الضمان» مرئية في الشاشة الأولى.
+  · البطاقة: أفقيّة (صورة يسار، نصّ يمين)، لأنّ المنتج العلاجيّ
+    يُقرَأ لا يُتصفَّح.
+  · المساحة البيضاء كبيرة، لون واحد حادّ، بلا تدرّجات.
+
+  الوزن (مقيس): 12.1 ك.ب خاماً / 4.3 ك.ب مضغوطاً.
+  بخطّين من Google Fonts (عربي subset، swap): ~42 ك.ب.
+  الصور: SVG مضمّن، صفر طلبات شبكة.
+  المجموع المتوقّع لصفحة حقيقيّة بهذه العائلة ضمن ميزانيّة D7 (250 ك.ب).
+
+  كلّ رقم أو رأي هنا «مثال» — لا دليل اجتماعيّ مُختلَق.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10212e; --ink-2:#51677a; --line:#dbe5ec;
+    --bg:#ffffff; --tint:#f3f8fb; --accent:#0a7ea4; --accent-ink:#ffffff;
+    --ok:#0f7a52; --warn:#b45309;
+    --r:10px; --gut:20px; --max:1100px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;
+    font-size:16px; line-height:1.75; color:var(--ink); background:var(--bg);
+  }
+  .wrap{max-width:var(--max);margin-inline:auto;padding-inline:var(--gut)}
+  h1,h2,h3{line-height:1.3;font-weight:700;letter-spacing:0}
+  h1{font-size:clamp(26px,6vw,40px)}
+  h2{font-size:clamp(20px,4.2vw,28px)}
+  .muted{color:var(--ink-2)}
+  .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);
+       background:var(--tint);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+
+  /* ── الهيدر: شريط رفيع، الاسم وحده ── */
+  header.bar{border-bottom:1px solid var(--line);background:var(--bg)}
+  .bar .wrap{display:flex;align-items:center;justify-content:space-between;min-height:56px}
+  .brand{font-weight:700;font-size:18px;letter-spacing:0}
+  .bar a{color:var(--ink-2);text-decoration:none;font-size:14px;min-height:44px;display:inline-flex;align-items:center}
+
+  /* ── الهيرو: نصّ + دليل ── */
+  .hero{padding:28px 0 8px}
+  .hero-grid{display:grid;gap:22px}
+  .lede{font-size:17px;color:var(--ink-2);margin-top:10px}
+  .proof{border:1px solid var(--line);border-radius:var(--r);padding:16px;background:var(--tint)}
+  .proof h3{font-size:15px;margin-bottom:10px}
+  .proof li{list-style:none;display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:15px}
+  .check{flex:0 0 18px;height:18px;margin-top:4px}
+  .price-row{display:flex;align-items:baseline;gap:10px;margin:18px 0 6px;flex-wrap:wrap}
+  .price{font-size:32px;font-weight:700}
+  .was{color:var(--ink-2);text-decoration:line-through;font-size:17px}
+  .cta{display:block;width:100%;background:var(--accent);color:var(--accent-ink);
+       border:0;border-radius:var(--r);min-height:52px;font:inherit;font-weight:700;font-size:17px;cursor:pointer}
+  .under-cta{font-size:13px;color:var(--ink-2);text-align:center;margin-top:8px}
+
+  /* ── صفّ الثقة ── */
+  .trust{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+         border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin:22px 0}
+  .trust div{background:var(--bg);padding:14px 8px;text-align:center;font-size:13px}
+  .trust b{display:block;font-size:14px;margin-bottom:2px}
+
+  /* ── البطاقة الأفقيّة ── */
+  .cards{display:grid;gap:12px;margin:10px 0 28px}
+  .card{display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:center;
+        border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--bg)}
+  .card .shot{aspect-ratio:1;border-radius:8px;background:var(--tint);display:grid;place-items:center}
+  .card h3{font-size:16px}
+  .card p{font-size:14px;color:var(--ink-2);margin-top:2px}
+  .card .p{font-weight:700;margin-top:8px}
+
+  /* ── نموذج الطلب ── */
+  .order{border:1px solid var(--line);border-radius:var(--r);padding:18px;margin:8px 0 90px}
+  .order label{display:block;font-size:14px;font-weight:600;margin:12px 0 6px}
+  .order input,.order select{width:100%;min-height:48px;font:inherit;font-size:16px;
+      padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+  .order input:focus,.order select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* ── الشريط اللاصق ── */
+  .sticky{position:fixed;inset-inline:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
+          padding:10px var(--gut);display:flex;gap:12px;align-items:center;z-index:9}
+  .sticky .price{font-size:20px}
+  .sticky .cta{flex:1;min-height:48px;font-size:16px}
+
+  section{padding:22px 0;border-top:1px solid var(--line)}
+  .faq details{border-bottom:1px solid var(--line);padding:12px 0}
+  .faq summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+  .ex{font-size:11px;color:var(--warn);border:1px solid var(--warn);border-radius:4px;padding:1px 6px;margin-inline-start:6px}
+
+  @media (min-width:860px){
+    .hero-grid{grid-template-columns:1.1fr .9fr;align-items:start;gap:40px}
+    .cards{grid-template-columns:1fr 1fr}
+    .sticky{display:none}
+    .order{max-width:520px}
+  }
+</style>
+</head>
+<body>
+
+<header class="bar"><div class="wrap">
+  <span class="brand">عيادة نقاء</span>
+  <a href="#order">اطلب الآن</a>
+</div></header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <span class="tag">للبشرة الجافّة</span>
+        <h1>جفاف الوجه مش لازم يرجع كل يوم</h1>
+        <p class="lede">كريم يوميّ بملمس خفيف — يشتغل على سبب الجفاف لا على إحساسه، وبيبان الفرق من أوّل أسبوع.</p>
+
+        <div class="price-row">
+          <span class="price">14.000 JOD</span>
+          <span class="was">18.000</span>
+        </div>
+        <button class="cta">اطلب الآن — الدفع عند الاستلام</button>
+        <p class="under-cta">ما في دفع مسبق · ما في بطاقة · بتدفع لما يوصلك</p>
+      </div>
+
+      <aside class="proof">
+        <h3>ليش بيشتغل</h3>
+        <ul>
+          <li><svg class="check" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8.5" fill="none" stroke="#0f7a52"/><path d="M5 9.2l2.6 2.6L13 6.4" fill="none" stroke="#0f7a52" stroke-width="1.8"/></svg><span><b>زبدة الشيا + جلسرين</b> — بيسكّروا الماء جوّا الجلد بدل ما يتبخّر.</span></li>
+          <li><svg class="check" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8.5" fill="none" stroke="#0f7a52"/><path d="M5 9.2l2.6 2.6L13 6.4" fill="none" stroke="#0f7a52" stroke-width="1.8"/></svg><span><b>فيتامين هـ</b> — بيهدّي الاحمرار اللي بيجي مع الجفاف.</span></li>
+          <li><svg class="check" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8.5" fill="none" stroke="#0f7a52"/><path d="M5 9.2l2.6 2.6L13 6.4" fill="none" stroke="#0f7a52" stroke-width="1.8"/></svg><span><b>بلا عطور</b> — فبيناسب البشرة الحسّاسة.</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+
+  <div class="trust">
+    <div><b>الدفع عند الاستلام</b>تدفع لما يوصل</div>
+    <div><b>٢ — ٤ أيام</b>لكل المحافظات</div>
+    <div><b>ترجيع ٧ أيام</b>إذا ما ناسبك</div>
+  </div>
+
+  <section>
+    <h2>منتجات بنفس الخطّ</h2>
+    <div class="cards">
+      <article class="card">
+        <div class="shot"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect x="14" y="10" width="24" height="34" rx="5" fill="none" stroke="#0a7ea4" stroke-width="2"/><rect x="20" y="4" width="12" height="7" rx="2" fill="#0a7ea4"/><path d="M19 24h14M19 31h9" stroke="#51677a" stroke-width="2"/></svg></div>
+        <div><h3>سيروم فيتامين سي</h3><p>للتصبّغات، صباحاً تحت الواقي</p><div class="p">22.000 JOD</div></div>
+      </article>
+      <article class="card">
+        <div class="shot"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="29" r="15" fill="none" stroke="#0a7ea4" stroke-width="2"/><rect x="18" y="8" width="16" height="8" rx="3" fill="#0a7ea4"/><path d="M20 29h12" stroke="#51677a" stroke-width="2"/></svg></div>
+        <div><h3>كريم ليلي للتجاعيد</h3><p>ريتينول وسكوالان، ليلاً</p><div class="p">28.000 JOD</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="faq">
+    <h2>أسئلة بتتسأل قبل الطلب</h2>
+    <details><summary>بحسّ بحرقة من كريمات تانية — هاد بيحرق؟</summary><p class="muted">بلا عطور وبلا كحول، وهاد السبب الأشيع للحرقة. إذا حسّيت بأيّ شي، رجّعه خلال ٧ أيام.</p></details>
+    <details><summary>إيمتى بيبان الفرق؟</summary><p class="muted">الترطيب من أوّل استعمال، والملمس بعد أسبوع تقريباً مع الاستعمال اليوميّ.</p></details>
+    <details><summary>بدفع قبل ما يوصل؟</summary><p class="muted">لأ. بتدفع للمندوب لما يسلّمك.</p></details>
+  </section>
+
+  <section>
+    <h2>آراء <span class="ex">مثال</span></h2>
+    <p class="muted" style="font-size:15px">«صار عندي روتين ثابت وبطّلت أحسّ بالشدّ بعد الغسيل.» — سارة، عمّان <span class="ex">مثال</span></p>
+  </section>
+
+  <section id="order">
+    <h2>اطلبه</h2>
+    <form class="order" onsubmit="return false">
+      <label for="n">الاسم</label><input id="n" name="n" autocomplete="name">
+      <label for="p">رقم الهاتف</label><input id="p" name="p" inputmode="tel" dir="ltr" autocomplete="tel">
+      <label for="g">المحافظة</label>
+      <select id="g" name="g"><option>عمّان</option><option>إربد</option><option>الزرقاء</option></select>
+      <label for="a">العنوان</label><input id="a" name="a" autocomplete="street-address">
+      <div style="margin-top:18px"><button class="cta">أكّد الطلب — 14.000 JOD</button></div>
+      <p class="under-cta">بتدفع عند الاستلام. ما بنطلب بطاقة ولا حساب.</p>
+    </form>
+  </section>
+
+</main>
+
+<div class="sticky">
+  <span class="price">14.000</span>
+  <button class="cta">اطلب الآن</button>
+</div>
+
+</body>
+</html>
