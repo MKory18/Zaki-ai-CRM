@@ -14,6 +14,7 @@ import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { skinToLandingTheme } from '@/lib/store-skin';
 import { zodMessage } from '@/lib/zod-message';
 import { readLimit, readPage } from '@/lib/numeric-input';
+import { shownPageProductIds } from '@/lib/storefront';
 
 export async function GET(req: Request) {
   try {
@@ -208,12 +209,27 @@ export async function POST(req: Request) {
      * Read once, before the page is written, because it decides the page's
      * `showInStore` below — and because it is the answer about the store as
      * it stands NOW, before this page joins it.
+     *
+     * ── THROUGH THE CATALOGUE'S OWN DEFINITION, NOT A COUNT ──
+     *
+     * This counted published shown PAGES, and `storeShelf` switches on
+     * shown pages that SELL SOMETHING. The two disagree over exactly one
+     * store: one whose only shown page carries no product. Its shelf has
+     * not switched — a page selling nothing can put nothing on a shelf,
+     * and counting it as the switch would empty the shop, which is the
+     * one thing the owner's answer ① forbids. But this read called that
+     * store switched, so the next new page with a product started SHOWN,
+     * became the first product-carrying shown page, and switched the
+     * whole store on its own. The same no-press switch, one step further
+     * along, reachable by any seller who has a campaign page in the shop
+     * window.
+     *
+     * So the question is asked of `shownPageProductIds` — the same
+     * function the shelf asks. Two readers of one rule drift; one does
+     * not.
      */
     const storeAlreadySwitched =
-      !!storeId &&
-      (await db.landingPage.count({
-        where: { companyId, storeId, isPublished: true, showInStore: true },
-      })) > 0;
+      !!storeId && (await shownPageProductIds(companyId, storeId)).size > 0;
 
     try {
       const lp = await db.landingPage.create({
