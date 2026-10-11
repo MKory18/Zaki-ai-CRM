@@ -57,3 +57,27 @@ jobs:
         env:
           NODE_ENV: production
           JWT_SECRET: build-time-secret-not-used-in-production
+
+      # ── The payload budget, measured on the build that just happened ──
+      #
+      # `quality-gates.test.ts` holds a ratchet on the first-load
+      # stylesheet. It reads `.next/static`, which does not exist while the
+      # Tests step runs — so under that step it skipped silently, and a
+      # ratchet was crossed with nobody told. A guard that is quiet because
+      # it could not measure reads exactly like a guard that passed.
+      #
+      # The order above stays as it is: nobody should sit through a
+      # production build to be told about a typo. So the one file that
+      # needs a build runs again here, after it.
+      #
+      # REQUIRE_BUILD=1 turns the test's «no build, skip» into a FAILURE.
+      # Without it — every local run — it still skips, so running the suite
+      # never requires building first. The step also prints the measured
+      # KB and the room left, so the number can be watched instead of only
+      # being tripped over.
+      - name: Payload budget
+        run: npx vitest run src/lib/quality-gates.test.ts
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-secret-not-used-anywhere
+          REQUIRE_BUILD: '1'
