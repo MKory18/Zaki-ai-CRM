@@ -14,7 +14,7 @@ import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixe
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureForm } from '@/lib/landing-sections';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
-import { parseStoreTheme, themeForPage } from '@/lib/store-theme';
+import { parseStoreTheme, themeForPage, wearsShopChrome } from '@/lib/store-theme';
 import { directionOf } from '@/lib/store-languages';
 import { loadStoreFonts } from '@/lib/fonts/load-store-fonts';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
@@ -130,6 +130,15 @@ export type LandingPageTarget = (
 ) & {
   /** The ?c= campaign code the visit arrived with, if any. */
   campaign?: string;
+  /**
+   * RENDERED INSIDE A SHOP SCREEN THAT HAS ALREADY DRAWN THE SHELL.
+   *
+   * Set by `/s/<store>/p/<handle>`, which wraps this view in its own
+   * `StorefrontShell` because only that route knows the «كل المنتجات»
+   * back link belongs in it. The page then draws no chrome of its own —
+   * see `wearsShopChrome`.
+   */
+  inStore?: boolean;
 };
 
 export async function LandingPageView({ target }: { target: LandingPageTarget }) {
@@ -331,12 +340,19 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
      * The page's own footer block wins over the shop's: two footers is the
      * duplication this whole section exists to avoid.
      */
-    const asFront = 'frontPageId' in target;
     // The switch belongs to the STORE's template, not to the page's own
     // palette: `theme` here has already been narrowed to what a landing
     // page may override, and the shop's chrome is never one of those.
-    const wearsChrome =
-      asFront && parseStoreTheme(lp.store?.theme).header?.onFrontPage !== false && !!lp.store?.slug;
+    //
+    // One function decides it, in `store-theme.ts`, because the question
+    // «who draws the header» now has three answers and a condition spelled
+    // out at the one call site cannot be tested without a database.
+    const wearsChrome = wearsShopChrome({
+      asFront: 'frontPageId' in target,
+      inStore: target.inStore === true,
+      hasSlug: !!lp.store?.slug,
+      theme: parseStoreTheme(lp.store?.theme),
+    });
     const shop = wearsChrome ? await getStorefront(lp.store!.slug) : null;
     if (shop) {
       return (

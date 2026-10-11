@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
-import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storeShelf } from '@/lib/storefront';
 import { SUGGESTION_LIMIT, parseSynonyms, searchProducts } from '@/lib/store-search';
 
 /**
@@ -15,9 +15,10 @@ import { SUGGESTION_LIMIT, parseSynonyms, searchProducts } from '@/lib/store-sea
  * The matching rule is `searchProducts`, and the spelling rule inside it is
  * `normalizeArabic`, which six other places in this system already ask.
  *
- * NO PRICES ARE DECIDED HERE. `storefrontProducts` is the same read the
- * grid uses, so a product's «من» price in a search result and on the shelf
- * cannot disagree.
+ * NO PRICES ARE DECIDED HERE, AND NO SHELF RULE EITHER. `storeShelf` is
+ * the same read the grid uses, so a product's «من» price in a search result
+ * and on the shelf cannot disagree — and a product the store's catalogue
+ * rule has taken off the shelf cannot be found by typing its name.
  */
 
 interface Ctx {
@@ -80,7 +81,7 @@ export async function GET(req: Request, ctx: Ctx) {
     }
 
     const [products, vocabulary] = await Promise.all([
-      storefrontProducts(store.companyId, store.id),
+      storeShelf(store.companyId, store.id),
       db.store
         .findFirst({ where: { id: store.id }, select: { searchSynonyms: true } })
         .then((r) => parseSynonyms(r?.searchSynonyms)),

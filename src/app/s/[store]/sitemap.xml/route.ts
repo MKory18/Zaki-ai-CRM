@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storeShelf } from '@/lib/storefront';
 import { publicOrigin } from '@/lib/public-metadata';
 import { cartBarApplies } from '@/lib/store-theme';
 
@@ -49,7 +49,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     const base = `${origin}/s/${store.slug}`;
 
     const [products, pages] = await Promise.all([
-      storefrontProducts(store.companyId, store.id),
+      storeShelf(store.companyId, store.id),
       db.storePage.findMany({
         where: { storeId: store.id, isPublished: true },
         select: { slug: true, updatedAt: true },

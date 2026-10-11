@@ -9,9 +9,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * the difference between a shelf and a spinner.
  */
 
-const { getStorefront, storefrontProducts, notFound, bestSellers, db } = vi.hoisted(() => ({
+const { getStorefront, storeShelf, notFound, bestSellers, db } = vi.hoisted(() => ({
   getStorefront: vi.fn(),
-  storefrontProducts: vi.fn(async (..._a: unknown[]) => [] as unknown[]),
+  storeShelf: vi.fn(async (..._a: unknown[]) => [] as unknown[]),
   bestSellers: vi.fn(async (..._a: unknown[]) => new Map<string, number>()),
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND');
@@ -27,7 +27,7 @@ vi.mock('next/navigation', () => ({ notFound: () => notFound() }));
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/storefront', () => ({
   getStorefront: (...a: unknown[]) => getStorefront(...a),
-  storefrontProducts: (...a: unknown[]) => storefrontProducts(...a),
+  storeShelf: (...a: unknown[]) => storeShelf(...a),
 }));
 vi.mock('@/lib/store-facts', () => ({ bestSellers: (...a: unknown[]) => bestSellers(...a) }));
 vi.mock('@/components/storefront/StorefrontShell', () => ({
@@ -113,7 +113,7 @@ beforeEach(() => {
     name: 'صحة',
     theme: DEFAULT_STORE_THEME,
   });
-  storefrontProducts.mockResolvedValue([
+  storeShelf.mockResolvedValue([
     P('a', { attributes: { size: 'صغير' } }),
     P('b', { attributes: { size: 'كبير' } }),
     /**
@@ -231,7 +231,7 @@ describe('a narrowing is a page', () => {
    * would open on a page that may no longer exist.
    */
   it('gives a page to «عرض المزيد» and to nothing else', async () => {
-    storefrontProducts.mockResolvedValue(
+    storeShelf.mockResolvedValue(
       Array.from({ length: 30 }, (_, i) => P(`p${i}`, { attributes: { size: 'صغير' } }))
     );
     const parts = textOf(await shop({ cat: 'cat-1' }));

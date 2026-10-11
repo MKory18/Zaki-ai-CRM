@@ -10,9 +10,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * company, so one shop showed another shop's shelves.
  */
 
-const { getStorefront, storefrontProducts, storefrontProduct, redirect, notFound } = vi.hoisted(() => ({
+const { getStorefront, storeShelf, storefrontProduct, redirect, notFound } = vi.hoisted(() => ({
   getStorefront: vi.fn(),
-  storefrontProducts: vi.fn(),
+  storeShelf: vi.fn(),
   storefrontProduct: vi.fn(),
   redirect: vi.fn((url: string) => { throw Object.assign(new Error('REDIRECT'), { url }); }),
   notFound: vi.fn(() => { throw new Error('NOT_FOUND'); }),
@@ -21,7 +21,7 @@ const { getStorefront, storefrontProducts, storefrontProduct, redirect, notFound
 vi.mock('next/navigation', () => ({ redirect: (u: string) => redirect(u), notFound: () => notFound() }));
 vi.mock('@/lib/storefront', () => ({
   getStorefront: (...a: unknown[]) => getStorefront(...a),
-  storefrontProducts: (...a: unknown[]) => storefrontProducts(...a),
+  storeShelf: (...a: unknown[]) => storeShelf(...a),
   storefrontProduct: (...a: unknown[]) => storefrontProduct(...a),
 }));
 vi.mock('@/components/landing/LandingPageView', () => ({ LandingPageView: () => null }));
@@ -69,16 +69,16 @@ describe('a Single Product store with a front page', () => {
 describe('a Single Product store without a front page', () => {
   it('is its one product\'s page, the campaign code carried across the redirect', async () => {
     getStorefront.mockResolvedValue(store());
-    storefrontProducts.mockResolvedValue([{ sku: 'SKU1' }]);
+    storeShelf.mockResolvedValue([{ sku: 'SKU1' }]);
     await expect(home({ c: 'SUMMER' })).rejects.toMatchObject({ url: '/s/sehha/p/SKU1?c=SUMMER' });
-    expect(storefrontProducts).toHaveBeenCalledWith('c1', 's1', 2);
+    expect(storeShelf).toHaveBeenCalledWith('c1', 's1', 2);
   });
 
   it('with several products shows its own list until a front page is picked — it does not go dark', async () => {
     getStorefront.mockResolvedValue(store());
-    storefrontProducts.mockResolvedValue([{ sku: 'A' }, { sku: 'B' }]);
+    storeShelf.mockResolvedValue([{ sku: 'A' }, { sku: 'B' }]);
     await expect(home()).resolves.toBeTruthy();
-    expect(storefrontProducts).toHaveBeenLastCalledWith('c1', 's1');
+    expect(storeShelf).toHaveBeenLastCalledWith('c1', 's1');
     expect(notFound).not.toHaveBeenCalled();
   });
 });
@@ -86,9 +86,9 @@ describe('a Single Product store without a front page', () => {
 describe('a many-products store', () => {
   it('lists its own products only', async () => {
     getStorefront.mockResolvedValue(store({ type: 'MULTI_PRODUCT' }));
-    storefrontProducts.mockResolvedValue([]);
+    storeShelf.mockResolvedValue([]);
     await home();
-    expect(storefrontProducts).toHaveBeenCalledWith('c1', 's1');
+    expect(storeShelf).toHaveBeenCalledWith('c1', 's1');
   });
 
   /**
@@ -120,7 +120,7 @@ describe('a many-products store', () => {
    */
   it('opens with a way into the products, not with the shop’s name', async () => {
     getStorefront.mockResolvedValue(store({ type: 'MULTI_PRODUCT' }));
-    storefrontProducts.mockResolvedValue([
+    storeShelf.mockResolvedValue([
       { id: 'a', sku: 'A', name: 'أ', image: null, fromPrice: 10, basePrice: 10, category: { id: 'c', name: 'فئة' } },
       { id: 'b', sku: 'B', name: 'ب', image: null, fromPrice: 20, basePrice: 20, category: { id: 'd', name: 'أخرى' } },
     ]);

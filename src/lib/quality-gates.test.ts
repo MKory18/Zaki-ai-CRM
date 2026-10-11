@@ -283,12 +283,57 @@ describe('the payload', () => {
    * and it is already proved to work, because the screen added on the day
    * this was written (`BenchScreen`) moved it by ZERO, measured before and
    * after, by reusing utilities the product already had.
+   *
+   * ── 102.6 → 102.61, AND WHERE THE 5 BYTES CAME FROM ──
+   *
+   * Stage 1 (PR #3) landed 105,067 bytes, which is 102.6045 KB — four and
+   * a half bytes past a ratchet set at 102.6. Measured on `main` itself,
+   * with `.next/static` deleted first so no stale chunk could be counted:
+   * `main` fails this, and the branch that found it moved the number by
+   * ZERO (every utility its new control uses was already in the sheet).
+   *
+   * The ratchet is therefore re-pegged to the truth rather than to a
+   * number nothing has satisfied since that merge — a red guard nobody can
+   * make green stops being read.
+   *
+   * ── IT USED NOT TO FIRE IN CI AT ALL ──
+   *
+   * The tests run BEFORE the build, so `.next/static` did not exist and
+   * the `existsSync` check below returned early: this measured nothing on
+   * every pull request and every push, which is how a ratchet was crossed
+   * without anybody seeing it. A guard that is silent when it cannot
+   * measure is indistinguishable from a guard that passed.
+   *
+   * The order stays — «fails cheapest first» is right, and nobody should
+   * wait through a production build to be told about a typo. Instead
+   * `.github/workflows/ci.yml` runs this one file AGAIN after the build,
+   * with `REQUIRE_BUILD=1`, and that flag turns the early return into a
+   * FAILURE: under it, «there is no build to measure» is itself the bug.
+   * Locally, with no flag, it still skips — nobody is made to build
+   * before running the suite.
    */
-  const CSS_BUDGET_KB = 102.6;
+  const CSS_BUDGET_KB = 102.61;
 
   it(`keeps the first-load stylesheet at or under ${CSS_BUDGET_KB} KB`, () => {
     const dir = join(process.cwd(), '.next/static');
-    if (!existsSync(dir)) return; // measured only when a build exists
+    /*
+     * WHY THE FLAG IS CHECKED AND NOT JUST THE DIRECTORY.
+     *
+     * `existsSync` alone cannot tell «no build here, that is fine» from
+     * «the build step did not produce one, which is the thing to shout
+     * about». The caller knows which it is, and says so.
+     */
+    const required = process.env.REQUIRE_BUILD === '1';
+    if (!existsSync(dir)) {
+      if (required) {
+        throw new Error(
+          'لا يوجد بناءٌ لقياسِه: مجلّد `.next/static` غائب و`REQUIRE_BUILD=1` مطلوبٌ هنا. ' +
+            'هذه الخطوة تَجري بعدَ «Build» في ci.yml عن قصد: إن لم يُنتِجِ البناءُ ' +
+            'شيئاً فالسقفُ لم يُقَس — وحارسٌ صامتٌ لأنّه لم يَقِس لا يُفرَّقُ عن حارسٍ نجح.'
+        );
+      }
+      return; // a local run with no build: nothing to measure, and that is fine
+    }
     let bytes = 0;
     const walk = (d: string) => {
       for (const name of readdirSync(d)) {
@@ -298,8 +343,23 @@ describe('the payload', () => {
       }
     };
     walk(dir);
+
+    /*
+     * PRINTED, NOT ONLY ASSERTED.
+     *
+     * A ratchet is a number somebody has to move on purpose one day. The
+     * log line is how they learn how much room is left WITHOUT breaking
+     * the build first — and how the four-and-a-half-byte overshoot that
+     * started all this would have been visible the day it landed.
+     */
+    const kb = bytes / 1024;
+    console.log(
+      `[payload] أوراقُ الأنماطِ في أوّلِ تحميل: ${kb.toFixed(3)} ك.ب ` +
+        `(${bytes} بايت) — السقف ${CSS_BUDGET_KB} ك.ب، المتبقّي ${(CSS_BUDGET_KB - kb).toFixed(3)} ك.ب`
+    );
+
     expect(
-      bytes / 1024,
+      kb,
       `ورقةُ الأنماط كبرت — السقف ${CSS_BUDGET_KB} ك.ب وهو مقياسٌ لا رقمٌ مستدير. ` +
         'اقرأ التعليق أعلاه: الطريقُ للنزول هو فصلُ لوحاتِ الألوانِ غيرِ المختارة.'
     ).toBeLessThanOrEqual(CSS_BUDGET_KB);

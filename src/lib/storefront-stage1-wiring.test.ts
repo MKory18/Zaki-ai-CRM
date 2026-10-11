@@ -19,6 +19,12 @@ describe('the product page shows its shown page', () => {
     expect(src()).toMatch(/frontPageId: shownPage\.id, storeId: store\.id/);
     expect(src()).toContain('<LandingPageView');
     expect(src()).toContain('<StorefrontShell');
+    /*
+     * AND SAYS SO, so the page does not draw a second one. Counted as real
+     * markup in `src/app/s/in-store-page-chrome.test.tsx`; what is held
+     * here is that the word is on the wire at all.
+     */
+    expect(src(), 'الصفحة ما بتعرف إنّ القشرة مرسومة فوقها').toContain('inStore: true');
   });
 
   it('carries the ?c= attribution into the page', () => {
@@ -64,10 +70,24 @@ describe('every storefront screen names its store', () => {
 });
 
 describe('the defaults that feed the rule', () => {
-  it('a new page with a product is shown; without one it is not', () => {
-    expect(stripComments(repoFile('src/app/api/landing-pages/route.ts'))).toMatch(
-      /showInStore: !!productId/
-    );
+  /**
+   * THIS USED TO PIN THE BUG.
+   *
+   * It read «a new page with a product is shown; without one it is not»
+   * and held down `showInStore: !!productId` — which is exactly the hole
+   * in the owner's rule ①: the first new page with a product switched the
+   * whole store with no press, and the shop came back showing one thing.
+   * A guard can be green about a defect; this one was.
+   *
+   * What replaces it is behavioural, in
+   * `only-the-press-switches-the-store.test.ts`, which asks the route for
+   * both answers. What stays here is the wire that press needs.
+   */
+  it('and the one press is a single update, so the shop is never empty between', () => {
+    const src = stripComments(repoFile('src/app/api/landing-pages/show-all/route.ts'));
+    expect(src).toMatch(/updateMany\(\{/);
+    expect(src).toMatch(/where: \{ companyId, storeId, isPublished: true, showInStore: false \}/);
+    expect(src).toMatch(/data: \{ showInStore: true \}/);
   });
 
   it('the registry opens with /store and drops the redirected address', () => {

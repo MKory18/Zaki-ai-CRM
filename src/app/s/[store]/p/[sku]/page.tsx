@@ -14,7 +14,7 @@ import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { layoutOf } from '@/lib/store-theme';
 import { boughtTogether } from '@/lib/store-facts';
-import { storefrontProducts } from '@/lib/storefront';
+import { storeShelf } from '@/lib/storefront';
 import { moneyText } from '@/lib/money';
 import { OfferCards } from '@/components/landing/blocks/OfferCards';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
@@ -167,8 +167,14 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
     const sp = await searchParams;
     const campaign = typeof sp.c === 'string' ? sp.c : undefined;
     return (
+      // `inStore`: THIS route draws the shell, because only this route
+      // knows the «كل المنتجات» back link belongs in it. Without saying
+      // so, `LandingPageView` read the store template's `header.onFrontPage`
+      // — true by default — and wrapped a second shell inside this one, so
+      // an open store's product page carried two headers, two footers and
+      // the shell stylesheet twice.
       <StorefrontShell store={store} back={back}>
-        <LandingPageView target={{ frontPageId: shownPage.id, storeId: store.id, campaign }} />
+        <LandingPageView target={{ frontPageId: shownPage.id, storeId: store.id, campaign, inStore: true }} />
       </StorefrontShell>
     );
   }
@@ -200,7 +206,10 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
    */
 
   const pairs = await boughtTogether(db, { companyId: store.companyId, storeId: store.id }, product.id);
-  const shelf = pairs.length > 0 ? await storefrontProducts(store.companyId, store.id) : [];
+  // Read through the shelf: «يُشترى معه عادةً» is a listing a shopper can
+  // tap, so a product the store's catalogue rule has taken off the shelf
+  // must not be offered here either. The pair quietly shrinks instead.
+  const shelf = pairs.length > 0 ? await storeShelf(store.companyId, store.id) : [];
   const alsoBought = pairs
     .map((pair) => shelf.find((s) => s.id === pair.productId))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));

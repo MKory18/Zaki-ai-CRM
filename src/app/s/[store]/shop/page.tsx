@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storeShelf } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { publicTitle, storeIcons } from '@/lib/public-metadata';
 import { parseSynonyms, searchProducts } from '@/lib/store-search';
@@ -85,7 +85,7 @@ export default async function ShopPage({ params, searchParams }: Props) {
   }
 
   const [all, country, vocabulary, sales] = await Promise.all([
-    storefrontProducts(store.companyId, store.id),
+    storeShelf(store.companyId, store.id),
     db.country.findUnique({ where: { id: store.countryId }, select: { currencyCode: true, minorUnit: true } }),
     db.store
       .findFirst({ where: { id: store.id }, select: { searchSynonyms: true } })

@@ -18,7 +18,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
   db: {
-    landingPage: { findFirst: vi.fn(), create: vi.fn() },
+    // `findMany` answers «has this store already switched to the new
+    // catalogue?» — the route asks `shownPageProductIds`, the same reader
+    // the shelf uses. Empty by default: a store on its old catalogue,
+    // which is where every store starts.
+    landingPage: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn(async () => []) },
     product: { findFirst: vi.fn() },
   },
 }));
