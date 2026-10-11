@@ -1,5 +1,6 @@
 import { CORE_STATES, whereForState, type CoreState } from './order-state';
 import { normalizePhoneNumber } from './phone';
+import { typed } from './text-search';
 
 /**
  * THE ORDERS LIST'S «WHERE», WRITTEN ONCE.
@@ -130,12 +131,12 @@ export function ordersWhere(params: URLSearchParams, input: OrdersWhereInput = {
   if (search) {
     const normalised = normalizePhoneNumber(search);
     where.OR = [
-      { orderNumber: { contains: search } },
-      { merchantRef: { contains: search } },
-      { trackingNumber: { contains: search } },
-      { customer: { fullName: { contains: search } } },
-      { customer: { phone: { contains: normalised || search } } },
-      { customer: { rawPhone: { contains: search } } },
+      { orderNumber: typed(search) },
+      { merchantRef: typed(search) },
+      { trackingNumber: typed(search) },
+      { customer: { fullName: typed(search) } },
+      { customer: { phone: typed(normalised || search) } },
+      { customer: { rawPhone: typed(search) } },
     ];
   }
 

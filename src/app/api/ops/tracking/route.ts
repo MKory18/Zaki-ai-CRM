@@ -9,6 +9,7 @@ import { transitStatus } from '@/lib/transit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { expectedAmountFor, SETTLEMENT_ORDER_SELECT } from '@/lib/settlement';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { typed } from '@/lib/text-search';
 
 /**
  * GET /api/ops/tracking?q=&status=
@@ -41,11 +42,11 @@ export async function GET(req: Request) {
         ...(term
           ? {
               OR: [
-                { orderNumber: { contains: term } },
-                { merchantRef: { contains: term } },
-                { trackingNumber: { contains: term } },
-                { customer: { fullName: { contains: term } } },
-                { customer: { phone: { contains: normalizePhoneNumber(term) || term } } },
+                { orderNumber: typed(term) },
+                { merchantRef: typed(term) },
+                { trackingNumber: typed(term) },
+                { customer: { fullName: typed(term) } },
+                { customer: { phone: typed(normalizePhoneNumber(term) || term) } },
               ],
             }
           : {}),

@@ -15,6 +15,7 @@ import {
   completionOf, doorUnits, expectedBackTotal, extraAction, needsExtraAction, settledLines,
 } from '@/lib/partial-delivery';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { typed } from '@/lib/text-search';
 
 /**
  * Return receiving.
@@ -65,7 +66,7 @@ export async function GET(req: Request) {
         shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY', 'PARTIALLY_DELIVERED'] },
         returnReceipt: null,
         ...(term
-          ? { OR: [{ orderNumber: { contains: term } }, { merchantRef: { contains: term } }, { trackingNumber: { contains: term } }] }
+          ? { OR: [{ orderNumber: typed(term) }, { merchantRef: typed(term) }, { trackingNumber: typed(term) }] }
           : {}),
       },
       orderBy: { returnedAt: 'asc' },

@@ -16,6 +16,7 @@ import { geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 import { can } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
 import { commissionRateField } from '@/lib/user-commission-rate';
+import { typed } from '@/lib/text-search';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -183,8 +184,8 @@ export async function GET(req: Request) {
       whereClause.AND = [
         {
           OR: [
-            { name: { contains: search } },
-            { email: { contains: search } },
+            { name: typed(search) },
+            { email: typed(search) },
           ],
         },
       ];

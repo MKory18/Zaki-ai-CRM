@@ -9,6 +9,7 @@ import { AlreadyBlocked, blockPhone, releaseBlock } from '@/lib/blacklist';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { typed } from '@/lib/text-search';
 
 /**
  * GET    /api/control/blacklist   the list, active first
@@ -44,9 +45,9 @@ export async function GET(req: Request) {
         ...(term
           ? {
               OR: [
-                ...(normalized ? [{ phone: { contains: normalized } }] : []),
-                { name: { contains: term } },
-                { reason: { contains: term } },
+                ...(normalized ? [{ phone: typed(normalized) }] : []),
+                { name: typed(term) },
+                { reason: typed(term) },
               ],
             }
           : {}),

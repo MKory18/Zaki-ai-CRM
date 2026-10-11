@@ -9,6 +9,7 @@ import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { customerFacts } from '@/lib/customer-insights';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { typed } from '@/lib/text-search';
 
 /**
  * Full PII projection for users holding 'customers.view'.
@@ -93,10 +94,10 @@ export async function GET(req: Request) {
     if (search) {
       const normalizedSearch = normalizePhoneNumber(search);
       whereClause.OR = [
-        { fullName: { contains: search } },
-        { phone: { contains: normalizedSearch || search } },
-        { rawPhone: { contains: search } },
-        { city: { contains: search } },
+        { fullName: typed(search) },
+        { phone: typed(normalizedSearch || search) },
+        { rawPhone: typed(search) },
+        { city: typed(search) },
       ];
     }
 

@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { inStore } from '@/lib/store-filter';
+import { typed } from '@/lib/text-search';
 
 /**
  * GET /api/inventory/movements — the stock ledger.
@@ -42,10 +43,10 @@ export async function GET(req: Request) {
       ...(term
         ? {
             OR: [
-              { product: { name: { contains: term } } },
-              { product: { sku: { contains: term } } },
-              { reason: { contains: term } },
-              { batch: { batchNumber: { contains: term } } },
+              { product: { name: typed(term) } },
+              { product: { sku: typed(term) } },
+              { reason: typed(term) },
+              { batch: { batchNumber: typed(term) } },
             ],
           }
         : {}),

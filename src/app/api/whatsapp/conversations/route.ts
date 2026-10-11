@@ -9,6 +9,7 @@ import { requireCompanyTenant, requirePermission } from '@/lib/auth';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { apiErrorResponse } from '@/lib/api-error';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { typed } from '@/lib/text-search';
 
 export async function GET(req: Request) {
   try {
@@ -29,8 +30,8 @@ export async function GET(req: Request) {
     if (q) {
       const norm = normalizePhoneNumber(q);
       where.OR = [
-        { customerPhone: { contains: norm || q } },
-        { customerName: { contains: q } },
+        { customerPhone: typed(norm || q) },
+        { customerName: typed(q) },
       ];
     }
 
