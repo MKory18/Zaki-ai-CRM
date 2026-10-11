@@ -199,6 +199,47 @@ export function hasLeftWarehouse(order: StateSource): boolean {
 }
 
 /**
+ * THE SAME RULING, ASKED OF THE DATABASE.
+ *
+ * `hasLeftWarehouse` answers about a row already in hand. A query that
+ * needs to FIND the committed orders cannot call it — so the same three
+ * facts are rendered as a `where`, here, beside the predicate.
+ *
+ * Two renderings of one rule is normally the defect this repository keeps
+ * finding. It is acceptable only because they are kept together and
+ * `a-statement-line-is-a-parcel-that-left.test.ts` proves they agree over
+ * EVERY combination of the three inputs — generated, not sampled. The
+ * alternative was a hand-written `shippingStatus: { in: [...] }` at the
+ * call site, which is a fourth copy of the list and the thing the comment
+ * above `SHIPPING_GONE` says caused the original drift.
+ *
+ * The owner's words, and they settled this line deliberately: «لحظةَ طباعة
+ * البوليصة». A labelled parcel on the out-tray is committed.
+ */
+/*
+ * A FUNCTION, NOT A CONSTANT, AND FOR TWO REASONS.
+ *
+ * `as const` makes the `OR` array readonly and Prisma's `where` wants a
+ * mutable one — so a constant either needs a cast or loses its type. And a
+ * module-level object spread into a query is shared mutable state: one
+ * caller pushing a condition onto that `OR` changes the rule for every
+ * other caller, silently, for the life of the process. A fresh object each
+ * call cannot be edited from a distance.
+ */
+export function leftWarehouseWhere(): {
+  OR: ({ shippedAt: { not: null } } | { shippingStatus: { in: string[] } } | { labelPrintedAt: { not: null } } | { shippingStatus: string })[];
+} {
+  return {
+    OR: [
+      { shippedAt: { not: null } },
+      { shippingStatus: { in: [...SHIPPING_GONE] } },
+      { labelPrintedAt: { not: null } },
+      { shippingStatus: 'READY_FOR_PICKUP' },
+    ],
+  };
+}
+
+/**
  * Cancellation after SHIPPED is refused — it becomes a cancel request and
  * ends as RETURNED with a reason (contract invariant 4).
  */

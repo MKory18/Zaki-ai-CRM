@@ -5,6 +5,7 @@ import { db } from './db';
 // order's add-ons. The expectation is not allowed a formula of its own.
 import { codForOrder, type OrderLineLike } from './delivery-fees';
 import { roundMinor } from './money';
+import { leftWarehouseWhere } from './order-state';
 // The ONE reader for a figure that arrived in a file. A courier's money
 // column is read through it, brackets and Arabic digits and all.
 import { readStatementFigure } from './numeric-input';
@@ -781,11 +782,45 @@ export async function runMatching(
       : null;
     const matchedByBarcode = byBarcode !== null;
 
+    /*
+     * THE FALLBACK NOW ASKS WHETHER THE PARCEL EVER LEFT.
+     *
+     * A statement line says «this parcel was delivered and we collected
+     * X». Matching it to an order that never went out is wrong whoever is
+     * carrying it — and this branch had no state filter at all, so a
+     * reference that happened to equal a real order number attached a
+     * courier's money to a parcel sitting in the warehouse.
+     *
+     * MEASURED, AND THIS IS NOT A LATENT PATH: every one of the twelve
+     * MATCHED orders in the live database has `trackingNumber IS NULL`, so
+     * the barcode branch above matched NOTHING and this fallback did all
+     * the work. It is the only path that functions in this deployment.
+     *
+     * WHERE THE REFERENCE COMES FROM makes it sharper. `merchantRef` on a
+     * line is the courier's own column when they echo ours back — or, when
+     * they do not, `refFromNotes` reading the FIRST TOKEN of a free-text
+     * notes column. «15132 - العميل طلب التأجيل» gives `15132`. That
+     * heuristic is right often and cannot be right always: a note opening
+     * with any token that equals an order number finds that order. Arabic
+     * text returns null (the pattern needs an ASCII alphanumeric first),
+     * and `@@unique([companyId, merchantRef])` means a hit names exactly
+     * one order — so what was missing was never a tighter pattern, it was
+     * this filter.
+     *
+     * The company-wide scope STAYS: the reference is ours, so it names one
+     * order whoever carried the parcel, and scoping it to the courier would
+     * break an order that changed couriers after we sent it.
+     */
     const order =
       byBarcode ??
       (line.merchantRef
         ? await tx.order.findFirst({
-            where: { companyId, storeId, merchantRef: line.merchantRef },
+            where: {
+              companyId,
+              storeId,
+              merchantRef: line.merchantRef,
+              ...leftWarehouseWhere(),
+            },
             select: { id: true, ...SETTLEMENT_ORDER_SELECT },
           })
         : null);
