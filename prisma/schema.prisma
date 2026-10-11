@@ -1713,6 +1713,27 @@ model Store {
   favicon               String?
   status                String       @default("ACTIVE") // ACTIVE | PAUSED
   type                  String       @default("MULTI_PRODUCT") // MULTI_PRODUCT | SINGLE_PRODUCT
+  /// A TEST BENCH, NOT A SHOP. «منتج تيست — بيئةٌ منعزلة … أرقامٌ لا تدخل
+  /// أيَّ حسبة».
+  ///
+  /// Measured before this was chosen: 253 queries in this product already
+  /// filter by `storeId` and exclude a test store FOR FREE, against 31 that
+  /// are company-wide and touch money. A flag on the PRODUCT would inherit
+  /// none of the 253 and would have to defend all 284.
+  ///
+  /// And a second COMPANY — perfect isolation, needing no exclusion anywhere
+  /// — was refused for the requirement that put this here: «إنشاءُ منتج من
+  /// DNA منتجاتك الناجحة» means READING the real products, and a
+  /// cross-company read is the one thing this system refuses everywhere.
+  ///
+  /// It hides nothing. Categories, couriers, regions and settings are the
+  /// company's and stay shared — a bench with its own courier list tests
+  /// nothing. What it marks is the boundary for FIGURES, and
+  /// `src/lib/test-store.ts` is the one place that says which.
+  ///
+  /// A bench may never be public: `stores_test_bench_is_not_public` refuses
+  /// `isTest` beside `storefrontEnabled` at the database.
+  isTest                Boolean      @default(false) @map("is_test")
   /// Whether the advertised price already contains the delivery fee.
   /// A shop-wide pricing policy, not a per-offer one: it used to live only
   /// on the offer, so a direct order on a delivery-inclusive store was

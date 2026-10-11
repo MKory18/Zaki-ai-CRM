@@ -1,4 +1,5 @@
 import { whereDelivered } from './order-state';
+import { realStoresOnly } from './test-store';
 import { availableStock } from './reservation';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
@@ -533,7 +534,18 @@ export async function stockShortfall(tx: Tx, scope: Scope): Promise<Finding[]> {
  */
 export async function staleStatements(tx: Tx, scope: Scope, now = new Date()): Promise<Finding[]> {
   const open = await tx.courierStatement.findMany({
-    where: { companyId: scope.companyId, status: 'OPEN' },
+    /*
+     * AND NOT THE TEST BENCH'S. A bench exists to try a product in front of
+     * real traffic, so its parcels really ship and a courier really hands
+     * in a statement for them — and an unclosed bench statement raised as a
+     * finding about the BUSINESS is the «أرقامٌ لا تدخل أيَّ حسبة» rule
+     * broken in the one screen built to tell the owner what is wrong.
+     *
+     * This is the only company-wide money aggregate that needed the filter:
+     * measured, the other thirty are either scoped to named ids or sit on a
+     * table that carries no store at all. See src/lib/test-store.ts.
+     */
+    where: { companyId: scope.companyId, status: 'OPEN', ...realStoresOnly() },
     select: { createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
