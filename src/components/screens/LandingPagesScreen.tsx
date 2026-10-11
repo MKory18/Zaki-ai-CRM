@@ -87,6 +87,15 @@ export function LandingPagesScreen() {
   /** What the seller writes into the structure's slots, per dialect. */
   const [copy, setCopy] = useState<SlotCopy>({});
   const [products, setProducts] = useState<any[]>([]);
+  /**
+   * THE PROPOSAL, AND WHAT IT COULD NOT DO.
+   *
+   * Kept beside the fields rather than shown as a toast: «كُتبت 7 من 9
+   * خانة. اكتب بنفسك: الدليل، الضمان.» is a list of work, and a message
+   * that disappears after four seconds is a list nobody keeps.
+   */
+  const [wroteNote, setWroteNote] = useState<string | null>(null);
+  const [writeError, setWriteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -113,6 +122,65 @@ export function LandingPagesScreen() {
     // `basePrice` and `currency`, which `PickableProduct` does not carry.
     crmApi('/api/products').then((d) => setProducts(d.products || [])).catch(() => {});
   }, []);
+
+  /**
+   * ASK FOR THE WORDS. It writes nothing anywhere — the answer lands in
+   * the same `copy` state a seller types into, and is saved by the same
+   * «حفظ» they would press anyway. See src/lib/landing-copy-brief.ts for
+   * why the model is asked for slot copy and not for a page.
+   */
+  const writeCopy = async () => {
+    if (!chosenStructure || !form.productId) return;
+    setWroteNote(null);
+    setWriteError(null);
+    /*
+     * NO `writing` FLAG OF ITS OWN. `Button` takes a handler that returns a
+     * promise and does the rest itself — disabled while it runs, a tick
+     * when it resolves, a shake when it rejects. A second flag beside it
+     * is a second answer to «is this running», and the two part company
+     * the first time one of them is forgotten.
+     *
+     * AND THE REFUSAL IS RE-THROWN, not swallowed: a handler that returns
+     * normally after failing makes the button answer a failure with a tick.
+     * It is caught only to put the server's own sentence on the screen —
+     * «لم يُفهم جواب الذكاء الاصطناعي» is actionable and «حدث خطأ» is not.
+     *
+     * Through `crmApi`, which is what every other call on this screen uses:
+     * it carries the credentials, parses the body, and throws the server's
+     * `error` string. A bare `fetch` here was its own third answer to all
+     * three — and `bare-fetch-ratchet.test.ts` refuses a new one.
+     */
+    let data: { copy?: Record<string, string>; note?: string };
+    try {
+      data = await crmApi('/api/ai/landing-copy', {
+        method: 'POST',
+        body: JSON.stringify({
+          structureId: chosenStructure.id,
+          productId: form.productId,
+          dialect: form.dialect,
+        }),
+      });
+    } catch (e) {
+      setWriteError(e instanceof Error ? e.message : 'تعذّر التوليد');
+      throw e;
+    }
+    /*
+     * MERGED, NOT REPLACED, AND ONLY INTO THIS DIALECT.
+     *
+     * A seller who wrote the headline themselves and then asked for help
+     * with the rest must not lose the headline. And a proposal is for ONE
+     * dialect: writing it over every dialect's cell would put Levantine
+     * text under a field labelled «الفصحى».
+     */
+    setCopy((prev) => {
+      const next = { ...prev };
+      for (const [slotKey, text] of Object.entries(data.copy ?? {})) {
+        next[slotKey] = { ...next[slotKey], [form.dialect]: text };
+      }
+      return next;
+    });
+    setWroteNote(data.note ?? null);
+  };
 
   /** What the template previews should be selling: the product just picked. */
   const chosenProduct = React.useMemo(() => {
@@ -615,6 +683,39 @@ export function LandingPagesScreen() {
                   <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
                     اتركها فارغةً فتبدأ الصفحةُ بهيكل القصّة تكتبه في المحرّر — وما تكتبه هنا يظهر في المعاينة فوراً.
                   </p>
+                  {/*
+                    THE GENERATOR, WHERE THE WRITING IS.
+                    «مولّد صفحة الهبوط بالذكاء الاصطناعيّ» — and it needs the
+                    PRODUCT, because the words have to be true about
+                    something. Disabled with its reason beside it rather
+                    than hidden: a button that vanishes teaches nobody what
+                    to pick first.
+                  */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={writeCopy}
+                      disabled={!form.productId}
+                    >
+                      اكتب النصوص بالذكاء الاصطناعي
+                    </Button>
+                    {!form.productId && (
+                      <span className="text-xs text-[var(--sys-muted-foreground)]">
+                        اختر المنتج أولاً — النصوص تُكتب عنه.
+                      </span>
+                    )}
+                  </div>
+                  {wroteNote && (
+                    <p className="mt-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-xs text-[var(--sys-muted-foreground)]">
+                      {wroteNote}
+                    </p>
+                  )}
+                  {writeError && (
+                    <p className="mt-2 rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2.5 text-xs text-[var(--sys-destructive)]">
+                      {writeError}
+                    </p>
+                  )}
                   <div className="mt-2 max-h-[26rem] overflow-y-auto pe-1">
                     <SlotFields
                       structure={chosenStructure}

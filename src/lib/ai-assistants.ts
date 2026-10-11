@@ -68,6 +68,29 @@ export interface AssistantDef {
 
 export const ASSISTANTS: AssistantDef[] = [
   {
+    /*
+     * THE PAGE'S WORDS, PROPOSED.
+     *
+     * `scopes: []` and `pii: false` are the point: it is given the product
+     * and the structure and NOTHING ELSE. No order, no customer, no money
+     * beyond the product's own price — so there is nothing in its payload
+     * that could leave the building.
+     *
+     * `needs` is the landing permission rather than a product one: writing
+     * a shop's sales copy is the person who publishes the page, and the
+     * proposal lands in a draft they then have to publish themselves.
+     */
+    key: 'landing_copy',
+    label: 'كاتب نصوص صفحة الهبوط',
+    who: 'من ينشر صفحات الهبوط',
+    where: 'محرّر صفحة الهبوط',
+    promptJob: 'landing_copy',
+    scopes: [],
+    needs: 'landing_pages.edit',
+    pii: false,
+    note: 'يقترح نصوص الخانات ويكتب لا شيء — تُحفظ مسوّدةً وتراجعها أنت قبل النشر.',
+  },
+  {
     key: 'order_intake',
     label: 'مستخرج الطلبات',
     who: 'المودريتور',

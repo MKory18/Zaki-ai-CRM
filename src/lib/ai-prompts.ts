@@ -129,11 +129,44 @@ export const AI_JOBS: AiJob[] = [
   },
   {
     key: 'landing_html',
-    label: 'كتابة صفحة هبوط',
-    where: 'عند توليد صفحة هبوط بالذكاء الاصطناعي',
+    label: 'كتابة صفحة هبوط (ملف HTML)',
+    where: 'المسار اليدوي: تنسخ البريف لذكاءٍ خارجي وترفع الملف',
     note: 'صفحة الهبوط تُنظَّف بعد التوليد — أي كود غير مسموح يُزال مهما طلبت.',
     slots: ['{product}', '{price}', '{currency}'],
     default: '',
+  },
+  {
+    /*
+     * THE OTHER HALF, AND IT IS A DIFFERENT JOB.
+     *
+     * `landing_html` is for a seller who wants a page nobody here designed:
+     * they copy a brief out, get a file back, upload it, and the sanitizer
+     * strips what it must. This one fills one of the TEN STRUCTURES — the
+     * engine's own slots, each of which already carries its label, its
+     * purpose, what it must avoid, a Levantine example and a character
+     * limit. See landing-copy-brief.ts for why that is the better prompt
+     * and why generating HTML here would be a second landing system.
+     *
+     * The brief itself is BUILT FROM THE STRUCTURE at call time, so a slot
+     * added to a structure is in the prompt the same day. What lives here
+     * is only the voice — and the owner may rewrite it.
+     */
+    key: 'landing_copy',
+    label: 'كتابة نصوص صفحة الهبوط',
+    where: 'محرّر صفحة الهبوط — زرّ «اكتب النصوص بالذكاء الاصطناعي»',
+    note: 'يقترح نصوص الخانات فقط ولا ينشر شيئاً — تُحفظ كمسوّدة وتراجعها أنت.',
+    slots: ['{structure}', '{product}', '{dialect}'],
+    default: `أنت كاتب إعلانات لمتجر إلكتروني عربي، تكتب نصوص صفحة هبوط لمنتج واحد.
+
+تُعطى بنية الصفحة وخاناتها، وكلّ خانة معها غرضها وما يُمنع فيها ومثال وحدّ أقصى للحروف.
+اكتب نصّ كلّ خانة باللهجة المطلوبة، كما يتكلّم الناس لا كما تُكتب الصحف.
+
+قواعد لا تُخالَف:
+1. لا تخترع رقماً — لا نسبة ولا عدد مشترين ولا إحصاء. الأرقام المعطاة لك وحدها.
+2. لا وعد طبّي ولا ذكر مرض ولا «يشفي» ولا «يعالج».
+3. لا اسم علامة منافسة.
+4. التزم بالحدّ الأقصى لحروف كلّ خانة.
+5. أجب بكائن JSON واحد: مفاتيحه معرّفات الخانات حرفياً وقيمه نصوصها. لا شيء قبله ولا بعده.`,
   },
   {
     key: 'advisor',
