@@ -1,4 +1,5 @@
 import { db as prisma } from './db';
+import { foldArabic, stripLeadingGovernorate } from './address';
 
 /**
  * HOW LONG THIS GOVERNORATE ACTUALLY TAKES.
@@ -25,6 +26,55 @@ import { db as prisma } from './db';
 
 /** Fewer deliveries than this and the median is an anecdote. */
 export const MIN_DELIVERIES = 5;
+
+/**
+ * THE OTHER HALF OF THE SENTENCE: «لكلّ محافظةٍ وعنوان».
+ *
+ * The governorate was measured and the address was not, and the two are
+ * different questions. عمّان is a governorate of four million people: a
+ * parcel to a tower downtown and a parcel to a village on its edge are both
+ * «عمّان», and quoting the governorate's median to the second one is how a
+ * promise gets broken at a door two days late.
+ *
+ * So an address that this shop has delivered to enough times answers for
+ * itself, and everything else falls back to the governorate exactly as
+ * before. More specific first, never the other way round.
+ *
+ * ── WHAT AN ADDRESS IS, HERE ──
+ *
+ * Free text on the shared customer row. So it is FOLDED before it is used
+ * as a key — `foldArabic` is the same fold `sameArabicName` uses, so «شارع
+ * الملك الحسين» written with a stretched letter is one street and not two
+ * — and the leading governorate is stripped, because most stored addresses
+ * came from a courier's statement that writes «عمّان - عمّان الصويفية» and
+ * «الصويفية» is the part that means anything.
+ *
+ * ── AND WHAT IT HONESTLY IS NOT ──
+ *
+ * There is no per-order copy of the address: it lives on the customer row
+ * and nowhere else (`address.ts` says so, at length, for the same reason).
+ * So a customer who MOVES takes their delivery history with them, and the
+ * new address inherits the old one's durations. Measured against the floor
+ * that is a small distortion — five deliveries to one person who then moves
+ * — and the alternative is a column on every order, which is the owner's
+ * call and not a side effect of a prediction.
+ */
+export function addressKey(regionId: string | null | undefined, address: string | null | undefined, governorate?: string | null): string | null {
+  if (!regionId) return null;
+  const stripped = governorate ? stripLeadingGovernorate(String(address ?? ''), governorate) : String(address ?? '');
+  const folded = foldArabic(stripped);
+  /*
+   * A key of nothing is not a key. An address that is empty, or that was
+   * only ever the governorate's own name — Telegram intake stores exactly
+   * that when the customer gave none — carries no information past the
+   * region, and grouping on it would file every such order together and
+   * then answer «this address takes 3 days» for a field nobody filled.
+   *
+   * Two characters is the floor on the text itself: «ب» is not a street.
+   */
+  if (folded.length < 3) return null;
+  return `@${regionId}|${folded}`;
+}
 
 export interface DeliveryWindow {
   /** The usual case. */
@@ -76,10 +126,20 @@ export async function deliveryWindows(scope: {
       shippedAt: { not: null, gte: since },
       deliveredAt: { not: null },
     },
-    select: { regionId: true, shippedAt: true, deliveredAt: true },
+    select: {
+      regionId: true,
+      shippedAt: true,
+      deliveredAt: true,
+      // The address, for the finer grain — and the region's NAME with it,
+      // because the stored address usually repeats it at the front and the
+      // key must be the part that distinguishes one street from another.
+      customer: { select: { address: true } },
+      region: { select: { name: true } },
+    },
   });
 
   const byRegion = new Map<string, number[]>();
+  const byAddress = new Map<string, number[]>();
   for (const r of rows) {
     if (!r.regionId || !r.shippedAt || !r.deliveredAt) continue;
     const days = (r.deliveredAt.getTime() - r.shippedAt.getTime()) / 86_400_000;
@@ -88,12 +148,31 @@ export async function deliveryWindows(scope: {
     const list = byRegion.get(r.regionId) ?? [];
     list.push(days);
     byRegion.set(r.regionId, list);
+    /*
+     * AND THE SAME DAY-COUNT IS FILED TWICE, ON PURPOSE.
+     *
+     * A delivery to a street in عمّان is evidence about that street AND
+     * about عمّان. Taking it out of the governorate's set once the street
+     * has its own would shrink the governorate below its floor as the
+     * addresses above it fill up — the wider claim getting WEAKER the more
+     * the shop learns, which is backwards.
+     */
+    const key = addressKey(r.regionId, r.customer?.address, r.region?.name);
+    if (key) {
+      const addr = byAddress.get(key) ?? [];
+      addr.push(days);
+      byAddress.set(key, addr);
+    }
   }
 
   const out = new Map<string, DeliveryWindow>();
   for (const [regionId, days] of byRegion) {
     const w = summariseDays(days);
     if (w) out.set(regionId, w);
+  }
+  for (const [key, days] of byAddress) {
+    const w = summariseDays(days);
+    if (w) out.set(key, w);
   }
 
   /**
@@ -134,10 +213,57 @@ export const EVERYWHERE = '*';
  */
 export function windowFor(
   windows: Map<string, DeliveryWindow>,
-  regionId: string | null | undefined
+  regionId: string | null | undefined,
+  /** Their own street, when it is known and has been delivered to enough. */
+  address?: { text: string | null | undefined; governorate?: string | null }
 ): DeliveryWindow | null {
-  return (regionId ? windows.get(regionId) : null) ?? windows.get(EVERYWHERE) ?? null;
+  /*
+   * MOST SPECIFIC FIRST. The address, then the governorate, then the
+   * country, then nothing — and each step is taken only when the one
+   * before it cleared the sample floor, which `deliveryWindows` enforced
+   * by not putting it in the map at all.
+   */
+  const key = address ? addressKey(regionId, address.text, address.governorate) : null;
+  return (
+    (key ? windows.get(key) : null) ??
+    (regionId ? windows.get(regionId) : null) ??
+    windows.get(EVERYWHERE) ??
+    null
+  );
 }
+
+/** How specific the answer actually was, for a screen that says so. */
+export type EtaLevel = 'address' | 'region' | 'country';
+
+/**
+ * The window AND where it came from.
+ *
+ * «يصل عادةً خلال يومين» means something different when it is this street
+ * and when it is the whole country, and a screen that cannot tell them
+ * apart cannot say «من ٧ تسليماً لهذا العنوان». Same lookup as
+ * `windowFor` — not a second one — so the two can never disagree.
+ */
+export function windowWithLevel(
+  windows: Map<string, DeliveryWindow>,
+  regionId: string | null | undefined,
+  address?: { text: string | null | undefined; governorate?: string | null }
+): { window: DeliveryWindow; level: EtaLevel } | null {
+  const key = address ? addressKey(regionId, address.text, address.governorate) : null;
+  const atAddress = key ? windows.get(key) : undefined;
+  if (atAddress) return { window: atAddress, level: 'address' };
+  const atRegion = regionId ? windows.get(regionId) : undefined;
+  if (atRegion) return { window: atRegion, level: 'region' };
+  const everywhere = windows.get(EVERYWHERE);
+  if (everywhere) return { window: everywhere, level: 'country' };
+  return null;
+}
+
+/** What the level is called where a person reads it. */
+export const ETA_LEVEL_AR: Record<EtaLevel, string> = {
+  address: 'لهذا العنوان',
+  region: 'لهذه المحافظة',
+  country: 'لكل المناطق',
+};
 
 /**
  * The sentence, in the words a person says.

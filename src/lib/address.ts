@@ -32,6 +32,20 @@ export function sameArabicName(a: string, b: string): boolean {
   return fold(a) !== '' && fold(a) === fold(b);
 }
 
+/**
+ * THE SAME TEXT WITH EVERY WAY OF WRITING IT MADE ONE.
+ *
+ * Exported because a second copy of this would be a second answer to
+ * «are these the same place». `delivery-time.ts` groups deliveries by
+ * address, and an address folded by a different set of rules from the one
+ * `sameArabicName` uses would file «شارع الملك الحسين» and «شارع الملك
+ * الحسين» — one with a stretched letter — as two places, each below the
+ * sample floor, so a street with ten deliveries would learn nothing.
+ */
+export function foldArabic(s: string): string {
+  return fold(s);
+}
+
 function fold(s: string): string {
   return String(s ?? '')
     .normalize('NFKC')

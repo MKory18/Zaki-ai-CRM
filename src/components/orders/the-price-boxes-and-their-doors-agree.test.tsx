@@ -286,7 +286,7 @@ async function orderBodyFor(fill: (u: ReturnType<typeof userEvent.setup>) => Pro
   await waitFor(() => expect(screen.getByLabelText('المنتج')).toBeTruthy());
   await user.type(screen.getByPlaceholderText('مثال: عبدالله عبدالقادر'), 'عبدالله');
   await user.type(screen.getByPlaceholderText('مثال: 0936654998'), '0936654998');
-  await user.type(screen.getByPlaceholderText('الشارڡ البناء، المنطقة...'), 'بانياس');
+  await user.type(screen.getByPlaceholderText('الشارع، البناء، المنطقة...'), 'بانياس');
   await user.selectOptions(screen.getByLabelText('المحافظة'), '11111111-1111-4111-8111-111111111111');
   await user.selectOptions(screen.getByLabelText('المنتج'), PRODUCT.id);
   await waitFor(() => expect(priceBox().value).toBe('14'));

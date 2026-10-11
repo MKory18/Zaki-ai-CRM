@@ -99,11 +99,29 @@ describe('where it comes from', () => {
     expect(lib()).toMatch(/scope\.storeId \? \{ storeId: scope\.storeId \} : \{\}/);
   });
 
-  it('and the order form says it only where it is measured', () => {
+  it('and the order form reads the measured window, not a figure of its own', () => {
+    /*
+     * THIS USED TO PIN A SPELLING: `/selectedRegion\?\.deliveryAr &&/`.
+     *
+     * It fired the day the condition was rewritten to prefer the finer
+     * answer — a rewrite that hides the sentence in exactly the same cases
+     * — and it would have passed on a condition that mentioned
+     * `deliveryAr` and then printed a hard-coded «يومين» beside it. A
+     * guard on a spelling is not a guard on a rule.
+     *
+     * THE RULE IS NOW RENDERED, in
+     * `components/orders/the-form-says-how-long-it-takes.test.tsx`: the
+     * form is drawn with nothing measured, with the governorate measured,
+     * and with the address measured, and what it shows is asserted.
+     *
+     * What is left here is the half a render cannot see — that the form
+     * carries no day-count of its own. A number written into the screen
+     * would survive every render test, because the hook that was supposed
+     * to supply it was mocked.
+     */
     const form = stripComments(repoFile('src/components/orders/CreateOrderModal.tsx'));
-    // `deliveryAr` is null below the minimum, so this one condition is the
-    // whole of «hide it when the sample cannot carry it».
-    expect(form).toMatch(/selectedRegion\?\.deliveryAr &&/);
-    expect(form).toMatch(/selectedRegion\.delivery\?\.samples/);
+    expect(form, 'الشاشةُ لا تَقرأُ النافذةَ المقاسة').toMatch(/\.samples/);
+    expect(form, 'جملةٌ مكتوبةٌ بيدٍ في الشاشة').not.toMatch(/يصل عادةً/);
+    expect(form, 'عددُ أيّامٍ مكتوبٌ في الشاشة').not.toMatch(/خلال \d+ (يوم|أيام)/);
   });
 });

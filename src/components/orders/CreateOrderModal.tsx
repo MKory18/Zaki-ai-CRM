@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { useRegions } from '@/hooks/useRegions';
+import { useDeliveryEta } from '@/hooks/useDeliveryEta';
 import { useProducts } from '@/hooks/useProducts';
 import { productName } from '@/lib/product-name';
 import { ProductLinesEditor, goodsTotal, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
@@ -43,6 +44,12 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const [regionId, setRegionId] = useState('');
   const selectedRegion = regions.find((r) => r.id === regionId) ?? null;
   const customerCity = selectedRegion?.name ?? '';
+  /*
+   * THE FINER ANSWER. The governorate's window arrives with the list; the
+   * street's has to be asked for, because the address is typed. Same
+   * engine behind both — see src/lib/delivery-time.ts.
+   */
+  const { eta } = useDeliveryEta(regionId || null, customerAddress);
   const [lines, setLines] = useState<DraftLine[]>([newLine()]);
   const [channelId, setChannelId] = useState('');
   const { products } = useProducts({ enabled: isOpen });
@@ -295,19 +302,26 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
                 </p>
               )}
               {/*
-                WHAT THIS GOVERNORATE HAS ACTUALLY TAKEN.
+                WHAT THIS PLACE HAS ACTUALLY TAKEN.
 
                 «لما أدخل طلب بالمدينة والعنوان يعطيني خلال كم الفترة
                 المتوقعة للاستلام» — measured from delivered orders, not
                 typed by anybody. It says nothing where too few have been
                 delivered to say anything honest, which is most of the
                 country on the first day.
+
+                AND IT NAMES ITS OWN GRAIN. «يصل عادةً خلال يومين» means
+                one thing for this street and another for the whole
+                country, so the chip says which — and the finer answer
+                replaces the governorate's as soon as the address is typed,
+                through the same engine, so the two can never disagree.
               */}
-              {selectedRegion?.deliveryAr && (
+              {(eta?.ar ?? selectedRegion?.deliveryAr) && (
                 <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
-                  {selectedRegion.deliveryAr}
+                  {eta?.ar ?? selectedRegion?.deliveryAr}
                   <span className="text-[var(--sys-muted)]">
-                    {' '}· من {selectedRegion.delivery?.samples} تسليماً سابقاً
+                    {' '}· {eta?.levelAr ?? 'لهذه المحافظة'} · من{' '}
+                    {eta?.window?.samples ?? selectedRegion?.delivery?.samples} تسليماً سابقاً
                   </span>
                 </p>
               )}
@@ -317,7 +331,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
               <div className="relative">
                 <RiMapPinLine className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
                 <input
-                  placeholder="الشارڡ البناء، المنطقة..."
+                  placeholder="الشارع، البناء، المنطقة..."
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
                   required
