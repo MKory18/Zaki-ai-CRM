@@ -44,6 +44,24 @@ function shownPage(productId: string | null, extra: Record<string, unknown> = {}
   return { productId, ...extra };
 }
 
+/**
+ * A MOCK THAT ANSWERS WHAT A REAL QUERY WOULD.
+ *
+ * `storeShelf` narrows to the shown products IN THE WHERE — `id: { in: … }`
+ * — rather than taking sixty rows and filtering afterwards, because the
+ * filter-afterwards version silently loses a shown product that happens to
+ * be the sixty-first. A mock that ignores the where clause hands back rows
+ * no database would have returned, and then the assertion «a product with
+ * no shown page is absent» is being made about the mock and not about the
+ * rule. So this honours it.
+ */
+function respectsWhere(rows: Record<string, unknown>[]) {
+  return (args?: { where?: { id?: { in?: string[] } } }) => {
+    const only = args?.where?.id?.in;
+    return Promise.resolve(only ? rows.filter((r) => only.includes(r.id as string)) : rows);
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   db.product.findMany.mockResolvedValue([]);
@@ -110,12 +128,9 @@ describe('the catalogue after the press', () => {
 
   it('a product with no shown page is absent', async () => {
     db.product.findMany.mockReset();
-    db.product.findMany
-      .mockResolvedValueOnce([productRow('p1', 'SKU1'), productRow('p2', 'SKU2')])
-      .mockResolvedValueOnce([
-        { id: 'p1', categoryId: null, category: null },
-        { id: 'p2', categoryId: null, category: null },
-      ]);
+    db.product.findMany.mockImplementation(
+      respectsWhere([productRow('p1', 'SKU1'), productRow('p2', 'SKU2')])
+    );
 
     const cat = await storefrontCatalog(C, S, 'shop');
     expect(cat.items.map((i) => i.id)).toEqual(['p1']);
@@ -124,12 +139,9 @@ describe('the catalogue after the press', () => {
   it('two shown pages for one product are still one card', async () => {
     db.landingPage.findMany.mockResolvedValue([shownPage('p1'), shownPage('p1')]);
     db.product.findMany.mockReset();
-    db.product.findMany
-      .mockResolvedValueOnce([productRow('p1', 'SKU1'), productRow('p2', 'SKU2')])
-      .mockResolvedValueOnce([
-        { id: 'p1', categoryId: null, category: null },
-        { id: 'p2', categoryId: null, category: null },
-      ]);
+    db.product.findMany.mockImplementation(
+      respectsWhere([productRow('p1', 'SKU1'), productRow('p2', 'SKU2')])
+    );
 
     const cat = await storefrontCatalog(C, S, 'shop');
     expect(cat.items).toHaveLength(1);
@@ -138,9 +150,7 @@ describe('the catalogue after the press', () => {
 
   it('reads only through this store', async () => {
     db.product.findMany.mockReset();
-    db.product.findMany
-      .mockResolvedValueOnce([productRow('p1', 'SKU1')])
-      .mockResolvedValueOnce([{ id: 'p1', categoryId: null, category: null }]);
+    db.product.findMany.mockImplementation(respectsWhere([productRow('p1', 'SKU1')]));
 
     await storefrontCatalog(C, S, 'shop');
     for (const call of db.landingPage.findMany.mock.calls) {

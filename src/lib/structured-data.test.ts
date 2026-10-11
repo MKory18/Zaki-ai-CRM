@@ -221,7 +221,13 @@ describe('the shop’s map', () => {
    */
   it('lists one shop’s pages, and asks for that shop first', () => {
     expect(route()).toContain('getStorefront(slug)');
-    expect(route()).toContain('storefrontProducts(store.companyId, store.id)');
+    /*
+     * THROUGH THE SHELF, not the raw product list. A sitemap is what a
+     * search engine indexes: a product the store's own catalogue rule has
+     * taken off the shelf but the map still lists becomes a result that
+     * leads to a page the shop does not offer.
+     */
+    expect(route()).toContain('storeShelf(store.companyId, store.id)');
   });
 
   /**

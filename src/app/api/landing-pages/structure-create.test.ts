@@ -18,7 +18,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
   db: {
-    landingPage: { findFirst: vi.fn(), create: vi.fn() },
+    // `count` answers «has this store already switched to the new
+    // catalogue?» — the question that decides a new page's showInStore.
+    // Zero by default: a store on its old catalogue, which is where every
+    // store starts.
+    landingPage: { findFirst: vi.fn(), create: vi.fn(), count: vi.fn(async () => 0) },
     product: { findFirst: vi.fn() },
   },
 }));

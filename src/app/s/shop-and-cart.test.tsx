@@ -12,10 +12,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * door, and there is nobody there to explain it.
  */
 
-const { getStorefront, storefrontProducts, notFound, bestSellers, db } = vi.hoisted(() => ({
+const { getStorefront, storeShelf, notFound, bestSellers, db } = vi.hoisted(() => ({
   getStorefront: vi.fn(),
   bestSellers: vi.fn(async (..._a: unknown[]) => new Map<string, number>()),
-  storefrontProducts: vi.fn(async (..._a: unknown[]) => [] as unknown[]),
+  storeShelf: vi.fn(async (..._a: unknown[]) => [] as unknown[]),
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND');
   }),
@@ -34,7 +34,7 @@ vi.mock('next/navigation', () => ({ notFound: () => notFound(), useRouter: () =>
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/storefront', () => ({
   getStorefront: (...a: unknown[]) => getStorefront(...a),
-  storefrontProducts: (...a: unknown[]) => storefrontProducts(...a),
+  storeShelf: (...a: unknown[]) => storeShelf(...a),
 }));
 vi.mock('@/components/storefront/StorefrontShell', () => ({
   StorefrontShell: ({ children }: { children: React.ReactNode }) => children,
@@ -79,7 +79,7 @@ const src = (f: string) => stripComments(repoFile(f));
 beforeEach(() => {
   vi.clearAllMocks();
   getStorefront.mockResolvedValue(store());
-  storefrontProducts.mockResolvedValue([]);
+  storeShelf.mockResolvedValue([]);
   bestSellers.mockResolvedValue(new Map());
 });
 

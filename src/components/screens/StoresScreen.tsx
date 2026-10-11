@@ -8,6 +8,7 @@ import { RiAlertLine, RiCheckLine, RiEqualizer2Line, RiExternalLinkLine, RiInfor
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { apiJson } from '@/lib/api-client';
+import { catalogModeAr } from '@/lib/catalog-mode';
 
 /**
  * المتجر — EVERY SHOP, ONE CARD EACH.
@@ -265,6 +266,10 @@ function Card({
   const [about, setAbout] = useStateShim(shop.about);
   const dirty = (tagline ?? '') !== (shop.tagline ?? '') || (about ?? '') !== (shop.about ?? '');
 
+  // Which catalogue this shop reads its shelf from — the fact, not the two
+  // numbers it is derived from.
+  const mode = catalogModeAr(shop.shownProducts, shop.hiddenPublishedPages);
+
   const health: { ok: boolean; label: string }[] = [
     { ok: shop.health.hasLogo, label: 'الشعار' },
     { ok: shop.health.policyPages, label: 'صفحات السياسات' },
@@ -352,6 +357,37 @@ function Card({
         <Num label="منتجات معروضة" value={shop.shownProducts} />
         <Num label="صفحات منشورة مخفية" value={shop.hiddenPublishedPages} />
       </div>
+
+      {/*
+        WHICH CATALOGUE THIS SHOP IS ON — SAID, NOT LEFT TO BE WORKED OUT.
+        The two numbers above are the inputs to the rule; neither of them is
+        the rule's answer, and the answer is what decides what a shopper
+        sees. The sentence is built in `catalog-mode.ts`, where it can be
+        asked for all three answers with real numbers.
+      */}
+      {mode.switched ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)]">
+          <RiCheckLine className="h-4 w-4 shrink-0 text-[var(--sys-success)]" />
+          {mode.text}
+        </p>
+      ) : (
+        <div className="mt-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
+          <span className="flex items-center gap-1.5 font-semibold">
+            <RiInformationLine className="h-4 w-4 shrink-0 text-[var(--sys-muted)]" />
+            {mode.text}
+          </span>
+          {mode.action && (
+            <button
+              type="button"
+              onClick={() => onOpen('/store/landing-pages')}
+              disabled={busy}
+              className="tap-safe mt-1.5 flex items-center gap-1 font-bold text-[var(--sys-primary)] underline disabled:opacity-50"
+            >
+              {mode.action}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Store health: logo · policy pages · domain · one shown product ── */}
       <ul className="mt-2 space-y-1">

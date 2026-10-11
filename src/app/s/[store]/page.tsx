@@ -5,7 +5,7 @@ import { LandingPageView } from '@/components/landing/LandingPageView';
 import { carryQuery } from '@/lib/query-string';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { getStorefront, storefrontCatalog, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storeShelf, storefrontCatalog } from '@/lib/storefront';
 import { parseSections } from '@/lib/landing-sections';
 import { paletteFor } from '@/lib/landing-theme';
 import { publicizeMedia } from '@/lib/public-media';
@@ -70,7 +70,11 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
     // campaign code carried along); otherwise the store's own products, as
     // any store shows them, until a front page is picked. A store that was
     // open before front pages existed must not go dark on the day they did.
-    const only = await storefrontProducts(store.companyId, store.id, 2);
+    // THE SHELF and not every active product: in a store that has made
+    // the switch, «how many things does this shop offer» has to mean the
+    // same here as on the grid below, or a shop with one shown page among
+    // twenty products would refuse to open on it.
+    const only = await storeShelf(store.companyId, store.id, 2);
     if (only.length === 1) redirect(`/s/${store.slug}/p/${only[0].sku}${carryQuery(await searchParams)}`);
   }
 
@@ -148,7 +152,7 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
     );
   }
 
-  const products = await storefrontProducts(store.companyId, store.id);
+  const products = await storeShelf(store.companyId, store.id);
 
   /**
    * The country's own minor unit, for the one formatter.

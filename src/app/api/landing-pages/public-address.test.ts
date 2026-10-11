@@ -12,7 +12,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => ({
   db: {
-    landingPage: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    // `count`: «has this store already switched?» — zero, the state every
+    // store starts in.
+    landingPage: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn(async () => 0) },
     // A slug change suggests a redirect and stands down any redirect the new
     // slug would shadow — see src/lib/store-redirects.ts.
     storeRedirect: { upsert: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 0 }) },

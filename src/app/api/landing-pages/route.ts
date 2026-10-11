@@ -202,6 +202,19 @@ export async function POST(req: Request) {
       built = buildTemplate(template || 'classic');
     }
 
+    /**
+     * HAS THIS STORE ALREADY SWITCHED TO THE NEW CATALOGUE?
+     *
+     * Read once, before the page is written, because it decides the page's
+     * `showInStore` below — and because it is the answer about the store as
+     * it stands NOW, before this page joins it.
+     */
+    const storeAlreadySwitched =
+      !!storeId &&
+      (await db.landingPage.count({
+        where: { companyId, storeId, isPublished: true, showInStore: true },
+      })) > 0;
+
     try {
       const lp = await db.landingPage.create({
         data: {
@@ -222,17 +235,29 @@ export async function POST(req: Request) {
           sections: htmlContent ? null : JSON.stringify(built.sections),
           createdById: user.id,
           /**
-           * SHOWN WHEN IT SELLS SOMETHING.
+           * SHOWN WHEN THE STORE HAS ALREADY SWITCHED — NEVER BEFORE.
            *
-           * A page created with a product is meant for the shop window from
-           * the start — the catalogue shows a product only through its
-           * shown page, so a page born hidden would keep its own product
-           * out of the shop until somebody finds the toggle. A page with no
-           * product is a campaign page: reachable by its link and nowhere
-           * else, as before. Unpublished still never appears, whatever the
-           * flag says — the flag is intent, publishing is the act.
+           * This read `!!productId`, and that one `!!` was a hole in the
+           * owner's rule ①. The catalogue switches the moment the store
+           * has its first shown page, so the FIRST new page carrying a
+           * product switched the whole store on its own — and because it
+           * was then the only shown page, the shop that had twenty
+           * products in its window came back showing one. No press, no
+           * warning, and the seller's own «صفحة جديدة» did it.
+           *
+           * So the question this answers is not «does this page sell
+           * something» but «has this store already switched». In a
+           * switched store a new page's product belongs in the window
+           * immediately — leaving it out would be the mirror bug, a
+           * product invisible until somebody found the toggle. In a store
+           * still on its old catalogue nothing moves, and «اعرض كل
+           * الصفحات المنشورة» stays the one thing that switches it: one
+           * press, one update, and the shop is never empty in between.
+           *
+           * Unpublished still never appears whatever this says — the flag
+           * is intent, publishing is the act.
            */
-          showInStore: !!productId,
+          showInStore: !!productId && storeAlreadySwitched,
         },
       });
       // A LIVE PAGE ALWAYS BEATS A REDIRECT. A slug can be free today

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
-import { getStorefront, storefrontProducts } from '@/lib/storefront';
+import { getStorefront, storeShelf } from '@/lib/storefront';
 import { MAX_RECENT } from '@/lib/recently-viewed';
 
 /**
@@ -12,9 +12,10 @@ import { MAX_RECENT } from '@/lib/recently-viewed';
  * either. So the row has to ask what those ids are, and this answers.
  *
  * IT ANSWERS ONLY ABOUT THIS SHOP, and only about products it would list
- * anyway: `storefrontProducts` is the same read the grid uses, so a
- * product that has been retired or emptied is simply absent — the row
- * shrinks rather than linking somewhere gone.
+ * anyway: `storeShelf` is the same read the grid uses — so a product that
+ * has been retired, emptied, or taken off the shelf by the store's own
+ * catalogue rule is simply absent, and the row shrinks rather than linking
+ * somewhere gone.
  *
  * AND IT DECIDES NO PRICE. The «من» figure is the one the grid shows,
  * computed where every other one is.
@@ -78,7 +79,7 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: 'هذا المتجر غير موجود' }, { status: 404, headers: CORS });
     }
 
-    const shelf = await storefrontProducts(store.companyId, store.id);
+    const shelf = await storeShelf(store.companyId, store.id);
     const byId = new Map(shelf.map((p) => [p.id, p]));
 
     return NextResponse.json(

@@ -198,13 +198,34 @@ export const getStorefront = cache(async function getStorefront(slug: string): P
 export async function storefrontProducts(
   companyId: string,
   storeId: string,
-  limit = 60
+  limit = 60,
+  /**
+   * NARROWED TO THESE PRODUCTS, AND NONE OF THEM CUT BY THE LIMIT.
+   *
+   * Passed only by `storeShelf`, for a store that has made the switch.
+   * The narrowing is in the WHERE and not a `.filter()` on the result for
+   * one reason: taking 60 rows newest-first and filtering afterwards
+   * silently drops a shown product that happens to be the 61st, and a
+   * shop whose window loses its oldest goods as it grows is a bug nobody
+   * reports because nothing looks broken.
+   *
+   * `take` therefore ignores `limit` here. The count is bounded by how
+   * many pages the seller has published and shown, which is their own
+   * doing and small.
+   */
+  onlyIds?: string[]
 ): Promise<StorefrontProduct[]> {
   const now = new Date();
   const products = await db.product.findMany({
-    where: { companyId, storeId, status: 'ACTIVE', basePrice: { gt: 0 } },
+    where: {
+      companyId,
+      storeId,
+      status: 'ACTIVE',
+      basePrice: { gt: 0 },
+      ...(onlyIds ? { id: { in: onlyIds } } : {}),
+    },
     orderBy: { createdAt: 'desc' },
-    take: limit,
+    take: onlyIds ? onlyIds.length : limit,
     select: {
       id: true, sku: true, name: true, description: true, image: true, basePrice: true, attributes: true,
       slug: true, previousSlugs: true,
@@ -246,6 +267,64 @@ export async function storefrontProducts(
       attributes: parseProductAttributes(p.attributes, parseCategoryAttributes(p.category?.attributeSchema ?? null)),
     };
   });
+}
+
+/**
+ * THE PRODUCTS THIS STORE HAS PUT A SHOWN PAGE BEHIND.
+ *
+ * One read, one place, so «ما الذي في واجهة هذا المتجر؟» has a single
+ * answer. Published AND shown are two different things: publishing is
+ * what makes a page exist for the public, `showInStore` is whether it
+ * belongs in the shop window, and a campaign page is deliberately the
+ * first without the second.
+ */
+export async function shownPageProductIds(companyId: string, storeId: string): Promise<Set<string>> {
+  const shown = await db.landingPage.findMany({
+    where: { companyId, storeId, showInStore: true, isPublished: true },
+    select: { productId: true },
+  });
+  return new Set(shown.map((p) => p.productId).filter((id): id is string => !!id));
+}
+
+/**
+ * THE SHELF — ONE RULE, ONE FUNCTION, EVERY SURFACE.
+ *
+ * What this store offers a shopper, wherever the question is asked: the
+ * home grid, `/shop`, the search and cards doors, the sitemap, the
+ * catalogue block, «يُشترى معه عادةً».
+ *
+ * ── THE RULE ──
+ *
+ * A store that has at least one published shown page selling a product
+ * has made the switch: its shelf is the products those pages sell, and
+ * nothing else. A store that has none keeps exactly the shelf it always
+ * had — every active product, as before.
+ *
+ * ── WHY IT IS ONE FUNCTION ──
+ *
+ * Stage 1 put this rule inside `storefrontCatalog` alone, so it reached
+ * only the `catalog` block of a **published** home page. Every other
+ * listing went on reading all active products: the default home grid,
+ * `/shop`, the public search and cards APIs, the sitemap. A store without
+ * a published home — the owner's own — showed precisely what it had shown
+ * before, which is how a shipped rule can be true and invisible at the
+ * same time. `storefront-shelf.test.ts` sweeps the source and fails if any
+ * surface grows a shelf read of its own again.
+ *
+ * ── WHY «WITH A PRODUCT» ──
+ *
+ * A shown page with no product sells nothing, so it cannot put anything
+ * on a shelf. Counting it as the switch would empty the store — the one
+ * thing the owner's answer ① forbids: «الكتالوج ما بصير يفضى».
+ */
+export async function storeShelf(
+  companyId: string,
+  storeId: string,
+  limit = 60
+): Promise<StorefrontProduct[]> {
+  const shown = await shownPageProductIds(companyId, storeId);
+  if (shown.size === 0) return storefrontProducts(companyId, storeId, limit);
+  return storefrontProducts(companyId, storeId, limit, [...shown]);
 }
 
 /**
@@ -369,18 +448,13 @@ export async function storefrontCatalog(
    * in a single update, so the switch and the press are one moment, and
    * the store is never empty in between.
    */
-  const shown = await db.landingPage.findMany({
-    where: { companyId, storeId, showInStore: true, isPublished: true },
-    select: { productId: true },
-  });
-  const shownProductIds = new Set(
-    shown.map((p) => p.productId).filter((id): id is string => !!id)
-  );
+  const shownProductIds = await shownPageProductIds(companyId, storeId);
 
   if (shownProductIds.size > 0) {
-    const products = (await storefrontProducts(companyId, storeId)).filter((p) =>
-      shownProductIds.has(p.id)
-    );
+    // `storeShelf` reads the same rule again and narrows in the query, so a
+    // shown product is never the one cut by the limit. This used to take 60
+    // products and filter afterwards.
+    const products = await storeShelf(companyId, storeId);
     const seen = new Map<string, string>();
     for (const p of products) if (p.category) seen.set(p.category.id, p.category.name);
     const items: CatalogItem[] = products.map((p) => ({
@@ -409,6 +483,10 @@ export async function storefrontCatalog(
         product: { select: { image: true, basePrice: true, categoryId: true } },
       },
     }),
+    // The direct read and not `storeShelf`: this branch is only reached
+    // when the rule has already been asked and answered «no shown page», so
+    // going through the shelf would ask the same question a second time for
+    // an answer that cannot have changed.
     storefrontProducts(companyId, storeId),
   ]);
 

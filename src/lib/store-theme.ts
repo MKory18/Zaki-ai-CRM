@@ -446,6 +446,48 @@ export function cartBarApplies(storeType: string | null | undefined): boolean {
   return storeType !== 'SINGLE_PRODUCT';
 }
 
+/**
+ * WHO DRAWS THE SHOP'S CHROME — ASKED ONCE, ANSWERED ONCE.
+ *
+ * A landing page can be served in three situations, and only one of them
+ * wants the page to put a header and a footer around itself:
+ *
+ *   `/lp/<slug>` — an advert of its own. It keeps its own clothes; a
+ *   header full of links is a way out of an advert.
+ *
+ *   A Single Product store's FRONT. Such a store's address renders this
+ *   page, and it used to render it bare: no logo, no shop name, no menus.
+ *   Everything the seller set under «القوالب» never appeared, on the only
+ *   page that store has. So it wears the shop's chrome — unless the
+ *   seller turned `header.onFrontPage` off, which is their switch.
+ *
+ *   INSIDE the shop, at `/s/<store>/p/<handle>`. Here the page is a panel
+ *   of a screen that **has already drawn the shell** — with the «كل
+ *   المنتجات» back link in it, which only that route knows. A page that
+ *   added a second one gave an open store's product page two headers, two
+ *   footers and the shell stylesheet twice.
+ *
+ * `inStore` AND NOT THE THEME FLAG for that last one. The flag is the
+ * seller's answer to «how should my front page look», and it defaulted to
+ * yes — so the in-store case inherited a yes to a question nobody had
+ * asked about it, and the only way to get one header was for the seller
+ * to disfigure their front page. Whether a shell is already on the screen
+ * is the caller's fact, not a setting.
+ */
+export function wearsShopChrome(opts: {
+  /** Served as a store's front page (as opposed to `/lp/<slug>`). */
+  asFront: boolean;
+  /** Served inside a shop screen that has already drawn the shell. */
+  inStore: boolean;
+  /** The store is known by a public slug — without one there is no shop to wear. */
+  hasSlug: boolean;
+  theme: StoreTheme;
+}): boolean {
+  if (opts.inStore) return false;
+  if (!opts.asFront || !opts.hasSlug) return false;
+  return opts.theme.header?.onFrontPage !== false;
+}
+
 /** The checkout fields this shop shows, in order, with nothing lost or doubled. */
 export function checkoutOrder(theme: StoreTheme): CheckoutField[] {
   const wanted = theme.checkout?.fieldOrder ?? [];
