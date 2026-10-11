@@ -122,6 +122,23 @@ Rules:
 الملف الشخصي              /admin/profile
 ```
 
+**11. واجهة المتجر** — added 2026-10-11 (was missing; the registry carries
+it as group `storefront`)
+```
+المتجر                    /store
+صفحات الهبوط              /store/landing-pages
+التصميم                   /store/design
+القوالب                   /store/themes
+القوائم                   /store/menus
+الصفحات التعريفية والسياسات /store/pages
+البحث والفلاتر            /store/search
+اللغات                    /store/languages
+المسارات                  /store/routes
+الدومين                   /store/domain
+```
+`/store` lists every shop on one card each. The old
+`/store/single-product` address redirects to `/store` permanently.
+
 ## Distinctions that must not collapse
 
 - `/assistant` is a CHAT assistant: ask about a product, an order, a

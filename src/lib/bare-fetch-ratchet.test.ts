@@ -52,7 +52,6 @@ const DEBT = new Map<string, number>([
   ['src/components/screens/AssistantScreen.tsx', 3],
   ['src/components/screens/FinanceProfitScreen.tsx', 3],
   ['src/components/screens/ManufacturingScreen.tsx', 3],
-  ['src/components/screens/StorefrontsScreen.tsx', 3],
   ['src/components/screens/users/CreateUserModal.tsx', 3],
   ['src/components/screens/UsersScreen.tsx', 3],
   ['src/components/settings/AdAccountsCard.tsx', 3],
@@ -68,6 +67,10 @@ const DEBT = new Map<string, number>([
   ['src/components/screens/PerformanceScreen.tsx', 1],
   ['src/components/screens/ProfileScreen.tsx', 1],
   ['src/components/screens/StoreDesignScreen.tsx', 1],
+  // The all-stores screen: everything through apiJson except the
+  // context switch, which must stay a bare fetch + full navigation
+  // (the selection cookie is read server-side on the next render).
+  ['src/components/screens/StoresScreen.tsx', 1],
   ['src/components/screens/users/UserCommissionCurrency.tsx', 1],
   ['src/components/screens/users/UserSalary.tsx', 1],
   ['src/components/screens/users/UserShift.tsx', 1],

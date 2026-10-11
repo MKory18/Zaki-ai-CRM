@@ -168,10 +168,13 @@ describe('the shop’s screens are in the shop’s tab', () => {
   it('the front page and the landing pages sit with the design', () => {
     const storefront = NAV.find((g) => g.key === 'storefront')!;
     const paths = storefront.routes.map((r) => r.path);
-    expect(paths).toContain('/store/single-product');
+    expect(paths).toContain('/store');
     expect(paths).toContain('/store/landing-pages');
-    // The shop comes before the things that dress it.
-    expect(paths.indexOf('/store/single-product')).toBeLessThan(paths.indexOf('/store/design'));
+    // The shop comes before the things that dress it. The old
+    // single-product address redirects to /store permanently instead of
+    // living on as a second entry for the same thing.
+    expect(paths).not.toContain('/store/single-product');
+    expect(paths.indexOf('/store')).toBeLessThan(paths.indexOf('/store/design'));
 
     const growth = NAV.find((g) => g.key === 'growth')!;
     for (const gone of ['/growth/landing-pages', '/growth/single-product-stores']) {
@@ -189,7 +192,7 @@ describe('the shop’s screens are in the shop’s tab', () => {
   });
 
   it('and the store card reaches its design, templates and icon', () => {
-    const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
+    const src = stripComments(repoFile('src/components/screens/StoresScreen.tsx'));
     for (const path of ['/store/design', '/store/themes']) {
       expect(src, `البطاقة لا تصل إلى ${path}`).toContain(path);
     }
@@ -209,7 +212,7 @@ describe('the shop’s screens are in the shop’s tab', () => {
    * on the way instead of asking.
    */
   it('and every one of them opens, from whichever store you are standing in', () => {
-    const src = stripComments(repoFile('src/components/screens/StorefrontsScreen.tsx'));
+    const src = stripComments(repoFile('src/components/screens/StoresScreen.tsx'));
     // …only when standing somewhere else, and it is the same call the
     // header's switcher makes, carrying THIS card's store…
     expect(src, 'لا شرط على المتجر الحالي').toMatch(/if \(!shop\.current\) \{/);

@@ -116,6 +116,9 @@ const nextConfig: NextConfig = {
       // The tracking screen's old address, kept alive for bookmarks and for
       // links already pasted into notes and chats.
       { source: '/settings/pixels', destination: '/settings/tracking', permanent: true },
+      // The single-product shop is one card on /store now: its old address
+      // moves bookmarks and pasted links along permanently.
+      { source: '/store/single-product', destination: '/store', permanent: true },
     ];
   },
   typescript: {

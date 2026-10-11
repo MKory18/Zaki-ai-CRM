@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { activeOffersFor } from '@/lib/offers';
 import { getStorefront, storefrontProduct } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
+import { LandingPageView } from '@/components/landing/LandingPageView';
 import Link from 'next/link';
 import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
@@ -115,6 +116,10 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
     redirect(`/s/${store.slug}${carryQuery(await searchParams)}`);
   }
 
+  // A single-product shop's product page IS its home page, so there is
+  // nowhere to go back to.
+  const back = store.type === 'SINGLE_PRODUCT' ? undefined : { href: `/s/${store.slug}`, label: 'كل المنتجات' };
+
   const product = await storefrontProduct(store.companyId, store.id, sku);
   if (!product) notFound();
 
@@ -131,6 +136,41 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
    */
   if (product.handle !== sku) {
     redirect(`/s/${store.slug}/p/${encodeURIComponent(product.handle)}`);
+  }
+
+  /**
+   * THE PRODUCT'S PAGE, INSIDE THE SHOP.
+   *
+   * When this product has a published page flagged `showInStore`, the card
+   * in the catalogue points here — and here renders THAT page, through the
+   * same `LandingPageView` `/lp/<slug>` uses, inside the store's shell.
+   * One renderer, so the two can never drift apart; one address, so the
+   * index keeps a single canonical URL; one render, so the visit and the
+   * `?c=` attribution are counted exactly once.
+   *
+   * Several shown pages for one product still make one card, so one of
+   * them answers here: the oldest, the way every shared address in this
+   * codebase resolves.
+   */
+  const shownPage = await db.landingPage.findFirst({
+    where: {
+      companyId: store.companyId,
+      storeId: store.id,
+      productId: product.id,
+      showInStore: true,
+      isPublished: true,
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  if (shownPage) {
+    const sp = await searchParams;
+    const campaign = typeof sp.c === 'string' ? sp.c : undefined;
+    return (
+      <StorefrontShell store={store} back={back}>
+        <LandingPageView target={{ frontPageId: shownPage.id, storeId: store.id, campaign }} />
+      </StorefrontShell>
+    );
   }
 
   // The same offers the order path will charge from. A listing that reads a
@@ -172,10 +212,6 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     })
   ).map((r) => r.name);
-
-  // A single-product shop's product page IS its home page, so there is
-  // nowhere to go back to.
-  const back = store.type === 'SINGLE_PRODUCT' ? undefined : { href: `/s/${store.slug}`, label: 'كل المنتجات' };
 
   // A storefront page is a selling page: the store's company's pixels, the
   // ones not limited to landing pages.

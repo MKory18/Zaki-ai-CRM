@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Input';
-import { apiJson } from '@/lib/api-client';
-import { STORE_TYPE_LABEL } from '@/lib/store-types';
-import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiPaletteLine, RiStore2Line } from '@remixicon/react';
+import React from 'react';
+import { RiExternalLinkLine, RiPaletteLine, RiStore2Line } from '@remixicon/react';
+import { EditingStoreBar } from '@/components/shell/EditingStoreBar';
 
 /**
- * Turning a store's public face on, and what it says about itself.
+ * WHERE A STORE'S FACE IS MANAGED — A SIGNPOST, NOT A SECOND EDITOR.
  *
- * NOT what it looks like. The colour, the fonts, the header, the footer,
- * the product display and the checkout are the store's template, and they
- * live in one place — «واجهة المتجر ← القوالب». This screen links there.
- *
- * The theme is not merely un-editable here: it is not SENT here either. It
- * used to ride along in this form's PATCH as a plain landing theme, so
- * saving a tagline would have written back a theme with the header, the
- * footer and the checkout settings missing from it.
+ * Open/close, tagline and about moved to the store's card at `/store`:
+ * one editor, so the two can never disagree. This panel keeps a single
+ * link there, plus the rows that genuinely live here: the read-only
+ * domain (edited on its own screen, with DNS checks) and the link to
+ * the templates.
  */
 
 interface StoreRow {
@@ -26,58 +20,15 @@ interface StoreRow {
   slug: string;
   type: 'SINGLE_PRODUCT' | 'MULTI_PRODUCT';
   storefrontEnabled?: boolean;
-  tagline?: string | null;
-  about?: string | null;
   domain?: string | null;
   landingPageId?: string | null;
 }
 
-
-export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSaved?: () => void }) {
-  const [enabled, setEnabled] = useState(!!store.storefrontEnabled);
-  const [type, setType] = useState(store.type);
-  const [form, setForm] = useState({
-    tagline: store.tagline ?? '',
-    about: store.about ?? '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  const reset = useCallback(() => {
-    setEnabled(!!store.storefrontEnabled);
-    setType(store.type);
-    setForm({
-      tagline: store.tagline ?? '',
-      about: store.about ?? '',
-    });
-  }, [store]);
-
-  useEffect(() => { reset(); }, [reset]);
-
-  async function save() {
-    setSaving(true);
-    setMsg(null);
-    try {
-      await apiJson(`/api/geo/stores/${store.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          storefrontEnabled: enabled,
-          type,
-          tagline: form.tagline.trim() || null,
-          about: form.about.trim() || null,
-        }),
-      });
-      setMsg({ ok: true, text: 'تم الحفظ' });
-      onSaved?.();
-    } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحفظ' });
-    } finally {
-      setSaving(false);
-    }
-  }
-
+export function StorefrontSettings({ store }: { store: StoreRow; onSaved?: () => void }) {
   return (
     <div className="space-y-4 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
+      {/* Which store this edits — same bar every storefront screen carries. */}
+      <EditingStoreBar />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
@@ -90,7 +41,7 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
           </p>
         </div>
 
-        {enabled && (
+        {store.storefrontEnabled && (
           <a
             href={`/s/${store.slug}`}
             target="_blank"
@@ -102,85 +53,39 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
         )}
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[var(--sys-foreground)]">
-        <input
-          type="checkbox"
-          className="h-4 w-4 cursor-pointer accent-[var(--sys-primary)]"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-        />
-        المتجر مفتوح للزوار
-      </label>
-
-      {!enabled && (
-        <p className="rounded-lg bg-[var(--sys-surface)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          مغلق الآن: الرابط يقرأ كأنه غير موجود، ولا يقبل طلبات. متجر غير مفتوح
-          لا يجوز أن يكون قابلاً للتصفّح.
-        </p>
-      )}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Select label="نوع المتجر" value={type} onChange={(e) => setType(e.target.value as StoreRow['type'])}>
-          <option value="MULTI_PRODUCT">متعدد المنتجات — صفحة رئيسية بالمنتجات</option>
-          <option value="SINGLE_PRODUCT">{STORE_TYPE_LABEL.SINGLE_PRODUCT} — واجهته صفحة هبوط تختارها</option>
-        </Select>
-        <Input
-          label="سطر تعريفي"
-          placeholder="منتجات العناية الأصلية"
-          value={form.tagline}
-          onChange={(e) => setForm({ ...form, tagline: e.target.value })}
-        />
-        {/* The domain is NOT edited here. It has one editor, which checks
-            DNS and re-verifies; this form wrote the address and left the
-            old verification standing, so the dashboard showed a tick for a
-            host nobody had checked while the customer met an error page. */}
-        <div>
-          <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نطاق خاص</span>
-          <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            {store.domain ? (
-              <span dir="ltr" className="font-medium text-[var(--sys-foreground)]">{store.domain}</span>
-            ) : (
-              'لا نطاق خاص.'
-            )}{' '}
-            يُضبط من{' '}
-            <a href="/store/domain" className="font-medium text-[var(--sys-primary)] hover:underline">
-              شاشة الدومين
-            </a>{' '}
-            — هناك يُفحص الـDNS فعلاً ويُعاد التحقق عند كل تغيير.
-          </p>
-        </div>
-      </div>
+      {/* The one place these are edited now. */}
+      <a
+        href="/store"
+        className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+      >
+        <span className="flex items-center gap-1.5">
+          <RiStore2Line className="h-4 w-4" />
+          الفتح والإغلاق والسطر التعريفي والنبذة
+        </span>
+        <span className="font-semibold">في «المتجر» ←</span>
+      </a>
 
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نبذة عن المتجر</label>
-        <textarea
-          rows={2}
-          value={form.about}
-          onChange={(e) => setForm({ ...form, about: e.target.value })}
-          placeholder="نوصّل لكل المحافظات، والدفع عند الاستلام."
-          className="w-full min-w-0 resize-y rounded-lg border border-[var(--sys-border-input)] px-3 py-2 text-sm outline-none focus:border-[var(--sys-primary)]"
-        />
+        <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">نطاق خاص</span>
+        <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+          {store.domain ? (
+            <span dir="ltr" className="font-medium text-[var(--sys-foreground)]">{store.domain}</span>
+          ) : (
+            'لا نطاق خاص.'
+          )}{' '}
+          يُضبط من{' '}
+          <a href="/store/domain" className="font-medium text-[var(--sys-primary)] hover:underline">
+            شاشة الدومين
+          </a>{' '}
+          — هناك يُفحص الـDNS فعلاً ويُعاد التحقق عند كل تغيير.
+        </p>
       </div>
 
-      {/* A Single Product store with a front page LOOKS like that page: its
-          colour, font and words come from the page editor. Said here, where
-          the seller would otherwise change a colour and see nothing move.
-          The logo and the support phone still count — waybills print them. */}
-      {/*
-        A SINGLE-PRODUCT STORE WITH NO PAGE CANNOT SELL, AND SAID NOTHING.
-
-        This block used to require `landingPageId`, so the note appeared
-        only once the store was already finished — and the state that
-        needed it, a store whose type says «its front IS a landing page»
-        while no page is picked, showed nothing at all. Same shape as a
-        courier with no fee rows: the setup that cannot work looks
-        identical to the one that can.
-      */}
       {store.type === 'SINGLE_PRODUCT' && !store.landingPageId && (
         <p className="rounded-lg border border-[var(--sys-warning)]/50 bg-[var(--sys-warning-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-warning)]">
           هذا المتجر واجهتُه صفحةُ هبوط، ولم تُختَر صفحةٌ بعد — فلا شيء يُعرض لزائره.{' '}
           <a
-            href="/store/single-product"
+            href="/store"
             className="font-semibold underline"
           >
             اختر صفحته الآن
@@ -191,20 +96,13 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
       {store.type === 'SINGLE_PRODUCT' && store.landingPageId && (
         <p className="rounded-lg bg-[var(--sys-surface-strong)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-foreground)]">
           واجهة هذا المتجر صفحة هبوط — ألوانها وخطها ونصوصها تُعدَّل من{' '}
-          <a href="/store/single-product" className="font-semibold text-[var(--sys-primary)] hover:underline">
-            متجر Single Product ← صمّم الواجهة
+          <a href="/store" className="font-semibold text-[var(--sys-primary)] hover:underline">
+            المتجر ← بطاقة المتجر
           </a>
           . اللون والنصوص هنا لا تظهر عليها؛ الشعار ورقم الدعم يُطبعان على البوالص.
         </p>
       )}
 
-      {/* THE LOOK MOVED, AND IT MOVED WHOLE.
-          The colour, the mood, the font and the corners are the store's
-          template, and a template has one editor — «واجهة المتجر ← القوالب»,
-          where the header, the footer, the product display and the checkout
-          are set beside them. Four controls left here would have been four
-          fields in two places, which is how a shop ends up with two answers
-          to what colour it is. */}
       <a
         href="/store/themes"
         className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
@@ -215,19 +113,6 @@ export function StorefrontSettings({ store, onSaved }: { store: StoreRow; onSave
         </span>
         <span className="font-semibold">في «واجهة المتجر ← القوالب» ←</span>
       </a>
-
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <RiCheckLine className="mb-0.5 mr-1 inline h-4 w-4" />}
-            {msg.text}
-          </span>
-        )}
-        <Button variant="outline" size="sm" onClick={reset} disabled={saving}>تراجع</Button>
-        <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />} احفظ
-        </Button>
-      </div>
     </div>
   );
 }

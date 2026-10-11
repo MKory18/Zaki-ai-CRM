@@ -221,6 +221,18 @@ export async function POST(req: Request) {
           theme: htmlContent ? null : JSON.stringify(built.theme),
           sections: htmlContent ? null : JSON.stringify(built.sections),
           createdById: user.id,
+          /**
+           * SHOWN WHEN IT SELLS SOMETHING.
+           *
+           * A page created with a product is meant for the shop window from
+           * the start — the catalogue shows a product only through its
+           * shown page, so a page born hidden would keep its own product
+           * out of the shop until somebody finds the toggle. A page with no
+           * product is a campaign page: reachable by its link and nowhere
+           * else, as before. Unpublished still never appears, whatever the
+           * flag says — the flag is intent, publishing is the act.
+           */
+          showInStore: !!productId,
         },
       });
       // A LIVE PAGE ALWAYS BEATS A REDIRECT. A slug can be free today
