@@ -65,8 +65,32 @@ describe('what the route does with it', () => {
     // Clearing the secret while leaving the codes alive would leave the
     // old phone's escape hatch working for an account just reset.
     expect(src).toMatch(/\$transaction/);
-    expect(src).toMatch(/totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null/);
+    expect(src).toMatch(/totpSecretEnc: null,[\s\S]{0,80}totpEnabledAt: null,[\s\S]{0,80}totpLastStep: null/);
     expect(src).toMatch(/twoFactorRecoveryCode\.deleteMany/);
+  });
+
+  /**
+   * AND HIS OPEN SESSIONS END WITH IT.
+   *
+   * A reset happens because the phone was lost or replaced, or because
+   * somebody is suspected of having the account. Clearing the secret alone
+   * left every browser he was already signed in on working exactly as
+   * before — so whoever the reset was meant to lock out stayed inside
+   * until the session expired on its own.
+   */
+  it('and ends his open sessions in the same transaction', () => {
+    const src = route();
+    expect(src, 'جلساتُه القائمةُ تَبقى مفتوحةً بعدَ إعادةِ الضبط').toMatch(
+      /tokenVersion: \{ increment: 1 \}/
+    );
+    // Inside the transaction, not after it: a reset that half-happened
+    // would leave an account with no second factor and a live session.
+    const tx = src.slice(src.indexOf('$transaction'), src.indexOf('twoFactorRecoveryCode'));
+    expect(tx, 'الزيادةُ خارجَ المعاملة').toMatch(/tokenVersion/);
+  });
+
+  it('and says so, so the owner knows what the press did', () => {
+    expect(route()).toMatch(/أُغلقت جلساته/);
   });
 
   it('refuses an account that has nothing enrolled', () => {

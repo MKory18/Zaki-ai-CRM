@@ -44,7 +44,16 @@ export default function RegisterPage() {
 
       setSuccess(data.message);
       setTimeout(() => {
-        router.push(data.status === 'PENDING' ? '/pending' : '/');
+        /*
+         * TO THE LOGIN SCREEN, NOT INTO THE SYSTEM.
+         *
+         * Registering no longer sets a session cookie: a new account has
+         * no second factor enrolled yet, and `/login` is the one door that
+         * asks for it. Pushing to `/` here would land on a screen with no
+         * session and bounce back anyway — the redirect is the honest
+         * version of what now happens.
+         */
+        router.push(data.status === 'PENDING' ? '/pending' : '/login');
         router.refresh();
       }, 1200);
     } catch (err: any) {

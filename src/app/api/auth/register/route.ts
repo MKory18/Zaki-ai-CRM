@@ -92,27 +92,28 @@ export async function POST(req: Request) {
       },
     });
 
-    // Log the user in (they will land on the pending-approval screen)
-    const token = await createSessionToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role as any,
-      status: user.status as any,
-      companyId: user.companyId,
-      tv: user.tokenVersion,
-    });
-
-    const response = NextResponse.json({
+    /*
+     * ── NO SESSION IS CREATED HERE EITHER ──
+     *
+     * Registering used to sign a token and set the cookie. That is a way
+     * into the system that never passes `stepFor`, and now that every
+     * account carries a second factor it would be the way around it: a
+     * brand-new account is precisely one with `totpEnabledAt` null, which
+     * is what `enrol` exists for.
+     *
+     * The very first SUPER_ADMIN matters most here, not least: the account
+     * that can do everything must not be the one account that got in
+     * without enrolling.
+     */
+    return NextResponse.json({
       success: true,
       status: user.status,
       role: user.role,
+      signIn: true,
       message: isInitialSuperAdmin
-        ? 'تم إنشاء حساب المدير الأعلى بنجاح'
+        ? 'تم إنشاء حساب المدير الأعلى بنجاح — سجّل دخولك الآن'
         : 'تم إنشاء حسابك بنجاح وهو الآن بانتظار موافقة المدير',
     });
-
-    response.cookies.set({ name: COOKIE_NAME, value: token, ...sessionCookieOptions(true) });
-    return response;
   } catch (error: any) {
     if (error?.code === 'P2002') {
       return NextResponse.json({ error: 'هذا البريد الإلكتروني مسجل مسبقاً' }, { status: 409 });

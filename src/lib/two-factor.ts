@@ -38,7 +38,30 @@ export const TWO_FACTOR_ROLES = [
   'SETTLEMENT_OFFICER',
 ] as const;
 
-export function requiresTwoFactor(role: string): boolean {
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * EVERY ACCOUNT NOW CARRIES ONE — THE OWNER'S DECISION, AND IT REVERSES
+ * THE PARAGRAPH ABOVE.
+ *
+ * That paragraph argued a moderator or a warehouse keeper should be left
+ * out, because «a second factor on a phone that lives in a warehouse is a
+ * phone that gets shared». The owner has overruled it, and the reason is
+ * on the other side of the same fact: MODERATOR is the DEFAULT role for a
+ * new account, and a moderator reads customers' names, phones and
+ * addresses all day. The account most likely to exist is the account that
+ * had no second factor at all.
+ *
+ * `TWO_FACTOR_ROLES` is kept rather than deleted: `requiresTwoFactor` is
+ * now true for everybody, and the list still records which roles the rule
+ * started with — for anyone reading the history of this decision.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export function requiresTwoFactor(_role: string): boolean {
+  return true;
+}
+
+/** The roles the rule began with, before it was widened to every account. */
+export function wasOriginallyRequired(role: string): boolean {
   return (TWO_FACTOR_ROLES as readonly string[]).includes(role);
 }
 
@@ -46,6 +69,12 @@ export function requiresTwoFactor(role: string): boolean {
 export type TwoFactorStep = 'none' | 'enrol' | 'verify';
 
 export function stepFor(user: { role: string; totpEnabledAt: Date | null }): TwoFactorStep {
+  /*
+   * `requiresTwoFactor` is true for every role now, so this is «have you
+   * enrolled yet». It is left reading the function rather than being
+   * simplified away: the day somebody wants a role exempted again, there
+   * is exactly one place to say so.
+   */
   if (!requiresTwoFactor(user.role)) return 'none';
   return user.totpEnabledAt ? 'verify' : 'enrol';
 }

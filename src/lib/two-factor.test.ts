@@ -33,6 +33,7 @@ import {
   normaliseRecovery,
   requiresTwoFactor,
   stepFor,
+  wasOriginallyRequired,
 } from './two-factor';
 import { currentCode, generateSecret, stepAt } from './totp';
 import { repoFile, stripComments } from './guard-source';
@@ -44,11 +45,27 @@ describe('who must carry one', () => {
     }
   });
 
-  it('and nobody else — a shared warehouse phone is not a second factor', () => {
-    for (const role of ['MODERATOR', 'CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'WAREHOUSE', 'DELIVERY_MANAGER', 'CONFIRMATION_SUPERVISOR', 'PENDING_USER']) {
-      expect(requiresTwoFactor(role), role).toBe(false);
+  /**
+   * AND NOW EVERYBODY ELSE TOO — THE OWNER REVERSED THIS.
+   *
+   * This test used to assert the opposite, under «a shared warehouse phone
+   * is not a second factor». The owner's reason for overruling it is the
+   * other side of the same fact: MODERATOR is the DEFAULT role for a new
+   * account, and a moderator reads customers' names, phones and addresses
+   * all day. The account most likely to exist was the one with no second
+   * factor at all.
+   */
+  it('and now every other role as well, including a custom one', () => {
+    for (const role of ['MODERATOR', 'CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'WAREHOUSE', 'DELIVERY_MANAGER', 'CONFIRMATION_SUPERVISOR', 'PENDING_USER', 'دور من صنع الشركة']) {
+      expect(requiresTwoFactor(role), role).toBe(true);
     }
+  });
+
+  it('and the roles it started with are still recorded', () => {
+    // Kept, not deleted: the history of the decision stays readable.
     expect(TWO_FACTOR_ROLES).toHaveLength(5);
+    expect(wasOriginallyRequired('ACCOUNTANT')).toBe(true);
+    expect(wasOriginallyRequired('MODERATOR')).toBe(false);
   });
 
   /**
@@ -61,7 +78,10 @@ describe('who must carry one', () => {
   it('sends a protected role to enrol when it has none yet', () => {
     expect(stepFor({ role: 'ACCOUNTANT', totpEnabledAt: null })).toBe('enrol');
     expect(stepFor({ role: 'ACCOUNTANT', totpEnabledAt: new Date() })).toBe('verify');
-    expect(stepFor({ role: 'WAREHOUSE', totpEnabledAt: null })).toBe('none');
+    // And a warehouse keeper is sent to enrol now too, where he used to
+    // be waved through with 'none'.
+    expect(stepFor({ role: 'WAREHOUSE', totpEnabledAt: null })).toBe('enrol');
+    expect(stepFor({ role: 'MODERATOR', totpEnabledAt: null })).toBe('enrol');
   });
 });
 

@@ -73,7 +73,26 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await db.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: target.id },
-        data: { totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null },
+        data: {
+          totpSecretEnc: null,
+          totpEnabledAt: null,
+          totpLastStep: null,
+          /*
+           * ── AND HIS OPEN SESSIONS END ──
+           *
+           * A reset happens because the phone was lost, replaced, or
+           * because somebody is suspected of having the account. Clearing
+           * the secret alone left every browser he was already signed in
+           * on working exactly as before — so whoever the reset was meant
+           * to lock out stayed inside until their session expired.
+           *
+           * Bumping `tokenVersion` is how this system ends sessions
+           * everywhere; `forceLogout` does the same thing. He signs in
+           * again and `stepFor` sends him to enrol, which is the whole
+           * point of having reset it.
+           */
+          tokenVersion: { increment: 1 },
+        },
       });
       await tx.twoFactorRecoveryCode.deleteMany({ where: { userId: target.id } });
     });
@@ -93,7 +112,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({
       ok: true,
       employee: target.name,
-      message: `أُعيد ضبط التحقّق بخطوتين لـ${target.name} — سيُطلب منه تسجيله من جديد عند الدخول القادم.`,
+      message: `أُعيد ضبط التحقّق بخطوتين لـ${target.name} — أُغلقت جلساته، وسيُطلب منه تسجيله من جديد عند الدخول القادم.`,
     });
   } catch (error) {
     return apiErrorResponse(error);

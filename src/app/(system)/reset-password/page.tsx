@@ -30,7 +30,12 @@ function ResetForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      router.push(data.status === 'PENDING' ? '/pending' : '/');
+      /*
+       * The password changed; the second factor is still owed. The reset
+       * door no longer signs a session, so this goes where both halves
+       * are asked.
+       */
+      router.push(data.status === 'PENDING' ? '/pending' : '/login');
       router.refresh();
     } catch (err: any) {
       setError(err.message);
