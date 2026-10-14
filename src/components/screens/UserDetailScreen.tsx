@@ -406,7 +406,7 @@ export function UserDetailScreen() {
                 <div className="space-y-2 rounded-lg border border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] p-3">
                   <p className="text-xs font-black text-[var(--sys-success)]">انسخها هلأ — ما رح تنعرض مرّة تانية</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 select-all rounded-lg bg-[var(--sys-card)] px-3 py-2 text-sm font-bold tracking-wider" dir="ltr">
+                    <code className="flex-1 select-all rounded-lg bg-[var(--sys-card)] px-3 py-2 text-sm font-bold tracking-wide" dir="ltr">
                       {shownPassword}
                     </code>
                     <button
@@ -439,7 +439,7 @@ export function UserDetailScreen() {
                       const met = typedPassword.length > 0 && r.test(typedPassword);
                       return (
                         <li key={r.key} className={`flex items-center gap-1 text-xs ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
-                          <RiCheckLine className={`h-4 w-4 shrink-0 ${met ? '' : 'opacity-30'}`} />
+                          <RiCheckLine className={`h-4 w-4 shrink-0 ${met ? '' : 'opacity-40'}`} />
                           {r.ar}
                         </li>
                       );
