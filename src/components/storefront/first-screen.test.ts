@@ -27,7 +27,27 @@ describe('the first screen is not the shop’s name', () => {
    */
   it('never falls back to the bare name', () => {
     expect(front(), 'البطل يعرض اسم المتجر وحده').not.toMatch(/store\.tagline \|\| store\.name/);
-    expect(front()).toMatch(/\{store\.tagline && \(/);
+    /*
+     * THE RULE, NOT THE SPELLING IT USED TO HAVE.
+     *
+     * The second half of this pinned `{store.tagline && (` — the exact
+     * shape of the fixed tagline box the front page drew. That box was
+     * the bug: the template had five first screens to choose between,
+     * the gallery drew all five, and the page drew this one regardless
+     * (`AUDIT-2a-delta.md` §2). Pinning its spelling would have made
+     * replacing it look like a regression.
+     *
+     * What the rule actually says is «the first screen is never the
+     * shop's name alone», and that is now a property of `StoreHero`:
+     * `store.name` reaches no variant of it, and `hero-variants` proves
+     * every variant renders something a shopper can act on.
+     */
+    expect(
+      stripComments(repoFile('src/components/storefront/StoreHero.tsx')),
+      'شاشةٌ أولى تَعرِضُ اسمَ المتجرِ وحدَه'
+    ).not.toMatch(/\bstore\.name\b|\bstoreName\b/);
+    // And the page asks the template which one to draw.
+    expect(front()).toMatch(/variant=\{layoutOf\(store\.theme, 'hero'\)\}/);
   });
 
   it('and leads with a way into the products', () => {

@@ -1,6 +1,7 @@
 'use client';
 
-import { LAYOUT_SLOTS, type LayoutSlot } from '@/lib/layout-slots';
+import { LAYOUT_SLOTS, liveVariants, retiredNoteAr, type LayoutSlot } from '@/lib/layout-slots';
+import { RiAlertLine } from '@remixicon/react';
 import { DEFAULT_LAYOUT, type StoreTheme } from '@/lib/store-theme';
 
 /**
@@ -96,8 +97,28 @@ export function LayoutPanel({
           <p className="mb-2 mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             {SLOT_LABEL[slot].hint}
           </p>
+          {/*
+            THE TEMPLATE IS HOLDING SOMETHING NOBODY BUILDS ANY MORE.
+
+            Said here, on the seller's own screen, naming both halves:
+            which variant is stored and what their shoppers actually get.
+            The renderer resolves it silently — a shopper needs a page
+            that works — so this is the one place it must be loud, or the
+            seller is reading a setting that is not true.
+          */}
+          {retiredNoteAr(slot, current[slot]) && (
+            <p className="mb-2 flex items-start gap-1.5 rounded-lg bg-[var(--sys-warning-soft)] px-2.5 py-1.5 text-xs leading-relaxed text-[var(--sys-warning)]">
+              <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0" />
+              {retiredNoteAr(slot, current[slot])}
+            </p>
+          )}
           <div role="group" aria-label={SLOT_LABEL[slot].title} className="flex flex-wrap gap-1.5">
-            {LAYOUT_SLOTS[slot].map((variant) => {
+            {/*
+              `liveVariants`, never `LAYOUT_SLOTS[slot]`: a retired name
+              stays in the catalogue so a theme already holding it still
+              parses, and a seller must not be able to newly choose one.
+            */}
+            {liveVariants(slot).map((variant) => {
               const on = current[slot] === variant;
               return (
                 <button

@@ -246,7 +246,13 @@ export default async function ShopPage({ params, searchParams }: Props) {
         ) : (
           <>
             <p className="sf-count">{shelf.total} منتج</p>
-            <div className="sf-grid">
+            {/*
+              THE CATEGORY PAGE'S DENSITY — the slot that was declared,
+              validated, offered to the seller and chosen by all ten
+              skins, and read by no renderer at all, so every shop's
+              category page looked the same. This is the renderer.
+            */}
+            <div className="sf-grid" data-catpage={layoutOf(store.theme, 'categoryPage')}>
               {shelf.items.map((p) => (
                 <ProductCard
                   key={p.id}

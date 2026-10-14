@@ -1,6 +1,28 @@
 'use client';
 
 import type { StoreSkin } from '@/lib/store-skin';
+import { StoreHero } from '@/components/storefront/StoreHero';
+import { HERO_CSS } from '@/components/storefront/styles';
+
+/**
+ * THE HERO'S OWN RULES, AND ONLY THOSE.
+ *
+ * The miniature cannot load the shop's whole stylesheet — it is a panel
+ * inside the dashboard, and `SHOP_SHEET` is the shop's entire face. So
+ * the hero's slice is exported on its own and injected here. Same rules,
+ * same `[data-hero-slot]` selectors, so the arrangement the seller sees
+ * is the arrangement the renderer applies.
+ */
+function HeroStyles() {
+  return <style dangerouslySetInnerHTML={{ __html: HERO_CSS }} />;
+}
+
+/** Stand-ins for `categoryTiles`, which needs ways in rather than goods. */
+const SAMPLE_CATEGORIES = [
+  { id: 'a', name: 'فئة' },
+  { id: 'b', name: 'فئة' },
+  { id: 'c', name: 'فئة' },
+];
 
 /**
  * A SHOP TEMPLATE, DRAWN — not described, and not photographed.
@@ -156,7 +178,25 @@ export function SkinPreview({
         // system does not ship.
         width: '100%',
         fontFamily: 'inherit',
-      }}
+        /*
+          THE SHOP'S OWN VARIABLE NAMES, FROM THIS TEMPLATE'S PALETTE.
+
+          `StoreHero`'s rules are the shop's rules, and they read
+          `--store-*`. Inside the dashboard nothing defines those, so the
+          miniature declares them here from the very palette the gallery
+          is showing. Not one colour is written literally — the same rule
+          the rest of this file has always obeyed.
+        */
+        ['--store-accent' as string]: palette.accent,
+        ['--store-accent-text' as string]: palette.accentContrast,
+        ['--store-surface' as string]: palette.surface1,
+        ['--store-card' as string]: palette.surface0,
+        ['--store-border' as string]: palette.border,
+        ['--store-text' as string]: palette.textPrimary,
+        ['--store-muted' as string]: palette.textSecondary,
+        ['--store-radius' as string]: `${radius}px`,
+        ['--store-heading-weight' as string]: '800',
+      } as React.CSSProperties}
     >
       {/* ── the header, in the arrangement this template chose ── */}
       <div
@@ -193,27 +233,39 @@ export function SkinPreview({
         <span style={{ width: phone ? 12 : 14, height: phone ? 12 : 14, borderRadius: 5, background: palette.accent }} />
       </div>
 
-      {/* ── the hero, in the arrangement this template chose ── */}
-      {layout.hero === 'offerStrip' ? (
-        <div style={{ background: palette.accent, color: palette.accentContrast, padding: '6px 10px', fontSize: 8, fontWeight: 700 }}>
-          عروض اليوم
-        </div>
-      ) : layout.hero === 'categoryTiles' ? (
-        <div style={{ display: 'flex', gap: 5, padding: '7px 8px' }}>
-          {['', '', ''].map((_, i) => (
-            <span key={i} style={{ flex: 1, height: phone ? 22 : 28, borderRadius: radius, background: palette.surface1, border: `1px solid ${palette.border}` }} />
-          ))}
-        </div>
-      ) : layout.hero === 'editorial' ? (
-        <div style={{ padding: phone ? '12px 10px' : '16px 14px', display: 'grid', gap: 4 }}>
-          <span style={{ height: 7, width: '55%', borderRadius: 3, background: palette.textPrimary, opacity: 0.85 }} />
-          <span style={{ height: 5, width: '78%', borderRadius: 3, background: palette.textSecondary }} />
-        </div>
-      ) : layout.hero === 'slider' ? (
-        <div style={{ padding: '7px 8px' }}>
-          <span style={{ display: 'block', height: phone ? 46 : 62, borderRadius: radius, background: `color-mix(in srgb, ${palette.accent} 18%, ${palette.surface1})` }} />
-        </div>
-      ) : null}
+      {/*
+        ── THE HERO — THE SHOP'S OWN COMPONENT, AT PREVIEW SCALE ──
+
+        This used to be five inline-styled approximations written here:
+        a coloured strip for `offerStrip`, three grey boxes for
+        `categoryTiles`, two bars for `editorial`, one box for `slider`,
+        and nothing for `productFirst`. They were the ONLY place any hero
+        variant was drawn — the shop itself read `layout.hero` nowhere and
+        drew a fixed tagline box instead. So this panel was showing the
+        seller five first screens they could choose between and never get.
+
+        One component now. `StoreHero` with `mini` renders the same markup
+        and takes the same variant branch the shop will take, so a hero
+        that does not exist cannot be promised here.
+      */}
+      <HeroStyles />
+      <StoreHero
+        variant={layout.hero}
+        mini
+        slug=""
+        currency={null}
+        minorUnit={0}
+        tagline={storeName}
+        about={null}
+        products={products.slice(0, 4).map((p, i) => ({
+          id: String(i),
+          name: p.name,
+          handle: '',
+          image: p.image,
+          fromPrice: p.price,
+        }))}
+        categories={SAMPLE_CATEGORIES}
+      />
 
       {/* ── the shelf, with the seller's own products ── */}
       <div

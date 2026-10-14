@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LAYOUT_SLOTS } from './layout-slots';
+import { LAYOUT_SLOTS, effectiveVariant } from './layout-slots';
 import {
   DEFAULT_THEME,
   STATE_COLORS,
@@ -541,7 +541,30 @@ export function themeForPage(
 }
 
 /** The face used for headings / menus, falling back to the body face. */
+/**
+ * THE VARIANT A SHOPPER ACTUALLY GETS, FOR ONE SLOT.
+ *
+ * Retirement is resolved HERE and not at the seven call sites. A stored
+ * value that nobody builds any more must never reach a `data-` attribute
+ * with no rule behind it — and leaving that to each renderer is how the
+ * thirteen dead variants happened in the first place: every one of them
+ * was somebody's forgotten call site.
+ *
+ * The seller still sees the truth: `retiredNoteAr` reads the RAW stored
+ * value on the theme screen and names both halves. Quiet here, loud
+ * there, which is the right way round — the shopper needs a page that
+ * works, the seller needs to know their template is holding something old.
+ */
 export function layoutOf<K extends keyof typeof DEFAULT_LAYOUT>(
+  theme: StoreTheme,
+  slot: K
+): (typeof DEFAULT_LAYOUT)[K] {
+  const stored = (theme.layout?.[slot] as (typeof DEFAULT_LAYOUT)[K] | undefined) ?? DEFAULT_LAYOUT[slot];
+  return effectiveVariant(slot, stored) as (typeof DEFAULT_LAYOUT)[K];
+}
+
+/** What the theme has stored, retirement and all — for the seller's own screen. */
+export function storedLayoutOf<K extends keyof typeof DEFAULT_LAYOUT>(
   theme: StoreTheme,
   slot: K
 ): (typeof DEFAULT_LAYOUT)[K] {

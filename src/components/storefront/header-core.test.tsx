@@ -123,8 +123,16 @@ describe('the variant reaches the page at all', () => {
     'src/lib/store-skin.ts',
     'src/lib/landing-sections.ts',
   ])('%s names the variants from the catalogue', (file) => {
+    /*
+     * THE RULE IS «FROM THE CATALOGUE», NOT «AND NOTHING ELSE FROM IT».
+     *
+     * This pinned the import line exactly, so `store-theme.ts` adding
+     * `effectiveVariant` beside `LAYOUT_SLOTS` — from the very same
+     * module — failed a guard about not keeping a second list. It was
+     * pinning a spelling. What it exists to stop is the next line's job.
+     */
     expect(stripComments(repoFile(file))).toMatch(
-      /import \{ LAYOUT_SLOTS \} from '\.\/layout-slots'/
+      /import \{[^}]*\bLAYOUT_SLOTS\b[^}]*\} from '\.\/layout-slots'/
     );
   });
 
