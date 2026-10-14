@@ -5,6 +5,8 @@ import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { hashPassword, resolveSingleCompanyId } from '@/lib/auth';
+import { maySetPassword, generatePassword } from '@/lib/two-factor-reset';
+import { passwordMessage } from '@/lib/password-rules';
 import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 import { can, requirePermission } from '@/lib/authorization';
@@ -192,8 +194,38 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.tokenVersion = { increment: 1 };
       auditAction = 'USER_FORCED_LOGOUT';
     } else if (action === 'resetPassword') {
-      // Secure one-time temp password; admin relays it to the user out-of-band
-      const tempPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12) + 'Aa1';
+      /*
+       * ── THE OWNER'S, AND NOBODY ELSE'S ──
+       *
+       * `users.edit` opens this route, and MANAGER holds it: without this
+       * check a manager could set the password on the account above them.
+       * Setting a password and stripping a second factor are the same kind
+       * of act — a way into an account that is not yours — so they are
+       * granted by the same rule, from the same file.
+       */
+      const mayDo = maySetPassword(admin as never, id);
+      if (!mayDo.ok) {
+        return NextResponse.json({ error: mayDo.error, code: mayDo.code }, { status: mayDo.status });
+      }
+
+      /*
+       * TYPED, OR GENERATED — AND NEVER READ BACK.
+       *
+       * The owner asked to «see» a staff password. The system cannot: it
+       * stores a bcrypt hash and nothing else, which is the property that
+       * makes a database leak survivable. So the honest answer is the one
+       * the screen gives — set a new one, and see THAT once.
+       *
+       * A typed password goes through the same `PASSWORD_RULES` every
+       * other door uses, so the button and the server agree about what is
+       * allowed.
+       */
+      const typed = typeof body.newPassword === 'string' ? body.newPassword : null;
+      if (typed !== null) {
+        const problem = passwordMessage(typed);
+        if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+      }
+      const tempPassword = typed ?? generatePassword((max) => crypto.randomInt(max));
       updateData.passwordHash = await hashPassword(tempPassword);
       updateData.tokenVersion = { increment: 1 };
       await db.user.update({ where: { id }, data: updateData });
@@ -204,7 +236,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         entity: 'User',
         entityId: id,
         previousData: { user: target.name, email: target.email },
-        newData: { resetBy: admin.name }, // password intentionally NOT logged
+        newData: { resetBy: admin.name, chosen: typed !== null }, // the password itself is NEVER logged
       });
       // Returned once over the authenticated response only
       return NextResponse.json({ success: true, temporaryPassword: tempPassword });

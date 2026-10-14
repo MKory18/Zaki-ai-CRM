@@ -216,6 +216,13 @@ export async function GET(req: Request) {
           assignedAt: true,
           assignedBy: { select: { name: true } },
           company: { select: { name: true } },
+          /*
+           * WHETHER THE SECOND FACTOR IS SET UP — the DATE, never the
+           * secret. `totpSecretEnc` is encrypted where it sits and leaves
+           * the database for nobody; what the owner needs from a list is
+           * «done» or «not yet», and this timestamp is exactly that.
+           */
+          totpEnabledAt: true,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

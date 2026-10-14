@@ -29,8 +29,10 @@ import { Modal } from '@/components/ui/Modal';
 import { UserGeoAccessSection, UserPhoneField } from '@/components/screens/users/UserAccessSections';
 import { UserCommissionCurrency } from '@/components/screens/users/UserCommissionCurrency';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/types/auth';
-import { RiAddCircleLine, RiArrowRightLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShieldKeyholeLine, RiTimerLine, RiUserLine } from '@remixicon/react';
+import { RiAddCircleLine, RiAlertLine, RiArrowRightLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiMailLine, RiSearchLine, RiShieldCheckLine, RiShieldKeyholeLine, RiTimerLine, RiToolsLine, RiUserLine } from '@remixicon/react';
 import { apiJson } from '@/lib/api-client';
+import { maySetPassword } from '@/lib/two-factor-reset';
+import { PASSWORD_RULES, passwordProblems } from '@/lib/password-rules';
 import { useConfirm } from '@/components/ui/Confirm';
 import { mayResetTwoFactor } from '@/lib/two-factor-reset';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -59,6 +61,19 @@ export function UserDetailScreen() {
   const [roleFlash, setRoleFlash] = useState<string | null>(null);
   const [resetting2fa, setResetting2fa] = useState(false);
   const [twoFaMsg, setTwoFaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  /*
+   * THE NEW PASSWORD, HELD FOR AS LONG AS THE SCREEN IS OPEN AND NO LONGER.
+   *
+   * In component state only — never written anywhere, never fetched back.
+   * The system keeps a bcrypt hash and nothing else, so this is the single
+   * moment the characters exist outside the owner's head, and the screen
+   * says so rather than letting them assume they can come back for it.
+   */
+  const [typedPassword, setTypedPassword] = useState('');
+  const [shownPassword, setShownPassword] = useState<string | null>(null);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [passwordErr, setPasswordErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   /**
    * CLEARING AN ENROLMENT IS NOT LOGGING SOMEBODY IN.
@@ -67,6 +82,45 @@ export function UserDetailScreen() {
    * on its own sounds like it hands the account over. It does the
    * opposite: the next login cannot proceed until a new phone is enrolled.
    */
+  /**
+   * SET A STAFF PASSWORD — TYPED, OR GENERATED, AND SHOWN ONCE.
+   *
+   * `newPassword` absent means «generate one». The door returns the
+   * characters exactly once, in this response; there is no second request
+   * that can ask for them again, because the system never stored them.
+   * His open sessions end with the change, which is the point: whoever was
+   * using the old password is out.
+   */
+  const setPassword = async (generate: boolean) => {
+    if (!userId) return;
+    const ok = await confirm({
+      title: `تغيير كلمة سرّ ${user?.name ?? 'هذا الموظّف'}؟`,
+      body: 'رح تُغلَق كلّ جلساته المفتوحة فوراً، ورح تشوف كلمة السرّ مرّة وحدة بس. يُسجّل هذا باسمك في سجلّ التدقيق.',
+      confirmLabel: 'غيّرها',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setSettingPassword(true);
+    setPasswordErr(null);
+    setShownPassword(null);
+    setCopied(false);
+    try {
+      const res = await apiJson<{ temporaryPassword: string }>(`/api/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action: 'resetPassword',
+          ...(generate ? {} : { newPassword: typedPassword }),
+        }),
+      });
+      setShownPassword(res.temporaryPassword);
+      setTypedPassword('');
+    } catch (e) {
+      setPasswordErr(e instanceof Error ? e.message : 'تعذّر تغيير كلمة السرّ');
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
   const resetTwoFactor = async () => {
     if (!userId) return;
     const ok = await confirm({
@@ -304,6 +358,138 @@ export function UserDetailScreen() {
           there is an enrolment to clear — a button that always refuses
           teaches people the screen is lying to them.
         */}
+        {/*
+          THE STATE IS SHOWN WHETHER OR NOT THERE IS ANYTHING TO RESET.
+
+          Every account carries a second factor now, so «not enrolled» is
+          no longer «this role is exempt» — it is «he has not signed in
+          since». That is a fact the owner needs to see, and the card used
+          to be drawn only when there WAS an enrolment, so the accounts
+          that had none were the ones it said nothing about.
+        */}
+        {/*
+          ═══ CHANGING A STAFF PASSWORD ═══
+
+          The owner asked to SEE a staff password. The system cannot show
+          one: it stores a bcrypt hash and nothing else, which is the
+          property that makes a database leak survivable. So the screen
+          says that in as many words, and offers the thing that does help
+          — set a new one and see THAT, once.
+
+          For the owner only, and never on himself: `maySetPassword` is the
+          same rule that governs stripping a second factor, from the same
+          file, because both hand somebody a way into an account.
+        */}
+        {maySetPassword(currentUser as never, user.id).ok && (
+          <Card>
+            <CardContent className="p-5 space-y-3">
+              <h3 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-1.5">
+                <RiKey2Line className="w-4 h-4" />
+                كلمة السرّ
+              </h3>
+
+              {/* Icons, not emoji: `one-icon-family.test.ts` refuses a
+                  glyph the operating system draws, because it is a
+                  different typeface on every phone. */}
+              <div className="rounded-lg bg-[var(--sys-warning-soft)] px-3 py-2 text-xs leading-relaxed text-[var(--sys-warning)]">
+                <p className="flex items-start gap-1.5">
+                  <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0" />
+                  كلمة السرّ الحاليّة ما بتنعرض — النظام ما بيخزّنها.
+                </p>
+                <p className="mt-1 flex items-start gap-1.5">
+                  <RiToolsLine className="mt-0.5 h-4 w-4 shrink-0" />
+                  غيّرها من هون وانسخ الجديدة.
+                </p>
+              </div>
+
+              {shownPassword ? (
+                <div className="space-y-2 rounded-lg border border-[var(--sys-success-soft)] bg-[var(--sys-success-soft)] p-3">
+                  <p className="text-xs font-black text-[var(--sys-success)]">انسخها هلأ — ما رح تنعرض مرّة تانية</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 select-all rounded-lg bg-[var(--sys-card)] px-3 py-2 text-sm font-bold tracking-wider" dir="ltr">
+                      {shownPassword}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => { void navigator.clipboard?.writeText(shownPassword); setCopied(true); }}
+                      className="min-h-11 md:min-h-0 rounded-lg border border-[var(--sys-border)] px-3 py-1.5 text-xs font-bold hover:border-[var(--sys-primary)]"
+                    >
+                      {copied ? 'اننسخت' : 'انسخ'}
+                    </button>
+                  </div>
+                  <p className="text-xs leading-relaxed text-[var(--sys-success)]">
+                    وكلّ جلساته المفتوحة انقفلت — رح يدخل بهاي الكلمة.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">كلمة سرّ جديدة</span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={typedPassword}
+                      onChange={(e) => { setTypedPassword(e.target.value); setPasswordErr(null); }}
+                      placeholder="اكتبها، أو ولّد واحدة"
+                      className="h-11 md:h-10 w-full rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-3 text-sm"
+                    />
+                  </label>
+                  <ul className="space-y-0.5">
+                    {PASSWORD_RULES.map((r) => {
+                      const met = typedPassword.length > 0 && r.test(typedPassword);
+                      return (
+                        <li key={r.key} className={`flex items-center gap-1 text-xs ${met ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
+                          <RiCheckLine className={`h-4 w-4 shrink-0 ${met ? '' : 'opacity-30'}`} />
+                          {r.ar}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {passwordErr && (
+                    <p className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 py-2 text-xs text-[var(--sys-destructive)]">
+                      {passwordErr}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={settingPassword || passwordProblems(typedPassword).length > 0}
+                      onClick={() => void setPassword(false)}
+                      className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg bg-[var(--sys-primary)] px-4 py-1.5 text-xs font-bold text-[var(--sys-primary-foreground)] disabled:opacity-50"
+                    >
+                      {settingPassword ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiKey2Line className="w-4 h-4" />}
+                      غيّر كلمة السرّ
+                    </button>
+                    <button
+                      type="button"
+                      disabled={settingPassword}
+                      onClick={() => void setPassword(true)}
+                      className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-4 py-1.5 text-xs font-medium hover:border-[var(--sys-primary)] disabled:opacity-50"
+                    >
+                      ولّد واحدة
+                    </button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!user.totpEnabledAt && (
+          <Card>
+            <CardContent className="p-5 space-y-1">
+              <h3 className="text-xs font-black text-[var(--sys-foreground)] flex items-center gap-1.5">
+                <RiShieldKeyholeLine className="w-4 h-4" />
+                التحقّق بخطوتين
+              </h3>
+              <p className="text-xs font-semibold text-[var(--sys-muted-foreground)]">بانتظار أوّل دخول</p>
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                كلّ حساب صار عليه تحقّق بخطوتين. هذا الموظّف رح يُطلَب منه يسجّله أوّل مرّة يدخل فيها بكلمة السرّ — لازم يكون منزّل تطبيق Google Authenticator على جواله.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {mayResetTwoFactor(currentUser as never, user.id).ok && user.totpEnabledAt && (
           <Card>
             <CardContent className="p-5 space-y-2">

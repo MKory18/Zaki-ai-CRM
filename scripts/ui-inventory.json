@@ -1130,12 +1130,12 @@
     "tabs": 0
   },
   "src/components/screens/UserDetailScreen.tsx": {
-    "buttons": 11,
-    "inputs": 9,
+    "buttons": 14,
+    "inputs": 10,
     "columns": 5,
-    "cards": 6,
+    "cards": 8,
     "modals": 1,
-    "icons": 16,
+    "icons": 23,
     "links": 0,
     "tabs": 0
   },
@@ -1192,7 +1192,7 @@
   "src/components/screens/UsersScreen.tsx": {
     "buttons": 13,
     "inputs": 5,
-    "columns": 8,
+    "columns": 9,
     "cards": 1,
     "modals": 2,
     "icons": 13,

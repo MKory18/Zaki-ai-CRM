@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
-import { hashPassword, createSessionToken, sessionCookieOptions, COOKIE_NAME } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 

@@ -328,6 +328,21 @@ export function UsersScreen() {
                     render: (u) => arDate(u.createdAt) },
                   { key: 'c4', label: "آخر دخول",
                     render: (u) => arDateTime(u.lastLoginAt) },
+                  /*
+                     THE SECOND FACTOR, AT A GLANCE.
+
+                     Every account carries one now, so the only question a
+                     list can answer is whether the person has set it up
+                     yet — and «بانتظار أوّل دخول» says the honest
+                     thing: nothing is missing, it happens when they next
+                     sign in. The date is read, never the secret.
+                  */
+                  { key: 'c2fa', label: "التحقّق بخطوتين",
+                    render: (u) => (
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold ${u.totpEnabledAt ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
+                        {u.totpEnabledAt ? 'مفعّل' : 'بانتظار أوّل دخول'}
+                      </span>
+                    ) },
                   { key: 'c5', label: "عيّنه",
                     render: (u) => (u.assignedBy?.name || '—') },
                   { key: 'c6', label: "إجراءات", align: 'end',
