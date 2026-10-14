@@ -17,7 +17,8 @@ import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
 import { ordersWhere } from '@/lib/order-filters';
 import { apiError } from '@/lib/api-error';
-import { requirePermission, getPermissionScope } from '@/lib/authorization';
+import { requirePermission, getPermissionScope, can } from '@/lib/authorization';
+import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
@@ -383,6 +384,26 @@ export async function POST(req: Request) {
         .toFixed(2)
     );
 
+    /*
+     * ── WHOSE ORDER IS THIS THE MOMENT IT IS TYPED ──
+     *
+     * An agent taking an order over the phone used to have to let go of it
+     * and pull it back out of the queue — and could draw somebody else's
+     * instead, while a colleague drew hers and rang a customer who had
+     * already ordered. `entryOwnership` is the rule, and it is asked by
+     * permission and not by role name.
+     *
+     * The held count is read ONLY when the rule needs it: for anybody who
+     * does not keep their own entries, this costs no query at all.
+     */
+    const keepsIt = can(user, 'confirmation.work') && !can(user, 'confirmation.supervise');
+    const entry = entryOwnership({
+      userId: user.id,
+      holds: (perm) => can(user, perm as Parameters<typeof can>[1]),
+      heldTotal: keepsIt ? (await ownedCounts(db, { companyId, storeId }, user.id)).total : 0,
+      now: new Date(),
+    });
+
     // Moderator assignment — Phase S: moderator must belong to THIS company
     const assignedModeratorId = moderatorId || (user.role === 'MODERATOR' ? user.id : null);
     if (assignedModeratorId) {
@@ -435,6 +456,9 @@ export async function POST(req: Request) {
               totalAmount,
               currency: country.currencyCode,
               moderatorId: assignedModeratorId,
+              // Who TYPED it — whatever their role. `moderatorId` only ever
+              // recorded a MODERATOR, so an agent's own entry had no creator.
+              createdById: user.id,
               estimatedCostOfGoods,
               productNameSnapshot: product.name,
               productImageSnapshot: product.image || null,
@@ -442,10 +466,12 @@ export async function POST(req: Request) {
               confirmationStatus: 'NEW',
               shippingStatus: 'NOT_READY',
               settlementStatus: 'NOT_APPLICABLE',
-              // Ownership: created but unclaimed — appears in the AVAILABLE queue
+              // Ownership: hers at once when she works a queue, otherwise
+              // created-but-unclaimed and in the AVAILABLE queue as before.
               assignedToId: null,
-              claimedById: null,
-              currentOwnerId: null,
+              claimedById: entry.claimedById,
+              claimedAt: entry.claimedAt,
+              currentOwnerId: entry.currentOwnerId,
               signatureStatus: 'UNSIGNED',
               version: 1,
               channelId: channel?.id ?? null,
@@ -509,6 +535,17 @@ export async function POST(req: Request) {
         },
       });
 
+      /*
+       * 5b. THE CLAIM, RECORDED LIKE EVERY OTHER CLAIM.
+       *
+       * Inside the same transaction as the order, so an order can never
+       * exist as hers with no row saying how she got it. `MANUAL_ENTRY`
+       * tells it apart from a pull: the auto-release, the caps and the
+       * transfer screen all read this history, and «she typed it» is a
+       * different fact from «she drew it from the queue».
+       */
+      await recordEntryClaim(tx, { companyId, orderId: created.id, ownership: entry });
+
       // 6. Status log (confirmation workflow entry point)
       await tx.orderStatusLog.create({
         data: {
@@ -550,7 +587,19 @@ export async function POST(req: Request) {
       link: ['/confirmation/queue', '/orders'],
     });
 
-    return NextResponse.json({ success: true, order });
+    /*
+     * AND SHE IS TOLD WHEN THE CAP TOOK IT.
+     *
+     * Only when it was HER entry that the ceiling pushed into the queue.
+     * Handing her a 121st order silently would make the cap a suggestion;
+     * saying nothing at all would leave her looking for an order that is
+     * not in «طلباتي».
+     */
+    return NextResponse.json({
+      success: true,
+      order,
+      ...(entry.capFull ? { notice: ENTRY_CAP_FULL_MESSAGE } : {}),
+    });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });

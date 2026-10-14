@@ -192,7 +192,16 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
        *
        * With the number, because that is the thing she is about to need.
        */
-      toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح');
+      /*
+       * AND WHO IT WENT TO.
+       *
+       * The door returns `notice` only when the agent's own cap pushed her
+       * entry into the shared queue. Without this she reads «تم إنشاء
+       * الطلب» and goes looking for it in «طلباتي», where it is not.
+       * A warning, not a success: the order was made, but not hers.
+       */
+      if (data.notice) toast.warn(`تم إنشاء الطلب ${created?.orderNumber ?? ''} — ${data.notice}`.trim());
+      else toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح');
       onSuccess(created);
       onClose();
     } catch (err: any) {

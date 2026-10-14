@@ -46,6 +46,16 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
         { assignedToId: user.id },
         { claimedById: user.id },
         { currentOwnerId: user.id },
+        /*
+         * AND WHAT SHE TYPED, EVEN ONCE SOMEBODY ELSE HOLDS IT.
+         *
+         * The list envelope has listed `createdById` since the column
+         * existed; this one did not, so an order she entered that was
+         * later released, auto-released and pulled, transferred, or
+         * pushed to the queue by a full cap stayed in her list and
+         * opened as «غير موجود». A row a list shows is a row that opens.
+         */
+        { createdById: user.id },
         // Orders I entered as a moderator (legacy compat)
         { moderatorId: user.id },
         // ─── Claimable queue: unclaimed orders in the workflow intake stage ───
@@ -61,11 +71,73 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
   }
 
   if (scope.scope === 'OWN') {
-    return { moderatorId: user.id };
+    /*
+     * ENTERED BY HIM — BY EITHER RECORD OF IT.
+     *
+     * `moderatorId` is the old one and only ever held a MODERATOR;
+     * `createdById` is written on every staff creation path from now on.
+     * Both, because orders from before the column exists have only the
+     * first, and nothing was backfilled: «visible by claim, as today».
+     */
+    return { OR: [{ createdById: user.id }, { moderatorId: user.id }] };
   }
 
   // CATEGORY / SPECIFIC are not meaningful for orders
   return { id: '__no_access__' };
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * WHAT A LIST MAY SHOW — WHICH IS NOT WHAT A PERSON MAY READ.
+ *
+ * `orderVisibilityWhere` answers both questions today, and the two are not
+ * the same question. Its ASSIGNED branch carries the CLAIMABLE QUEUE —
+ * unclaimed, unsigned, NEW orders — and that branch is not there to give an
+ * agent a list of the pool. It is there so an agent can OPEN an order she is
+ * about to pull: `assertOrderReadable` puts this very object into its query,
+ * and before it did, the claim route carried a hand-written patch saying
+ * «Without this the agent sees the order in their queue but gets 403 when
+ * actually claiming it» (`a-queue-row-opens.test.ts`).
+ *
+ * So «the agent's «الطلبات» never shows the unclaimed pool» cannot be done
+ * by narrowing that function. Narrowing it would 404 every order she tries
+ * to pull.
+ *
+ * Two envelopes, then:
+ *
+ *   `orderVisibilityWhere` — MAY I READ THIS ONE ORDER. Keeps the pool.
+ *   Used by the detail, the timeline, the notes, the call log, the claim.
+ *
+ *   `orderListWhere` — WHAT BELONGS IN A LIST OF ORDERS. Drops the pool.
+ *   Used by anything that returns MORE THAN ONE order: `GET /api/orders`
+ *   with its search and its scan, and the report export.
+ *
+ * The owner's rule in one line: an agent's list is the work she has taken
+ * and the work she typed — not the shelf she may take from.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export function orderListWhere(user: SessionUser): Record<string, unknown> {
+  const scope = getPermissionScope(user, 'orders.view');
+  if (!scope) return { id: '__no_access__' };
+
+  if (scope.scope === 'ALL_COMPANY') return {};
+
+  if (scope.scope === 'ASSIGNED') {
+    return {
+      OR: [
+        { assignedToId: user.id },
+        { claimedById: user.id },
+        { currentOwnerId: user.id },
+        // Orders she entered herself — by either record of it.
+        { createdById: user.id },
+        { moderatorId: user.id },
+      ],
+    };
+  }
+
+  // OWN and the rest read exactly as they do for a single order: a list of
+  // what he entered is the same set as the orders he may open.
+  return orderVisibilityWhere(user);
 }
 
 /**
@@ -112,10 +184,20 @@ export function applyQueueFilter(
       return where;
     }
     default: {
-      // No explicit queue → apply the role's default visibility envelope.
-      // Always merge via AND so an existing search `OR` is never clobbered
-      // by the spread of orderVisibilityWhere (which also contains an OR).
-      const visibility = orderVisibilityWhere(user);
+      /*
+       * No explicit queue → the role's default LIST envelope.
+       *
+       * `orderListWhere` and not `orderVisibilityWhere`: this is the one
+       * place every multi-order read passes through — `GET /api/orders`
+       * with its search and its scan, and `/api/reports/export`, both of
+       * which call this function — so the pool leaves all of them at once.
+       * The single-order doors keep the read envelope, which still carries
+       * the pool, so pulling an order still opens it.
+       *
+       * Merged via AND so an existing search `OR` is never clobbered by
+       * the spread of an envelope that also contains an OR.
+       */
+      const visibility = orderListWhere(user);
       if (Object.keys(visibility).length === 0) return where;
       return { AND: [where, visibility] };
     }

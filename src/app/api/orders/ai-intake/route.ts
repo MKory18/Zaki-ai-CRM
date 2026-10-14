@@ -15,7 +15,8 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { requirePermission } from '@/lib/authorization';
+import { requirePermission, can } from '@/lib/authorization';
+import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { AiEndpointMissing, AiNotConfigured, AiNotLocal, aiChat, aiSettings } from '@/lib/ai-provider';
 import { resolvePrompt } from '@/lib/ai-prompts';
@@ -224,7 +225,20 @@ export async function POST(req: Request) {
       const unitCost = (await productCost(db, companyId, product.id)).average;
 
       // Moderator assignment — must belong to THIS company (same rule as POST /orders)
-      const assignedModeratorId = p.moderatorId || (user.role === 'MODERATOR' ? user.id : null);
+      const assignedModeratorId = p.moderatorId || (user.role === 'MODERATOR' ? user.id : null);
+
+      /*
+       * WHOSE ORDER IS THIS — the same rule the quick-entry door asks, in
+       * the same words. A seller who pastes a message into the extractor is
+       * entering an order exactly as much as one who types it into the form.
+       */
+      const keepsIt = can(user, 'confirmation.work') && !can(user, 'confirmation.supervise');
+      const entry = entryOwnership({
+        userId: user.id,
+        holds: (perm) => can(user, perm as Parameters<typeof can>[1]),
+        heldTotal: keepsIt ? (await ownedCounts(db, { companyId, storeId }, user.id)).total : 0,
+        now: new Date(),
+      });
       if (assignedModeratorId) {
         const mod = await db.user.findFirst({ where: { id: assignedModeratorId, companyId } });
         if (!mod) {
@@ -311,7 +325,12 @@ export async function POST(req: Request) {
                 shippingCost: 0,
                 totalAmount: money.cod,
                 currency: country.currencyCode,
-                moderatorId: assignedModeratorId,
+                moderatorId: assignedModeratorId,
+                // Who pasted it in — whatever their role.
+                createdById: user.id,
+                claimedById: entry.claimedById,
+                claimedAt: entry.claimedAt,
+                currentOwnerId: entry.currentOwnerId,
                 // Rounded by the currency, like the total beside it.
                 estimatedCostOfGoods: roundMinor(unitCost * qty, country.minorUnit),
                 productNameSnapshot: product.name,
@@ -329,7 +348,11 @@ export async function POST(req: Request) {
             throw e;
           }
         }
-        if (!created) throw new Error('Failed to generate a unique order number');
+        if (!created) throw new Error('Failed to generate a unique order number');
+
+        // The claim her entry created, recorded by the one writer both
+        // doors use — inside this transaction, like the order itself.
+        await recordEntryClaim(tx, { companyId, orderId: created.id, ownership: entry });
 
         // The order's line. Reservation and the discount share live per line.
         await tx.orderItem.create({
@@ -423,7 +446,14 @@ export async function POST(req: Request) {
         link: ['/confirmation/queue', '/orders'],
       });
 
-      return NextResponse.json({ success: true, order });
+      // And the same notice the quick door returns: an entry the cap
+      // pushed into the queue is not hers, and silence would let her
+      // believe it was.
+      return NextResponse.json({
+        success: true,
+        order,
+        ...(entry.capFull ? { notice: ENTRY_CAP_FULL_MESSAGE } : {}),
+      });
     }
 
     // ─── Mode 1: Parse & Preview ───

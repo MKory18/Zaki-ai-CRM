@@ -20,6 +20,113 @@ export const AUTO_RELEASE_BUSINESS_MINUTES = 90;
 /** How far ahead a postponed order becomes actionable. */
 export const POSTPONE_LEAD_DAYS = 2;
 
+/**
+ * ════════════════════════════════════════════════════════════════════════
+ * AN ORDER AN AGENT TYPES IS HERS FROM THE MOMENT SHE TYPES IT.
+ *
+ * Every staff-created order went into the pull queue as an unclaimed NEW
+ * order — including one an agent had just taken over the phone, with the
+ * customer still on the line. She then had to pull it back out, and could
+ * draw somebody else's instead; meanwhile a colleague could pull hers and
+ * ring a customer who had already given their order.
+ *
+ * ── WHO, BY PERMISSION AND NEVER BY ROLE NAME ──
+ *
+ * Whoever works a queue and does not supervise one: `confirmation.work`
+ * without `confirmation.supervise`. A custom role is judged by what it
+ * holds, which is the whole point of the permission engine — a company
+ * that builds its own «موظف تأكيد» under another name gets this too, and
+ * a supervisor who happens to hold `confirmation.work` does not, because
+ * her entries belong to whoever is free.
+ *
+ * ── AND THE CAP STILL BINDS ──
+ *
+ * 120 is the ceiling on what one person may hold. An entry that would
+ * cross it goes to the queue instead, and the screen says so — silently
+ * handing her a 121st order would make the cap a suggestion.
+ * ════════════════════════════════════════════════════════════════════════
+ */
+export const MANUAL_ENTRY_REASON = 'MANUAL_ENTRY';
+
+/** Said to the agent when her own entry had to go to the queue. */
+export const ENTRY_CAP_FULL_MESSAGE = `وصلت للحد (${CLAIM_CAPS.total}) — الطلب راح للطابور`;
+
+/** Does this account keep the orders it enters? */
+export function keepsOwnEntry(holds: (permission: string) => boolean): boolean {
+  return holds('confirmation.work') && !holds('confirmation.supervise');
+}
+
+export interface EntryOwnership {
+  /** Null when the order goes to the pull queue, as every entry used to. */
+  claimedById: string | null;
+  claimedAt: Date | null;
+  currentOwnerId: string | null;
+  /** True only when it was HER entry that the cap pushed into the queue. */
+  capFull: boolean;
+}
+
+/**
+ * Who owns an order at the moment it is entered.
+ *
+ * Pure: the caller supplies the permission test and how many the user
+ * already holds, so the rule can be asked about every case without a
+ * database — and so the two creation routes cannot answer it differently.
+ */
+export function entryOwnership(args: {
+  userId: string;
+  holds: (permission: string) => boolean;
+  /** `ownedCounts(...).total`, read only when the rule needs it. */
+  heldTotal: number;
+  now: Date;
+}): EntryOwnership {
+  const unclaimed: EntryOwnership = {
+    claimedById: null,
+    claimedAt: null,
+    currentOwnerId: null,
+    capFull: false,
+  };
+  if (!keepsOwnEntry(args.holds)) return unclaimed;
+  if (args.heldTotal >= CLAIM_CAPS.total) return { ...unclaimed, capFull: true };
+  return {
+    claimedById: args.userId,
+    claimedAt: args.now,
+    currentOwnerId: args.userId,
+    capFull: false,
+  };
+}
+
+/**
+ * RECORD THE CLAIM AN ENTRY CREATED — ONE WRITER, BOTH DOORS.
+ *
+ * Called inside the transaction that writes the order, so an order can
+ * never exist as hers with no row saying how she got it. The first version
+ * of this lived inline in the quick-entry door, and the AI intake claimed
+ * orders with no history at all — which is the shape of every rule in this
+ * file that has ever been half-applied.
+ *
+ * `MANUAL_ENTRY` tells it apart from a pull: the auto-release, the caps and
+ * the transfer screen all read this history, and «she typed it» is a
+ * different fact from «she drew it from the queue».
+ *
+ * Does nothing when the entry went to the queue — there is no claim to
+ * record.
+ */
+export async function recordEntryClaim(
+  tx: Tx,
+  args: { companyId: string; orderId: string; ownership: EntryOwnership }
+): Promise<void> {
+  if (!args.ownership.claimedById) return;
+  await tx.orderClaimHistory.create({
+    data: {
+      companyId: args.companyId,
+      orderId: args.orderId,
+      userId: args.ownership.claimedById,
+      action: 'CLAIMED',
+      reason: MANUAL_ENTRY_REASON,
+    },
+  });
+}
+
 /** Statuses that still belong to the confirmation stage. */
 const OPEN_CONFIRMATION = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'];
 
