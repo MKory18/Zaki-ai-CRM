@@ -23,7 +23,13 @@ interface QueueResponse {
   leadDays: number;
   waitingOnADate?: number;
   canPull: boolean;
-  refusal: { code: string; message: string } | null;
+  refusal: {
+    code: string;
+    message: string;
+    /** The untouched order the UNTOUCHED_ORDER refusal is about, if any. */
+    orderId?: string | null;
+    orderNumber?: string | null;
+  } | null;
   autoReleased: number;
   orders: {
     id: string;
@@ -140,6 +146,24 @@ export function ConfirmationQueueScreen() {
             }`}
           >
             {error ?? data.refusal?.message}
+            {/*
+              AND A WAY TO THE ORDER IT MEANS.
+
+              The refusal used to say «طلبك الحالي» and point nowhere. When
+              that order is postponed it is hidden from «طلباتي» until its
+              date, and «الطلبات المؤجلة» lists it with no contact buttons —
+              so the agent was told to do something on an order she could not
+              open, and the only exit was the ninety-business-minute release.
+              This is the door.
+            */}
+            {!error && data.refusal?.code === 'UNTOUCHED_ORDER' && data.refusal.orderId && (
+              <a
+                href={`/orders/${data.refusal.orderId}`}
+                className="mt-2 inline-flex min-h-11 items-center font-bold underline"
+              >
+                افتح الطلب {data.refusal.orderNumber ?? ''} وسجّل محاولة
+              </a>
+            )}
           </p>
         )}
 

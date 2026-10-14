@@ -29,6 +29,13 @@ const { db, requireContext, assertOrderAccess, can, createNotification } = vi.ho
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderItem: { create: vi.fn() },
+    /*
+     * The holder has already rung the customer. These tests are about WHO
+     * gets told when a decision is made, not about the rule that a holder
+     * must try to reach the customer before deciding — which is
+     * `contact-first.test.ts`.
+     */
+    orderContactAttempt: { count: vi.fn(async () => 1) },
     // A FAILED_DELIVERY transition now writes its attempt in the same
     // transaction as the status.
     deliveryAttempt: {

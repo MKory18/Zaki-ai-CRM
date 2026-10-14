@@ -20,6 +20,16 @@ const { db, requireContext, requirePermission, can, assertOrderAccess } = vi.hoi
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
     orderItem: { findMany: vi.fn(), updateMany: vi.fn() },
+    /*
+     * THE ORDER HAS BEEN CALLED ON.
+     *
+     * `u1` holds this order, and a holder may not postpone, confirm,
+     * reject or cancel one he has not tried to reach the customer about
+     * (`needsContactFirst`). These tests are about WHERE a postpone lands,
+     * not about that rule, so the attempt they would have made by hand is
+     * here. `contact-first.test.ts` owns the rule itself.
+     */
+    orderContactAttempt: { count: vi.fn(async () => 1) },
     $transaction: vi.fn(async (fn: never) => (typeof fn === 'function' ? (fn as (t: unknown) => unknown)(db) : fn)),
   },
   requireContext: vi.fn(),

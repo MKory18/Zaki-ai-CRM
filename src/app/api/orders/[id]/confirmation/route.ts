@@ -12,6 +12,7 @@ import { assertCancellable, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines, reserveOrderLines } from '@/lib/reservation';
 import { emitAppEvent } from '@/lib/apps/events';
 import { queueConversions } from '@/lib/conversions/emit';
+import { needsContactFirst, CONTACT_FIRST_MESSAGE } from '@/lib/confirmation-queue';
 
 /**
  * POST /api/orders/[id]/confirmation — controlled confirmation workflow action.
@@ -92,6 +93,36 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     };
 
     if (!action) return NextResponse.json({ error: 'لم يُحدَّد الإجراء' }, { status: 400 });
+
+    /*
+     * ── THE CONTACT COMES FIRST ──
+     *
+     * Checked HERE, before the action switch, because the rule is about
+     * every disposal of a held order and not about any one of them: an
+     * agent who can reach `confirm` without it can reach «تأجيل» without
+     * it too, and «تأجيل» is the one that cost an hour and a half of work
+     * (see `needsContactFirst`).
+     *
+     * The count and not the rows: the route never needs the attempts
+     * themselves, and «does any exist» is one index read.
+     */
+    if (
+      needsContactFirst({
+        action,
+        isHolder: order.claimedById === user.id,
+        hasAttempt:
+          (await db.orderContactAttempt.count({ where: { orderId: order.id }, take: 1 })) > 0,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          error: CONTACT_FIRST_MESSAGE,
+          errorAr: CONTACT_FIRST_MESSAGE,
+          code: 'CONTACT_FIRST',
+        },
+        { status: 409 }
+      );
+    }
 
     const from = order.confirmationStatus as ConfirmationStatus;
     const now = new Date();
