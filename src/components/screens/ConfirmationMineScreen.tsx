@@ -498,7 +498,7 @@ export function ConfirmationMineScreen() {
                     ألغِ
                   </Action>
                   {needsContact(order) && (
-                    <p className="basis-full text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                    <p className="w-full text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
                       اتصل بالزبون أول — بعدها بتفتح الأزرار
                     </p>
                   )}
