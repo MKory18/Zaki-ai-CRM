@@ -299,6 +299,7 @@ model User {
   passkeys                      Passkey[]
   passkeyChallenges             PasskeyChallenge[]
   company                       Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  enteredOrders                 Order[]                 @relation("OrderCreator")
   assignedOrders                Order[]                 @relation("ModeratorOrders")
   claimedOrders                 Order[]                 @relation("OrderClaimer")
   ownedOrders                   Order[]                 @relation("OrderCurrentOwner")
@@ -664,6 +665,14 @@ model Order {
   totalAmount               Float
   currency                  String    @default("USD")
   // Ownership model (Decision 1)
+  // createdById = the staff account that ENTERED this order, whatever its
+  // role. `moderatorId` only ever recorded a MODERATOR, so an order typed
+  // by an agent or imported by a supervisor had no creator at all — the
+  // fact survived only in activity rows. Nullable and never backfilled:
+  // a public storefront order has no staff creator, and an order from
+  // before this column exists has none to invent.
+  createdById               String?
+
   // moderatorId = original MODERATOR who created/entered the order (semantic preserved)
   moderatorId               String?
   moderatorCommission       Float     @default(0.0)
@@ -826,6 +835,7 @@ model Order {
   conversionDeliveries  ConversionDelivery[]
   product               Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
   offer                 Offer?                 @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  createdBy             User?                  @relation("OrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
   moderator             User?                  @relation("ModeratorOrders", fields: [moderatorId], references: [id], onDelete: SetNull)
   assignee              User?                  @relation("OrderAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   claimer               User?                  @relation("OrderClaimer", fields: [claimedById], references: [id], onDelete: SetNull)
@@ -871,6 +881,7 @@ model Order {
   @@index([companyId, trackingNumber])
   @@index([companyId, shippingBatchId])
   @@index([companyId, customerId])
+  @@index([companyId, createdById])
   @@index([companyId, moderatorId])
   @@index([companyId, productId])
   @@index([companyId, assignedToId])
