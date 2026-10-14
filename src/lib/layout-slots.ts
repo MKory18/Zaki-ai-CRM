@@ -45,3 +45,80 @@ export const LAYOUT_SLOTS = Object.freeze({
 
 export type LayoutSlot = keyof typeof LAYOUT_SLOTS;
 export type HeroVariant = (typeof LAYOUT_SLOTS.hero)[number];
+export type CategoryPageVariant = (typeof LAYOUT_SLOTS.categoryPage)[number];
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * RETIRED — NAMED, NOT DELETED, AND NEVER SILENT.
+ *
+ * The warning at the top of this file («a name with nothing behind it
+ * renders the default and tells nobody») was not enough on its own: it
+ * said what must not happen without giving anybody a way to say «this one
+ * is deliberately gone». So thirteen of twenty-seven names drifted into
+ * exactly that state — see `docs/storefront/AUDIT-2a-delta.md`.
+ *
+ * A retired variant is one nobody will build. It is:
+ *
+ *   NOT DELETED. A store's theme may already hold it, and deleting the
+ *   name would make that theme fail to parse — a seller's shop going
+ *   blank because of a decision about a list.
+ *
+ *   NOT OFFERED. `liveVariants()` is what the editor shows, so a seller
+ *   cannot newly choose one.
+ *
+ *   NOT SILENT. The theme screen reads `retiredNoteAr()` and says, on the
+ *   seller's own screen, which variant their template is holding and what
+ *   the shop draws instead. Falling back without a word is the failure;
+ *   falling back and saying so is a decision.
+ *
+ * The value is what the shopper actually gets.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export const RETIRED_VARIANTS: Partial<Record<LayoutSlot, Record<string, string>>> = Object.freeze({
+  /*
+   * `mixed` was «a big first card, small ones after». It is a layout with
+   * no rule for WHICH product earns the big cell, and every answer to that
+   * is a ranking this system refuses to invent — the shelf has no
+   * editorial order, and «newest» is not a reason to be twice the size.
+   */
+  categoryPage: Object.freeze({ mixed: 'grid3' }),
+  /*
+   * `drawer` was a side panel for the cart. The cart has been a page at
+   * `/s/<store>/cart` since it was written, nothing ever read this slot,
+   * and a drawer is a second checkout entrance to keep working on a phone
+   * — for a shop whose whole order path is one form.
+   */
+  cart: Object.freeze({ drawer: 'page' }),
+} as const);
+
+/** Is this variant one nobody will build? */
+export function isRetired(slot: LayoutSlot, variant: string): boolean {
+  return Boolean(RETIRED_VARIANTS[slot]?.[variant]);
+}
+
+/**
+ * The variant a shop actually gets — itself, or what replaced it.
+ *
+ * Every renderer reads the slot through this, so a stored retired value
+ * can never reach a `data-` attribute with no rule behind it.
+ */
+export function effectiveVariant<S extends LayoutSlot>(slot: S, variant: string): string {
+  return RETIRED_VARIANTS[slot]?.[variant] ?? variant;
+}
+
+/** What the editor may offer: everything still built. */
+export function liveVariants(slot: LayoutSlot): readonly string[] {
+  return LAYOUT_SLOTS[slot].filter((v) => !isRetired(slot, v));
+}
+
+/**
+ * What to tell the SELLER when their template holds a retired variant.
+ *
+ * Arabic, on the theme screen, naming both halves: a note that said only
+ * «this is old» would leave them guessing what their shoppers see.
+ */
+export function retiredNoteAr(slot: LayoutSlot, variant: string): string | null {
+  const to = RETIRED_VARIANTS[slot]?.[variant];
+  if (!to) return null;
+  return `هذا القالب يحمل «${variant}» وهو خيار متقاعد لم يعد يُبنى — المتجر يعرض «${to}» بدلاً منه.`;
+}
