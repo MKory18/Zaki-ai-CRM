@@ -86,6 +86,14 @@ const {
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({
+  /*
+   * `can` answers «does this account keep the orders it enters?»
+   * (`entryOwnership`). False: these tests are about the money and the
+   * payload, and an entry that goes to the pull queue is what every
+   * one of them has always asserted. `order-entry-ownership.test.ts`
+   * owns the rule itself.
+   */
+  can: () => false,
   requirePermission: (...a: unknown[]) => requirePermission(...a),
   getPermissionScope: vi.fn(),
 }));
