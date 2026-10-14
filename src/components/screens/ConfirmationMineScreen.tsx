@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
+import { CONTACT_FIRST_MESSAGE } from '@/lib/confirmation-queue';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
@@ -85,6 +86,15 @@ const RISK_LABEL: Record<string, { text: string; cls: string }> = {
 type DialogState =
   | { kind: 'postpone' | 'issue' | 'change' | 'reject' | 'assist'; order: OrderRow }
   | null;
+
+/**
+ * HAS ANYBODY TRIED TO REACH THIS CUSTOMER YET?
+ *
+ * One question, asked of the count the row already carries, so the three
+ * buttons and the line under them can never disagree about it.
+ */
+const needsContact = (order: { _count: { contactAttempts: number } }) =>
+  order._count.contactAttempts === 0;
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
@@ -443,15 +453,55 @@ export function ConfirmationMineScreen() {
                     are neither an outcome of the call — the entry issue and
                     the assistant — come after them.
                   */}
-                  <Action primary onClick={() => confirm(order)} busy={busyId === order.id} icon={<RiCheckboxCircleLine className="w-4 h-4" />}>
+                  {/*
+                    THE THREE THAT DISPOSE OF THE ORDER, SHUT UNTIL SHE HAS
+                    TRIED TO REACH THE CUSTOMER.
+
+                    The server refuses them anyway (`needsContactFirst`), so
+                    this is not the rule — it is the agent being told the
+                    rule before she presses rather than after. The measured
+                    failure was «تأجيل» pressed with no call: the order went
+                    postponed, left her list, kept her claim, and blocked her
+                    next pull for ninety business minutes.
+
+                    «افتح وعدّل», «إدخال إشكال» and «مساعدة» stay open: none
+                    of them decides anything about the order, and the last
+                    two are how she gets help when the call is the problem.
+                  */}
+                  <Action
+                    primary
+                    onClick={() => confirm(order)}
+                    busy={busyId === order.id}
+                    locked={needsContact(order)}
+                    lockedTitle={CONTACT_FIRST_MESSAGE}
+                    icon={<RiCheckboxCircleLine className="w-4 h-4" />}
+                  >
                     تأكيد الطلب
                   </Action>
-                  <Action onClick={() => setDialog({ kind: 'postpone', order })} busy={busyId === order.id} icon={<RiTimerLine className="w-4 h-4" />}>
+                  <Action
+                    onClick={() => setDialog({ kind: 'postpone', order })}
+                    busy={busyId === order.id}
+                    locked={needsContact(order)}
+                    lockedTitle={CONTACT_FIRST_MESSAGE}
+                    icon={<RiTimerLine className="w-4 h-4" />}
+                  >
                     تأجيل {order.postponeCount > 0 && `(${order.postponeCount})`}
                   </Action>
-                  <Action onClick={() => setDialog({ kind: 'reject', order })} busy={busyId === order.id} danger icon={<RiCloseCircleLine className="w-4 h-4" />}>
+                  <Action
+                    onClick={() => setDialog({ kind: 'reject', order })}
+                    busy={busyId === order.id}
+                    locked={needsContact(order)}
+                    lockedTitle={CONTACT_FIRST_MESSAGE}
+                    danger
+                    icon={<RiCloseCircleLine className="w-4 h-4" />}
+                  >
                     ألغِ
                   </Action>
+                  {needsContact(order) && (
+                    <p className="w-full text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                      اتصل بالزبون أول — بعدها بتفتح الأزرار
+                    </p>
+                  )}
 
                   {/* «إدخال إشكال», not «إشكال إدخال»: the button is the
                       act she performs, and the old name read as the name of
@@ -702,6 +752,16 @@ function Action({
   children,
   onClick,
   busy,
+  /**
+   * SHUT, AND NOT MERELY WAITING.
+   *
+   * Separate from `busy` on purpose: `busy` is «this is saving, a moment»
+   * and `locked` is «you have not earned this yet». Folding the second
+   * into the first would give the agent a button that looks like it is
+   * thinking and never comes back, with no way to learn why.
+   */
+  locked,
+  lockedTitle,
   primary,
   danger,
   icon,
@@ -709,6 +769,8 @@ function Action({
   children: React.ReactNode;
   onClick: () => void;
   busy?: boolean;
+  locked?: boolean;
+  lockedTitle?: string;
   primary?: boolean;
   danger?: boolean;
   icon?: React.ReactNode;
@@ -716,7 +778,9 @@ function Action({
   return (
     <button
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || locked}
+      title={locked ? lockedTitle : undefined}
+      aria-disabled={locked || undefined}
       className={`min-h-11 md:min-h-0 inline-flex items-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border disabled:opacity-50 ${
         primary
           ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border-[var(--sys-primary)]'

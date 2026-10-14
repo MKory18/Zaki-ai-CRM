@@ -31,29 +31,100 @@ export interface QueueScope {
 export interface OwnedCounts {
   total: number;
   withoutAttempt: number;
+  /**
+   * THE ORDER THE REFUSAL IS ABOUT.
+   *
+   * «سجّل محاولة اتصال على طلبك الحالي قبل سحب طلب جديد» named no order and
+   * linked nowhere, and the agent could not reach the one it meant: a
+   * postponed claim is hidden from «طلباتي» until its date, and «الطلبات
+   * المؤجلة» listed it with no contact buttons. The order was held, unusable
+   * and unreachable, and the only way out was the ninety-business-minute
+   * release. So the count carries the order with it, and the refusal opens it.
+   *
+   * The oldest first: it is the one that has been stuck longest, and it is
+   * the one the auto-release will take away first.
+   */
+  /* Optional so the pure refusal rules can still be tested with a bare
+     count literal — `ownedCounts` always supplies it. */
+  untouched?: { id: string; orderNumber: string } | null;
 }
 
 /** What this agent currently holds in the confirmation stage. */
 export async function ownedCounts(tx: Tx, scope: QueueScope, userId: string): Promise<OwnedCounts> {
-  const [total, withoutAttempt] = await Promise.all([
+  const untouchedWhere = {
+    ...scope,
+    claimedById: userId,
+    confirmationStatus: { in: OPEN_CONFIRMATION },
+    contactAttempts: { none: {} },
+  };
+  const [total, withoutAttempt, untouched] = await Promise.all([
     tx.order.count({
       where: { ...scope, claimedById: userId, confirmationStatus: { in: OPEN_CONFIRMATION } },
     }),
-    tx.order.count({
-      where: {
-        ...scope,
-        claimedById: userId,
-        confirmationStatus: { in: OPEN_CONFIRMATION },
-        contactAttempts: { none: {} },
-      },
+    tx.order.count({ where: untouchedWhere }),
+    tx.order.findFirst({
+      where: untouchedWhere,
+      orderBy: { claimedAt: 'asc' },
+      select: { id: true, orderNumber: true },
     }),
   ]);
-  return { total, withoutAttempt };
+  return { total, withoutAttempt, untouched: untouched ?? null };
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * THE CONTACT COMES FIRST — AND IT IS THE HOLDER WHO IS BOUND.
+ *
+ * The owner's rule: the agent speaks to the customer before deciding
+ * anything about their order. What happened instead was measured on this
+ * installation — an agent pulled an order, pressed «تأجيل» without
+ * contacting anybody, and then could not pull again, because the pull gate
+ * counts held orders with no attempt. The order was postponed, so it was
+ * hidden from his own list; the pull screen named no order; and nothing
+ * released it for ninety business minutes. One press cost him an hour and a
+ * half of work.
+ *
+ * Two halves of one rule, and this is the half the server keeps: deciding
+ * on an order you HOLD requires having tried to reach the customer.
+ *
+ * ── WHY THE HOLDER AND NOT EVERYONE ──
+ *
+ * A supervisor cancelling a fake order, or the owner closing something from
+ * a report, never pulled anything and is not working a queue — binding them
+ * would be asking a manager to ring a customer before correcting a record.
+ * The rule exists to stop an agent from disposing of orders without working
+ * them, so it binds exactly the person the queue handed the order to.
+ *
+ * ── WHAT COUNTS AS AN ATTEMPT ──
+ *
+ * Any `OrderContactAttempt`: a call that was answered, a call that was not,
+ * an SMS, a WhatsApp message. «لا يرد» counts — it is a real attempt and
+ * three of them are already a documented outcome. The agent is not being
+ * asked to succeed, only to try.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export const CONTACT_FIRST_ACTIONS = ['confirm', 'reject', 'cancel', 'schedule_follow_up'] as const;
+export type ContactFirstAction = (typeof CONTACT_FIRST_ACTIONS)[number];
+
+export function needsContactFirst(args: {
+  action: string;
+  /** Does the person acting hold this order? */
+  isHolder: boolean;
+  /** Does the order carry at least one contact attempt? */
+  hasAttempt: boolean;
+}): boolean {
+  if (!args.isHolder) return false;
+  if (args.hasAttempt) return false;
+  return (CONTACT_FIRST_ACTIONS as readonly string[]).includes(args.action);
+}
+
+/** The one sentence the server and the screen both say. */
+export const CONTACT_FIRST_MESSAGE = 'اتصل بالزبون أول — أو اكبس «لا يرد»';
 
 export type PullRefusal =
   | { code: 'NOT_YOUR_DESK'; message: string }
-  | { code: 'UNTOUCHED_ORDER'; message: string }
+  /** Carries the order it is about, so the screen can open it. */
+  | { code: 'UNTOUCHED_ORDER'; message: string; orderId: string | null; orderNumber: string | null }
   | { code: 'CAP_WITHOUT_ATTEMPT'; message: string }
   | { code: 'CAP_TOTAL'; message: string }
   | { code: 'QUEUE_EMPTY'; message: string };
@@ -76,7 +147,20 @@ export function pullRefusal(counts: OwnedCounts): PullRefusal | null {
     };
   }
   if (counts.withoutAttempt > 0) {
-    return { code: 'UNTOUCHED_ORDER', message: 'سجّل محاولة اتصال على طلبك الحالي قبل سحب طلب جديد.' };
+    /*
+     * NAMED, AND REACHABLE. The message used to say «طلبك الحالي» and point
+     * at nothing — see `OwnedCounts.untouched`. The id travels with the
+     * refusal so the screen can open that order where its contact buttons
+     * are, including when it is postponed and hidden from «طلباتي».
+     */
+    return {
+      code: 'UNTOUCHED_ORDER',
+      message: counts.untouched
+        ? `سجّل محاولة اتصال على الطلب ${counts.untouched.orderNumber} قبل سحب طلب جديد.`
+        : 'سجّل محاولة اتصال على طلبك الحالي قبل سحب طلب جديد.',
+      orderId: counts.untouched?.id ?? null,
+      orderNumber: counts.untouched?.orderNumber ?? null,
+    };
   }
   return null;
 }
