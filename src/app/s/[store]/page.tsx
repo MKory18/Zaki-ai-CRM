@@ -12,6 +12,7 @@ import { publicizeMedia } from '@/lib/public-media';
 import { PageBlocks } from '@/components/landing/blocks/PageBlocks';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { ProductCard } from '@/components/storefront/ProductCard';
+import { StoreHero } from '@/components/storefront/StoreHero';
 import { CategoryNav } from '@/components/storefront/CategoryNav';
 import { layoutOf } from '@/lib/store-theme';
 import type { Metadata } from 'next';
@@ -188,12 +189,29 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
         header has it, the tab title has it, and a third telling sells
         nothing.
       */}
-      {store.tagline && (
-        <section className="sf-hero">
-          <h1>{store.tagline}</h1>
-          {store.about && <p>{store.about}</p>}
-        </section>
-      )}
+      {/*
+        THE FIRST SCREEN THE TEMPLATE ACTUALLY PICKED.
+
+        This was `{store.tagline && <section className="sf-hero">…}` — one
+        fixed shape, and nothing at all for a shop that had left the
+        tagline empty. Meanwhile «القوالب» drew five different first
+        screens in its preview and let the seller choose between them, and
+        `layoutOf(theme, 'hero')` was called nowhere in the storefront. The
+        seller picked, saved, opened their shop, and got a sixth thing.
+
+        `StoreHero` is the one component the gallery now draws too, so the
+        promise and the delivery cannot drift apart again.
+      */}
+      <StoreHero
+        variant={layoutOf(store.theme, 'hero')}
+        tagline={store.tagline}
+        about={store.about}
+        slug={store.slug}
+        currency={store.currencyCode}
+        minorUnit={minorUnit}
+        products={products}
+        categories={categories}
+      />
 
       <CategoryNav
         categories={categories}

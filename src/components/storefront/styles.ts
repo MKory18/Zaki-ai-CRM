@@ -9,6 +9,153 @@ import { minifyCss } from '@/lib/css-minify';
  * colour still reads a `--store-*` variable the theme derived, so one colour
  * picker restyles the whole shop exactly as it restyles one page.
  */
+/**
+ * THE HERO'S RULES, EXPORTED ON THEIR OWN.
+ *
+ * The template gallery's miniature draws the SAME `StoreHero` component
+ * the shop does, inside the dashboard, where the shop's whole stylesheet
+ * has no business being loaded. So this slice stands alone and
+ * `SkinPreview` injects it: one set of `[data-hero-slot]` rules for both,
+ * which is the other half of «the gallery cannot promise a first screen
+ * the shop does not draw».
+ */
+export const HERO_CSS = `
+/* ────────────────────────────────────────────────────────────────────
+   THE FIVE FIRST SCREENS — one rule each, and that is the point.
+
+   «LAYOUT_SLOTS.hero» named five of these and the shop drew none: no
+   «[data-hero-slot]» existed, because nothing set the attribute. The
+   gallery drew five miniatures of its own, so the promise was visible
+   and the delivery was not. «StoreHero.tsx» sets the attribute; these
+   are what it means. A variant with no rule below is a variant the
+   guard refuses — see «layout-variants.test.ts».
+   ──────────────────────────────────────────────────────────────────── */
+.sf-hx {
+  display: grid;
+  gap: 12px;
+  padding: 20px 20px 4px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+.sf-hx a, .sf-hx > span { color: inherit; text-decoration: none; min-height: 44px; }
+.sf-hx-img {
+  display: block;
+  position: relative;
+  /* 4:3 and NOT a square. Measured at 390: a full-width square put the
+     first product's price at 600px of an 844px screen, so the one thing
+     the hero exists to show — something to buy, priced, in the first
+     screen — fell below the fold. The hero was losing the argument it
+     was built to win. */
+  aspect-ratio: 4 / 3;
+  max-height: 46vh;
+  border-radius: calc(var(--store-radius) * .8);
+  background: var(--store-surface);
+  overflow: hidden;
+}
+.sf-hx-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The shop-wide answer to «no photograph yet»: the initial, never a grey
+   square. Same rule the card and the catalogue block already use. */
+.sf-hx-img:not(:has(img))::after {
+  content: attr(data-letter);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--store-accent) 55%, transparent);
+}
+.sf-hx-name { display: block; font-size: 16px; font-weight: 700; line-height: 1.5; }
+.sf-hx-price { display: block; font-size: 15px; color: var(--store-accent); font-weight: 800; }
+
+/* productFirst — the goods, big, before anything else. */
+.sf-hx[data-hero-slot='productFirst'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sf-hx[data-hero-slot='productFirst'] .sf-hx-feature:first-child { grid-column: 1 / -1; }
+.sf-hx[data-hero-slot='productFirst'] .sf-hx-feature:first-child .sf-hx-img { aspect-ratio: 16 / 9; }
+
+/* offerStrip — the cheapest «من» prices, as a strip, scrolled by hand. */
+.sf-hx[data-hero-slot='offerStrip'] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(44%, 1fr);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+}
+.sf-hx[data-hero-slot='offerStrip'] .sf-hx-offer {
+  scroll-snap-align: start;
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
+  padding: 14px;
+  background: color-mix(in srgb, var(--store-accent) 7%, var(--store-card));
+}
+
+/* categoryTiles — the ways in, for a shopper who knows the kind. */
+.sf-hx[data-hero-slot='categoryTiles'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sf-hx[data-hero-slot='categoryTiles'] .sf-hx-tile {
+  display: grid;
+  place-items: center;
+  padding: 18px 10px;
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-radius);
+  background: var(--store-surface);
+  text-align: center;
+}
+
+/* editorial — the shop's own sentence, set like one, with a way forward. */
+.sf-hx[data-hero-slot='editorial'] { grid-template-columns: 1fr; align-items: center; }
+.sf-hx[data-hero-slot='editorial'] .sf-hx-say { display: grid; gap: 10px; }
+.sf-hx[data-hero-slot='editorial'] strong {
+  font-size: clamp(24px, 5vw, 38px);
+  font-weight: var(--store-heading-weight);
+  line-height: 1.3;
+}
+.sf-hx[data-hero-slot='editorial'] em { font-style: normal; font-size: 16px; color: var(--store-muted); line-height: 1.8; }
+.sf-hx[data-hero-slot='editorial'] .sf-hx-go {
+  justify-self: start;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 22px;
+  min-height: 44px;
+  border-radius: 999px;
+  background: var(--store-accent);
+  color: var(--store-accent-text, #fff);
+  font-weight: 800;
+}
+
+/* slider — three, side by side, scrolled by hand. Nothing moves on its
+   own: the motion rule the template contract already enforces. */
+.sf-hx[data-hero-slot='slider'] {
+  grid-auto-flow: column;
+  grid-auto-columns: 78%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+}
+.sf-hx[data-hero-slot='slider'] .sf-hx-slide { scroll-snap-align: center; }
+
+@media (min-width: 720px) {
+  .sf-hx[data-hero-slot='productFirst'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sf-hx[data-hero-slot='productFirst'] .sf-hx-feature:first-child { grid-column: auto; }
+  .sf-hx[data-hero-slot='categoryTiles'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sf-hx[data-hero-slot='editorial'] { grid-template-columns: 1.1fr .9fr; }
+  .sf-hx[data-hero-slot='offerStrip'] { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+  .sf-hx[data-hero-slot='slider'] { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+}
+
+/* The gallery's miniature is the SAME markup at preview scale — which is
+   how a hero that does not exist here can no longer be promised there. */
+.sf-hx[data-mini] { padding: 8px 8px 2px; gap: 5px; max-width: none; }
+.sf-hx[data-mini] .sf-hx-name { font-size: 8px; font-weight: 700; }
+.sf-hx[data-mini] .sf-hx-price { font-size: 8px; }
+.sf-hx[data-mini] .sf-hx-img::after { font-size: .7rem; }
+.sf-hx[data-mini] strong { font-size: 11px; }
+.sf-hx[data-mini] em { font-size: 8px; }
+.sf-hx[data-mini] a, .sf-hx[data-mini] > span { min-height: 0; }
+.sf-hx[data-mini] .sf-hx-go { min-height: 0; padding: 3px 9px; font-size: 8px; }
+.sf-hx[data-mini] .sf-hx-offer, .sf-hx[data-mini] .sf-hx-tile { padding: 6px; }
+`;
+
 export const STOREFRONT_CSS = `
 .sf-root { min-height: 100vh; display: flex; flex-direction: column; }
 .sf-root main { flex: 1; }
@@ -295,6 +442,8 @@ export const STOREFRONT_CSS = `
 }
 .sf-hero p { font-size: 15px; color: var(--store-muted); max-width: 620px; margin: 0 auto; line-height: 1.8; }
 
+${HERO_CSS}
+
 /* And the goods sit on the same faint shelf the catalogue block's do. */
 .sf-grid-wrap {
   border-radius: 28px;
@@ -309,6 +458,26 @@ export const STOREFRONT_CSS = `
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+/* ── the category page's density — four names, nothing behind any of them
+   until now. Declared in LAYOUT_SLOTS, validated by the contract, offered
+   in the editor, chosen by all ten skins, and read by NO renderer: every
+   shop's category page was identical. «mixed» is retired rather than
+   built (see RETIRED_VARIANTS) — it needs a rule for which product earns
+   the big cell, and this system invents no ranking. ── */
+.sf-grid[data-catpage='grid2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sf-grid[data-catpage='grid3'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* list — one per row, the picture small and the words given the width.
+   For a shop whose products are told apart by their names, not their
+   photographs. */
+.sf-grid[data-catpage='list'] { grid-template-columns: 1fr; gap: 10px; }
+.sf-grid[data-catpage='list'] .sf-card { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 12px; }
+.sf-grid[data-catpage='list'] .sf-card-img { aspect-ratio: 1; }
+@media (min-width: 720px) {
+  .sf-grid[data-catpage='grid3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sf-grid[data-catpage='grid2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sf-grid[data-catpage='list'] .sf-card { grid-template-columns: 120px 1fr; }
 }
 /* THE SAME CARD AS THE CATALOGUE BLOCK'S.
    This grid is what a shop shows before its seller builds a home page, so
@@ -463,6 +632,13 @@ export const STOREFRONT_CSS = `
 .sf-cat-mark::after { content: attr(data-letter); font-weight: 900; }
 
 /* Circles with pictures. */
+/* chips — the shape the nav fell back to for every store that chose it,
+   with no rule of its own saying so. Now it says so, and it is a pill
+   rail that scrolls rather than wrapping to three lines on a phone. */
+.sf-cats[data-nav='chips'] { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
+.sf-cats[data-nav='chips']::-webkit-scrollbar { display: none; }
+.sf-cats[data-nav='chips'] .sf-cat { flex: 0 0 auto; border-radius: 999px; }
+
 .sf-cats[data-nav='tiles'] { gap: 14px; }
 .sf-cats[data-nav='tiles'] .sf-cat {
   flex-direction: column; gap: 7px; padding: 0;
@@ -579,6 +755,20 @@ export const STOREFRONT_CSS = `
    the search and the basket stay readable on whatever photograph a
    seller uploaded — text straight on an image is text half of them
    cannot read. */
+/* minimal — chosen by ritual, heritage and tender, and drawn by nothing:
+   those three shops silently wore the default bar. It is the quietest
+   header the engine has — no search, no menu, the name and the cart —
+   for a shop whose first screen is meant to carry the whole argument. */
+/* The search and the basket STAY. «البحث والسلة وزر واتساب موجودة في كل
+   نسخة — ما يتغيّر هو ترتيبها»: what a header variant may change is the
+   arrangement, never the presence, and «header-core.test.tsx» holds that
+   down. A first draft of this rule hid both and the guard caught it. So
+   minimal is quiet by ARRANGEMENT: no menu row, the name and the basket
+   at the two ends, and the search given only the width it needs. */
+.sf-header[data-header='minimal'] .sf-header-menu { display: none; }
+.sf-header[data-header='minimal'] .sf-header-inner { justify-content: space-between; }
+.sf-header[data-header='minimal'] .sf-search { max-width: 190px; }
+
 .sf-header[data-header='transparent'] {
   background: color-mix(in oklab, var(--store-card) 82%, transparent);
   backdrop-filter: blur(8px);
@@ -766,12 +956,12 @@ export const STOREFRONT_CSS = `
  * THE WHOLE SHEET A SHOP SERVES, BUILT ONCE WHEN THIS MODULE LOADS.
  *
  * It lives here rather than in the shell because the shell is no longer
- * the only thing that needs it: a `loading.tsx` draws the shop's skeleton
+ * the only thing that needs it: a «loading.tsx» draws the shop's skeleton
  * before any page component has run, and a skeleton drawn without the
  * shop's stylesheet is a stack of unstyled boxes — worse than the blank
  * screen it was meant to replace.
  *
- * `minifyCss` drops the comments and collapses the whitespace and changes
+ * «minifyCss» drops the comments and collapses the whitespace and changes
  * nothing else. As written the two sheets came to 51.7 KB, 16.2 KB of it
  * prose explaining the rules to whoever opens the file; those sentences
  * belong in the file and not on a shopper's connection. Both forms were
