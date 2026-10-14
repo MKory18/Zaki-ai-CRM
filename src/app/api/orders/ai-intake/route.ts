@@ -16,7 +16,7 @@ import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, can } from '@/lib/authorization';
-import { entryOwnership, ownedCounts, MANUAL_ENTRY_REASON, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
+import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { AiEndpointMissing, AiNotConfigured, AiNotLocal, aiChat, aiSettings } from '@/lib/ai-provider';
 import { resolvePrompt } from '@/lib/ai-prompts';
@@ -348,7 +348,11 @@ export async function POST(req: Request) {
             throw e;
           }
         }
-        if (!created) throw new Error('Failed to generate a unique order number');
+        if (!created) throw new Error('Failed to generate a unique order number');
+
+        // The claim her entry created, recorded by the one writer both
+        // doors use — inside this transaction, like the order itself.
+        await recordEntryClaim(tx, { companyId, orderId: created.id, ownership: entry });
 
         // The order's line. Reservation and the discount share live per line.
         await tx.orderItem.create({
@@ -442,7 +446,14 @@ export async function POST(req: Request) {
         link: ['/confirmation/queue', '/orders'],
       });
 
-      return NextResponse.json({ success: true, order });
+      // And the same notice the quick door returns: an entry the cap
+      // pushed into the queue is not hers, and silence would let her
+      // believe it was.
+      return NextResponse.json({
+        success: true,
+        order,
+        ...(entry.capFull ? { notice: ENTRY_CAP_FULL_MESSAGE } : {}),
+      });
     }
 
     // ─── Mode 1: Parse & Preview ───

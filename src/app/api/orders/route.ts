@@ -18,7 +18,7 @@ import { applyQueueFilter } from '@/lib/rbac';
 import { ordersWhere } from '@/lib/order-filters';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, getPermissionScope, can } from '@/lib/authorization';
-import { entryOwnership, ownedCounts, MANUAL_ENTRY_REASON, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
+import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
@@ -544,17 +544,7 @@ export async function POST(req: Request) {
        * transfer screen all read this history, and «she typed it» is a
        * different fact from «she drew it from the queue».
        */
-      if (entry.claimedById) {
-        await tx.orderClaimHistory.create({
-          data: {
-            companyId,
-            orderId: created.id,
-            userId: entry.claimedById,
-            action: 'CLAIMED',
-            reason: MANUAL_ENTRY_REASON,
-          },
-        });
-      }
+      await recordEntryClaim(tx, { companyId, orderId: created.id, ownership: entry });
 
       // 6. Status log (confirmation workflow entry point)
       await tx.orderStatusLog.create({

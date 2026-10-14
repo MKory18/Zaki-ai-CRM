@@ -206,6 +206,12 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل حفظ الطلب');
+      /*
+       * THE SAME NOTICE THE OTHER ENTRY WINDOW SHOWS. Pasting a message in
+       * is entering an order exactly as much as typing one, so the agent
+       * learns the same fact the same way: the cap took it to the queue.
+       */
+      if (data.notice) toast.warn(data.notice);
       onSuccess();
       onClose();
       setText('');

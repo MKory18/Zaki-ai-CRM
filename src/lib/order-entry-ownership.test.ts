@@ -225,11 +225,28 @@ describe('both creation doors ask the same rule and record the same fact', () =>
     }
   });
 
-  it('and the claim is recorded as a MANUAL_ENTRY, told apart from a pull', () => {
-    // The auto-release, the caps and the transfer screen all read this
-    // history: «she typed it» is a different fact from «she drew it».
-    expect(quick()).toMatch(/reason: MANUAL_ENTRY_REASON/);
+  it('and both record the claim through the one writer', () => {
+    /*
+     * THIS USED TO GREP THE QUICK-ENTRY FILE FOR `reason:
+     * MANUAL_ENTRY_REASON`, AND PASSED WHILE THE AI INTAKE WROTE NO
+     * HISTORY AT ALL. A text match on one of two places is a test about
+     * that place, not about the rule.
+     *
+     * What it holds now is that neither door writes the row itself — the
+     * shared `recordEntryClaim` does, and `entry-claim-reaches-both-doors`
+     * asks that function what it writes.
+     */
+    for (const [name, src] of [['quick entry', quick()], ['AI intake', intake()]] as const) {
+      expect(src, name).toMatch(/recordEntryClaim\(tx, \{/);
+      expect(src, `${name}: يَكتبُ سجلَّ الحجزِ بنفسِه`).not.toMatch(/orderClaimHistory\.create/);
+    }
     expect(MANUAL_ENTRY_REASON).toBe('MANUAL_ENTRY');
+  });
+
+  it('and both return the cap notice', () => {
+    for (const [name, src] of [['quick entry', quick()], ['AI intake', intake()]] as const) {
+      expect(src, name).toMatch(/entry\.capFull \? \{ notice: ENTRY_CAP_FULL_MESSAGE \}/);
+    }
   });
 
   it('and the public storefront door writes no creator at all', () => {
@@ -242,9 +259,7 @@ describe('both creation doors ask the same rule and record the same fact', () =>
     expect(pub, 'طلبُ المتجرِ العامِّ صارَ له مُدخِل').not.toMatch(/createdById/);
   });
 
-  it('and the agent is told when the cap took her entry', () => {
-    expect(quick()).toMatch(/entry\.capFull \? \{ notice: ENTRY_CAP_FULL_MESSAGE \}/);
-  });
+
 });
 
 describe('the column is additive and nothing was invented for old orders', () => {

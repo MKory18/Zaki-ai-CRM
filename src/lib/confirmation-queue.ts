@@ -95,6 +95,38 @@ export function entryOwnership(args: {
   };
 }
 
+/**
+ * RECORD THE CLAIM AN ENTRY CREATED — ONE WRITER, BOTH DOORS.
+ *
+ * Called inside the transaction that writes the order, so an order can
+ * never exist as hers with no row saying how she got it. The first version
+ * of this lived inline in the quick-entry door, and the AI intake claimed
+ * orders with no history at all — which is the shape of every rule in this
+ * file that has ever been half-applied.
+ *
+ * `MANUAL_ENTRY` tells it apart from a pull: the auto-release, the caps and
+ * the transfer screen all read this history, and «she typed it» is a
+ * different fact from «she drew it from the queue».
+ *
+ * Does nothing when the entry went to the queue — there is no claim to
+ * record.
+ */
+export async function recordEntryClaim(
+  tx: Tx,
+  args: { companyId: string; orderId: string; ownership: EntryOwnership }
+): Promise<void> {
+  if (!args.ownership.claimedById) return;
+  await tx.orderClaimHistory.create({
+    data: {
+      companyId: args.companyId,
+      orderId: args.orderId,
+      userId: args.ownership.claimedById,
+      action: 'CLAIMED',
+      reason: MANUAL_ENTRY_REASON,
+    },
+  });
+}
+
 /** Statuses that still belong to the confirmation stage. */
 const OPEN_CONFIRMATION = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'];
 

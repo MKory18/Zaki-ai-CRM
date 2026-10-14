@@ -46,6 +46,16 @@ export function orderVisibilityWhere(user: SessionUser): Record<string, unknown>
         { assignedToId: user.id },
         { claimedById: user.id },
         { currentOwnerId: user.id },
+        /*
+         * AND WHAT SHE TYPED, EVEN ONCE SOMEBODY ELSE HOLDS IT.
+         *
+         * The list envelope has listed `createdById` since the column
+         * existed; this one did not, so an order she entered that was
+         * later released, auto-released and pulled, transferred, or
+         * pushed to the queue by a full cap stayed in her list and
+         * opened as «غير موجود». A row a list shows is a row that opens.
+         */
+        { createdById: user.id },
         // Orders I entered as a moderator (legacy compat)
         { moderatorId: user.id },
         // ─── Claimable queue: unclaimed orders in the workflow intake stage ───

@@ -126,6 +126,23 @@ vi.mock('@/lib/rbac', () => ({ applyQueueFilter: vi.fn() }));
 /* ── the screens' dependencies ─────────────────────────────────────────── */
 
 const { apiFetch, apiJson } = vi.hoisted(() => ({ apiFetch: vi.fn(), apiJson: vi.fn() }));
+
+/*
+ * THE TOAST, SPIED ON.
+ *
+ * `useToast` returns no-op functions outside a provider, so what these
+ * windows SAY went nowhere and could not be asserted. The entry doors now
+ * return a `notice` when the agent's own cap pushed her order into the
+ * shared queue, and whether she is told is the behaviour under test.
+ */
+const { toastDone, toastWarn, toastFailed } = vi.hoisted(() => ({
+  toastDone: vi.fn(),
+  toastWarn: vi.fn(),
+  toastFailed: vi.fn(),
+}));
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ done: toastDone, warn: toastWarn, failed: toastFailed }),
+}));
 vi.mock('@/lib/api-client', () => ({ apiFetch, apiJson }));
 vi.mock('@/context/AppContext', () => ({
   useApp: () => ({ t: { cancel: 'إلغاء' }, locale: 'ar', isRtl: true }),
@@ -774,5 +791,112 @@ describe('POST /api/orders/ai-intake — the AI modal’s own body, at the real 
     const btn = screen.getByText(/تسجيل الطلب/);
     expect(btn.textContent).toContain('—');
     expect(btn.textContent).not.toContain('0.00');
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AND THE SELLER IS TOLD WHEN THE CAP TOOK HER ORDER.
+ *
+ * An agent keeps the orders she enters — unless she is already holding
+ * 120, in which case the entry goes to the shared queue instead. The door
+ * returns `notice` for exactly that case, and the first version of this
+ * work had both windows ignore it: she read «تم إنشاء الطلب», went to
+ * «طلباتي», and the order was not there.
+ *
+ * `warn` and not `done`: the order WAS created. What failed is the
+ * assumption that it is hers.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+describe('the cap notice reaches the seller', () => {
+  const NOTICE = 'وصلت للحد (120) — الطلب راح للطابور';
+
+  it('the quick-entry window says it', async () => {
+    const user = userEvent.setup();
+    apiFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).startsWith('/api/orders') && init?.method === 'POST') {
+        return new Response(
+          JSON.stringify({ success: true, order: { id: 'o1', orderNumber: 'ORD-9' }, notice: NOTICE }),
+          { status: 200 }
+        );
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+    render(<CreateOrderModal isOpen onClose={() => {}} onSuccess={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('المنتج')).toBeTruthy());
+    await user.type(screen.getByPlaceholderText('مثال: عبدالله عبدالقادر'), 'عبدالله');
+    await user.type(screen.getByPlaceholderText('مثال: 0936654998'), '0936654998');
+    await user.type(screen.getByPlaceholderText('الشارع، البناء، المنطقة...'), 'بانياس');
+    await user.selectOptions(screen.getByLabelText('المحافظة'), '11111111-1111-4111-8111-111111111111');
+    await user.selectOptions(screen.getByLabelText('المنتج'), PRODUCT.id);
+    await waitFor(() => expect(priceBox().value).toBe('14'));
+    await user.click(screen.getByText(/إنشاء الطلب/));
+
+    await waitFor(() =>
+      expect(toastWarn, 'ما قالت للبائعة إنّ الطلب راح للطابور').toHaveBeenCalled()
+    );
+    expect(String(toastWarn.mock.calls[0][0])).toContain(NOTICE);
+    expect(toastDone, 'قالت «تمّ» عن طلبٍ ليس لها').not.toHaveBeenCalled();
+  });
+
+  it('and the extractor window says the same thing', async () => {
+    const user = userEvent.setup();
+    apiFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      if (body?.confirm) {
+        return new Response(
+          JSON.stringify({ success: true, order: { id: 'o1' }, notice: NOTICE }),
+          { status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          parsed: PARSED,
+          engine: 'parser',
+          matchedProduct: { id: PRODUCT.id, name: PRODUCT.name, score: 1 },
+          productMatchConfident: true,
+          suggestedPrice: null,
+          suggestedOfferName: null,
+          existingCustomer: null,
+        }),
+        { status: 200 }
+      );
+    });
+    render(<AiOrderModal isOpen onClose={() => {}} onSuccess={() => {}} />);
+    await user.type(screen.getByRole('textbox'), 'الاسم: عبدالله');
+    await user.click(screen.getByText(/تحليل الطلب بالذكاء الاصطناعي/));
+    await waitFor(() => expect(screen.getByLabelText('الكمية')).toBeTruthy());
+    await user.click(screen.getByText(/تسجيل الطلب/));
+
+    await waitFor(() =>
+      expect(toastWarn, 'المستخرج ما قال للبائعة وين راح الطلب').toHaveBeenCalled()
+    );
+    expect(String(toastWarn.mock.calls[0][0])).toContain(NOTICE);
+  });
+
+  it('and says nothing extra when the order IS hers', async () => {
+    // No notice means the ordinary path: one «تمّ», no warning.
+    const user = userEvent.setup();
+    apiFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).startsWith('/api/orders') && init?.method === 'POST') {
+        return new Response(
+          JSON.stringify({ success: true, order: { id: 'o1', orderNumber: 'ORD-9' } }),
+          { status: 200 }
+        );
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+    render(<CreateOrderModal isOpen onClose={() => {}} onSuccess={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('المنتج')).toBeTruthy());
+    await user.type(screen.getByPlaceholderText('مثال: عبدالله عبدالقادر'), 'عبدالله');
+    await user.type(screen.getByPlaceholderText('مثال: 0936654998'), '0936654998');
+    await user.type(screen.getByPlaceholderText('الشارع، البناء، المنطقة...'), 'بانياس');
+    await user.selectOptions(screen.getByLabelText('المحافظة'), '11111111-1111-4111-8111-111111111111');
+    await user.selectOptions(screen.getByLabelText('المنتج'), PRODUCT.id);
+    await waitFor(() => expect(priceBox().value).toBe('14'));
+    await user.click(screen.getByText(/إنشاء الطلب/));
+
+    await waitFor(() => expect(toastDone).toHaveBeenCalled());
+    expect(toastWarn, 'حذّرت عن طلبٍ لم يُؤخَذ منها').not.toHaveBeenCalled();
   });
 });
