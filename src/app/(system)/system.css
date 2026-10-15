@@ -73,13 +73,22 @@
    * furniture instead of the content. The rule is about controls, so the
    * controls get their own token.
    *
-   * It points at `--sys-muted` — the faintest TEXT colour, and the only
-   * colour already in this palette that clears 3:1 in all three themes
-   * (5.16 / 5.05 / 5.13). Nothing new is invented, so nothing new can
-   * drift. The same decision was taken for the zaki-ui package, where it
-   * is `--zk-color-border-input`.
+   * It takes `--sys-muted`'s value — the faintest TEXT colour, and the
+   * only colour already in each palette that clears 3:1 on its own
+   * surfaces. Nothing new is invented, so nothing new can drift. The same
+   * decision was taken for the zaki-ui package, where it is
+   * `--zk-color-border-input`.
+   *
+   * ⚠️ Its VALUE, written out — it used to be `var(--sys-muted)`, and that
+   * was a bug waiting for the day a palette stopped living in this file.
+   * A custom property substitutes at computed-value time on the element
+   * that declares it, so this line computes on `:root` to the DEFAULT
+   * theme's muted and is then INHERITED as that. Every palette here
+   * repeated the line, which hid it; a palette written into the document
+   * instead would have outlined every field on nine themes in the
+   * default's grey. It is a per-theme value now — see `SYS_VARS`.
    */
-  --sys-border-input: var(--sys-muted);
+  --sys-border-input: #7b8e9c;
   --sys-heading: #E6F1F4;
   --sys-foreground: #E6F1F4;
   --sys-muted-foreground: #9FB6C2;
@@ -110,115 +119,44 @@
   /*
    * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
    * sidebar thumb resolved to nothing and the browser drew its own. No new
-   * colour is introduced — the sidebar borrows the page scrollbar's, which
-   * is what it looked like it was meant to do.
+   * colour is introduced — the sidebar takes the page scrollbar's value,
+   * which is what it looked like it was meant to do.
+   *
+   * ⚠️ Its VALUE, not `var(--sys-scrollbar)`. The same trap as
+   * `--sys-border-input` above: an alias declared here computes on
+   * `:root` to the DEFAULT theme's colour and is inherited as that, so a
+   * palette written into the document rather than into this file would
+   * have drawn nine sidebars with the default's thumb. Per theme now —
+   * see `SYS_VARS`.
    */
-  --sys-sidebar-scrollbar: var(--sys-scrollbar);
-  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
+  --sys-sidebar-scrollbar: #1C3A52;
+  --sys-sidebar-scrollbar-hover: #597183;
   --sys-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55);
   --sys-shadow-overlay: 0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65);
 }
 
-[data-sys-theme='day'] {
-  /* Light, stated. The user agent's own assumption is already light, so
-     this moves no pixel today — it is declared so the scheme belongs to
-     the palette rather than to a default, and so a later surface change
-     cannot leave the native controls behind. */
-  color-scheme: light;
-  --sys-background: #FFFFFF;
-  --sys-card: #F4F8FA;
-  --sys-surface: #E9F0F3;
-  --sys-surface-strong: #DCE7EC;
-  --sys-border: #D5E1E6;
-  --sys-border-strong: #a9bac5;
-  --sys-border-input: var(--sys-muted);
-  --sys-heading: #0C3252;
-  --sys-foreground: #0C3252;
-  --sys-muted-foreground: #4A6272;
-  --sys-muted: #5f6c75;
-  --sys-primary: #1A6382;
-  --sys-primary-foreground: #FFFFFF;
-  --sys-primary-hover: #176079;
-  --sys-primary-soft: #e9f1f4;
-  --sys-focus: #1A6382;
-  --sys-warning: #9A5B12;
-  --sys-warning-soft: #f0f0ee;
-  --sys-destructive: #B42318;
-  --sys-destructive-soft: #f1edef;
-  --sys-destructive-border: #deb0ad;
-  --sys-success: #1E7A3A;
-  --sys-success-soft: #e9f2f0;
-  --sys-chart-1: #2e9aad;
-  --sys-chart-2: #1A6382;
-  --sys-chart-3: #8E7CC3;
-  --sys-chart-4: #a48456;
-  --sys-chart-5: #758d9f;
-  --sys-chart-6: #c1758e;
-  --sys-sidebar: #F4F8FA;
-  --sys-sidebar-foreground: #4A6272;
-  --sys-scrollbar: #D5E1E6;
-  --sys-scrollbar-hover: #99acba;
+/*
+ * ── AND THE OTHER NINE PALETTES ARE NOT HERE ──
+ *
+ * `[data-sys-theme='day']` and `[data-sys-theme='calm']` used to sit at
+ * this spot, and eight more were asked for. Every byte of this file is in
+ * the first-load payload and reaches everybody, whichever theme they
+ * chose: eleven palettes would be ten kilobytes of colours that nine
+ * people in ten never see, and the cap in `quality-gates.test.ts` has
+ * said all along that the way down is «فصلُ لوحاتِ الألوانِ غيرِ
+ * المختارة».
+ *
+ * So only two stay: the DEFAULT above — under `:root` too, so a page
+ * rendered outside the system layout still has colours — and «تلقائي»
+ * below, which must be answered by a media query or a phone in night mode
+ * is shown a white screen at four in the morning.
+ *
+ * The rest are written into the document by `SystemFrame`, one rule for
+ * the one theme that person chose, in the same HTML response. The first
+ * paint is still right. See `SHEET_THEMES` and `themeStyle` in
+ * src/lib/system-themes.ts.
+ */
 
-  /*
-   * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
-   * sidebar thumb resolved to nothing and the browser drew its own. No new
-   * colour is introduced — the sidebar borrows the page scrollbar's, which
-   * is what it looked like it was meant to do.
-   */
-  --sys-sidebar-scrollbar: var(--sys-scrollbar);
-  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
-  --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
-  --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
-}
-
-[data-sys-theme='calm'] {
-  /* Parchment surfaces, light controls. */
-  color-scheme: light;
-  --sys-background: #F6F2EA;
-  --sys-card: #EFE9DE;
-  --sys-surface: #E6DECF;
-  --sys-surface-strong: #DDD3C2;
-  --sys-border: #D8CEBC;
-  --sys-border-strong: #abaca5;
-  --sys-border-input: var(--sys-muted);
-  --sys-heading: #0C3252;
-  --sys-foreground: #0C3252;
-  --sys-muted-foreground: #566369;
-  --sys-muted: #5d6262;
-  --sys-primary: #1A6382;
-  --sys-primary-foreground: #FFFFFF;
-  --sys-primary-hover: #176079;
-  --sys-primary-soft: #e4e2d9;
-  --sys-focus: #1A6382;
-  --sys-warning: #8e5410;
-  --sys-warning-soft: #eae2d4;
-  --sys-destructive: #B42318;
-  --sys-destructive-soft: #ecdfd4;
-  --sys-destructive-border: #dba69b;
-  --sys-success: #1c7036;
-  --sys-success-soft: #e4e3d6;
-  --sys-chart-1: #2a8e9f;
-  --sys-chart-2: #1A6382;
-  --sys-chart-3: #8877bb;
-  --sys-chart-4: #9d7f53;
-  --sys-chart-5: #708799;
-  --sys-chart-6: #b97088;
-  --sys-sidebar: #EFE9DE;
-  --sys-sidebar-foreground: #566369;
-  --sys-scrollbar: #D8CEBC;
-  --sys-scrollbar-hover: #9b9f9c;
-
-  /*
-   * READ TWICE BY `.sidebar-scroll` AND DECLARED NOWHERE, until now: the
-   * sidebar thumb resolved to nothing and the browser drew its own. No new
-   * colour is introduced — the sidebar borrows the page scrollbar's, which
-   * is what it looked like it was meant to do.
-   */
-  --sys-sidebar-scrollbar: var(--sys-scrollbar);
-  --sys-sidebar-scrollbar-hover: var(--sys-scrollbar-hover);
-  --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
-  --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
-}
 
 /*
  * تلقائي HANDS THE CHOICE TO THE DEVICE, AND THE CONTROLS WITH IT.
@@ -238,8 +176,18 @@
   color-scheme: light dark;
 }
 
-/* تلقائي on a light device. On a dark one it already has what it needs. */
+/*
+ * تلقائي on a light device. On a dark one it already has what it needs.
+ *
+ * `:root` is in the selector for the same reason `themeStyle` puts it
+ * there: `body` is the frame div's ancestor, so its background comes from
+ * what the root computed — the default (dark) palette. On «تلقائي» on a
+ * light device that left the overscroll gutter navy behind a white screen.
+ * On a DARK device this media query does not apply at all, and the root
+ * keeps the default, which is what «تلقائي» means there.
+ */
 @media (prefers-color-scheme: light) {
+  :root,
   [data-sys-theme='auto'] {
     --sys-background: #FFFFFF;
     --sys-card: #F4F8FA;
@@ -247,7 +195,7 @@
     --sys-surface-strong: #DCE7EC;
     --sys-border: #D5E1E6;
     --sys-border-strong: #a9bac5;
-    --sys-border-input: var(--sys-muted);
+    --sys-border-input: #5f6c75;
     --sys-heading: #0C3252;
     --sys-foreground: #0C3252;
     --sys-muted-foreground: #4A6272;
@@ -274,6 +222,11 @@
     --sys-sidebar-foreground: #4A6272;
     --sys-scrollbar: #D5E1E6;
     --sys-scrollbar-hover: #99acba;
+    /* The sidebar's thumb too, now that it is a value rather than an
+       alias: without these two a light device on «تلقائي» would inherit
+       the DEFAULT's dark thumb inside a light sidebar. */
+    --sys-sidebar-scrollbar: #D5E1E6;
+    --sys-sidebar-scrollbar-hover: #99acba;
     --sys-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
     --sys-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
   }

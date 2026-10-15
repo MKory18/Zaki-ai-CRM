@@ -1051,6 +1051,16 @@ model Role {
   companyId String? // null = system-wide role template
   name      String
   isSystem  Boolean  @default(false)
+
+  /// THE LOOK A NEW PERSON IN THIS ROLE OPENS ON — and nothing more.
+  ///
+  /// The owner sets one for a role; the moment that person picks a theme of
+  /// their own, `users.system_theme` wins and this stops being consulted
+  /// for them. The same shape as the menu arrangement in
+  /// `nav_arrangements`: a BASE for the role, overridden per person.
+  ///
+  /// Null = the product's default, which is what every role has today.
+  systemTheme String? @map("system_theme")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

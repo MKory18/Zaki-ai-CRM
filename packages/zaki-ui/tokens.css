@@ -76,6 +76,7 @@
   --zk-color-text-heading: #E6F1F4;
   --zk-color-text: #E6F1F4;
   --zk-color-text-muted: #9FB6C2;
+  --zk-color-border-input: var(--zk-color-text-faint);
   --zk-color-text-faint: #7b8e9c;
   --zk-color-brand: #36B5CC;
   --zk-color-brand-on: #04182B;
@@ -99,11 +100,10 @@
   --zk-color-text-sidebar: #9FB6C2;
   --zk-color-scrollbar: #1C3A52;
   --zk-color-scrollbar-hover: #597183;
-  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: #1C3A52;
+  --zk-color-scrollbar-sidebar-hover: #597183;
   --zk-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55);
   --zk-shadow-overlay: 0 2px 8px rgb(0 0 0 / 0.45), 0 16px 40px rgb(0 0 0 / 0.65);
-  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /* ── light: لوحة «النهار» ─────────────────────────────── */
@@ -117,6 +117,7 @@
   --zk-color-text-heading: #0C3252;
   --zk-color-text: #0C3252;
   --zk-color-text-muted: #4A6272;
+  --zk-color-border-input: var(--zk-color-text-faint);
   --zk-color-text-faint: #5f6c75;
   --zk-color-brand: #1A6382;
   --zk-color-brand-on: #FFFFFF;
@@ -140,11 +141,10 @@
   --zk-color-text-sidebar: #4A6272;
   --zk-color-scrollbar: #D5E1E6;
   --zk-color-scrollbar-hover: #99acba;
-  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: #D5E1E6;
+  --zk-color-scrollbar-sidebar-hover: #99acba;
   --zk-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.06), 0 1px 3px rgb(12 50 82 / 0.08);
   --zk-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.07), 0 12px 32px rgb(12 50 82 / 0.14);
-  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /* ── calm: لوحة «الهادئة» — فاتحةٌ ثانيةٌ موجودةٌ في المنتج ─────────────────────────────── */
@@ -158,6 +158,7 @@
   --zk-color-text-heading: #0C3252;
   --zk-color-text: #0C3252;
   --zk-color-text-muted: #566369;
+  --zk-color-border-input: var(--zk-color-text-faint);
   --zk-color-text-faint: #5d6262;
   --zk-color-brand: #1A6382;
   --zk-color-brand-on: #FFFFFF;
@@ -181,11 +182,10 @@
   --zk-color-text-sidebar: #566369;
   --zk-color-scrollbar: #D8CEBC;
   --zk-color-scrollbar-hover: #9b9f9c;
-  --zk-color-scrollbar-sidebar: var(--zk-color-scrollbar);
-  --zk-color-scrollbar-sidebar-hover: var(--zk-color-scrollbar-hover);
+  --zk-color-scrollbar-sidebar: #D8CEBC;
+  --zk-color-scrollbar-sidebar-hover: #9b9f9c;
   --zk-shadow-raised: 0 1px 2px rgb(12 50 82 / 0.05), 0 1px 3px rgb(12 50 82 / 0.07);
   --zk-shadow-overlay: 0 2px 6px rgb(12 50 82 / 0.06), 0 12px 32px rgb(12 50 82 / 0.12);
-  --zk-color-border-input: var(--zk-color-text-faint);
 }
 
 /*

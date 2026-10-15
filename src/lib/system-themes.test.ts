@@ -10,8 +10,10 @@ import {
   DEFAULT_THEME,
   SYSTEM_THEMES,
   SYS_VARS,
+  SHEET_THEMES,
   sanitizeTheme,
   themeByKey,
+  themeStyle,
 } from './system-themes';
 
 /**
@@ -60,8 +62,10 @@ const contrast = (a: string, b: string) => {
 };
 
 describe('the palettes', () => {
-  it('there are three palettes, and the default is one of them', () => {
-    expect(SYSTEM_THEMES).toHaveLength(3);
+  it('there are eleven palettes, and the default is one of them', () => {
+    // Three were the product's own; eight are the owner's, from his PC
+    // application. Every gate below runs over all eleven.
+    expect(SYSTEM_THEMES).toHaveLength(11);
     expect(themeByKey(DEFAULT_THEME).key).toBe(DEFAULT_THEME);
   });
 
@@ -341,14 +345,64 @@ describe('the brand, and what it forbids', () => {
 describe('the stylesheet matches the palettes', () => {
   // The CSS is generated from these objects so the first paint is already
   // the right theme. Two copies of a palette is one palette that goes stale.
-  it('every theme has a block, and every value in it is the one here', () => {
+  it('the two the sheet carries are in it, every value', () => {
     const text = css();
+    for (const key of SHEET_THEMES) {
+      expect(text, `no block for ${key}`).toContain(`[data-sys-theme='${key}']`);
+    }
+    const dflt = themeByKey(DEFAULT_THEME);
+    for (const name of SYS_VARS) {
+      expect(text, `${dflt.key}: --sys-${name}`).toContain(`--sys-${name}: ${dflt.vars[name]};`);
+    }
+  });
+
+  it('and the other nine are NOT in it — a palette nobody chose is weight on everybody', () => {
+    /*
+     * Every byte of system.css is in the first-load payload. Eleven
+     * palettes is ten kilobytes of colours nine people in ten never see,
+     * and `quality-gates.test.ts` caps the sheet for that reason — its own
+     * message names this as the way down.
+     */
+    // Stripped, because the note left at the spot those palettes used to
+    // occupy NAMES two of them — and a guard that reads its own prose is
+    // the fault this repository has now made nine times.
+    const text = stripComments(css());
     for (const theme of SYSTEM_THEMES) {
-      expect(text, `no block for ${theme.key}`).toContain(`[data-sys-theme='${theme.key}']`);
+      if ((SHEET_THEMES as readonly string[]).includes(theme.key)) continue;
+      expect(text, `قلمٌ لم يختره أحد في ورقة الأنماط: ${theme.key}`).not.toContain(
+        `[data-sys-theme='${theme.key}']`
+      );
+    }
+  });
+
+  it('and every palette the sheet does not carry is written by the frame, whole', () => {
+    // Whole: the selector, every one of the thirty-four values, and the
+    // scheme its native controls are drawn in — in ONE rule, so a theme
+    // whose surfaces are light and whose checkboxes are dark cannot exist.
+    for (const theme of SYSTEM_THEMES) {
+      if ((SHEET_THEMES as readonly string[]).includes(theme.key)) continue;
+      const rule = themeStyle(theme.key);
+      expect(rule, theme.key).toContain(`[data-sys-theme='${theme.key}']`);
+      expect(rule, `${theme.key}: color-scheme`).toContain(`color-scheme:${theme.dark ? 'dark' : 'light'}`);
       for (const name of SYS_VARS) {
-        expect(text, `${theme.key}: --sys-${name}`).toContain(`--sys-${name}: ${theme.vars[name]};`);
+        expect(rule, `${theme.key}: --sys-${name}`).toContain(`--sys-${name}:${theme.vars[name]}`);
       }
     }
+  });
+
+  it('and writes nothing for the two it does carry, nor for a key it does not know', () => {
+    // Declaring the default twice is how the two copies come to disagree.
+    for (const key of SHEET_THEMES) expect(themeStyle(key), key).toBe('');
+    expect(themeStyle('midnight')).toBe('');
+    expect(themeStyle(null)).toBe('');
+  });
+
+  it('and the frame actually puts it in the document, beside the fonts', () => {
+    const frame = stripComments(
+      readFileSync(join(process.cwd(), 'src/app/(system)/SystemFrame.tsx'), 'utf8')
+    );
+    expect(frame).toContain('themeStyle(key)');
+    expect(frame, 'القلم محسوبٌ ولا يُطبع').toMatch(/\$\{palette\}/);
   });
 
   it('and تلقائي resolves on the FIRST paint, by media query, not by script', () => {
@@ -517,7 +571,16 @@ describe('every palette declares the scheme its native controls are drawn in', (
   it.each(SYSTEM_THEMES.map((t) => [t.key, t.dark] as const))(
     '%s declares the scheme matching its own dark flag',
     (key, dark) => {
-      const schemes = declaredSchemes(css(), `[data-sys-theme='${key}']`);
+      /*
+       * READ WHERE THAT PALETTE ACTUALLY LIVES.
+       *
+       * Two of the eleven are in the stylesheet and nine are written into
+       * the document by `SystemFrame` — see `SHEET_THEMES`. The claim is
+       * the same for all eleven: whichever place a palette comes from, it
+       * states the scheme its own native controls are drawn in.
+       */
+      const source = (SHEET_THEMES as readonly string[]).includes(key) ? css() : themeStyle(key);
+      const schemes = declaredSchemes(source, `[data-sys-theme='${key}']`);
       expect(schemes, `لا color-scheme للقلم ${key}`).toContain(dark ? 'dark' : 'light');
     }
   );

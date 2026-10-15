@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { SystemFrame } from './SystemFrame';
 import { getCurrentUser } from '@/lib/auth';
-import { themeByKey } from '@/lib/system-themes';
+import { openingTheme, themeByKey } from '@/lib/system-themes';
 import { cookies } from 'next/headers';
 import { RAIL_COOKIE } from '@/lib/sidebar-rail';
+import { DECOR_COOKIE } from '@/lib/theme-decoration';
 import { AppProvider } from '@/context/AppContext';
 import { GlobalTrackingProvider } from '@/components/tracking/GlobalTrackingProvider';
 
@@ -46,14 +47,22 @@ export default async function SystemLayout({ children }: { children: React.React
    * inside React components are never executed» in the console on every
    * page load. See src/lib/sidebar-rail.ts.
    */
-  const railed = (await cookies()).get(RAIL_COOKIE)?.value === '1';
+  const jar = await cookies();
+  const railed = jar.get(RAIL_COOKIE)?.value === '1';
+  /*
+   * How much of the theme's own mood this browser wants — off, light or
+   * full. A cookie and not a column: it belongs to a screen rather than
+   * to an account (the same person on a phone in the sun and on a desk at
+   * night does not want the same answer), and it costs no migration.
+   */
+  const decor = jar.get(DECOR_COOKIE)?.value;
 
   return (
-    <SystemFrame theme={user?.systemTheme} railed={railed}>
+    <SystemFrame theme={openingTheme(user?.systemTheme, user?.roleTheme)} railed={railed} decor={decor}>
       {/* The status bar takes the colour of the theme this person chose, so
           an installed app does not wear the default's colour above a dark
           screen. */}
-      <meta name="theme-color" content={themeByKey(user?.systemTheme).vars.sidebar} />
+      <meta name="theme-color" content={themeByKey(openingTheme(user?.systemTheme, user?.roleTheme)).vars.sidebar} />
 
       <AppProvider initialUser={user}>
         {/* The engine starts empty. Pixels are registered by the selling
