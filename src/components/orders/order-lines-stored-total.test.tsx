@@ -89,6 +89,10 @@ function order(items: (typeof ZERO_LINE)[]) {
   return {
     id: 'o1',
     version: 7,
+    // Before confirmation: this file is about the stored total, and after
+    // confirmation the card raises a request instead of saving.
+    confirmationStatus: 'NEW',
+    totalAmount: 126,
     quantity: 3,
     sellingPrice: 42,
     discountAmount: 42,

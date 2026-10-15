@@ -83,12 +83,30 @@ describe('who may decide', () => {
     expect(verdict.reason).toContain('شركة الشحن');
   });
 
-  it('lets a supervisor decide at either stage', () => {
-    // An escalation path that stops working because one person went home is
-    // not a path.
+  it('lets whoever HOLDS the permission decide at either stage', () => {
+    /*
+     * An escalation path that stops working because one person went home
+     * is not a path — so this is still true at both stages. What changed
+     * is WHY: it used to be true because `CONFIRMATION_SUPERVISOR` is in
+     * `SUPERVISOR_ROLES`, a list that `can()` could not switch off. The
+     * owner unticking «طلبات التعديل» for a role did nothing, which is
+     * the one screen built for keeping the final say.
+     *
+     * Now the name decides nothing and the permission decides everything.
+     * The migration grants it to exactly those roles, so the day after
+     * the deploy the same people decide — and from then on it holds.
+     */
+    can.mockImplementation((_u: unknown, key: string) => key === 'control.change_requests');
     const sup = user('sup', 'CONFIRMATION_SUPERVISOR');
     expect(mayDecide(sup, onHerDesk).allowed).toBe(true);
     expect(mayDecide(sup, inOperations).allowed).toBe(true);
+  });
+
+  it('and a supervisor the owner has unticked no longer decides', () => {
+    // The whole point: the name used to be authority, and could not be
+    // withdrawn. `can` returns false for everything here.
+    const sup = user('sup', 'CONFIRMATION_SUPERVISOR');
+    expect(mayDecide(sup, inOperations).allowed, 'الاسم لسّا بيعطي سلطة').toBe(false);
   });
 
   it('treats the permission as the authority, not the job title', () => {
@@ -97,7 +115,11 @@ describe('who may decide', () => {
     expect(can).toHaveBeenCalledWith(expect.anything(), 'control.change_requests');
   });
 
-  it('lets the owner decide anything', () => {
+  it('lets the owner decide anything, because he holds every permission', () => {
+    // Not special-cased by name: `SUPER_ADMIN` holds every key in this
+    // system, so it holds this one — which is why dropping the name list
+    // takes nothing away from him.
+    can.mockImplementation((_u: unknown, key: string) => key === 'control.change_requests');
     expect(mayDecide(user('owner', 'SUPER_ADMIN'), inOperations).allowed).toBe(true);
   });
 

@@ -95,15 +95,33 @@ export interface RoutingVerdict {
 }
 
 /**
- * The roles that may decide a change request whatever their permissions.
- * Exported so the people TOLD about a request are the people who may
- * decide it — the notification audience reads this same list.
+ * THE ROLES THAT DECIDED BY NAME, AND WHY THE NAME STOPPED COUNTING.
+ *
+ * This list WAS authority: four role names could decide a change request
+ * whatever their permissions. So «طلبات التعديل» on the permissions screen
+ * could be unticked for `MANAGER` and a manager went on deciding — the
+ * owner could not keep the final say to himself from the one screen built
+ * for keeping it. A guard that is a list of names is incomplete the day it
+ * is written, and this one could not even be turned off.
+ *
+ * It is now a MIGRATION list, not a rule: `control.change_requests` is
+ * granted to exactly these roles once, so the day after the deploy the
+ * same people decide as before — and from then on the owner unticks
+ * whoever he wants out, and it holds.
+ *
+ * Still exported because the people TOLD about a request should be the
+ * people who may decide it, and the notification audience reads this.
  */
 export const SUPERVISOR_ROLES = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'CONFIRMATION_SUPERVISOR'] as const;
 
-/** A supervisor by authority, not by job title. */
+/**
+ * A supervisor by authority, and no longer by job title.
+ *
+ * `SUPER_ADMIN` is not special-cased here either: it holds every
+ * permission in this system, so it holds this one.
+ */
 function isSupervisor(user: SessionUser): boolean {
-  return can(user, 'control.change_requests') || (SUPERVISOR_ROLES as readonly string[]).includes(user.role);
+  return can(user, 'control.change_requests');
 }
 
 export function mayDecide(user: SessionUser, order: RoutingSource): RoutingVerdict {

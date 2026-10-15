@@ -6,6 +6,11 @@ import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 import { RiHistoryLine, RiLoader4Line, RiPencilLine, RiUserLine } from '@remixicon/react';
 import { ContactButtons } from '@/components/orders/ContactButtons';
+import { raiseEditRequest } from '@/components/orders/raiseEditRequest';
+import { BEFORE_OPERATIONS } from '@/lib/change-request-routing';
+import type { ChangeableField } from '@/lib/change-request-fields';
+import { MAX_REASON, MIN_REASON } from '@/lib/order-edit-reason';
+import { useAsk } from '@/components/ui/Confirm';
 
 /**
  * Who the order goes to, and the one button that edits all of it.
@@ -24,6 +29,8 @@ interface Props {
     id: string;
     version: number;
     orderNumber: string;
+    /** Confirmation is the line after which an edit becomes a request. */
+    confirmationStatus: string;
     totalAmount: number;
     trackingNumber?: string | null;
     regionId: string | null;
@@ -56,10 +63,13 @@ interface Props {
 export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved, onOpenHistory }: Props) {
   // Saves, and asks why when the server says this authority owes a reason.
   const patchOrder = useOrderPatch();
+  const ask = useAsk();
   const { regions, countryName } = useRegions();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** «بانتظار الموافقة» — said out loud, not left to be guessed. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({
     fullName: order.customer.fullName ?? '',
     phone: order.customer.rawPhone || order.customer.phone || '',
@@ -84,14 +94,82 @@ export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved,
       address: order.customer.address ?? '',
     });
     setError(null);
+    setNotice(null);
     if (!canEdit) await onAcquireLock();
     setOpen(true);
+  }
+
+  /**
+   * ONCE IT IS CONFIRMED, THIS SAVE IS A REQUEST.
+   *
+   * The owner's rule: «لما يتأكد الطلب، الموظف ما بيقدر يعدله — التعديل
+   * يصير طلب تعديل، والقرار إلي». Before confirmation the order is still
+   * the agent's and the save goes straight through, exactly as it did.
+   *
+   * The server refuses the direct path either way
+   * (`CHANGE_REQUEST_REQUIRED`), so this is not the rule — it is the
+   * person being told the rule BEFORE they have retyped a street, rather
+   * than after.
+   *
+   * Only the fields that actually changed travel: a request that says «the
+   * name, to the same name» is a row a supervisor has to read and decide
+   * for nothing.
+   */
+  const pastConfirmation = !BEFORE_OPERATIONS.includes(order.confirmationStatus);
+
+  function changedFields(): Partial<Record<ChangeableField, string | number | null>> {
+    const now = {
+      customerName: form.fullName,
+      customerPhone: form.phone,
+      customerAltPhone: form.altPhone.trim() || null,
+      customerAddress: form.address,
+      regionId: form.regionId || null,
+    } as const;
+    const before = {
+      customerName: order.customer.fullName ?? '',
+      customerPhone: order.customer.rawPhone || order.customer.phone || '',
+      customerAltPhone: order.customer.altPhone ?? null,
+      customerAddress: order.customer.address ?? '',
+      regionId: order.regionId ?? null,
+    } as const;
+    const diff: Partial<Record<ChangeableField, string | number | null>> = {};
+    for (const key of Object.keys(now) as (keyof typeof now)[]) {
+      if ((now[key] ?? null) !== (before[key] ?? null)) diff[key] = now[key] ?? null;
+    }
+    return diff;
   }
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
+      if (pastConfirmation) {
+        const changes = changedFields();
+        if (Object.keys(changes).length === 0) {
+          setOpen(false);
+          return;
+        }
+        const reason = await ask({
+          title: 'طلب تعديل',
+          body: 'الطلب مؤكَّد، فالتعديل بيروح كطلب لمن يبتّ فيه. السبب بينحفظ مع الطلب وبيقراه اللي بيوافق.',
+          confirmLabel: 'ارفع الطلب',
+          input: {
+            label: 'ليش بدّه يتعدّل؟',
+            placeholder: 'مثال: الزبون غيّر العنوان بالتلفون',
+            required: true,
+            multiline: true,
+            maxLength: MAX_REASON,
+          },
+        });
+        const trimmed = (reason ?? '').trim();
+        if (trimmed.length < MIN_REASON) return; // cancelled, or too short to mean anything
+        const { applied } = await raiseEditRequest(order.id, changes, trimmed, order.version);
+        setOpen(false);
+        if (applied) onSaved();
+        else setNotice('بانتظار الموافقة — التعديل انرفع كطلب، والطلب ما تغيّر لحتى حدا يوافق.');
+        return;
+      }
+
       const res = await patchOrder(order.id, {
         expectedVersion: order.version,
         customerName: form.fullName,
@@ -141,6 +219,18 @@ export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved,
           </button>
         </div>
       </div>
+
+      {/*
+        «بانتظار الموافقة» — SAID, NOT LEFT TO BE GUESSED.
+        A save that raises a request closes the form and changes nothing on
+        the order. Without this line the card looks exactly like a save that
+        did not work, and the person presses «تعديل» again.
+      */}
+      {notice && (
+        <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5">
+          {notice}
+        </p>
+      )}
 
       {!open ? (
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
