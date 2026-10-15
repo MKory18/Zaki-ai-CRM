@@ -128,7 +128,7 @@ export async function recordEntryClaim(
 }
 
 /** Statuses that still belong to the confirmation stage. */
-const OPEN_CONFIRMATION = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'];
+export const OPEN_CONFIRMATION = ['NEW', 'IN_PROGRESS', 'NO_ANSWER', 'FOLLOW_UP_REQUIRED', 'POSTPONED'];
 
 export interface QueueScope {
   companyId: string;
@@ -156,14 +156,32 @@ export interface OwnedCounts {
   untouched?: { id: string; orderNumber: string } | null;
 }
 
-/** What this agent currently holds in the confirmation stage. */
-export async function ownedCounts(tx: Tx, scope: QueueScope, userId: string): Promise<OwnedCounts> {
-  const untouchedWhere = {
+/**
+ * HELD BY SOMEBODY, AND NOBODY HAS TRIED TO RING THE CUSTOMER YET.
+ *
+ * This is the predicate the pull gate refuses on — see `pullRefusal` and
+ * `CONTACT_FIRST_MESSAGE`. It is lifted out of `ownedCounts` because the
+ * palette's opening summary asks the SAME question twice over: an agent
+ * asks it about her own desk, and an owner asks it about the store. Two
+ * copies of this `where` would be two definitions of «بلا محاولة اتصال»,
+ * and the one on the summary would be the one nobody tested.
+ *
+ * `holderId` absent means «whoever is holding it» — the store-wide
+ * question. It is NOT «unclaimed»: an order nobody has taken has nobody
+ * to chase, and `claimedById: { not: null }` says so.
+ */
+export function heldWithoutAttemptWhere(scope: QueueScope, holderId?: string) {
+  return {
     ...scope,
-    claimedById: userId,
+    claimedById: holderId ?? { not: null },
     confirmationStatus: { in: OPEN_CONFIRMATION },
     contactAttempts: { none: {} },
   };
+}
+
+/** What this agent currently holds in the confirmation stage. */
+export async function ownedCounts(tx: Tx, scope: QueueScope, userId: string): Promise<OwnedCounts> {
+  const untouchedWhere = heldWithoutAttemptWhere(scope, userId);
   const [total, withoutAttempt, untouched] = await Promise.all([
     tx.order.count({
       where: { ...scope, claimedById: userId, confirmationStatus: { in: OPEN_CONFIRMATION } },
