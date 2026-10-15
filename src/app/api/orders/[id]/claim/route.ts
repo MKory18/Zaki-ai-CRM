@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { can } from '@/lib/authorization';
 import { ORDER_CLAIM_NOT_HELD, ORDER_NOT_FOUND, ORDER_STALE, orderClaimedBy } from '@/lib/order-refusals';
+import { ownedCounts, pullRefusal } from '@/lib/confirmation-queue';
 
 /**
  * POST /api/orders/[id]/claim        → claim + digital signature
@@ -121,6 +122,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Already claimed by me → idempotent success
     if (order.claimedById === user.id && order.signatureStatus === 'SIGNED') {
       return NextResponse.json({ success: true, alreadyClaimed: true, order });
+    }
+
+    /**
+     * ── THE CAPS ARE ABOUT THE DESK, NOT ABOUT THE BUTTON ──
+     *
+     * «اسحب الطلب التالي» asks `pullRefusal` first: the 120 total, the 40
+     * without a contact attempt, and C1's rule that an untouched order in
+     * your hands comes before a new one. This door — take THIS order, by
+     * id — asked none of them. No screen offers it, but the queue it
+     * draws from is the same queue, and one hand-written request could
+     * cherry-pick the good orders out of it all day with no limit at all.
+     *
+     * Only when she is TAKING it. Finishing a claim she already holds is
+     * not a new order on her desk, and the caps already counted it.
+     */
+    if (order.claimedById !== user.id) {
+      const counts = await ownedCounts(db, { companyId, storeId }, user.id);
+      const refusal = pullRefusal(counts);
+      if (refusal) {
+        return NextResponse.json(
+          {
+            error: refusal.message,
+            errorAr: refusal.message,
+            code: refusal.code,
+            // The untouched-order refusal names the order it is about, so
+            // whoever gets this can open it instead of hunting for it.
+            ...(refusal.code === 'UNTOUCHED_ORDER'
+              ? { orderId: refusal.orderId, orderNumber: refusal.orderNumber }
+              : {}),
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const now = new Date();

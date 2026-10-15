@@ -30,6 +30,30 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'orders.view', ar: 'عرض الطلبات', en: 'View orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.edit', ar: 'تعديل الطلبات', en: 'Edit orders', scopes: ['ALL_COMPANY', 'OWN', 'ASSIGNED'] },
       { key: 'orders.create', ar: 'إنشاء طلبات', en: 'Create orders' },
+      /**
+       * SEPARATE FROM `orders.create`, BECAUSE A FILE IS NOT A ROW.
+       *
+       * The import dialog posts its rows to the same door a single entry
+       * uses, one call each. So whoever could type ONE order could feed a
+       * spreadsheet of three hundred through the same permission — and the
+       * owner's rule is that a confirmation agent types orders by hand and
+       * does not import.
+       */
+      { key: 'orders.import', ar: 'استيراد طلبات', en: 'Import orders' },
+      /**
+       * Recording what happened on a call had no permission of its own: the
+       * contact-attempts door took `orders.edit` OR `orders.claim`, and the
+       * `contact_result` action rode on `orders.confirm`. Three different
+       * permissions, none of them about the telephone.
+       */
+      { key: 'orders.contact_log', ar: 'تسجيل نتيجة الاتصال', en: 'Log contact result' },
+      /**
+       * The arrows in the order window. They had no permission at all, and
+       * they walked the READ envelope — which carries the unclaimed queue.
+       * So one order opened was a door onto the whole pool, the pool C2 had
+       * just taken out of the agent's list.
+       */
+      { key: 'orders.navigate', ar: 'التنقّل بين الطلبات (السابق واللاحق)', en: 'Navigate between orders' },
       { key: 'orders.assign', ar: 'إسناد الطلبات', en: 'Assign orders' },
       { key: 'orders.claim', ar: 'استلام الطلبات', en: 'Claim orders' },
       { key: 'orders.release', ar: 'تحرير الطلبات', en: 'Release orders' },

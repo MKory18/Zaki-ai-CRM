@@ -141,6 +141,33 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
+    /**
+     * ── ONE ORDER IS NOT THREE HUNDRED ──
+     *
+     * `ImportOrdersDialog` has no bulk endpoint of its own: it reads the
+     * file in the browser and posts the rows HERE, one call each. Which
+     * means `orders.create` — «may type an order» — was also «may feed a
+     * spreadsheet through», and the owner's rule is that a confirmation
+     * agent does the first and not the second.
+     *
+     * So the dialog says what it is, and this door asks for the matching
+     * permission. The flag is the client's claim about itself, and that is
+     * enough: it can only ever ADD a requirement. A caller who lies by
+     * omission is left exactly where they were before this existed, still
+     * holding `orders.create` and still posting one row per call — which
+     * is the honest shape of the limit, and is recorded as known in
+     * BACKLOG_P2.md rather than pretended away.
+     */
+    if (body?.viaImport === true && !can(user, 'orders.import')) {
+      return NextResponse.json(
+        {
+          error: 'لا تملك صلاحية استيراد الطلبات — الإدخال اليدوي متاح.',
+          code: 'IMPORT_NOT_ALLOWED',
+        },
+        { status: 403 }
+      );
+    }
+
     // Server-side Zod validation — never trust client input
     const orderSchema = z.object({
       customerName: z.string().trim().min(2).max(80),

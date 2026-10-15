@@ -21,6 +21,8 @@ import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
@@ -98,6 +100,21 @@ const needsContact = (order: { _count: { contactAttempts: number } }) =>
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
+  /**
+   * ── THE PHONE STRIP FOLLOWS ITS OWN PERMISSION ──
+   *
+   * Gated HERE and not inside `ContactButtons`: that component is also
+   * drawn by the couriers screen, the tracking screen and the storefront
+   * shell, and none of those is the confirmation queue. Hiding it there
+   * would take the call button off three screens that never asked for one.
+   *
+   * ⚠️ And note what stays visible: «تأكيد» · «تأجيل» · «ألغِ» are locked
+   * by C1 until an attempt exists, so a role without `orders.contact_log`
+   * can see them and never open them. That is why «الصلاحيات» warns about
+   * exactly this combination.
+   */
+  const { currentUser } = useApp();
+  const canLogContact = userCan(currentUser, 'orders.contact_log');
   const [data, setData] = useState<MineResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -390,6 +407,8 @@ export function ConfirmationMineScreen() {
                   </Action>
 
                   {/* 1/2/3 counter — the third no-answer closes the order by rule */}
+                  {canLogContact && (
+                  <>
                   <Action
                     onClick={() => logAttempt(order, 'PHONE', 'NO_ANSWER')}
                     busy={busyId === order.id}
@@ -440,6 +459,8 @@ export function ConfirmationMineScreen() {
                       logAttempt(order, method, method === 'PHONE' ? 'ANSWERED' : 'MESSAGE_SENT')
                     }
                   />
+                  </>
+                  )}
                   {/*
                     IN THE ORDER THE WORK HAPPENS IN.
 
