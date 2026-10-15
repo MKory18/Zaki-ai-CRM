@@ -90,7 +90,7 @@ const lab = shipped({
 });
 
 /**
- * ٢. أعشاب — the herbalist's shop.
+ * ٢. أعشاب — the herbal's shop.
  *
  * Warm cream and olive, ink brown for the words. The distinctive thing
  * is the INGREDIENT: somebody buying herbs is buying what is in them,
@@ -112,7 +112,7 @@ const herbs = shipped({
     border: '#e6ddcd',
     price: '#3a2f25',
   },
-  // Naskh for the name, a plain face for everything else: a herbalist's
+  // Naskh for the name, a plain face for everything else: a herbal's
   // shop reads as one, and a display face on body text is a shop nobody
   // can read a paragraph of.
   type: { heading: 'naskh', body: 'tajawal' },

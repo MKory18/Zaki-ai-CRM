@@ -1070,11 +1070,11 @@ const CLINIC_CSS = `
 const HERBALIST_CSS = `
 /* «عطّار» breathes most, and its one ornament is a dotted rule under a
    heading — the cheapest thing on the list and the most recognisable. */
-.sf-root[data-family='herbalist'] .sf-grid-wrap, .sf-root[data-family='herbalist'] .sf-row { padding-block: 26px; }
-.sf-root[data-family='herbalist'] .sf-row h2 {
+.sf-root[data-family='herbal'] .sf-grid-wrap, .sf-root[data-family='herbal'] .sf-row { padding-block: 26px; }
+.sf-root[data-family='herbal'] .sf-row h2 {
   border-block-end: 2px dotted var(--store-border); padding-block-end: 8px;
 }
-.sf-root[data-family='herbalist'] .sf-card { outline: 1px solid var(--store-border); outline-offset: 3px; }
+.sf-root[data-family='herbal'] .sf-card { outline: 1px solid var(--store-border); outline-offset: 3px; }
 `;
 
 const TREND_CSS = `
@@ -1293,7 +1293,7 @@ export const FAMILY_MINI_CSS = `
 /** Each family's own rules, by the id `familyOf` returns. */
 export const FAMILY_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
   clinic: CLINIC_CSS,
-  herbalist: HERBALIST_CSS,
+  herbal: HERBALIST_CSS,
   trend: TREND_CSS,
   brand: BRAND_CSS,
 });
@@ -1305,7 +1305,7 @@ export const FAMILY_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
  */
 export const FAMILY_HERO_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
   clinic: CLINIC_HERO_CSS,
-  herbalist: '',
+  herbal: '',
   trend: '',
   brand: BRAND_HERO_CSS,
 });

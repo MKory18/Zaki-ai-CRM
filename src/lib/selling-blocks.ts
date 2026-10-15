@@ -75,12 +75,19 @@ export const DEFAULT_FAMILY: SellingFamily = 'clinic';
  * it reads as the default rather than as nothing, the same rule
  * `effectiveVariant` applies to a retired layout slot.
  *
- * AND «علامة» IS NOT HERE, DELIBERATELY. It is the owner's fourth family,
- * added on 15/10, and it is not one of the ten skins: it is built from a
- * product's own fields — the Latin name, the promises, the close-up — and
- * its brief is the storefront stage's. No template maps to it, so nothing
+ * AND «علامة» IS HERE NOW — IT WAS NOT, AND THE REASON IT IS WORTH
+ * READING. This table shipped with a note saying the owner's fourth
+ * family was deliberately absent: «No template maps to it, so nothing
  * here can derive it, and `the-three-families.test.ts` holds that: a
- * family this stage has not drawn must be one this stage cannot select.
+ * family this stage has not drawn must be one this stage cannot select.»
+ *
+ * The storefront branch then drew it. «علامة» is a shipped template now
+ * (`alama`, in `store-templates.ts`), its product page is built from the
+ * product's own fields (`store-brand-template.ts`), and `brand` has a
+ * look in this stage's own stylesheet beside the other three. So the
+ * bargain is kept from the other side: the id is reachable BECAUSE it is
+ * drawn, and the guard still fails the day somebody maps a template to a
+ * family nobody drew.
  */
 export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Object.freeze({
   lab: 'clinic',
@@ -92,6 +99,14 @@ export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Objec
   pulse: 'trend',
   souq: 'trend',
   tender: 'trend',
+  /*
+   * The eleventh template and the only one that is not one of the ten:
+   * «علامة», the owner's fourth family, added 15/10. Its page is built
+   * from the product's fields rather than from a seller's blocks — but
+   * a landing page in this family is still a landing page, and these
+   * blocks still draw it.
+   */
+  alama: 'brand',
 });
 
 /**

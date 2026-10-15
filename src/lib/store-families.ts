@@ -1,5 +1,6 @@
 import { LAYOUT_SLOTS } from './layout-slots';
 import type { ThemeFont } from './landing-theme';
+import { LANDING_FAMILIES, type LandingFamilyId } from './landing-matcher';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -53,9 +54,29 @@ import type { ThemeFont } from './landing-theme';
  * ═══════════════════════════════════════════════════════════════════════
  */
 
-/** The four, in the order a seller meets them. */
-export const FAMILY_IDS = ['clinic', 'herbalist', 'trend', 'brand'] as const;
-export type FamilyId = (typeof FAMILY_IDS)[number];
+/**
+ * THE FOUR IDS COME FROM THE ONE LIST THAT ALREADY HAD THEM.
+ *
+ * `landing-matcher.ts` shipped `LANDING_FAMILIES` on the S3 branch with a
+ * note written to this one: «the families are being built on their own
+ * branch (2a-2)… when that branch lands, its renderer reads these ids;
+ * two lists of the same four would be two lists to keep in step, so the
+ * ids are the contract».
+ *
+ * This is that renderer, and it reads them. What the matcher holds is an
+ * id and one line about who the family is for — what a page can be
+ * PROPOSED as. What this file holds is the LOOK: the typography, the
+ * rhythm, the imagery and one variant per engine slot. Neither repeats
+ * the other, and the id is the joint.
+ *
+ * It also settled a spelling. This file said `herbalist` and the matcher
+ * said `herbal` for the same «عطّار» — two names for one family, which is
+ * exactly how a seller's shop comes to wear a family the matcher can
+ * never propose. The matcher's spelling wins because it shipped first and
+ * because `selling-blocks.ts` already derives from it.
+ */
+export const FAMILY_IDS = LANDING_FAMILIES.map((f) => f.id) as readonly LandingFamilyId[];
+export type FamilyId = LandingFamilyId;
 
 /**
  * What a shop that has chosen nothing wears.
@@ -131,7 +152,7 @@ export const STORE_FAMILIES: readonly StoreFamilyLook[] = Object.freeze([
    * a calm two-up grid: a shelf of jars, read slowly.
    */
   {
-    id: 'herbalist',
+    id: 'herbal',
     name: 'عطّار',
     line: 'للطبيعي والتراثي — حكاية وأصل، وإيقاع هادي',
     suggestedFor: 'الأعشاب والزيوت والمنتجات الطبيعية',
@@ -257,16 +278,16 @@ export const SKIN_FAMILY: Readonly<Record<string, SkinPlacement>> = Object.freez
     into: 'lab',
     why: 'نفس الترويسة ونفس المزاج (clean) — صوتان لا يُفرَّق بينهما',
   },
-  herbs: { family: 'herbalist', state: 'reference', why: 'المرجع — دافئ، تحريري، نسخي' },
+  herbs: { family: 'herbal', state: 'reference', why: 'المرجع — دافئ، تحريري، نسخي' },
   heritage: {
-    family: 'herbalist',
+    family: 'herbal',
     state: 'merged',
     into: 'herbs',
     why: 'نفس الدفء ونفس البطل التحريري ونفس عائلة الخط',
   },
-  ritual: { family: 'herbalist', state: 'voice', why: 'الصوت الثاني — البطاقة العريضة وإيقاع مختلف فعلاً' },
+  ritual: { family: 'herbal', state: 'voice', why: 'الصوت الثاني — البطاقة العريضة وإيقاع مختلف فعلاً' },
   amber: {
-    family: 'herbalist',
+    family: 'herbal',
     state: 'merged',
     into: 'ritual',
     why: 'مزاجه الجريء يخصّ «ترند» وتخطيطه يخصّ «عطّار» — فلا يقوم بعمل جديد',
