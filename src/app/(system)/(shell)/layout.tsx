@@ -6,6 +6,8 @@ import { AiDock } from '@/components/ai/AiDock';
 import { can } from '@/lib/authorization';
 import { requireShellContext } from '@/lib/page-guard';
 import { visibleNav } from '@/lib/route-registry';
+import { applyArrangement } from '@/lib/nav-arrangement';
+import { readArrangement } from '@/lib/nav-arrangement-store';
 import { listAccessibleCountries, listAccessibleStores } from '@/lib/geo-context';
 
 /**
@@ -16,13 +18,27 @@ import { listAccessibleCountries, listAccessibleStores } from '@/lib/geo-context
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   const { user, companyId, store } = await requireShellContext();
 
+  /*
+   * THE ARRANGEMENT IS READ HERE, ON THE SERVER, FOR THE FIRST FRAME.
+   *
+   * A menu that reorders itself a moment after the page appears is a menu
+   * that moved under somebody's thumb. This layout already resolves the
+   * session, so the stored arrangement is read in the same pass and the
+   * sidebar is handed the result — it never knows there was a preference.
+   *
+   * And it is applied to `visibleNav`'s output, never before it: what a
+   * role may SEE is still decided by the server, per route. Arranging
+   * reorders and hides; it cannot add.
+   */
+  const nav = await readArrangement(companyId, user.id, user.role).catch(() => null);
+
   const countries = await listAccessibleCountries(user, companyId);
   const stores = countries.length > 0 ? await listAccessibleStores(user, companyId, store.country.id) : [];
   const canSwitch = countries.length > 1 || (stores?.length ?? 0) > 1;
 
   return (
     <Shell
-      groups={visibleNav(user, can)}
+      groups={applyArrangement(visibleNav(user, can), nav?.resolved ?? null)}
       userName={user.name}
       userRole={user.role}
       viewer={{ name: user.name, id: user.id }}

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { ScoreCard } from '@/components/performance/ScoreCard';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { MenuOrderCard } from '@/components/settings/MenuOrderCard';
 import { PasskeySection } from '@/components/settings/PasskeySection';
 import { RiCheckboxCircleLine, RiErrorWarningLine, RiShieldCheckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -92,6 +93,26 @@ export function ProfileScreen() {
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
           <ThemePicker initial={currentUser?.systemTheme} />
         </div>
+
+        {/*
+          AND THE MENU, ON THE SAME PAGE AND FOR THE SAME REASON.
+
+          Arranging your own menu is a personal preference, exactly like
+          the theme above it — and it needs no permission, because it
+          opens nothing: the menu it arranges is already filtered per
+          viewer and every door checks itself when it is opened.
+
+          It is here and NOT a screen of its own in the menu, because the
+          one rule about that menu is that only «حسابي» is open to
+          everybody (`acceptance.test.ts`). A screen everybody may open
+          would have had to be an exception to it, and the page about the
+          person was the right place anyway.
+
+          Setting a ROLE's base is the part that needs authority, and this
+          component offers it only to `roles.edit` — checked again on the
+          server.
+        */}
+        <MenuOrderCard />
 
         <ScoreCard />
 

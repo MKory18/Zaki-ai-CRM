@@ -44,6 +44,7 @@ model Company {
   landingPages          LandingPage[]
   orderAddOns           OrderAddOn[]
   roles                 Role[]
+  navArrangements       NavArrangement[]
   categories            Category[]
   whatsappConnections   WhatsAppConnection[]
   whatsappConversations WhatsAppConversation[]
@@ -297,6 +298,7 @@ model User {
   /// A passkey stands in for the six-digit code, never for the password: a
   /// phone that is picked up is a second factor that is already lost.
   passkeys                      Passkey[]
+  navArrangement                NavArrangement[]
   passkeyChallenges             PasskeyChallenge[]
   company                       Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   enteredOrders                 Order[]                 @relation("OrderCreator")
@@ -1056,10 +1058,63 @@ model Role {
   permissions RolePermission[]
   defaults    RolePermissionDefault[]
   users       User[]
+  navBase     NavArrangement[]
 
   @@unique([companyId, name])
   @@index([companyId])
   @@map("roles")
+}
+
+model NavArrangement {
+  id        String @id @default(uuid())
+  companyId String
+
+  /// THE OWNER OF THIS ARRANGEMENT — exactly one of the two.
+  ///
+  /// A row with `roleId` is the BASE the owner sets for a role; a row with
+  /// `userId` is one person's own adjustment on top of it. Both in one
+  /// table because they are the same thing — a stored opinion about the
+  /// same menu — and because resolving them means reading both at once.
+  ///
+  /// Two PARTIAL unique indexes hold «one row per owner»; they live in the
+  /// migration, not here, because Prisma cannot express a WHERE on an
+  /// index. Six other indexes in this schema are the same way.
+  roleId String?
+  userId String?
+
+  /// `{ order: string[], hidden: string[], pinned: string[] }` — paths.
+  /// JSON in a text column, read defensively: a menu is the one thing that
+  /// must never fail to render. See src/lib/nav-arrangement.ts.
+  layout String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// A deleted role takes its base with it, and its people fall back to the
+  /// registry — the edge case the brief names, enforced by the database
+  /// rather than by a cleanup job nobody runs.
+  role    Role?   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, roleId])
+  @@index([companyId, userId])
+  @@map("nav_arrangements")
+
+  /// ── TWO PARTIAL UNIQUE INDEXES THE SCHEMA CANNOT EXPRESS ──
+  ///
+  /// `nav_arrangements_role_key` — UNIQUE (companyId, roleId) WHERE roleId IS NOT NULL
+  /// `nav_arrangements_user_key` — UNIQUE (userId)            WHERE userId IS NOT NULL
+  ///
+  /// `@@unique([companyId, roleId])` would let a second row in whenever
+  /// `roleId` is NULL, because NULLs do not collide — so every personal
+  /// override would satisfy it and the table would collect a row per save.
+  /// The WHERE is what makes each one mean «one base per role» and «one
+  /// override per person». Both live in
+  /// `20261015190000_nav_arrangement/migration.sql`, and they are named
+  /// here because `pg_indexes` and not this file is the answer to «what
+  /// does the database actually enforce» — which is a thing worth being
+  /// able to read in one place.
 }
 
 model RolePermission {
