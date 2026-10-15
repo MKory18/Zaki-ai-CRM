@@ -8,6 +8,7 @@ import { moneyText } from '@/lib/money';
 import { whatsappHref } from '@/lib/store-contact';
 import { worldVars } from '@/lib/store-world';
 import { brandSections, type BrandContent } from '@/lib/store-brand-template';
+import { BRAND_PAGE_SHEET } from './styles';
 import type { StorefrontProduct } from '@/lib/storefront';
 import type { OfferView } from '@/lib/offers';
 
@@ -116,6 +117,17 @@ export function BrandProductPage({
      * is the shape of it and what it saved.
      */
     <article className="sf-product sf-bp" style={worldVars(content.world) as React.CSSProperties}>
+      {/*
+        THIS PAGE'S OWN RULES, CARRIED BY THIS PAGE.
+
+        Two and a half kilobytes that only «علامة»'s product page matches
+        — the ring of promises, the dark panels, the sticky bar. The shop
+        shell carries the family's shop-wide half, the home carries the
+        hero's, and this carries its own: measured, that is what keeps a
+        «علامة» shop inside the brief's 50 KB of stylesheet while three
+        other branches are adding rules to the shared block library.
+      */}
+      <style dangerouslySetInnerHTML={{ __html: BRAND_PAGE_SHEET }} />
       <section className="sf-bp-hero">
         <span className="sf-bw-art sf-bp-art">
           {/* The faint Latin word, INSIDE the picture's box — never behind
@@ -174,7 +186,7 @@ export function BrandProductPage({
               اطلب الآن — الدفع عند الاستلام
             </a>
             {wa && (
-              <a className="sf-bw-all" href={wa} rel="noopener noreferrer" target="_blank">
+              <a className="lp-cta sf-bw-all" href={wa} rel="noopener noreferrer" target="_blank">
                 أو اطلب عالواتساب
               </a>
             )}

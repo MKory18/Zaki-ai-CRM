@@ -106,11 +106,23 @@ const FULL = {
   },
 };
 
+/**
+ * THE MARKUP, WITHOUT THE STYLESHEET THE PAGE CARRIES.
+ *
+ * «علامة»'s product page inlines its own rules — the layer only it draws
+ * — and those rules NAME every section by its class. So «the page does
+ * not contain `sf-bp-ring`» was true of the markup and false of the
+ * document, and the §١٠.١ assertions below were failing on a selector in
+ * a stylesheet rather than on an element. Stripped here, once, because
+ * what rule 0 is about is what gets DRAWN.
+ */
+const drawn = (html: string) => html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, '');
+
 const draw = (
   product: StorefrontProduct & { gallery: string[] },
   over: Partial<Parameters<typeof BrandProductPage>[0]> = {}
 ) =>
-  renderToStaticMarkup(
+  drawn(renderToStaticMarkup(
     React.createElement(BrandProductPage, {
       shop: SHOP,
       product: product as never,
@@ -124,7 +136,7 @@ const draw = (
       returns: null,
       ...over,
     })
-  );
+  ));
 
 describe('§١٠.١ — a product with a name and a photograph and nothing else', () => {
   const content = brandContent({ ...BARE, orderedCount: null, siblings: 0 });

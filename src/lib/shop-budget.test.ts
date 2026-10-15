@@ -4,7 +4,13 @@ import { join } from 'node:path';
 import { minifyCss } from './css-minify';
 import { repoFile, stripComments } from './guard-source';
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
-import { FAMILY_MINI_CSS, FAMILY_SHEET, STOREFRONT_CSS } from '@/components/storefront/styles';
+import {
+  BRAND_PAGE_SHEET,
+  FAMILY_HERO_SHEET,
+  FAMILY_MINI_CSS,
+  FAMILY_SHEET,
+  STOREFRONT_CSS,
+} from '@/components/storefront/styles';
 import { FAMILY_IDS } from './store-families';
 
 /**
@@ -51,23 +57,48 @@ describe('what a shop weighs', () => {
    * next rule learns that before the build tells them.
    * ═══════════════════════════════════════════════════════════════════
    */
-  it.each(FAMILY_IDS)('and a «%s» shop stays under it too, base and family together', (id) => {
-    const whole = kb(sheet + FAMILY_SHEET[id]);
+  /**
+   * MEASURED PER PAGE, because that is what a phone downloads.
+   *
+   * A shop's shell carries the family's shop-wide half; the HOME adds the
+   * hero's rules (the only page that draws one); «علامة»'s product page
+   * adds its own. So the two shapes that exist are measured, and no page
+   * is charged for a layer it does not draw.
+   */
+  const SHAPES = FAMILY_IDS.flatMap((id) => [
+    [`${id} · الواجهة`, FAMILY_SHEET[id] + FAMILY_HERO_SHEET[id]] as const,
+    ...(id === 'brand'
+      ? [[`${id} · صفحة المنتج`, FAMILY_SHEET[id] + BRAND_PAGE_SHEET] as const]
+      : []),
+  ]);
+
+  it.each(SHAPES)('and «%s» stays under it too, every layer that page ships', (what, slice) => {
+    const whole = kb(sheet + slice);
     console.log(
-      `[shop] ${id}: الأساس ${kb(sheet).toFixed(2)} + العائلة ${kb(FAMILY_SHEET[id]).toFixed(2)} ` +
-        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}`
+      `[shop] ${what}: الأساس ${kb(sheet).toFixed(2)} + الشرائح ${kb(slice).toFixed(2)} ` +
+        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}، المتبقّي ${(CSS_BUDGET_KB - whole).toFixed(2)}`
     );
     expect(
       whole,
-      `متجر «${id}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}. ` +
-        'اقرا الملاحظة فوق FAMILY_CSS: الشريحة تتبع المتجر، والألوان تجي بمتغيّرات مش بقواعد.'
+      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}. ` +
+        'اقرا الملاحظة فوق FAMILY_CSS: الشريحة تتبع الصفحة اللي بترسمها، والألوان تجي بمتغيّرات مش بقواعد.'
     ).toBeLessThan(CSS_BUDGET_KB);
   });
 
-  it('and no shop ships more than one of them', () => {
+  it('and no shop ships more than one family’s worth', () => {
     const shell = stripComments(repoFile('src/components/storefront/StorefrontShell.tsx'));
     // One slice, picked by the family this shop wears.
     expect(shell).toMatch(/__html: FAMILY_SHEET\[family\]/);
+    // And the two layers that belong to one page each are carried by that
+    // page, not by the shell — which is what keeps the other pages light.
+    expect(stripComments(repoFile('src/app/s/[store]/page.tsx')), 'الواجهة ما بتحمل أنماط بطلها')
+      .toMatch(/FAMILY_HERO_SHEET\[familyOf\(store\.theme\)\]/);
+    expect(
+      stripComments(repoFile('src/components/storefront/BrandProductPage.tsx')),
+      'صفحة «علامة» ما بتحمل أنماطها'
+    ).toMatch(/__html: BRAND_PAGE_SHEET/);
+    expect(shell, 'القشرة بتشحن أنماط البطل لكل الصفحات').not.toContain('FAMILY_HERO_SHEET');
+    expect(shell, 'القشرة بتشحن أنماط صفحة المنتج').not.toContain('BRAND_PAGE_SHEET');
     // Not all four, and not the gallery's miniature rules either.
     expect(shell, 'القشرة بتشحن كل العائلات').not.toContain('ALL_FAMILY_CSS');
     expect(shell, 'القشرة بتشحن أنماط المعاينة').not.toContain('FAMILY_MINI_CSS');

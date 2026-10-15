@@ -352,7 +352,7 @@ export function StoreHero({
                     >
                       اكتشف {p.name}
                     </Wrap>
-                    <Wrap href={`/s/${slug}/shop`} className="sf-bw-all">
+                    <Wrap href={`/s/${slug}/shop`} className="lp-cta sf-bw-all">
                       شوف السلسلة كاملة
                     </Wrap>
                   </span>

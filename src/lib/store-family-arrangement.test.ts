@@ -9,7 +9,16 @@ import {
   requiredCheckoutFields,
 } from './store-theme';
 import { parseSections } from './landing-sections';
-import { FAMILY_CSS } from '@/components/storefront/styles';
+import { BRAND_PAGE_CSS, FAMILY_CSS, FAMILY_HERO_CSS } from '@/components/storefront/styles';
+
+/**
+ * EVERY LAYER OF A FAMILY, because a family is three of them now: the
+ * shop-wide part the shell carries, the first screen the home carries,
+ * and «علامة»'s product page, which carries its own. A sweep that read
+ * one layer would pass on the two it could not see.
+ */
+const LAYERS = (id: 'clinic' | 'herbalist' | 'trend' | 'brand') =>
+  FAMILY_CSS[id] + FAMILY_HERO_CSS[id] + (id === 'brand' ? BRAND_PAGE_CSS : '');
 import { repoFile, stripComments } from './guard-source';
 
 /**
@@ -95,7 +104,7 @@ describe('① a family changes the look, never the arrangement', () => {
     ];
     for (const id of FAMILY_IDS) {
       for (const rx of FORBIDDEN) {
-        expect(FAMILY_CSS[id], `عائلة «${id}» بتعيد الترتيب: ${rx}`).not.toMatch(rx);
+        expect(LAYERS(id), `عائلة «${id}» بتعيد الترتيب: ${rx}`).not.toMatch(rx);
       }
     }
   });
@@ -189,7 +198,7 @@ describe('② decoration never stands behind a figure, a price or an amount', ()
     const FIGURE = /(price|-num|amount|total|money)/;
     const offenders: string[] = [];
     for (const id of FAMILY_IDS) {
-      for (const rule of FAMILY_CSS[id].split('}')) {
+      for (const rule of LAYERS(id).split('}')) {
         const [selector, body = ''] = rule.split('{');
         if (!FIGURE.test(selector)) continue;
         /*
@@ -208,7 +217,7 @@ describe('② decoration never stands behind a figure, a price or an amount', ()
   });
 
   it('and the price row says out loud that it has nothing behind it', () => {
-    expect(FAMILY_CSS.brand, 'صفّ السعر ما بيلغي خلفيّته').toMatch(
+    expect(BRAND_PAGE_CSS, 'صفّ السعر ما بيلغي خلفيّته').toMatch(
       /\.sf-bp-price \{[^}]*background:\s*none/
     );
   });
@@ -233,7 +242,7 @@ describe('② decoration never stands behind a figure, a price or an amount', ()
   });
 
   function TREND_RULES(): [string, string][] {
-    return FAMILY_CSS.trend
+    return LAYERS('trend')
       .split('}')
       .map((r) => r.split('{'))
       .filter((p) => p.length === 2)

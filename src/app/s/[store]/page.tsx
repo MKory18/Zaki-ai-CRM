@@ -15,6 +15,7 @@ import { ProductCard } from '@/components/storefront/ProductCard';
 import { StoreHero } from '@/components/storefront/StoreHero';
 import { CategoryNav } from '@/components/storefront/CategoryNav';
 import { BrandWhy } from '@/components/storefront/BrandWhy';
+import { FAMILY_HERO_SHEET } from '@/components/storefront/styles';
 import { familyOf, layoutOf } from '@/lib/store-theme';
 import type { Metadata } from 'next';
 import { publicTitle, storeIcons } from '@/lib/public-metadata';
@@ -203,6 +204,17 @@ export default async function StorefrontHome({ params, searchParams }: Props) {
         `StoreHero` is the one component the gallery now draws too, so the
         promise and the delivery cannot drift apart again.
       */}
+      {/*
+        THE FIRST SCREEN'S OWN RULES, ON THE ONLY PAGE THAT DRAWS ONE.
+
+        A family's hero is between one and two kilobytes of stylesheet,
+        and no other page in the shop matches a line of it. Measured: the
+        shop ships 43.9 KB of base against a 50 KB budget, so a product
+        page carrying the home's hero was two kilobytes it could not
+        afford for rules it never used. The shell still carries the
+        family's shop-wide half — the card, the rhythm, the ornament.
+      */}
+      <style dangerouslySetInnerHTML={{ __html: FAMILY_HERO_SHEET[familyOf(store.theme)] }} />
       <StoreHero
         variant={layoutOf(store.theme, 'hero')}
         tagline={store.tagline}

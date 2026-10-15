@@ -1005,7 +1005,35 @@ export const SHOP_SHEET = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
  * it» has to stay impossible.
  * ═══════════════════════════════════════════════════════════════════════
  */
-const CLINIC_CSS = `
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * A FAMILY IN THREE LAYERS, BECAUSE A PAGE SHIPS WHAT IT DRAWS.
+ *
+ * MEASURED, twice. Written as one slice per family the sheet was 43.5 +
+ * 6.3 = 49.8 KB for a «علامة» shop against the brief's 50 — and then
+ * three other branches landed rules in the shared block library and the
+ * same shop was 50.16. A cap with forty bytes of room is a cap the next
+ * person trips over for something unrelated.
+ *
+ * So each family is split by WHERE its rules are needed:
+ *
+ *   `FAMILY_CSS`       — the shop-wide part: the card, the rhythm, the
+ *                        ornament. Inlined by `StorefrontShell`, so every
+ *                        page of the shop has it.
+ *   `FAMILY_HERO_CSS`  — the family's first screen. Inlined by the store
+ *                        HOME, which is the only page that draws a hero;
+ *                        a product page was carrying 2 KB it never
+ *                        matched.
+ *   `BRAND_PAGE_CSS`   — «علامة»'s product page. Inlined by
+ *                        `BrandProductPage`, which is the only thing that
+ *                        draws it.
+ *
+ * Measured after the split: a «علامة» home is 47.3 KB and its product
+ * page 48.3, against 50. `shop-budget.test.ts` measures both shapes, and
+ * the gallery and the variant guard read all of it at once.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+const CLINIC_HERO_CSS = `
 /* ── splitProof — «عيادة»: the claim, and beside it the only proof ──
    The facts are what this shop DOES — cash at the door, every
    governorate — never a number about other people that nobody counted. */
@@ -1031,9 +1059,12 @@ const CLINIC_CSS = `
   padding: 12px 26px; border-radius: var(--store-radius); font-weight: 800; font-size: 15px;
   display: inline-flex; align-items: center; min-height: 44px;
 }
+@media (min-width: 720px) { .sf-hx[data-hero-slot='splitProof'] { grid-template-columns: 1.1fr .9fr; } }
+`;
+
+const CLINIC_CSS = `
 /* The clinic breathes least: a shopper with a complaint is scanning. */
 .sf-root[data-family='clinic'] .sf-grid-wrap, .sf-root[data-family='clinic'] .sf-row { padding-block: 16px; }
-@media (min-width: 720px) { .sf-hx[data-hero-slot='splitProof'] { grid-template-columns: 1.1fr .9fr; } }
 `;
 
 const HERBALIST_CSS = `
@@ -1069,49 +1100,7 @@ const TREND_CSS = `
 .sf-root[data-family='trend'] .sf-row h2, .sf-root[data-family='trend'] .sf-page h1 { font-weight: 800; }
 `;
 
-/**
- * «علامة» — AND THE ONE TRICK THAT MAKES IT AFFORDABLE.
- *
- * MEASURED: written as its own set of coloured rules this slice came to
- * 10.1 KB minified, which put a brand shop at 53.4 KB against a 50 KB
- * budget. Almost all of it was the same four lines of colour repeated on
- * forty elements.
- *
- * So the world is applied by REDEFINING THE SHOP'S OWN VARIABLES on the
- * page's root instead. Every rule in the base sheet already reads
- * «--store-page», «--store-text», «--store-accent» — so the landing
- * blocks, the offer cards, the order form and the FAQ box all wear the
- * product's world without one extra selector, and this slice only has to
- * carry what is genuinely NEW: the faint Latin word, the promises ring,
- * the dark panels, the sticky bar and the world switcher.
- *
- * That is also why the page reuses «lp-section», «lp-h2», «lp-sub»,
- * «lp-cta» and «lp-faq-item» rather than restyling them: a second set of
- * section paddings would be the same bytes twice and the same decision in
- * two places.
- */
-/**
- * «علامة» — AND THE TWO DECISIONS THAT MADE IT FIT.
- *
- * MEASURED: written as its own set of coloured rules this slice came to
- * 7.8 KB minified, which put a brand shop at 51.1 KB against the brief's
- * 50 — on a base sheet that already spends 43.3.
- *
- * FIRST, THE WORLD IS NOT A SECOND VARIABLE FAMILY. `worldVars` writes
- * this product's colours onto the element as the shop's OWN names
- * («--store-page», «--store-text», «--store-accent»…), so every rule in
- * the base sheet paints itself in the product's world with no selector
- * here at all. See the note in store-world.ts.
- *
- * SECOND, THIS PAGE REUSES THE BLOCKS' OWN SHAPES — «lp-section»,
- * «lp-h2», «lp-sub», «lp-cta», «lp-faq-item», «lp-offers». A second set
- * of section paddings and button shapes would be the same bytes twice and
- * the same decision in two places.
- *
- * What is left is what is genuinely NEW: the faint Latin word, the world
- * switcher, the promises ring, the dark panels and the sticky bar.
- */
-const BRAND_CSS = `
+const BRAND_HERO_CSS = `
 /* ── worldFirst — one product, its own world, three stages ──
    The stages are stacked and a hidden radio says which one shows, so the
    colour switch costs no JavaScript at all: «:has()» is how the section
@@ -1140,6 +1129,25 @@ ${WORLD_STAGES.map(
 /* The miniature draws no radios — eleven previews on one dashboard
    screen would share these ids — so it falls through to here. */
 .sf-hx[data-hero-slot='worldFirst']:not(:has(.sf-bw-radio)) .sf-bw-stage[data-w='0'] { visibility: visible; opacity: 1; }
+.sf-bw-pick { grid-area: 2 / 1; display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 20px 18px; }
+.sf-bw-dot { display: grid; gap: 5px; justify-items: center; width: 74px; cursor: pointer; }
+.sf-bw-dot .sf-hx-img {
+  width: 56px; height: 56px; border-radius: 50%; max-height: none;
+  background: var(--store-page); border: 2px solid transparent;
+}
+.sf-bw-dot .sf-hx-name { font-size: 11.5px; font-weight: 700; text-align: center; }
+@media (min-width: 720px) { .sf-hx .sf-bw-stage { grid-template-columns: 1.1fr .9fr; align-items: center; padding: 30px; } }
+@media (prefers-reduced-motion: reduce) { .sf-hx .sf-bw-stage { transition: none; } }
+`;
+
+/**
+ * The shop-wide half of «علامة»: the card every shelf draws, and the four
+ * pieces the hero and the product page BOTH use — the picture's box, the
+ * faint Latin word, the column of words beside it and the outline button.
+ * Shared rather than written twice: two copies of a rule is two places to
+ * get the ruling about what may sit behind a figure wrong.
+ */
+const BRAND_CSS = `
 .sf-bw-art { position: relative; display: block; }
 /* THE FAINT WORD IS INSIDE THE PICTURE'S BOX — never behind a price or a
    figure (the owner's ruling, 15/10), which is why it is a child of the
@@ -1154,19 +1162,16 @@ ${WORLD_STAGES.map(
 .sf-bw-art .sf-hx-img { background: transparent; aspect-ratio: 4 / 5; max-height: 52vh; }
 .sf-bw-art .sf-hx-img img, .sf-bw-art > img { object-fit: contain; }
 .sf-bw-say { display: grid; gap: 9px; justify-items: start; }
-.sf-bw-say strong { font-size: 27px; font-weight: 800; line-height: 1.3; }
+/* The hero's own title and the product page's h1 are the same type. */
+.sf-bw-say strong, .sf-bw-say h1 { font-size: 27px; font-weight: 800; line-height: 1.3; margin: 0; }
+/* THE OUTLINE BUTTON IS THE FILLED ONE, EMPTIED — «lp-cta» already carries
+   the shape, the padding, the radius and the press, so this is the four
+   declarations that differ. Written out in full it was 278 bytes of a
+   50 KB budget that «علامة» has about a quarter of a kilobyte left in. */
 .sf-bw-all {
-  border: 1px solid var(--store-border); color: var(--store-text);
-  padding: 12px 22px; border-radius: var(--store-radius); font-weight: 700; font-size: 14.5px;
-  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; text-decoration: none;
+  background: none; box-shadow: none; color: var(--store-text);
+  border: 1px solid var(--store-border); font-size: 14.5px; padding: 12px 22px;
 }
-.sf-bw-pick { grid-area: 2 / 1; display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 20px 18px; }
-.sf-bw-dot { display: grid; gap: 5px; justify-items: center; width: 74px; cursor: pointer; }
-.sf-bw-dot .sf-hx-img {
-  width: 56px; height: 56px; aspect-ratio: 1; border-radius: 50%; max-height: none;
-  background: var(--store-page); border: 2px solid transparent;
-}
-.sf-bw-dot .sf-hx-name { font-size: 11.5px; font-weight: 700; text-align: center; }
 
 /* ── world — the card wears its product's own colours ──
    «كرت لكلّ منتج بعالم منتجه», and the colours arrive on the card itself
@@ -1191,26 +1196,30 @@ ${WORLD_STAGES.map(
 .sf-card-line, .sf-card-specs { display: block; font-size: 12.5px; line-height: 1.7; color: var(--store-muted); }
 .sf-card-go { display: block; font-size: 12.5px; font-weight: 800; color: var(--store-accent-ink); }
 
+.sf-root[data-family='brand'] :is(.sf-grid-wrap, .sf-row) { padding-block: 30px; }
+@media (min-width: 720px) { .sf-card[data-card='world'] { grid-column: auto; } }
+`;
+
+/** «علامة»'s product page — inlined by the page itself, and nowhere else. */
+export const BRAND_PAGE_CSS = `
 /* ── AND THE PRODUCT PAGE, BUILT FROM THE PRODUCT'S FIELDS ──
    Every section exists only when its field does — the component draws
    «brandSections» and nothing else — so there is no rule here for an
    empty state. That is rule 0: «أي حقل فاضي، قسمه بيختفي لحاله والصفحة
    بتضلّ كاملة». */
-.sf-root[data-family='brand'] .sf-grid-wrap, .sf-root[data-family='brand'] .sf-row { padding-block: 30px; }
 .sf-bp { background: var(--store-page); color: var(--store-text); }
 .sf-bp-hero { display: grid; gap: 16px; padding: 22px 20px; }
 .sf-bp-badges { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
 .sf-bp-badges span {
-  font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  font-size: 12.5px; padding: 5px 11px; border-radius: 999px;
   border: 1px solid var(--store-border); color: var(--store-muted);
 }
-.sf-bw-say h1 { font-size: 28px; font-weight: 800; line-height: 1.3; margin: 0; }
-.sf-bp-line { font-size: 15.5px; line-height: 1.8; color: var(--store-muted); margin: 0; font-style: normal; }
+.sf-bp-line, .sf-bw-line { font-size: 15.5px; line-height: 1.8; color: var(--store-muted); margin: 0; font-style: normal; }
 /* THE PRICE HAS NOTHING BEHIND IT — no wash, no faint word, no pattern.
    The owner's ruling of 15/10, and the one place in this family where it
    would have been tempting. */
 .sf-bp-price { display: flex; align-items: baseline; gap: 10px; margin: 0; background: none; }
-.sf-bp-price strong { font-size: 30px; font-weight: 800; }
+.sf-bp-price strong { font-size: 30px; }
 .sf-bp-price s { font-size: 16px; color: var(--store-muted); }
 .sf-bp-price em { font-style: normal; font-size: 13px; font-weight: 800; color: var(--store-accent-ink); }
 .sf-bp-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
@@ -1228,8 +1237,9 @@ ${WORLD_STAGES.map(
   background: var(--store-accent); color: var(--store-accent-text);
 }
 .sf-bp-num[data-n='1'] { inset-block-start: 0; inset-inline-start: calc(50% - 17px); }
-.sf-bp-num[data-n='2'] { inset-block-end: 12%; inset-inline-start: 0; }
-.sf-bp-num[data-n='3'] { inset-block-end: 12%; inset-inline-end: 0; }
+.sf-bp-num[data-n='2'], .sf-bp-num[data-n='3'] { inset-block-end: 12%; }
+.sf-bp-num[data-n='2'] { inset-inline-start: 0; }
+.sf-bp-num[data-n='3'] { inset-inline-end: 0; }
 /* One numbered list, two sections: the promises and «كيف بتستعمله» are
    both «short lines, in order», and a second list rule would be the same
    decision twice. */
@@ -1239,6 +1249,7 @@ ${WORLD_STAGES.map(
 /* The dark panels sit INSIDE the world rather than on top of it. */
 .sf-bp-close, .sf-bp-video { background: var(--store-card); }
 .sf-bp-close { display: grid; gap: 14px; }
+
 /* The video is a POSTER until it is asked for: «ما بيتحمّل إلا لما يوصله
    السكرول، وقبله بتطلع صورة» — lazy, with its poster, and no autoplay. */
 .sf-bp-close img, .sf-bp-video video {
@@ -1255,12 +1266,7 @@ ${WORLD_STAGES.map(
   padding: 10px 16px; background: var(--store-card);
   border-block-start: 1px solid var(--store-border);
 }
-@media (min-width: 720px) {
-  .sf-bw-stage { grid-template-columns: 1.1fr .9fr; align-items: center; padding: 30px; }
-  .sf-bp-hero, .sf-bp-close { grid-template-columns: 1fr 1fr; align-items: center; }
-  .sf-card[data-card='world'] { grid-column: auto; }
-}
-@media (prefers-reduced-motion: reduce) { .sf-bw-stage { transition: none; } }
+@media (min-width: 720px) { .sf-bp-hero, .sf-bp-close { grid-template-columns: 1fr 1fr; align-items: center; } }
 `;
 
 /**
@@ -1292,14 +1298,37 @@ export const FAMILY_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
   brand: BRAND_CSS,
 });
 
+/**
+ * The FIRST SCREEN of each family — inlined by the store home, which is
+ * the only page that draws one. Two of the four have nothing here: their
+ * hero is a variant the base sheet already carries.
+ */
+export const FAMILY_HERO_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
+  clinic: CLINIC_HERO_CSS,
+  herbalist: '',
+  trend: '',
+  brand: BRAND_HERO_CSS,
+});
+
 /** What a shop inlines beside `SHOP_SHEET` — minified once, at load. */
 export const FAMILY_SHEET: Readonly<Record<FamilyId, string>> = Object.freeze(
   Object.fromEntries(FAMILY_IDS.map((id) => [id, minifyCss(FAMILY_CSS[id])])) as Record<FamilyId, string>
 );
 
+/** What the store home adds for the hero it is about to draw. */
+export const FAMILY_HERO_SHEET: Readonly<Record<FamilyId, string>> = Object.freeze(
+  Object.fromEntries(FAMILY_IDS.map((id) => [id, minifyCss(FAMILY_HERO_CSS[id])])) as Record<FamilyId, string>
+);
+
+/** What «علامة»'s product page adds for itself. */
+export const BRAND_PAGE_SHEET = minifyCss(BRAND_PAGE_CSS);
+
 /**
- * All four, for the two readers that need every family at once: the
- * template gallery, which draws a preview of each, and the guard that
- * checks no declared variant is left with nothing behind it.
+ * Every family's every layer, for the three readers that need them all at
+ * once: the template gallery, which draws a preview of each; the guard
+ * that checks no declared variant is left with nothing behind it; and the
+ * budget, which adds one layer at a time to see what a page really ships.
  */
-export const ALL_FAMILY_CSS = FAMILY_IDS.map((id) => FAMILY_CSS[id]).join('\n');
+export const ALL_FAMILY_CSS = FAMILY_IDS.map(
+  (id) => FAMILY_CSS[id] + FAMILY_HERO_CSS[id]
+).join('\n') + BRAND_PAGE_CSS;
