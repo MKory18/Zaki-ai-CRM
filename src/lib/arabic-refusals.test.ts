@@ -148,6 +148,18 @@ describe('every refusal a person can read carries a sentence', () => {
     ['src/app/api/webhooks/', 'Telegram, Meta and the couriers call in; their retry logic reads the status, not the words'],
     ['src/app/api/media/', 'an <img> tag asking for a file — nothing renders the body of this response'],
     ['src/app/api/public/', 'the shopper’s own page, where a missing slug is a page 404 rather than a sentence'],
+    /*
+     * `/api/v1` ANSWERS A PROGRAM, AND ANSWERS IN A DIFFERENT ENVELOPE.
+     *
+     * O7's door does not return `{ error, errorAr }` at all. It returns
+     * `{ error: { code, message, details }, request_id }` — the shape
+     * `contracts`-adjacent `OMS-DOOR-V1.md` fixes for the replies system —
+     * where `code` is what the caller branches on and `message` is for the
+     * developer's log. Nobody reads it on a screen, and translating a code
+     * a program switches on would be a translated dead end of the literal
+     * kind. The shape is pinned by `the-systems-door.test.ts` instead.
+     */
+    ['src/app/api/v1/', 'another SYSTEM parses this, in its own {error:{code,message,details},request_id} envelope — no screen renders it'],
   ];
 
   const ORDERS = 'src/app/api/orders/';

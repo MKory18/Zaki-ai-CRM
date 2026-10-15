@@ -41,6 +41,20 @@ const DOORS: Record<string, { checkedIn: string; why: string }> = {
     checkedIn: 'src/app/api/orders/import/route.ts',
     why: 'صفوفٌ كثيرة، وكلّ صفٍّ هاتف',
   },
+  /*
+   * O7 — THE SIXTH DOOR, AND THE FIRST THAT NO PERSON HERE PRESSES.
+   *
+   * `/api/v1/orders` takes an order from another SYSTEM. The hole it could
+   * have opened is the widest of the six: a blocked number that cannot
+   * order on any screen in this product, ordering freely because the
+   * replies system asked on its behalf. The check is in the intake service
+   * and not in the route handler, which is where every other rule at that
+   * door lives too.
+   */
+  'the systems door (/api/v1)': {
+    checkedIn: 'src/lib/v1/order-intake.ts',
+    why: 'نظامٌ خارجيٌّ يرحّل طلباً — والرقمُ المحظورُ لا يصير مسموحاً لأنّ غيرَنا سأل عنه',
+  },
 };
 
 describe('a blocked phone is blocked at every door that takes a new order', () => {
