@@ -79,9 +79,47 @@ describe('the scanner finds what this repository actually leaked', () => {
   });
 
   it('and a database URL carrying its own credentials', () => {
-    const { code, out } = scan(plant('config.ts', `const u = 'postgresql://zaki:Hunter2Hunter@db.host:5432/osm';\n`));
+    /*
+     * Assembled, like the key above, and for a reason worth writing down:
+     * the first version of this test spelled the URL out. It passed on the
+     * machine that wrote it and failed in CI — because the scanner reads
+     * `git ls-files`, and the file was not tracked yet when the suite ran
+     * locally. The moment it was committed it became its own finding.
+     *
+     * Which is the guard behaving correctly. A fixture that looks like a
+     * credential IS a credential as far as a scanner can tell, and a test
+     * that needs an exemption to pass is a hole with a test around it.
+     */
+    const url = ['postgresql://', 'zaki', ':', 'Hunter2Hunter', '@', 'db.host:5432/osm'].join('');
+    const { code, out } = scan(plant('config.ts', `const u = '${url}';\n`));
     expect(code, out).toBe(1);
     expect(out).toContain('Connection string');
+  });
+
+  /**
+   * The shapes with no quotes around them. Every pattern above wants a
+   * quote after the `=`, which is how CODE is written — and is exactly
+   * why they were blind to the likeliest accident in this repository: a
+   * value typed into a config file to debug something, and committed.
+   */
+  it('a real value typed into a .env.example', () => {
+    const { code, out } = scan(plant('.env.example', 'SEED_DEMO_PASSWORD=Mubarak2026\n'));
+    expect(code, out).toBe(1);
+    expect(out).toContain('Unquoted secret assignment');
+  });
+
+  it('and the same thing inlined into a compose file', () => {
+    const yaml = 'services:\n  db:\n    environment:\n      POSTGRES_PASSWORD: Mubarak2026\n';
+    const { code, out } = scan(plant('docker-compose.yml', yaml));
+    expect(code, out).toBe(1);
+    expect(out).toContain('docker-compose.yml:4');
+  });
+
+  it('and a private key committed as a file', () => {
+    const pem = `-----BEGIN RSA PRIVATE ${'KEY'}-----\nMIIEow==\n-----END RSA PRIVATE ${'KEY'}-----\n`;
+    const { code, out } = scan(plant('id_rsa', pem));
+    expect(code, out).toBe(1);
+    expect(out).toContain('Private key block');
   });
 
   it('and it never prints the value it found', () => {
@@ -114,6 +152,23 @@ describe('and it stays quiet on what is not a secret', () => {
 
   it('a URL whose name happens to end in token', () => {
     const { code, out } = scan(plant('oauth.ts', `  tokenUrl: 'https://graph.facebook.com/v21.0/oauth/access_token',\n`));
+    expect(code, out).toBe(0);
+  });
+
+  it('a compose file that does it right', () => {
+    const yaml = [
+      'POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}',
+      'JWT_SECRET=',
+      'API_TOKEN: # set in Coolify',
+    ].join('\n');
+    const { code, out } = scan(plant('docker-compose.yml', yaml));
+    expect(code, out).toBe(0);
+  });
+
+  it('and the unquoted shape inside ordinary code, where it is not that shape at all', () => {
+    // `password: someVariable` is how objects are written. The unquoted
+    // rule applies only to files whose grammar is `NAME: value`.
+    const { code, out } = scan(plant('handler.ts', '  const body = { password: hashedInput };\n'));
     expect(code, out).toBe(0);
   });
 

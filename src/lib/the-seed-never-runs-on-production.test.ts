@@ -31,9 +31,17 @@ function runSeed(env: Record<string, string | undefined>): { code: number; out: 
     const out = execFileSync(process.execPath, [TSX, 'prisma/seed.ts'], {
       encoding: 'utf8',
       stdio: 'pipe',
-      // A deliberately unreachable database: if any refusal below ever
-      // stops working, this test must not be the thing that writes.
-      env: { ...process.env, DATABASE_URL: 'postgresql://nobody:nobody@127.0.0.1:1/none', ...env },
+      /*
+       * A deliberately unreachable database: if any refusal below ever
+       * stops working, this test must not be the thing that writes.
+       *
+       * And with no password in it — not because one would be secret, but
+       * because `user:pass@host` is the shape the secret scanner looks
+       * for, and a fixture that has to be exempted from a guard is a hole
+       * with a test around it. Port 1 is what makes it unreachable; the
+       * credential never did.
+       */
+      env: { ...process.env, DATABASE_URL: 'postgresql://nobody@127.0.0.1:1/none', ...env },
       timeout: 60_000,
     });
     return { code: 0, out };
@@ -61,7 +69,10 @@ describe('the seed refuses', () => {
       SEED_DEMO_PASSWORD: 'irrelevant-here',
     });
     expect(code, out).toBe(1);
-    expect(out).toContain('حسابات التجربة');
+    // A string only the SECOND gate prints. «حسابات التجربة» appears in
+    // both messages, so asserting on it would stay green if this gate
+    // were deleted — which is the one thing this test exists to notice.
+    expect(out, 'البوّابة الثانية ما ردّت').toContain('SEED_OWNER_EMAIL');
   });
 
   it('and to invent a demo password when nobody set one', () => {

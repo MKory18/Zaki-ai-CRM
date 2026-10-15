@@ -437,10 +437,14 @@ async function setUpStage(userId: string, roleId: string | null, companyId: stri
     },
     select: { id: true, createdAt: true, updatedAt: true },
   });
-  // The password is rewritten on every run so the credential in this file is
+  // The password is rewritten on every run, so the one this run generated is
   // always the live one — an approver nobody can sign in as is no approver.
+  // It is not written down anywhere; this run holds it and then it is gone.
   await db.user.update({ where: { id: approver.id }, data: { passwordHash: await bcrypt.hash(APPROVER_PASSWORD, 10) } });
-  made(`User ${APPROVER_EMAIL} (${approver.id}) — كلمة المرور في رأس السكربت`);
+  made(
+    `User ${APPROVER_EMAIL} (${approver.id}) — كلمة المرور مولّدة لهالتشغيل` +
+      ' (حطّ GOLDEN_PATH_APPROVER_PASSWORD إذا بدّك تدخل عليه بإيدك بعدين)'
+  );
   /*
    * AND THE COUNTRY, or `/api/context` answers «Forbidden: country not
    * accessible» and the second pair of hands never gets through the door.

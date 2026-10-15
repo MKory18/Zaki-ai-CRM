@@ -46,6 +46,7 @@ const ALLOW_PATTERNS = [
   /xxx+/,
   /DEMO#/,
   /\bfake\b/i,
+  /not-used/i,               // «…-not-used-in-production» — a value that says what it is
   /<[A-Z_]{3,}>/,          // <DB_PASSWORD> — a named placeholder
   /\$\{[A-Za-z_]/,          // ${POSTGRES_PASSWORD} — shell or compose interpolation
   /process\.env\./,         // read from the environment, which is the point
@@ -87,6 +88,30 @@ const PATTERNS = [
     scope: 'all',
     re: /(postgres|postgresql|mysql|mongodb|redis|amqp):\/\/[^\s'"`/]+:[^\s'"`@]+@/,
   },
+  /**
+   * A private key, wherever it is. Nothing else in a repository starts a
+   * line with this, and a committed key file is not a near-miss.
+   */
+  { name: 'Private key block', scope: 'all', re: /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/ },
+  /**
+   * AND THE ONE WITH NO QUOTES AROUND IT.
+   *
+   * Every pattern above wants a quote after the `=`, which is how code is
+   * written — and is exactly why they are blind to the likeliest accident
+   * here: a committed `.env.example` or a compose file with a real value
+   * typed in to debug something.
+   *
+   *   SEED_DEMO_PASSWORD=Mubarak2026
+   *   POSTGRES_PASSWORD: Mubarak2026
+   *
+   * Only in files where that shape is the file's own grammar, so a line
+   * of ordinary code is never judged by it.
+   */
+  {
+    name: 'Unquoted secret assignment',
+    scope: 'env',
+    re: /^\s*(?:-\s*)?[A-Za-z_][A-Za-z0-9_]*(?:PASSWORD|PASSWD|SECRET|API_?KEY|TOKEN)\s*[:=]\s*(?!['"`$<#\s])[^\s#]{6,}\s*$/i,
+  },
   { name: 'Meta App Secret', scope: 'src', re: /[0-9a-f]{32}(?![0-9a-f])/ },
   /**
    * The one this repository actually leaked: a password written as a
@@ -122,6 +147,9 @@ const PATTERNS = [
 /** Where prose lives. */
 const IS_DOC = /\.(md|markdown|txt|rst|adoc)$/i;
 
+/** Where `NAME=value` and `NAME: value` are the file's own grammar. */
+const IS_ENV = /(^|\/)\.env(\.|$)|\.(env|ini|conf|cfg|properties|ya?ml|tf|tfvars)$|(^|\/)(docker-)?compose[^/]*\.ya?ml$/i;
+
 /** An ALL_CAPS value is the NAME of an environment variable, not its value. */
 const ENV_NAME_VALUE = /['"`][A-Z][A-Z0-9_]{4,}['"`]/;
 
@@ -136,7 +164,7 @@ function trackedFiles() {
 
 const argv = process.argv.slice(2);
 const files = (argv.length ? argv : trackedFiles()).filter(
-  (f) => !SKIP_EXT.test(f) && !SKIP_FILES.has(f.split('/').pop())
+  (f) => !SKIP_EXT.test(f) && !SKIP_FILES.has(f.replace(/\\/g, '/').split('/').pop())
 );
 
 let findings = 0;
@@ -150,8 +178,17 @@ for (const file of files) {
   // A file this scanner cannot read as text is a file it cannot judge.
   if (content.includes('\u0000')) continue;
 
-  const isTest = IS_TEST.test(file);
-  const isDoc = IS_DOC.test(file);
+  /*
+   * `git ls-files` always says `a/b`, but a path handed in as an argument
+   * on Windows says `a\b` — and every rule below is written with `/`. The
+   * first version of this scanner missed a planted `.env.example` for
+   * exactly that reason, on Windows only, which is the kind of difference
+   * that makes a guard pass locally and fail in CI, or worse, the reverse.
+   */
+  const unix = file.replace(/\\/g, '/');
+  const isTest = IS_TEST.test(unix);
+  const isDoc = IS_DOC.test(unix);
+  const isEnv = IS_ENV.test(unix);
 
   content.split('\n').forEach((line, i) => {
     if (ALLOW_PATTERNS.some((a) => a.test(line))) return;
@@ -159,6 +196,7 @@ for (const file of files) {
     for (const p of PATTERNS) {
       if (p.scope === 'src' && isTest) continue;
       if (p.scope === 'docs' && !isDoc) continue;
+      if (p.scope === 'env' && !isEnv) continue;
       if (p.re.test(line)) {
         // The finding names the place, never the value — printing it here
         // would put the secret in the CI log, which is the one place it
