@@ -78,7 +78,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🔑 Demo Seed Accounts (Password: `password123`)
+## 🔑 Demo Seed Accounts
+
+All of them share the password you set in `SEED_DEMO_PASSWORD` when you ran the
+seed. It is no longer written down anywhere — this repository is public, and the
+password that used to be printed here was the password thirteen real accounts
+were still using. Set your own and keep it out of git:
+
+```bash
+SEED_DEMO_PASSWORD="$(openssl rand -base64 18)" npx prisma db seed
+```
+
 
 | Role | Email | Capabilities |
 | :--- | :--- | :--- |
@@ -103,9 +113,10 @@ docker-compose up -d --build
 
 ### Coolify / VPS Deployment
 1. Set Environment Variables:
-   - `DATABASE_URL=postgresql://user:password@host:5432/salesflow`
-   - `JWT_SECRET=your_production_secret`
-   - `OPENROUTER_API_KEY=your_openrouter_api_key`
+   - `DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:5432/salesflow`
+   - `JWT_SECRET=<openssl rand -base64 32>`
+   - `OPENROUTER_API_KEY=<from openrouter.ai>`
+   - `SEED_DEMO_PASSWORD` — local seeding only; never set it on a production environment.
 2. Select Dockerfile build in Coolify.
 3. Deploy port `3000`.
 
