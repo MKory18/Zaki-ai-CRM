@@ -8,7 +8,6 @@ import type { SampleProduct } from '@/components/store/SkinPreview';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
-import { uploadStoreImages } from '@/lib/store-image-upload';
 import { FONTS, MOODS, isValidHex } from '@/lib/landing-theme';
 import {
   CHECKOUT_FIELDS, DEFAULT_STORE_THEME, MANDATORY_CHECKOUT_FIELDS,
@@ -16,8 +15,14 @@ import {
 } from '@/lib/store-theme';
 import { RiArrowGoBackLine, RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
-import { useStoreCurrency } from '@/context/StoreCurrency';
 import { TemplateGallery } from '@/components/ui/TemplateGallery';
+import { useStoreCurrency } from '@/context/StoreCurrency';
+import { uploadStoreImages } from '@/lib/store-image-upload';
+import { Advanced } from '@/components/landing-editor/Advanced';
+import { PaneToggle, editPaneClass, previewPaneClass, type EditorPane } from '@/components/landing-editor/EditorPanes';
+import { StoreThemePreview } from '@/components/landing-editor/StoreThemePreview';
+import { UndoBar } from '@/components/landing-editor/UndoBar';
+import { useHistory, useUndoKeys } from '@/lib/use-history';
 
 /**
  * THE STORE'S TEMPLATE — one panel of «الواجهة», beside the home page.
@@ -114,9 +119,33 @@ const CARD = 'rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] 
 
 export function StoreThemeScreen() {
   const [store, setStore] = useState<StoreInfo | null>(null);
-  const [theme, setTheme] = useState<StoreTheme>(DEFAULT_STORE_THEME);
+  /**
+   * THE SHOP'S LOOK, WITH A WAY BACK ONE STEP AT A TIME.
+   *
+   * There was already a «تراجع» on this screen and it is a different act:
+   * it throws away EVERY unsaved change and returns to the draft on the
+   * server. A seller who moved four colours and wants the fourth one back
+   * had exactly two options — lose all four, or remember what the colour
+   * used to be. Both of those are the product failing to keep a note it
+   * could have kept.
+   *
+   * So the two stand side by side, named apart: «تراجع» is one step, and
+   * «أرجِع للمحفوظة» is the reset it always was. Nothing was taken away.
+   *
+   * `history.set` is an edit; `history.reset` is every point where the
+   * SERVER decided the value — loading, saving, publishing, reverting. A
+   * stack that recorded those would offer a seller an undo back into a
+   * value a customer is already being served.
+   */
+  const history = useHistory<StoreTheme>(DEFAULT_STORE_THEME);
+  const theme = history.value;
+  const setTheme = (next: StoreTheme | ((t: StoreTheme) => StoreTheme)) =>
+    history.set(typeof next === 'function' ? next(history.value) : next);
+  useUndoKeys(history);
   const [saved, setSaved] = useState<StoreTheme>(DEFAULT_STORE_THEME);
   const [tab, setTab] = useState<TabKey>('gallery');
+  /** Which half of the editor a phone is showing. Ignored from `lg` up. */
+  const [pane, setPane] = useState<EditorPane>('edit');
   const [installing, setInstalling] = useState<string | null>(null);
   /**
    * The card being looked at. Selecting is not installing: installing
@@ -164,7 +193,8 @@ export function StoreThemeScreen() {
         apiJson<ShopTemplates>('/api/store/templates').catch(() => null),
       ]);
       setStore(data.store);
-      setTheme(data.theme);
+      // Loading is not an edit: it must not become the first undo step.
+      history.reset(data.theme);
       setSaved(data.theme);
       setUnpublished(data.hasUnpublished);
       setCanRevert(data.canRevert);
@@ -174,7 +204,9 @@ export function StoreThemeScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    // A stable callback with no dependencies of its own, so naming it here
+    // does not make `load` change on every render.
+  }, [history.reset]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -248,9 +280,9 @@ export function StoreThemeScreen() {
    * THE COVER IMAGE'S UPLOAD — the home page's own door, reused.
    *
    * It lands as an UNSAVED change, like every other value on this panel:
-   * the seller sees it, then presses «احفظ المسوّدة». Writing it straight
-   * through would make the picker the one control here that changes the
-   * shop without being saved.
+   * the seller sees it in the preview beside the controls, then presses
+   * «احفظ المسوّدة». Writing it straight through would make the picker the
+   * one control here that changes the shop without being saved.
    */
   async function uploadCover(file: File) {
     setUploadingCover(true);
@@ -286,7 +318,9 @@ export function StoreThemeScreen() {
         method: 'PATCH',
         body: JSON.stringify(theme),
       });
-      setTheme(res.theme);
+      // The server's own answer, and a clean stack behind it: there is
+      // nothing left to take back once the draft is what was saved.
+      history.reset(res.theme);
       setSaved(res.theme);
       setUnpublished(res.hasUnpublished);
       // It says what it did. «تم الحفظ» on a screen that used to repaint
@@ -306,7 +340,7 @@ export function StoreThemeScreen() {
     setMsg(null);
     try {
       const res = await apiJson<{ theme: StoreTheme }>('/api/store/theme', { method: 'POST' });
-      setTheme(res.theme);
+      history.reset(res.theme);
       setSaved(res.theme);
       setUnpublished(false);
       setCanRevert(true);
@@ -328,7 +362,7 @@ export function StoreThemeScreen() {
     setMsg(null);
     try {
       const res = await apiJson<{ theme: StoreTheme }>('/api/store/theme', { method: 'PUT' });
-      setTheme(res.theme);
+      history.reset(res.theme);
       setSaved(res.theme);
       setUnpublished(false);
       setMsg({ ok: true, text: 'رجع المتجر إلى الشكل السابق — اضغط مرّة أخرى للعودة' });
@@ -360,6 +394,8 @@ export function StoreThemeScreen() {
             </span>
           )
         }
+        /* THE ONE ACT A CUSTOMER FEELS. Saving, stepping back and going
+           back a version are all beside it, never above it. */
         primary={
           <Button size="sm" disabled={dirty || !unpublished || publishing} onClick={() => void publish()}>
             {publishing && <RiLoader4Line className="h-4 w-4 animate-spin" />} انشر
@@ -367,8 +403,21 @@ export function StoreThemeScreen() {
         }
         secondary={
           <>
-            <Button variant="secondary" size="sm" disabled={!dirty || saving} onClick={() => setTheme(saved)}>
-              تراجع
+            {/* One step back. The button after it is the reset, and the two
+                are no longer both called «تراجع». */}
+            <UndoBar
+              undo={history.undo}
+              redo={history.redo}
+              canUndo={history.canUndo}
+              canRedo={history.canRedo}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!dirty || saving}
+              onClick={() => history.reset(saved)}
+            >
+              أرجِع للمحفوظة
             </Button>
             <Button size="sm" variant="secondary" disabled={!dirty || saving} onClick={() => void save()}>
               {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} احفظ المسوّدة
@@ -384,7 +433,7 @@ export function StoreThemeScreen() {
           <>
             <p>
               الحفظ ليس نشراً: «احفظ المسوّدة» لا يغيّر شيئاً عند الزبون، و«انشر» وحده ينقل المتجر إلى
-              هذا الشكل. «النسخة السابقة» ترجع بضغطة، والضغطة التالية تعيدك.
+              هذا الشكل. و«تراجع» خطوةٌ واحدة، و«أرجِع للمحفوظة» يرمي كلّ ما لم يُحفظ.
             </p>
             <p>
               تثبيت قالب يكتب المسوّدة فقط، وألوانه تظهر هنا غير محفوظة — فلا قالبٌ تجرّبه يُعيد دهن
@@ -429,6 +478,27 @@ export function StoreThemeScreen() {
         ))}
       </nav>
 
+      {/*
+        THE CONTROLS AND THE SHOP, SIDE BY SIDE.
+
+        Seven of the eight tabs were forms. A seller changed the price
+        colour, saved, published, opened the shop in another tab and found
+        out — which makes PUBLISHING the preview, on a live shop, in front
+        of customers. The miniature on the right is drawn from the theme in
+        their hands, by the same component the gallery's cards use.
+
+        On a phone the two swap with the toggle above: two columns do not
+        fit at 390px, and stacking them puts the preview below a panel
+        taller than the screen, which is the same as not having one.
+      */}
+      <PaneToggle pane={pane} onPane={setPane} />
+
+      {/* The page editor's own column pair, to the pixel: a second width
+          here would be a second grid template in the stylesheet, which the
+          CSS ratchet charges to every page in the product. */}
+      <div className="gap-4 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
+        <div className={`space-y-4 ${editPaneClass(pane)}`}>
+
       {/* ── معرض القوالب ── */}
       {tab === 'gallery' && (
         <div className="space-y-4">
@@ -440,7 +510,6 @@ export function StoreThemeScreen() {
                   احفظه كملف لتنقله إلى متجر آخر، أو ثبّت ملفاً جاهزاً.
                 </p>
               </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <a href="/api/store/templates?export=1" download>
                   <Button variant="secondary" size="sm">
@@ -649,7 +718,17 @@ export function StoreThemeScreen() {
                 <option value="sharp">زوايا حادّة</option>
               </Select>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {/*
+              FOURTEEN PICKERS, FOLDED.
+
+              The control above decides the shop's colour; these fourteen
+              override one derived role each, and most shops never touch
+              one. Open, they made the accent the same size as «نص خافت»
+              — so the eye had no reason to land on the control that
+              actually does the work. Still all here, one tap away.
+            */}
+            <Advanced label="ألوان متقدّمة" holds="الصفحة · البطاقة · النص · السعر · شارة العرض — كلّ ما لا تحدّده يُشتقّ من الأساسي">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
               {COLOR_FIELDS.map(({ key, label, hint }) => {
                 const value = theme.colors?.[key];
                 return (
@@ -679,12 +758,18 @@ export function StoreThemeScreen() {
                 );
               })}
             </div>
+            </Advanced>
 
             {/*
               Under the grid, not beside one picker: a contrast failure is
               a fact about a PAIR, and which of the two to move is the
               seller's call. It names the pair by what a shopper reads and
               offers the nearest colour that works.
+
+              OUTSIDE the fold, deliberately: a pair that fails contrast is
+              a fact about the shop a seller must meet whether or not they
+              opened the advanced pickers — and the fix button inside it
+              reaches exactly those fields.
             */}
             <div className="mt-3">
               <ContrastNotes
@@ -1035,7 +1120,7 @@ export function StoreThemeScreen() {
               </span>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <label className="tap-safe inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-bold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] md:min-h-10">
+              <label className="tap-safe inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-bold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] md:min-h-0">
                 {uploadingCover ? (
                   <RiLoader4Line className="h-4 w-4 animate-spin" />
                 ) : (
@@ -1076,6 +1161,20 @@ export function StoreThemeScreen() {
           </p>
         </div>
       )}
+
+        </div>
+
+        {/* The shop as it is being set, at both widths, from the UNSAVED
+            theme — so the seller sees the change before a customer does. */}
+        <div className={`${previewPaneClass(pane)} min-h-0 flex-col`}>
+          <StoreThemePreview
+            theme={theme}
+            products={shop?.sample ?? []}
+            storeName={store?.name ?? ''}
+            unpublished={dirty || unpublished}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -80,7 +80,10 @@ export function PanelHeader({
                 aria-controls={helpId}
                 // 44px of target around a 16px glyph: the tap-target rule
                 // this task is held to, on the smallest control it adds.
-                className="tap-safe -m-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)] md:h-9 md:w-9"
+                // One size at every width — a `md:` override here would be
+                // a rule nothing else in the product uses, and the CSS
+                // ratchet charges it to every page.
+                className="tap-safe -m-2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
               >
                 <RiInformationLine className="h-4 w-4" />
                 <span className="sr-only">{open ? 'أخفِ الشرح' : 'اشرح لي هذه الشاشة'}</span>

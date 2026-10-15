@@ -394,7 +394,23 @@ describe('the four things the owner found on the templates screen', () => {
       /<Input[\s\S]{0,300}theme\.home\?\.coverImage/
     );
     expect(look).toMatch(/type="file"/);
-    expect(look).toMatch(/accept="image\/\*"/);
+    // READ RAW, FOR ONE ATTRIBUTE ONLY.
+    //
+    // The file-picker's accept attribute ends in a slash-star, and
+    // `stripComments` is a regex stripper: it reads that as the start of a
+    // block comment and blanks everything up to the next star-slash —
+    // which, once a comment follows the picker in this file, swallows the
+    // attribute and fails a guard about code that is right there. It
+    // passed until the editors stage put a commented preview pane below
+    // it, which is exactly how long such a guard stays honest by luck.
+    //
+    // (This very comment is line comments and not a block, for the same
+    // reason: writing the two characters inside a block comment ends it.)
+    //
+    // So this one line is matched against the file as written. A comment
+    // could in principle contain the string, but `type="file"` above is
+    // checked on the stripped source — the picker is real either way.
+    expect(repoFile('src/components/screens/StoreThemeScreen.tsx')).toMatch(/accept="image\/\*"/);
     // Through the one uploader both panels of «الواجهة» use — no second
     // door, no new permission.
     expect(look).toMatch(/uploadStoreImages\(\[file\]\)/);

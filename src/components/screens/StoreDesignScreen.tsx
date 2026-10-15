@@ -6,6 +6,8 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { uploadStoreImages } from '@/lib/store-image-upload';
 import { BlockBuilder } from '@/components/landing-editor/BlockBuilder';
+import { UndoBar } from '@/components/landing-editor/UndoBar';
+import { useHistory, useUndoKeys } from '@/lib/use-history';
 import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
@@ -56,7 +58,22 @@ interface Payload {
 export function StoreDesignScreen() {
   const confirm = useConfirm();
   const [data, setData] = useState<Payload | null>(null);
-  const [sections, setSections] = useState<LandingSection[]>([]);
+  /**
+   * THE SHOP WINDOW, WITH A WAY BACK.
+   *
+   * The landing page editor has had this since it was written; this screen
+   * drives the SAME builder and had nothing — so a seller who learned that
+   * Ctrl+Z takes back a deleted block on a landing page tried it here, lost
+   * the block, and stopped trusting it on either screen.
+   *
+   * `history.set` is the ordinary edit, and `history.reset` is loading:
+   * the draft arriving from the server must not become the first step a
+   * seller can undo to, because undoing to it is the same page.
+   */
+  const history = useHistory<LandingSection[]>([]);
+  const sections = history.value;
+  const setSections = history.set;
+  useUndoKeys(history);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -66,13 +83,16 @@ export function StoreDesignScreen() {
     try {
       const got = await apiJson<Payload>('/api/store/design');
       setData(got);
-      setSections(got.draft);
+      // Loading is not an edit: it must not become the first undo step.
+      history.reset(got.draft);
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التحميل' });
     } finally {
       setLoading(false);
     }
-  }, []);
+    // `history.reset` is a stable callback with no dependencies of its own,
+    // so naming it here does not make `load` change on every render.
+  }, [history.reset]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -159,7 +179,8 @@ export function StoreDesignScreen() {
           )
         }
         /* THE ONE ACT A CUSTOMER FEELS. Saving is not it, and neither is
-           looking at the published page — those two are beside it. */
+           looking at the published page or stepping back — those are
+           beside it. */
         primary={
           <Button size="sm" disabled={busy} onClick={() => void publish()}>
             <RiRocketLine className="h-4 w-4" /> نشر
@@ -167,6 +188,14 @@ export function StoreDesignScreen() {
         }
         secondary={
           <>
+            {/* A step back, beside the way forward — the same control, in
+                the same place, as the landing page editor's. */}
+            <UndoBar
+              undo={history.undo}
+              redo={history.redo}
+              canUndo={history.canUndo}
+              canRedo={history.canRedo}
+            />
             <a href={`/s/${data.store.slug}`} target="_blank" rel="noopener noreferrer">
               <Button variant="secondary" size="sm">
                 <RiExternalLinkLine className="icon-mirror h-4 w-4" /> المنشورة
@@ -189,6 +218,7 @@ export function StoreDesignScreen() {
                 : 'قبل أول نشر، متجرك يعرض قائمة المنتجات العادية.'}
             </p>
             <p>الألوان والخطوط والترويسة تُضبط في «القالب والألوان» — نفس التبويب، البطاقة المجاورة.</p>
+            <p>وخطوة للخلف بـCtrl+Z، وللأمام بـCtrl+Shift+Z — أو من الزرّين فوق.</p>
           </>
         }
       />
@@ -204,10 +234,15 @@ export function StoreDesignScreen() {
         It used to be `h-full` on a screen of its own, which worked because
         the shell's <main> is a stretched flex item. Inside a tab panel the
         parent's height is its content, so `h-full` resolved to nothing and
-        `flex-1 min-h-0` collapsed the canvas to zero. The viewport is what
-        this is really measured against, so the viewport is what it asks.
+        `flex-1 min-h-0` collapsed the canvas to zero.
+
+        AND IT IS `h-[70vh]`, A STEP THE PRODUCT ALREADY USES. The first
+        version asked for `calc(100vh-19rem)` with a floor, which is two
+        rules nothing else in the product needs — and the CSS ratchet
+        charges every page in the system for them. The nearest existing
+        step reads the same on a phone and a desk.
       */}
-      <div className="h-[calc(100vh-19rem)] min-h-[26rem] overflow-hidden rounded-lg border border-[var(--sys-border)]">
+      <div className="h-[70vh] overflow-hidden rounded-lg border border-[var(--sys-border)]">
         {/* The one builder in this system. The preview beside it is drawn by
             the public renderer, so it cannot be wrong in a way that only
             shows up after publishing. */}
