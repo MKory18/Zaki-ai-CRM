@@ -142,23 +142,46 @@ describe('the image says whether it is ready', () => {
 describe('the image is built off the server, and proved before it is published', () => {
   const workflow = () => repoFile('.github/workflows/image.yml');
 
-  /** A workflow step's shell body, by a word that appears in it. */
-  const stepWith = (needle: string): string => {
-    const steps = workflow().split(/\n {6}- /);
-    return steps.find((s) => s.includes(needle)) ?? '';
-  };
+  /**
+   * The steps, in order, with every comment line removed.
+   *
+   * COMMENTS REMOVED BECAUSE THE PROSE IS LOAD-BEARING HERE. The first
+   * version of the ordering claim below compared `indexOf('State.Health')`
+   * with `indexOf('push: true')` — and after the publish step stopped
+   * being a `build-push-action`, the only `push: true` left in the file was
+   * the SENTENCE explaining why it had been removed. The claim then
+   * compared an offset against a comment, so rewording that comment turned
+   * the suite red on a change that altered nothing. Ninth time a guard in
+   * this repository has read its own paperwork.
+   */
+  const steps = (): string[] =>
+    workflow()
+      .split(/\n {6}- /)
+      .map((s) =>
+        s
+          .split(/\r?\n/)
+          .filter((l) => !l.trim().startsWith('#'))
+          .join('\n')
+      );
+
+  /** The step that contains a word — comments already stripped. */
+  const stepWith = (needle: string): string => steps().find((s) => s.includes(needle)) ?? '';
+
+  /** Where that step sits in the sequence, so order can be asserted. */
+  const stepIndex = (needle: string): number => steps().findIndex((s) => s.includes(needle));
 
   it('starts the image and refuses to publish one that never reports healthy', () => {
-    const wf = workflow();
     // Docker's own verdict on the running container — not a reading of the
     // Dockerfile, which is what this whole file exists to distrust.
-    expect(wf).toContain('State.Health');
-    expect(wf).toContain('Config.Healthcheck');
+    expect(stepWith('Config.Healthcheck'), 'ما في خطوة بتسأل Docker عن الفحص').not.toBe('');
+    expect(stepWith('State.Health'), 'ما في خطوة بتستنّى الحاوية تقول جاهزة').not.toBe('');
 
     // Order matters more than presence: proving the image AFTER pushing it
     // means the registry holds a tag that breaks production when pulled.
-    const proof = wf.indexOf('State.Health');
-    const publish = wf.indexOf('push: true');
+    // Compared STEP BY STEP, not by offsets in the file's text.
+    const proof = stepIndex('State.Health');
+    const publish = stepIndex('docker push');
+    expect(publish, 'ما في خطوة نشر').toBeGreaterThan(-1);
     expect(proof, 'النشر قبل الإثبات').toBeLessThan(publish);
   });
 
@@ -170,17 +193,36 @@ describe('the image is built off the server, and proved before it is published',
      * cover, and the registry holds an image that never started while the
      * log above says «healthy». The proof would be about something else.
      */
-    const wf = workflow();
-    const builds = wf.match(/docker\/build-push-action/g) ?? [];
-    expect(builds, 'أكتر من بناء — فاللي انتشر مش اللي انثبت').toHaveLength(1);
+    const body = steps().join('\n');
+    const builders = body.match(/docker\/build-push-action/g) ?? [];
+    expect(builders, 'أكتر من بناء — فاللي انتشر مش اللي انثبت').toHaveLength(1);
+    // And not a second build smuggled in as a raw command: round 2 showed
+    // `docker build -t "$name:main" .` re-entering this very defect while
+    // every claim here stayed green.
+    expect(body, 'بناء تاني بأمر خامّ — فاللي انتشر مش اللي انثبت').not.toMatch(
+      /\bdocker\s+(build|buildx\s+build)\b/
+    );
 
     // Whatever local tag the smoke step started is the tag that is pushed.
-    const runStep = stepWith('docker run -d');
-    const started = /^\s*([a-z0-9][\w./-]*:[\w.-]+)\s*$/m.exec(runStep);
+    const started = /^\s*([a-z0-9][\w./-]*:[\w.-]+)\s*$/m.exec(stepWith('docker run -d'));
     expect(started, 'ما لقيت الصورة اللي انشغّلت').not.toBeNull();
+    const proved = started![1];
+
+    // EVERY pushed name must be an alias OF THAT IMAGE. Containing the
+    // proved tag somewhere was not enough: round 2 pushed `$name:latest`
+    // — a name nothing had ever tagged — and all thirteen claims passed.
     const pushStep = stepWith('docker push');
     expect(pushStep, 'ما في خطوة نشر').not.toBe('');
-    expect(pushStep, 'النشر بينشر صورة تانية غير اللي انشغّلت').toContain(started![1]);
+    const aliases = [...pushStep.matchAll(/docker tag\s+(\S+)\s+(\S+)/g)];
+    expect(aliases.length, 'ما في ولا وسم من الصورة المُثبَتة').toBeGreaterThan(0);
+    for (const [, from, to] of aliases) {
+      expect(from, `وسم من صورة تانية: ${from}`).toBe(proved);
+      expect(to).toBeTruthy();
+    }
+    const tagged = new Set(aliases.map(([, , to]) => to));
+    for (const [, pushed] of pushStep.matchAll(/docker push\s+(\S+)/g)) {
+      expect(tagged.has(pushed), `بينتدفع اسم ما حدا وسمه من المُثبَتة: ${pushed}`).toBe(true);
+    }
   });
 
   it('and the tag names the commit, wherever that name is computed', () => {
@@ -217,13 +259,29 @@ describe('the image is built off the server, and proved before it is published',
     }
   });
 
-  it('and the proof cannot be made optional', () => {
+  it('and the proof cannot be made optional, nor skipped', () => {
     // `continue-on-error: true` on the smoke step would publish an
     // unproven image while the job stayed green — and every other claim
     // in this file would still pass.
-    expect(workflow(), 'خطوة فيها continue-on-error — الإثبات بيصير اختيارياً').not.toContain(
+    expect(steps().join('\n'), 'خطوة فيها continue-on-error — الإثبات بيصير اختيارياً').not.toContain(
       'continue-on-error'
     );
+
+    /*
+     * AND THE PROOF CARRIES NO CONDITION AT ALL. Round 2 put
+     * `if: github.event_name == 'pull_request'` on it: on `main` the step
+     * is then SKIPPED, a skipped step counts as success, and the publish
+     * proceeds on an image nothing ever started. Same defect as
+     * `continue-on-error`, a different keyword — so the rule is the
+     * absence of any gate, not the absence of one spelling.
+     */
+    for (const needle of ['State.Health', 'Config.Healthcheck']) {
+      const step = stepWith(needle);
+      expect(step, `ما في خطوة فيها ${needle}`).not.toBe('');
+      expect(step, `${needle}: الإثبات محروس بشرط — فبينتخطّى وبينعدّ نجاحاً`).not.toMatch(
+        /\n\s+if:/
+      );
+    }
   });
 
   it('says nothing to Coolify until both of its secrets exist', () => {
@@ -256,20 +314,33 @@ describe('the image is built off the server, and proved before it is published',
      * error, and in any message that quotes the failing line. Through
      * `env:` it is a masked variable instead.
      */
-    // Comment lines stripped — and for the eighth time in this repository a
-    // guard read its own paperwork: the prose above the webhook step
-    // EXPLAINS this rule and quotes `${{ secrets.… }}` while explaining it,
-    // and the comment sits inside the previous step's block. The first
-    // version of this claim failed on the sentence that states it.
+    /*
+     * THE BODY IS TAKEN BY INDENTATION, AS YAML TAKES IT.
+     *
+     * Eighth time a guard here read its own paperwork: the prose above the
+     * webhook step EXPLAINS this rule and quotes `${{ secrets.… }}` while
+     * explaining it — and that comment sits inside the PREVIOUS step's
+     * block, so the first version of this claim failed on the sentence
+     * that states it. Stripping every `#` line fixed that and opened
+     * another hole: a `${{ secrets.X }}` written as a shell comment INSIDE
+     * the script would then pass unseen.
+     *
+     * A block scalar ends at the first line indented no deeper than its
+     * key, which is exactly the rule that separates the script from the
+     * next step's comments — and it keeps the script's own `#` lines.
+     */
     for (const block of workflow().split(/\n {6}- /)) {
-      const run = block.indexOf('run: |');
-      if (run === -1) continue;
-      const body = block
-        .slice(run)
-        .split(/\r?\n/)
-        .filter((l) => !l.trim().startsWith('#'))
-        .join('\n');
-      expect(body.includes('${{ secrets.'), 'سرّ مكتوب جوّا سطر الصدفة').toBe(false);
+      const lines = block.split(/\r?\n/);
+      const at = lines.findIndex((l) => /^\s+run: \|/.test(l));
+      if (at === -1) continue;
+      const depth = (lines[at].match(/^\s*/) ?? [''])[0].length;
+      const body: string[] = [];
+      for (const line of lines.slice(at + 1)) {
+        if (line.trim() === '') continue;
+        if ((line.match(/^\s*/) ?? [''])[0].length <= depth) break;
+        body.push(line);
+      }
+      expect(body.join('\n').includes('${{ secrets.'), 'سرّ مكتوب جوّا سطر الصدفة').toBe(false);
     }
   });
 });
