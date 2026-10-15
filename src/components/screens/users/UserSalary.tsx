@@ -135,6 +135,25 @@ export function UserSalary({
   const effectiveRate = sameCurrency ? 1 : Number(rate);
   const leaves = data && effectiveRate > 0 ? data.preview.net * effectiveRate : null;
 
+  /**
+   * Why «اصرف» is off, in the order the person meets the problems — and
+   * `null` when it is on. Reading the same conditions the `disabled`
+   * attribute reads, so the two cannot drift: a reason for a button that
+   * works, or a working button with a reason under it, are both worse than
+   * saying nothing.
+   */
+  const offReason = !data
+    ? null
+    : data.period.paid
+      ? 'صُرف راتب هذه الفترة من قبل.'
+      : data.preview.net <= 0
+        ? 'الصافي صفر أو أقل — ما في إشي يُصرف.'
+        : !walletId
+          ? 'اختر المحفظة اللي بيخرج منها المبلغ.'
+          : !(effectiveRate > 0)
+            ? 'اكتب سعر الصرف — المحفظة بعملة تانية.'
+            : null;
+
   const pay = async () => {
     if (!data || !walletId) return;
     setBusy(true);
@@ -314,6 +333,25 @@ export function UserSalary({
                   />
                   {!sameCurrency && ' — بالسعر الذي كتبته أنت، ويُحفظ ولا يُعاد حسابه.'}
                 </p>
+              )}
+
+              {/*
+                A GREY «اصرف» THAT SAYS NOTHING IS A SCREEN THAT LOOKS BROKEN.
+
+                Five things switch this button off and only ONE of them was
+                ever explained — «صُرف راتب هذه الفترة من قبل», above. The
+                other four were silent: no wallet picked, no exchange rate
+                typed, nothing left to pay. On a money screen that reads as
+                the system refusing for a reason nobody will tell you, and
+                the next move is to press it again.
+
+                The owner's rule, in his words: «اللي مطفي عن قصد بيضل
+                مطفي، بس بيكتب السبب جنبه». So the reason stands beside the
+                button, and only the FIRST one that applies — a list of
+                four complaints about one press is not an answer.
+              */}
+              {offReason && (
+                <p className="text-xs text-[var(--sys-muted-foreground)]">{offReason}</p>
               )}
 
               <div className="flex gap-2">
