@@ -2895,6 +2895,22 @@ model JobRun {
   @@index([jobName, startedAt])
   @@index([status, startedAt])
   @@map("job_runs")
+
+  /// ── ONE PARTIAL UNIQUE INDEX THE SCHEMA CANNOT EXPRESS ──
+  ///
+  /// `job_runs_one_running` — UNIQUE (jobName) WHERE status = 'RUNNING'
+  ///
+  /// The claim used to be read-then-create in `src/lib/jobs/runner.ts`:
+  /// two workers a millisecond apart both saw no RUNNING row and both
+  /// created one, so the job ran twice. Harmless while one container ran
+  /// the worker; not harmless the moment two do, which the rolling update
+  /// introduced — and `accrue-commission`, `accrue-period-commission`,
+  /// `propose-penalties`, `deliver-conversions` and `deliver-app-events`
+  /// are jobs where twice means money or a double-reported conversion.
+  ///
+  /// `@@unique([jobName])` cannot say it: a job has many finished runs and
+  /// only ever one live one. In
+  /// `20261015210000_one_worker_one_job/migration.sql`.
 }
 
 // Blocking a customer.

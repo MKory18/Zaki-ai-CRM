@@ -122,9 +122,46 @@ export async function runJob(
     });
   }
 
-  const run = await db.jobRun.create({
-    data: { jobName: job.name, status: 'RUNNING', startedAt: now },
-  });
+  /*
+   * ═══════════════════════════════════════════════════════════════════
+   * THE CLAIM IS THE DATABASE'S, NOT THIS FUNCTION'S.
+   *
+   * What stood here was read-then-create: the `findFirst` above looks for
+   * a RUNNING row, and this creates one. Two workers running the check a
+   * millisecond apart BOTH see no RUNNING row and BOTH create one — and
+   * the job runs twice. `job_runs` had no unique index to stop the second
+   * insert, only two plain ones.
+   *
+   * It never mattered while one container ran the worker. It starts
+   * mattering the moment two do, which is exactly what the rolling
+   * update introduced: `docker-entrypoint.sh` starts the worker unless
+   * `RUN_WORKER=false`, so during the overlap — the new container is up
+   * and the old one has not stopped — there are two schedulers on one
+   * database.
+   *
+   * And the jobs where twice is not harmless are the ones that matter:
+   * `accrue-commission` and `accrue-period-commission` write money,
+   * `propose-penalties` writes money, `deliver-conversions` reports a
+   * conversion to Meta and TikTok, `deliver-app-events` delivers a signed
+   * webhook. Twice is a double accrual and a double-counted conversion.
+   *
+   * So the claim is a partial unique index — UNIQUE (jobName) WHERE
+   * status = 'RUNNING' — and the loser of the race is told by the
+   * database, in the same word it would have been told before.
+   * ═══════════════════════════════════════════════════════════════════
+   */
+  let run: { id: string };
+  try {
+    run = await db.jobRun.create({
+      data: { jobName: job.name, status: 'RUNNING', startedAt: now },
+    });
+  } catch (e) {
+    // P2002: the unique index refused it, so somebody else holds the job.
+    if (typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002') {
+      throw new JobSkipped(job.name);
+    }
+    throw e;
+  }
 
   try {
     const result = await job.run({ now, db });
