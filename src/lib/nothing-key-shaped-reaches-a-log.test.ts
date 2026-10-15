@@ -15,6 +15,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * prefix into the server log, in a repository that deliberately refuses
  * to show even the last four characters on the settings screen.
  *
+ * And every fake key below carries `test-` ON PURPOSE: `scan:secrets`
+ * reads that word as «this one is fake». Without it the scanner stops on
+ * this very file — a leak test that trips the leak scanner.
+ *
  * The body is kept for CLASSIFICATION only — «credit balance» and nothing
  * else is read out of it — so redacting it costs nothing.
  * ═══════════════════════════════════════════════════════════════════════
@@ -48,7 +52,7 @@ beforeEach(async () => {
   db.company.findUnique.mockResolvedValue({ settings: JSON.stringify({ ai: { provider: 'OPENAI' } }) });
   readSystemSetting.mockResolvedValue({
     provider: 'OPENAI',
-    keys: { OPENAI: { enc: encryptSecret('sk-proj-REALKEYVALUE1234567890') } },
+    keys: { OPENAI: { enc: encryptSecret('sk-proj-test-LEAKMARKER-0001') } },
   });
 });
 
@@ -73,19 +77,19 @@ async function thrownFor(body: string): Promise<string> {
 describe('when a vendor quotes the request back', () => {
   it('an OpenAI key in the refusal never reaches the thrown message', async () => {
     const said = await thrownFor(
-      '{"error":{"message":"Incorrect API key provided: sk-proj-REALKEYVALUE1234567890. You can find your API key at…"}}'
+      '{"error":{"message":"Incorrect API key provided: sk-proj-test-LEAKMARKER-0001. You can find your API key at…"}}'
     );
 
-    expect(said, 'المفتاح طلع بالرسالة اللي بتنكتب بالسجلّ').not.toContain('sk-proj-REALKEYVALUE1234567890');
-    expect(said).not.toContain('REALKEYVALUE');
+    expect(said, 'المفتاح طلع بالرسالة اللي بتنكتب بالسجلّ').not.toContain('sk-proj-test-LEAKMARKER-0001');
+    expect(said).not.toContain('LEAKMARKER');
     // And the status is still readable, because that is what it is for.
     expect(said).toContain('AI_HTTP_401');
   });
 
   it('and an Anthropic one, and an OpenRouter one', async () => {
-    for (const key of ['sk-ant-api03-SECRETVALUE123456', 'sk-or-v1-SECRETVALUE123456']) {
+    for (const key of ['sk-ant-api03-test-LEAKMARKER-0002', 'sk-or-v1-test-LEAKMARKER-0003']) {
       const said = await thrownFor(`{"error":"bad key ${key}"}`);
-      expect(said, key).not.toContain('SECRETVALUE123456');
+      expect(said, key).not.toContain('LEAKMARKER');
     }
   });
 
