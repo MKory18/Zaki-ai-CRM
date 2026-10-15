@@ -10,6 +10,13 @@ import { EMPTY_LAYOUT, parseLayout, resolveLayout, type NavLayout } from './nav-
  * layout is a server component and already resolves the session, so the
  * read happens there and the sidebar is simply handed the result.
  *
+ * ── AND ONE SURFACE PER OPINION ──
+ *
+ * The same three lists answer every «you arrange it» in this product: the
+ * menu, the dashboard cards, the orders columns, a saved view published to
+ * a role. They are told apart by `surface`, and NULL reads as `nav` —
+ * which is what every row written before the column existed is.
+ *
  * ── THE ROLE A PERSON IS IN IS A NAME, NOT AN ID ──
  *
  * `user.role` is a name (`'MANAGER'`), and a role's base is keyed on the
@@ -18,15 +25,26 @@ import { EMPTY_LAYOUT, parseLayout, resolveLayout, type NavLayout } from './nav-
  * still resolve against — the same way `role_permissions` is read.
  */
 
+/**
+ * `surface = 'nav'` has to match the rows that predate the column, and
+ * those hold NULL. Written once so no caller forgets which of the two it
+ * is looking for.
+ */
+function surfaceWhere(surface: string) {
+  return surface === 'nav' ? { OR: [{ surface: 'nav' }, { surface: null }] } : { surface };
+}
+
 /** One query: the role's base and this person's own, in one round trip. */
 export async function readArrangement(
   companyId: string,
   userId: string,
-  roleName: string
+  roleName: string,
+  surface = 'nav'
 ): Promise<{ base: NavLayout | null; own: NavLayout | null; resolved: NavLayout }> {
   const rows = await db.navArrangement.findMany({
     where: {
       companyId,
+      ...surfaceWhere(surface),
       OR: [{ userId }, { role: { name: roleName } }],
     },
     select: { userId: true, roleId: true, layout: true },
@@ -44,10 +62,11 @@ export async function readArrangement(
 export async function saveOwnArrangement(
   companyId: string,
   userId: string,
-  layout: NavLayout
+  layout: NavLayout,
+  surface = 'nav'
 ): Promise<void> {
   const existing = await db.navArrangement.findFirst({
-    where: { companyId, userId },
+    where: { companyId, userId, ...surfaceWhere(surface) },
     select: { id: true },
   });
   if (existing) {
@@ -55,7 +74,7 @@ export async function saveOwnArrangement(
     return;
   }
   await db.navArrangement.create({
-    data: { companyId, userId, layout: JSON.stringify(layout) },
+    data: { companyId, userId, surface, layout: JSON.stringify(layout) },
   });
 }
 
@@ -65,31 +84,42 @@ export async function saveOwnArrangement(
  * indistinguishable from «I deliberately hid nothing», which is a
  * different thing from «I have no opinion».
  */
-export async function clearOwnArrangement(companyId: string, userId: string): Promise<void> {
-  await db.navArrangement.deleteMany({ where: { companyId, userId } });
+export async function clearOwnArrangement(
+  companyId: string,
+  userId: string,
+  surface = 'nav'
+): Promise<void> {
+  await db.navArrangement.deleteMany({ where: { companyId, userId, ...surfaceWhere(surface) } });
 }
 
 /** The base for a role, set by the owner. */
 export async function saveRoleArrangement(
   companyId: string,
   roleId: string,
-  layout: NavLayout
+  layout: NavLayout,
+  surface = 'nav'
 ): Promise<void> {
   const existing = await db.navArrangement.findFirst({
-    where: { companyId, roleId },
+    where: { companyId, roleId, ...surfaceWhere(surface) },
     select: { id: true },
   });
   if (existing) {
     await db.navArrangement.update({ where: { id: existing.id }, data: { layout: JSON.stringify(layout) } });
     return;
   }
-  await db.navArrangement.create({ data: { companyId, roleId, layout: JSON.stringify(layout) } });
+  await db.navArrangement.create({
+    data: { companyId, roleId, surface, layout: JSON.stringify(layout) },
+  });
 }
 
 /** The base a role carries today, for the owner's own «الترتيب لـ» screen. */
-export async function readRoleArrangement(companyId: string, roleId: string): Promise<NavLayout> {
+export async function readRoleArrangement(
+  companyId: string,
+  roleId: string,
+  surface = 'nav'
+): Promise<NavLayout> {
   const row = await db.navArrangement.findFirst({
-    where: { companyId, roleId },
+    where: { companyId, roleId, ...surfaceWhere(surface) },
     select: { layout: true },
   });
   return row ? parseLayout(row.layout) : EMPTY_LAYOUT;

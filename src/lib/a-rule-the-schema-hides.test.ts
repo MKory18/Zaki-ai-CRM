@@ -32,8 +32,21 @@ const schema = readFileSync(join(process.cwd(), 'prisma', 'schema.prisma'), 'utf
 
 /** Every `CREATE UNIQUE INDEX … WHERE …` this repository has ever written. */
 function partialUniqueIndexes(): { name: string; migration: string }[] {
-  const out: { name: string; migration: string }[] = [];
-  for (const dir of readdirSync(MIGRATIONS)) {
+  /*
+   * THE MIGRATIONS ARE A HISTORY, NOT A SET.
+   *
+   * `nav_arrangements_role_key` was created in one migration and dropped
+   * in a later one, when the arrangement gained a surface and the key had
+   * to include it. It exists in no database that has run both — so
+   * demanding the schema still name it would be demanding a comment about
+   * a rule nothing enforces, and the only way to pass would be to describe
+   * an index that is gone.
+   *
+   * Read in directory order, which is timestamp order, and a `DROP INDEX`
+   * removes what an earlier one added.
+   */
+  const live = new Map<string, string>();
+  for (const dir of readdirSync(MIGRATIONS).sort()) {
     let sql: string;
     try {
       sql = readFileSync(join(MIGRATIONS, dir, 'migration.sql'), 'utf8');
@@ -42,10 +55,13 @@ function partialUniqueIndexes(): { name: string; migration: string }[] {
     }
     const re = /CREATE UNIQUE INDEX(?:\s+IF NOT EXISTS)?\s+"([^"]+)"([\s\S]{0,400}?);/g;
     for (const m of sql.matchAll(re)) {
-      if (/\bWHERE\b/i.test(m[2])) out.push({ name: m[1], migration: dir });
+      if (/\bWHERE\b/i.test(m[2])) live.set(m[1], dir);
+    }
+    for (const m of sql.matchAll(/DROP INDEX(?:\s+IF EXISTS)?\s+"([^"]+)"/g)) {
+      live.delete(m[1]);
     }
   }
-  return out;
+  return [...live].map(([name, migration]) => ({ name, migration }));
 }
 
 describe('a rule the database keeps, the schema names', () => {

@@ -1082,6 +1082,14 @@ model NavArrangement {
   roleId String?
   userId String?
 
+  /// WHICH SURFACE THIS OPINION IS ABOUT — `nav`, `view:orders`, …
+  ///
+  /// NULL reads as `nav`, which is what every row written before this
+  /// column existed is. Nullable rather than defaulted on purpose: a
+  /// default would have written a value into every existing row, and
+  /// those rows already mean the menu.
+  surface String?
+
   /// `{ order: string[], hidden: string[], pinned: string[] }` — paths.
   /// JSON in a text column, read defensively: a menu is the one thing that
   /// must never fail to render. See src/lib/nav-arrangement.ts.
@@ -1099,12 +1107,22 @@ model NavArrangement {
 
   @@index([companyId, roleId])
   @@index([companyId, userId])
+  @@index([companyId, surface])
   @@map("nav_arrangements")
 
   /// ── TWO PARTIAL UNIQUE INDEXES THE SCHEMA CANNOT EXPRESS ──
   ///
-  /// `nav_arrangements_role_key` — UNIQUE (companyId, roleId) WHERE roleId IS NOT NULL
-  /// `nav_arrangements_user_key` — UNIQUE (userId)            WHERE userId IS NOT NULL
+  /// `nav_arrangements_role_surface_key`
+  ///     UNIQUE (companyId, roleId, COALESCE(surface,'nav')) WHERE roleId IS NOT NULL
+  /// `nav_arrangements_user_surface_key`
+  ///     UNIQUE (userId, COALESCE(surface,'nav'))            WHERE userId IS NOT NULL
+  ///
+  /// The surface is part of the key: without it «one base per role» would
+  /// mean one for the whole product, so publishing a dashboard arrangement
+  /// would overwrite that role's menu. And `COALESCE(…,'nav')` because two
+  /// NULLs do not collide in a unique index — the rows written before the
+  /// column existed would otherwise stop being covered by the rule they
+  /// were created under.
   ///
   /// `@@unique([companyId, roleId])` would let a second row in whenever
   /// `roleId` is NULL, because NULLs do not collide — so every personal

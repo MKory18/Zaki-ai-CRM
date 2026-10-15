@@ -40,6 +40,25 @@ export interface NavLayout {
   hidden: string[];
   /** Paths to lift to the top of their group. */
   pinned: string[];
+  /**
+   * NAMED FILTER SETS, FOR A SURFACE THAT HAS THEM — a published view.
+   *
+   * «المتأخرة أكثر من عشرة أيام، أرامكس، إربد» is what somebody opens the
+   * orders screen to see every morning, and it costs six controls before
+   * any work starts. A person's own views live in their browser
+   * (`SavedViews`); this is the other half the owner asked for — a view HE
+   * publishes to a role, so a new agent's first morning already has it.
+   *
+   * ── A VIEW IS A QUESTION, NEVER AN ANSWER ──
+   *
+   * It is a query string and a name. No results, no counts, no record ids
+   * — nothing about any customer, and nothing that could still be true
+   * when the data has moved on. Applying one re-asks the question through
+   * the same API, which applies the same scope envelope it always did. So
+   * a published view CANNOT widen what a role sees: the most it can do is
+   * ask for rows the server then refuses to return.
+   */
+  views?: { name: string; query: string }[];
 }
 
 export const EMPTY_LAYOUT: NavLayout = { order: [], hidden: [], pinned: [] };
@@ -65,7 +84,29 @@ export function parseLayout(raw: unknown): NavLayout {
   }
   if (!value || typeof value !== 'object') return EMPTY_LAYOUT;
   const o = value as Record<string, unknown>;
-  return { order: strings(o.order), hidden: strings(o.hidden), pinned: strings(o.pinned) };
+  /*
+   * The views, read as defensively as the three lists: a name and a query,
+   * both strings, and nothing else kept. A stored view carrying a third
+   * field would be a shape from a build that is not this one.
+   */
+  const views = Array.isArray(o.views)
+    ? o.views
+        .filter(
+          (v): v is { name: string; query: string } =>
+            !!v &&
+            typeof v === 'object' &&
+            typeof (v as { name?: unknown }).name === 'string' &&
+            typeof (v as { query?: unknown }).query === 'string'
+        )
+        .slice(0, 12)
+        .map((v) => ({ name: v.name.slice(0, 40), query: v.query.slice(0, 500) }))
+    : [];
+  return {
+    order: strings(o.order),
+    hidden: strings(o.hidden),
+    pinned: strings(o.pinned),
+    ...(views.length > 0 ? { views } : {}),
+  };
 }
 
 /**
@@ -87,6 +128,19 @@ export function resolveLayout(base: NavLayout | null, own: NavLayout | null): Na
     order: o.order.length > 0 ? o.order : b.order,
     hidden: o.hidden.length > 0 ? o.hidden : b.hidden,
     pinned: o.pinned.length > 0 ? o.pinned : b.pinned,
+    /*
+     * Views are the one list that ADDS rather than replaces: the owner's
+     * published views and a person's own are both offered, because they
+     * answer different questions and a person who saved one of their own
+     * has not thereby refused his. The person's come first — they chose
+     * them — and a name collision keeps theirs.
+     */
+    ...(() => {
+      const mine = o.views ?? [];
+      const theirs = (b.views ?? []).filter((v) => !mine.some((m) => m.name === v.name));
+      const all = [...mine, ...theirs];
+      return all.length > 0 ? { views: all } : {};
+    })(),
   };
 }
 
