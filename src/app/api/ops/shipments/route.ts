@@ -59,8 +59,14 @@ export async function GET(req: Request) {
      * becomes a bug report nobody can read.
      *
      * So it is the one builder, with the city switched on — this list is
-     * sorted by where parcels are going, so the governorate is the thing
-     * a person types.
+     * about where parcels are going, so a place name is what a person
+     * types into it.
+     *
+     * ⚠️ And «city» here is `Customer.city`, which is free text the order
+     * was taken with — NOT the `Region` the المحافظة column shows and the
+     * governorate filter uses. They usually agree and they are not the
+     * same field, so a place read off the screen may match nothing. The
+     * placeholder says «المدينة» for that reason.
      */
     const search = q.get('q')?.trim();
 

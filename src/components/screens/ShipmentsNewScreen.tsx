@@ -171,8 +171,32 @@ export function ShipmentsNewScreen() {
     }
   }, [filters, view]);
 
+  /**
+   * ── A QUARTER-SECOND, AND NOT FOR SMOOTHNESS ──
+   *
+   * `load` is in the dependency list and `load` changes with `filters`, so
+   * before the search box this effect fired on a dropdown — a few times an
+   * hour. A text input fires it on every keystroke, and this particular
+   * request is an expensive one: the route prices every row
+   * (`resolveDeliveryFee`) and asks `shipmentBlocks` about it, several
+   * queries each, for up to three hundred rows.
+   *
+   * ⚠️ AND IT COUNTS TOWARD A SECURITY ALERT. Every response runs
+   * `noteCustomersHandedOut`, which adds that response's distinct
+   * customers to a running fifteen-minute tally; past five hundred it
+   * writes a `CUSTOMER_BULK_VIEW` audit row and alerts everybody holding
+   * `users.manage`. Typing five letters over a three-hundred-row list
+   * would cross it — and the owner would be told his data was swept when
+   * somebody searched for a name.
+   *
+   * 🔧 250ms, the same figure and the same shape `OrdersScreen` uses for
+   * its own search.
+   */
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 250);
+    return () => clearTimeout(timer);
   }, [load]);
 
   const create = async () => {
@@ -242,13 +266,20 @@ export function ShipmentsNewScreen() {
         filters below narrow by where and when, and neither of those is
         «the one he just named».
       */}
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-5">
-        <div className="md:col-span-5">
-          <SearchField
-            value={filters.q}
-            onChange={(v) => setFilters({ ...filters, q: v })}
-          />
-        </div>
+      {/*
+        ITS OWN ROW, ABOVE THE GRID — AND NOT A FIVE-COLUMN SPAN INSIDE IT.
+        The span read better in the markup and cost a Tailwind utility this
+        repository uses nowhere else, which pushed the first-load stylesheet
+        0.04 KB past the budget `quality-gates.test.ts` holds. The gate's own
+        doctrine is to reuse what the product already has; a box on its own
+        line needs no column arithmetic at all.
+      */}
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
+        <SearchField
+          value={filters.q}
+          onChange={(v) => setFilters({ ...filters, q: v })}
+        />
+        <div className="grid gap-3 md:grid-cols-5">
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
@@ -261,6 +292,7 @@ export function ShipmentsNewScreen() {
           >
             {busy ? 'جارٍ الإنشاء…' : `إنشاء شحنة (${selectedCount})`}
           </button>
+        </div>
         </div>
       </div>
 
