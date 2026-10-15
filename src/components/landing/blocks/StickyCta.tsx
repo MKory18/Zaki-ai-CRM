@@ -1,16 +1,29 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { RiWhatsappLine } from '@/components/storefront/icons';
 import { OrderCta } from './OrderCta';
 
 /**
- * The floating button, showing the price the visitor is actually buying.
+ * THE BAR THAT KEEPS THE ORDER ONE TAP AWAY — at any scroll position.
  *
- * It listens for the form's `ZAKI_OFFER_SELECTED` and resolves that id
- * against ITS OWN server-provided offers — the price never arrives in the
- * message. Without this the button sat there advertising the base price
- * while the form below it had a three-pack selected, and the two numbers
- * on one screen disagreed.
+ * «النموذج على بُعد ضغطة واحدة من أي موضع تمرير · تواصل واتساب». Those are
+ * the two things a visitor two screens down a COD page needs and cannot
+ * reach: the form, and a person to ask. So the bar carries both — the
+ * button that lands them in the first field, and the shop's own WhatsApp
+ * when it has a number.
+ *
+ * WHY THE CONTACT IS HERE AND NOT A SECOND FLOATING BUBBLE. A bubble of its
+ * own is a second fixed element on a 360px screen, and the two then argue
+ * over the same corner — which is what the shop's home page and this page
+ * did when both were open in one session. One bar, two destinations, and
+ * they leave the screen together when the form arrives.
+ *
+ * The price shown is the one the visitor is actually buying: it listens for
+ * the form's `ZAKI_OFFER_SELECTED` and resolves that id against ITS OWN
+ * server-provided offers — the price never arrives in the message. Without
+ * this the button sat there advertising the base price while the form below
+ * it had a three-pack selected, and the two numbers on one screen disagreed.
  */
 
 interface Props {
@@ -21,9 +34,15 @@ interface Props {
   /** Shown when the page sells no offers at all. */
   basePrice: number;
   currency: string;
+  /**
+   * The shop's WhatsApp, already built into a link by `whatsappHref`, or
+   * null. Null draws no contact at all: a button that opens nothing looks
+   * to a shopper exactly like a shop that does not answer.
+   */
+  whatsapp?: string | null;
 }
 
-export function StickyCta({ text, showPrice, offers, basePrice, currency }: Props) {
+export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsapp }: Props) {
   // Start on what the form starts on, so the two agree before any click.
   const initial = offers.find((o) => o.isDefault)?.id ?? offers[0]?.id ?? '';
   const [offerId, setOfferId] = useState(initial);
@@ -51,8 +70,11 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency }: Prop
    * An observer rather than a scroll handler: the browser reports the
    * crossing itself, off the main thread, and there is no position maths
    * here to get wrong at one zoom level or one screen height.
+   *
+   * The whole BAR moves, not the button alone: half a bar sliding out from
+   * under a WhatsApp icon that stays is two objects where there is one.
    */
-  const ref = useRef<HTMLAnchorElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const form = document.getElementById('zaki-order-form');
     const el = ref.current;
@@ -75,13 +97,29 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency }: Prop
   const price = offers.find((o) => o.id === offerId)?.price ?? (offers.length ? undefined : basePrice);
 
   return (
-    <OrderCta ref={ref} className="lp-sticky">
-      <span>{text || 'اطلب الآن'}</span>
-      {showPrice && price !== undefined && price > 0 && (
-        <b dir="ltr">
-          {price.toLocaleString('en-US')} {currency}
-        </b>
+    <div className="lp-sticky-bar" ref={ref}>
+      {whatsapp && (
+        <a
+          className="lp-sticky-wa"
+          href={whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          /* The icon alone would be an unlabelled button to a screen reader,
+             and «واتساب» under it would cost the button beside it its words
+             on a 360px screen. */
+          aria-label="تواصل معنا على واتساب"
+        >
+          <RiWhatsappLine size={22} aria-hidden />
+        </a>
       )}
-    </OrderCta>
+      <OrderCta className="lp-sticky">
+        <span>{text || 'اطلب الآن'}</span>
+        {showPrice && price !== undefined && price > 0 && (
+          <b dir="ltr">
+            {price.toLocaleString('en-US')} {currency}
+          </b>
+        )}
+      </OrderCta>
+    </div>
   );
 }

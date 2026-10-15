@@ -421,6 +421,21 @@ const urgency = z.object({
   showRealStock: z.boolean().default(false),
 });
 
+/*
+ * THE MINUTES FIELD WAS RETIRED ON THIS BRANCH, AND IS NOT RETIRED.
+ *
+ * This branch read «عدّاد فقط من تاريخ انتهاء عرض حقيقي» as «the per-visitor
+ * timer has no source, so take the field away». S6 landed first with the
+ * owner's own D8 and a better answer to the same sentence: the field stays,
+ * the editor makes the seller CHOOSE between «يدوي» and «تلقائي», the
+ * per-visitor one carries the warning out loud, and «تلقائي» is REFUSED at
+ * the save door when the product has no offer with a future ending —
+ * `countdown.ts`, `countdownRefusal`.
+ *
+ * Theirs is kept whole. A retirement note beside a field that is not retired
+ * would be the second answer, and the sentence it answered is answered.
+ */
+
 /**
  * THE SENTENCE THAT SAYS NOBODY PAYS NOW.
  *
@@ -797,13 +812,22 @@ export function newSection(type: SectionType): LandingSection {
     mechanism: { title: 'كيف يشتغل', steps: [{ title: '', text: '' }], ingredients: [{ name: '', does: '' }] },
     urgency: { text: '', minutes: 0, showRealStock: false },
     form: { title: 'أكمل الطلب', subtitle: 'املأ بياناتك ويتواصل معك فريقنا للتأكيد' },
-    trust: {
-      items: [
-        { title: 'طلب آمن', text: 'بياناتك محفوظة' },
-        { title: 'توصيل سريع', text: 'خلال أيام' },
-        { title: 'دفع عند الاستلام', text: 'تدفع بعد ما تستلم' },
-      ],
-    },
+    /*
+     * EMPTY ON PURPOSE — AND THAT IS NOT AN EMPTY ROW.
+     *
+     * It used to arrive holding «طلب آمن · بياناتك محفوظة» and «توصيل سريع ·
+     * خلال أيام»: two sentences nobody measured, pre-written into the one
+     * block whose whole job is to be believed, on a shop that had never
+     * delivered anything. A seller who never opened the block published
+     * them, and a shopper cannot check «سريع».
+     *
+     * With no items the renderer draws the facts instead (`trustRow`): cash
+     * on delivery always, the delivery window only once this shop's own
+     * deliveries clear the sample floor, the returns line only when the
+     * seller wrote a guarantee or published a policy. Typing items still
+     * wins — those are their words about their shop.
+     */
+    trust: { items: [] },
     footer: {
       text: '',
       phone: '',
@@ -832,10 +856,48 @@ export function starterSections(): LandingSection[] {
     .map(newSection);
 }
 
+/**
+ * THE TWO BLOCKS A SELLING PAGE IS NEVER WITHOUT.
+ *
+ * The form, because without it the page cannot take an order — and the
+ * floating button, because «النموذج على بُعد ضغطة واحدة من أي موضع
+ * تمرير». A page a visitor has scrolled two screens down has its order
+ * form off the screen, and the only thing that keeps the order one tap
+ * away at that depth is a button that came with them.
+ *
+ * It is the same rule the structure contract already states twice — every
+ * one of the ten sequences must contain `sticky`, and `stickyOnMobile` is a
+ * `z.literal(true)` with no value that turns it off — and nothing kept it
+ * on a page assembled by hand in the builder. A seller who pressed «إخفاء»
+ * on it, or built a page before the block existed, shipped a page where
+ * the order was a scroll away at every depth.
+ *
+ * ENABLED, NOT APPENDED BLINDLY: a page that already holds the block keeps
+ * the seller's own words and its own id, because the words on the button
+ * are theirs and only its presence is ours. Its POSITION in the list means
+ * nothing — it is fixed to the bottom of the screen wherever it sits — so
+ * appending at the end moves nothing anybody arranged.
+ */
+export const LOCKED_SECTIONS: SectionType[] = ['form', 'sticky'];
+
+function ensureEnabled(sections: LandingSection[], type: SectionType): LandingSection[] {
+  if (sections.some((s) => s.type === type && s.enabled)) return sections;
+  const existing = sections.find((s) => s.type === type);
+  if (existing) return sections.map((s) => (s.id === existing.id ? { ...s, enabled: true } : s));
+  return [...sections, newSection(type)];
+}
+
 /** The form is not optional: without it the page cannot take an order. */
 export function ensureForm(sections: LandingSection[]): LandingSection[] {
-  if (sections.some((s) => s.type === 'form' && s.enabled)) return sections;
-  const existing = sections.find((s) => s.type === 'form');
-  if (existing) return sections.map((s) => (s.id === existing.id ? { ...s, enabled: true } : s));
-  return [...sections, newSection('form')];
+  return ensureEnabled(sections, 'form');
+}
+
+/** Nor is the button that carries a visitor back to it from any depth. */
+export function ensureSticky(sections: LandingSection[]): LandingSection[] {
+  return ensureEnabled(sections, 'sticky');
+}
+
+/** Both, for the one caller that renders a page to a shopper. */
+export function ensureSellingCore(sections: LandingSection[]): LandingSection[] {
+  return ensureSticky(ensureForm(sections));
 }
