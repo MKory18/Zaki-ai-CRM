@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, THEME_CHOICES, sanitizeTheme, themeByKey } from '@/lib/system-themes';
+import { DECOR_LEVELS, readDecor, setDecor, type DecorLevel } from '@/lib/theme-decoration';
 import { RiCheckLine, RiPaletteLine } from '@remixicon/react';
 
 /**
@@ -125,6 +126,88 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
           طُبِّق المظهر هنا، لكن تعذّر حفظه — سيعود إلى السابق على جهاز آخر.
         </p>
       )}
+
+      <DecorationLevel />
     </section>
+  );
+}
+
+/**
+ * HOW MUCH OF THE MOOD, AND WHERE IT IS ALLOWED TO BE.
+ *
+ * Eight of these themes are moods — neon, gold, parchment, a sky with no
+ * moon — and a mood that is only thirty-four hexes is a recoloured
+ * spreadsheet. So each one may put an ambient touch on the screen, in
+ * three places and three places only: the door, an empty list, and the
+ * header above the menu.
+ *
+ * ⚠️ The sentence under the heading says the rest out loud, because it is
+ * the part somebody would otherwise have to discover: NOT behind a table,
+ * a form, an order, a figure of money or a stock count. A glow under a
+ * column of numbers is a glow somebody reads through, every row, all day,
+ * while deciding whether to ship something.
+ *
+ * ── AND IT RELOADS, ON PURPOSE ──
+ *
+ * The CSS for this is written into the document by the server, which is
+ * what keeps it out of the stylesheet everybody downloads. So the new
+ * level arrives with the next HTML, and asking for that HTML is the honest
+ * way to apply it. The alternative is shipping all three levels to
+ * everybody for the sake of a setting changed about twice.
+ *
+ * This is a BROWSER's preference, not an account's: the same person on a
+ * phone in the sun and at a desk at night does not want the same answer.
+ * A cookie, so the server renders it on the first frame — no script, no
+ * flash, and no migration.
+ */
+const DECOR_AR: Record<DecorLevel, { ar: string; note: string }> = {
+  off: { ar: 'بلا', note: 'ألوانُ المظهر وحدها.' },
+  light: { ar: 'خفيفة', note: 'لمسةٌ ساكنة — الافتراضيّة، ولا شيءَ فيها يتحرّك.' },
+  full: { ar: 'كاملة', note: 'ومعها حركةٌ بطيئة — تتوقّف مع «تقليل الحركة» وعندما تُخفى النافذة.' },
+};
+
+function DecorationLevel() {
+  const [level, setLevel] = useState<DecorLevel>('light');
+  // Read after mount: the cookie is the browser's, and the server has
+  // already used it to paint. Reading it in render would differ between
+  // the two and React would say so.
+  useEffect(() => setLevel(readDecor()), []);
+
+  const choose = (next: DecorLevel) => {
+    setLevel(next);
+    setDecor(next);
+    window.location.reload();
+  };
+
+  return (
+    <div className="mt-4 border-t border-[var(--sys-border)] pt-3">
+      <h4 className="mb-1 text-xs font-semibold text-[var(--sys-foreground)]">زخرفةُ المظهر</h4>
+      <p className="mb-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+        في ثلاثةِ أماكنَ فقط: شاشةُ الدخول، والقائمةُ الفارغة، ورأسُ القائمة الجانبيّة.
+        ولا تظهر أبداً وراءَ جدولٍ أو حقلٍ أو طلبٍ أو مبلغٍ أو كميّةِ مخزون — الأرقامُ لا يُقرأُ من
+        خلفِها شيء.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {DECOR_LEVELS.map((key) => {
+          const active = key === level;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => choose(key)}
+              aria-pressed={active}
+              className={`min-h-11 md:min-h-0 rounded-lg border px-3 py-2 text-right ${
+                active
+                  ? 'border-[var(--sys-primary)] ring-1 ring-[var(--sys-primary)]'
+                  : 'border-[var(--sys-border)] hover:border-[var(--sys-border-strong)]'
+              }`}
+            >
+              <span className="block text-xs font-semibold text-[var(--sys-heading)]">{DECOR_AR[key].ar}</span>
+              <span className="block text-xs text-[var(--sys-muted-foreground)]">{DECOR_AR[key].note}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

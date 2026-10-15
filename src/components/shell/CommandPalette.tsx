@@ -12,6 +12,8 @@ import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
 import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail';
 import { signOut } from '@/lib/sign-out';
+import { apiJson } from '@/lib/api-client';
+import type { PaletteFact } from '@/lib/palette-intel';
 
 /**
  * ONE BOX FOR EVERYTHING.
@@ -61,6 +63,30 @@ import { signOut } from '@/lib/sign-out';
  * exactly where it was.
  */
 
+/**
+ * WHAT THE SERVER SAYS THIS ACCOUNT MAY ASK FOR.
+ *
+ * Not a role name and not a permission list: three answers, decided by
+ * `GET /api/palette` out of the permission engine. The palette never
+ * computes who may pull — it is told, by the same door that already
+ * refuses the pull itself.
+ */
+interface PaletteMay {
+  pull: boolean;
+  people: boolean;
+  /** The store's numbers, or this desk's. Only the wording depends on it. */
+  wide: boolean;
+}
+
+/** What a command that acts rather than navigates is given to act with. */
+interface ActionCtx {
+  close: () => void;
+  push: (href: string) => void;
+  /** One line back into the open box — a refusal, or an answer. */
+  say: (text: string) => void;
+  working: (on: boolean) => void;
+}
+
 interface Action {
   key: string;
   label: (folded: boolean) => string;
@@ -69,15 +95,90 @@ interface Action {
   /** Where it goes, when it goes anywhere the registry does not already name. */
   href?: string;
   /** Some commands only exist for some people; `true` when it always does. */
-  offered?: (ctx: { canSwitchStore: boolean }) => boolean;
+  offered?: (ctx: { canSwitchStore: boolean; may: PaletteMay | null }) => boolean;
   /** Does its glyph point somewhere, and so turn in a right-to-left page? */
   mirror?: boolean;
   /** Or what it does, when it does not go anywhere at all. */
-  run?: () => void;
+  run?: (ctx: ActionCtx) => void;
+  /**
+   * Does its answer land INSIDE the box?
+   *
+   * «لخّصلي اليوم» writes a paragraph into the sheet, and «اسحب» writes a
+   * refusal into it. Closing first would draw both onto a sheet that is
+   * already gone — which is the shape of «كبست وما صار شي».
+   */
+  keepsOpen?: true;
+}
+
+/**
+ * «اسحب» — THE SAME DOOR THE PULL SCREEN PRESSES.
+ *
+ * `POST /api/confirmation/pull` and nothing else, so every refusal it
+ * already enforces arrives here unchanged: «سجّل محاولة اتصال على طلبك
+ * الحالي», the two caps, «لا توجد طلبات بانتظار التأكيد الآن», and the
+ * 403 for an account whose desk this is not. There is no second pull path
+ * and no second rule — a palette that picked its own candidate would be a
+ * way around the caps, which is the whole reason the caps exist.
+ */
+async function pullNext(ctx: ActionCtx) {
+  ctx.working(true);
+  try {
+    await apiJson('/api/confirmation/pull', { method: 'POST' });
+    ctx.close();
+    ctx.push('/confirmation/mine');
+  } catch (e) {
+    ctx.say(e instanceof Error ? e.message : 'تعذر سحب طلب');
+  } finally {
+    ctx.working(false);
+  }
+}
+
+/** «لخّصلي اليوم» — numbers in, one Arabic paragraph back. See the route. */
+async function summariseToday(ctx: ActionCtx) {
+  ctx.working(true);
+  try {
+    const answer = await apiJson<{ text: string; from: string; why?: string }>(
+      '/api/palette/today',
+      { method: 'POST' }
+    );
+    // The screen says WHY it is the plain version — «الموديل مش محلّي» is
+    // a setting the owner can change, and silence about it reads as a
+    // worse model rather than an unused one.
+    const why =
+      answer.from === 'LOCAL_MODEL'
+        ? ''
+        : answer.why === 'NOT_LOCAL'
+          ? '\nالنصّ من الأرقام لا من موديل: مسار الذكاء ليس LOCAL، فلا شيء يخرج من الجهاز.'
+          : '\nالنصّ من الأرقام لا من موديل.';
+    ctx.say(answer.text + why);
+  } catch (e) {
+    ctx.say(e instanceof Error ? e.message : 'تعذر التلخيص');
+  } finally {
+    ctx.working(false);
+  }
 }
 
 /** The commands that live in the chrome, and so have no route to be found at. */
 const ACTIONS: Action[] = [
+  {
+    key: 'pull',
+    label: () => 'اسحب الطلب التالي',
+    hint: 'من أي شاشة — وبنفس شروط شاشة السحب',
+    icon: 'Inbox',
+    // Exactly the pull screen's own condition, as the server reported it.
+    offered: ({ may }) => may?.pull === true,
+    run: (ctx) => void pullNext(ctx),
+    keepsOpen: true,
+  },
+  {
+    key: 'today',
+    label: () => 'لخّصلي اليوم',
+    hint: 'فقرة واحدة من الأرقام نفسها — بلا أسماء ولا هواتف',
+    icon: 'Lightbulb',
+    offered: ({ may }) => may !== null,
+    run: (ctx) => void summariseToday(ctx),
+    keepsOpen: true,
+  },
   {
     key: 'switch',
     label: () => 'تبديل المتجر أو البلد',
@@ -114,21 +215,34 @@ interface Hit {
   currency?: string | null;
 }
 
-/** Same shape for all three, so a row is a row and the list reads as one. */
+/** A colleague, as the server is willing to name one. No email, no phone. */
+interface Person {
+  id: string;
+  name: string;
+  roleAr: string;
+}
+
+/** Same shape for all of them, so a row is a row and the list reads as one. */
 interface Row {
-  kind: 'record' | 'screen' | 'action';
+  kind: 'count' | 'record' | 'person' | 'screen' | 'action';
   key: string;
   label: string;
   hint: string;
   icon: string;
   mirror?: boolean;
+  /** Printed at the end of the row — a counter's own figure. */
+  tally?: number;
   /** Choosing it navigates, or does something here. Never both. */
   href?: string;
   run?: () => void;
+  /** See `Action.keepsOpen`. */
+  keepsOpen?: true;
 }
 
 const GROUP_AR: Record<Row['kind'], string> = {
+  count: 'أرقام',
   record: 'سجلات',
+  person: 'الموظفون',
   screen: 'شاشات',
   action: 'أفعال',
 };
@@ -156,6 +270,14 @@ export function CommandPalette({
   /** Only so one command can read its own name aloud both ways round. */
   const [folded, setFolded] = useState(false);
   const [hits, setHits] = useState<Hit[] | null>(null);
+  /** The opening summary, and what this account may ask for. */
+  const [facts, setFacts] = useState<PaletteFact[] | null>(null);
+  const [may, setMay] = useState<PaletteMay | null>(null);
+  /** The counters and the colleagues a typed word asked for. */
+  const [counts, setCounts] = useState<PaletteFact[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  /** One line a command wrote back into the open box. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [looking, setLooking] = useState(false);
   const [cursor, setCursor] = useState(0);
   const box = useRef<HTMLInputElement>(null);
@@ -164,12 +286,79 @@ export function CommandPalette({
     if (!open) return;
     setQuery('');
     setHits(null);
+    setCounts([]);
+    setPeople([]);
+    setNotice(null);
     setCursor(0);
     // After paint, or the focus lands on an element that is still hidden.
     setFolded(storedRail());
     const id = setTimeout(() => box.current?.focus(), 30);
     return () => clearTimeout(id);
   }, [open]);
+
+  /**
+   * WHAT IS IN FRONT OF THIS ACCOUNT RIGHT NOW.
+   *
+   * Asked on every open rather than once: the counts are the point, and a
+   * figure cached from the last time somebody pressed Ctrl+K is a figure
+   * that is wrong. `GET /api/palette` takes no scope parameter — see its
+   * own note — so this request cannot ask for anybody else's numbers.
+   */
+  useEffect(() => {
+    if (!open) return;
+    let dropped = false;
+    apiJson<{ facts: PaletteFact[]; may: PaletteMay }>('/api/palette')
+      .then((data) => {
+        if (dropped) return;
+        setFacts(data.facts ?? []);
+        setMay(data.may ?? null);
+      })
+      // A refused or dropped summary leaves the box a box. It is the thing
+      // the palette gained, not the thing it is for.
+      .catch(() => {
+        if (!dropped) setFacts([]);
+      });
+    return () => {
+      dropped = true;
+    };
+  }, [open]);
+
+  /**
+   * THE COUNTERS, AND THE COLLEAGUES.
+   *
+   * `POST` with the term in the BODY, because one of the things a person
+   * types here is a customer's phone number and a query string is written
+   * into every log on the way. The route's own note says the rest.
+   */
+  useEffect(() => {
+    const term = query.trim();
+    if (!open || term.length < 2) {
+      setCounts([]);
+      setPeople([]);
+      return;
+    }
+    let dropped = false;
+    const id = setTimeout(async () => {
+      try {
+        const data = await apiJson<{ facts: PaletteFact[]; people: Person[] }>('/api/palette', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: term }),
+        });
+        if (dropped) return;
+        setCounts(data.facts ?? []);
+        setPeople(data.people ?? []);
+      } catch {
+        if (dropped) return;
+        setCounts([]);
+        setPeople([]);
+      }
+    }, SETTLE_MS);
+    return () => {
+      dropped = true;
+      clearTimeout(id);
+    };
+  }, [query, open]);
 
   useEffect(() => {
     const heard = () => setFolded(storedRail());
@@ -220,6 +409,21 @@ export function CommandPalette({
    * And each group is capped on its own, never the list as a whole — a
    * common order number must not be able to push the commands out of reach.
    */
+  /**
+   * One context, handed to whichever command was chosen. Built here and
+   * not inside each command so «اسحب» and «لخّصلي اليوم» cannot differ
+   * about what closing the box means.
+   */
+  const ctx: ActionCtx = useMemo(
+    () => ({
+      close: onClose,
+      push: (href: string) => router.push(href),
+      say: setNotice,
+      working: setLooking,
+    }),
+    [onClose, router]
+  );
+
   const rows: Row[] = useMemo(() => {
     const term = query.trim().toLowerCase();
     const asRow = (a: Action): Row => ({
@@ -230,12 +434,28 @@ export function CommandPalette({
       icon: a.icon,
       mirror: a.mirror,
       href: a.href,
-      run: a.run,
+      run: a.run ? () => a.run!(ctx) : undefined,
+      keepsOpen: a.keepsOpen,
     });
 
-    const offered = ACTIONS.filter((a) => !a.offered || a.offered({ canSwitchStore }));
+    const offered = ACTIONS.filter((a) => !a.offered || a.offered({ canSwitchStore, may }));
 
     if (!term) return offered.map(asRow);
+
+    /*
+     * THE COUNTERS FIRST, because they are the answer to the shortest
+     * thing anybody types. «مؤجل» is four letters and the question behind
+     * it is «كم», not «أيّ شاشة».
+     */
+    const counters: Row[] = counts.map((fact) => ({
+      kind: 'count' as const,
+      key: `c:${fact.key}`,
+      label: fact.label,
+      hint: fact.rule,
+      tally: fact.count,
+      href: fact.href,
+      icon: 'Gauge',
+    }));
 
     const records: Row[] = (hits ?? []).slice(0, 6).map((hit) => ({
       kind: 'record',
@@ -244,6 +464,23 @@ export function CommandPalette({
       hint: hit.customer?.fullName ?? 'طلب',
       href: `/orders?q=${encodeURIComponent(hit.orderNumber)}`,
       icon: 'Receipt',
+    }));
+
+    /*
+     * A COLLEAGUE'S NAME OPENS THEIR PAGE — for whoever may open it.
+     *
+     * The list arrives empty unless the server found `users.view` on this
+     * account, so there is nothing to filter here and nothing to hide: a
+     * palette that received names and then declined to draw them would
+     * have shipped them to the browser anyway.
+     */
+    const colleagues: Row[] = people.map((person) => ({
+      kind: 'person' as const,
+      key: `p:${person.id}`,
+      label: person.name,
+      hint: person.roleAr,
+      href: `/admin/users/${person.id}`,
+      icon: 'CircleUser',
     }));
 
     const screens: Row[] = groups
@@ -261,12 +498,15 @@ export function CommandPalette({
 
     const actions: Row[] = offered.map(asRow).filter((r) => r.label.toLowerCase().includes(term));
 
-    return [...records, ...screens, ...actions];
-  }, [groups, hits, query, folded, canSwitchStore]);
+    return [...counters, ...records, ...colleagues, ...screens, ...actions];
+  }, [groups, hits, counts, people, query, folded, canSwitchStore, may, ctx]);
 
   const go = useCallback(
     (row: Row) => {
-      onClose();
+      // A destination closes the box. A command whose answer is drawn
+      // INSIDE the box must not close it first, or the answer lands on a
+      // sheet that is already gone — see `Action.keepsOpen`.
+      if (!row.keepsOpen) onClose();
       if (row.href) router.push(row.href);
       else row.run?.();
     },
@@ -318,7 +558,9 @@ export function CommandPalette({
             }}
             onKeyDown={onKey}
             placeholder={
-              canSearchRecords ? 'رقم طلب، هاتف، باركود، اسم شاشة، أو فعل…' : 'اسم شاشة، أو ما تريد فعله…'
+              canSearchRecords
+                ? 'رقم طلب، هاتف، باركود، «مؤجل»، اسم منتج، اسم شاشة، أو فعل…'
+                : '«مؤجل»، «متأخر»، اسم منتج، هاتف، اسم شاشة، أو ما تريد فعله…'
             }
             aria-label="ابحث أو انتقل أو نفّذ"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-[var(--sys-muted)]"
@@ -335,6 +577,73 @@ export function CommandPalette({
             <RiCloseLine className="w-5 h-5" />
           </button>
         </div>
+
+        {/*
+          WHAT AN OPEN BOX ANSWERS BEFORE ANYTHING IS TYPED.
+
+          Five counts and, under each, the rule it was counted by. The rule
+          is not a tooltip and not a help page: «متأخرة» is the kind of
+          number two people read two ways, and the sentence that settles it
+          costs one line.
+
+          A PANEL AND NOT ROWS, deliberately. These are not choices — they
+          are the state of the desk — so they are not in the ↑↓ list and
+          Enter never lands on one. The ones with a list behind them are
+          still pressable, because a number you cannot open is a number you
+          have to go and find by hand.
+        */}
+        {!query.trim() && facts !== null && facts.length > 0 && (
+          <section
+            aria-label="ملخّص اليوم"
+            className="border-b border-[var(--sys-border)] bg-[var(--sys-surface)] px-4 py-3"
+          >
+            <p className="pb-2 text-xs font-semibold text-[var(--sys-muted-foreground)]">
+              {may?.wide ? 'المتجر الآن' : 'عملك الآن'}
+            </p>
+            <ul className="space-y-1.5">
+              {facts.map((fact) => (
+                <li key={fact.key}>
+                  <button
+                    type="button"
+                    disabled={!fact.href}
+                    onClick={() => {
+                      if (!fact.href) return;
+                      onClose();
+                      router.push(fact.href);
+                    }}
+                    aria-label={`${fact.label}: ${fact.count} — ${fact.rule}`}
+                    className="flex w-full items-start gap-3 text-start"
+                  >
+                    <span className="w-8 shrink-0 text-sm font-semibold tabular-nums text-[var(--sys-heading)]">
+                      {fact.count}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-[var(--sys-heading)]">{fact.label}</span>
+                      {/* The rule, in full. Not truncated: half a rule is
+                          worse than none — it reads as a different rule. */}
+                      <span className="block text-xs text-[var(--sys-muted-foreground)]">{fact.rule}</span>
+                    </span>
+                    {fact.href && (
+                      <RiArrowRightSLine className="icon-mirror w-4 h-4 shrink-0 text-[var(--sys-muted)]" aria-hidden />
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* What a command wrote back: «لخّصلي اليوم»'s paragraph, or the
+            refusal «اسحب» came back with. `whitespace-pre-line` because the
+            summary carries its own second line saying where it came from. */}
+        {notice && (
+          <p
+            role="status"
+            className="whitespace-pre-line border-b border-[var(--sys-border)] bg-[var(--sys-surface)] px-4 py-3 text-sm leading-relaxed text-[var(--sys-heading)]"
+          >
+            {notice}
+          </p>
+        )}
 
         <ul className="min-h-0 flex-1 overflow-y-auto py-1">
           {rows.length === 0 && (
@@ -376,8 +685,22 @@ export function CommandPalette({
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm text-[var(--sys-heading)]">{row.label}</span>
-                      <span className="block truncate text-xs text-[var(--sys-muted-foreground)]">{row.hint}</span>
+                      {/* A counter's rule is the whole point of the row, so
+                          it is not truncated — every other hint is a group
+                          name or a role name and fits. */}
+                      <span
+                        className={`block text-xs text-[var(--sys-muted-foreground)] ${
+                          row.kind === 'count' ? '' : 'truncate'
+                        }`}
+                      >
+                        {row.hint}
+                      </span>
                     </span>
+                    {row.tally !== undefined && (
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--sys-heading)]">
+                        {row.tally}
+                      </span>
+                    )}
                     {/* A chevron promises a destination; a command that
                         acts right here has none. */}
                     {row.href ? (

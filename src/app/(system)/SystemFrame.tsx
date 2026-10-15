@@ -1,6 +1,9 @@
 import './system.css';
 import { arabic, arabicLatin, publicSans, systemFontVars } from './fonts';
-import { sanitizeTheme } from '@/lib/system-themes';
+import { sanitizeTheme, themeByKey, themeStyle } from '@/lib/system-themes';
+import { decorCss, sanitizeDecor } from '@/lib/theme-decoration';
+import { shapeCss } from '@/lib/theme-shape';
+import { DecorVisibility } from '@/components/shell/ThemeDecor';
 
 /**
  * The system's look around a subtree: its stylesheet, its fonts on the
@@ -19,19 +22,61 @@ export function SystemFrame({
   children,
   theme,
   railed,
+  decor,
 }: {
   children: React.ReactNode;
   theme?: string | null;
   /** Folded sidebar, from this browser's cookie. Rendered, never scripted. */
   railed?: boolean;
+  /** off · light · full, from this browser's cookie. See theme-decoration.ts. */
+  decor?: string | null;
 }) {
+  /**
+   * ── THE PALETTE OF THE ONE THEME THIS PERSON CHOSE ──
+   *
+   * `system.css` carries the default and «تلقائي» and nothing else, so
+   * eleven palettes do not ship to everybody for the sake of the one they
+   * picked. See `SHEET_THEMES`. This is in the same HTML response as the
+   * markup it paints, so the first paint is already right: no script, no
+   * flash, and no second request.
+   *
+   * Empty string for the default and for «تلقائي» — the sheet has them —
+   * and empty for an unknown key, so a stored typo adds nothing.
+   */
+  const key = sanitizeTheme(theme);
+  const palette = themeStyle(key);
+  /*
+   * ── AND THE AMBIENT TOUCH, FOR THE PEOPLE WHO WANT ONE ──
+   *
+   * Written here for the same reason the palette is: somebody who turned
+   * decoration off downloads none of it, and the stylesheet that reaches
+   * everybody does not grow. Three places are allowed and they are the
+   * three where nothing is being measured — never behind a table, a
+   * figure of money or a stock count. See `theme-decoration.ts`.
+   */
+  const level = sanitizeDecor(decor);
+  const chosen = themeByKey(key);
+  const ambient = decorCss(chosen, level);
+  /*
+   * ── AND ITS SHAPE ──
+   *
+   * The card's corner, its edge, the arch two themes wear and the faint
+   * corner glyph. Written here for the same reason as the palette: a
+   * shape nobody chose is weight on everybody. It is the FRAME only —
+   * never a drawing behind a figure, which is the owner's own line.
+   * See src/lib/theme-shape.ts.
+   */
+  const shape = shapeCss(chosen);
+
   return (
     <div
-      data-sys-theme={sanitizeTheme(theme)}
+      data-sys-theme={key}
       data-rail={railed ? '1' : undefined}
       className={`${systemFontVars} flex min-h-screen flex-col bg-[var(--sys-background)] text-[var(--sys-foreground)]`}
     >
-      <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-arabic-latin:${arabicLatin.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}`}</style>
+      <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-arabic-latin:${arabicLatin.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}${palette}${shape}${ambient}`}</style>
+      {/* Only the «full» level animates, so only it needs pausing. */}
+      {level === 'full' && <DecorVisibility />}
       {children}
     </div>
   );

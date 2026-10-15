@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { SHEET_THEMES, SYSTEM_THEMES, themeStyle } from './system-themes';
 
 /**
  * CONTRAST, MEASURED, IN EVERY THEME.
@@ -9,10 +10,19 @@ import { join, relative } from 'node:path';
  * is one file, so the answer is arithmetic — and arithmetic nobody has
  * run is the same as a rule nobody has.
  *
- * THERE ARE THREE THEMES, NOT FOUR. `ops`, `day` and `calm` carry
- * colours; `auto` carries none of its own — it follows the operating
- * system and resolves to one of the other two. Four is the count of
- * choices in the picker, not of palettes.
+ * THERE ARE ELEVEN PALETTES AND TWELVE CHOICES. `auto` carries no
+ * colours of its own — it follows the operating system and resolves to
+ * one of the others — so the count of palettes is not the count of
+ * choices in the picker.
+ *
+ * ── AND THEY NO LONGER ALL LIVE IN THE STYLESHEET ──
+ *
+ * The sheet carries the default and «تلقائي»; the other nine are written
+ * into the document by `SystemFrame`, one rule for the one theme that
+ * person chose (see `SHEET_THEMES`). So this sweep reads BOTH — and still
+ * reads CSS TEXT rather than the objects, which is its whole point. The
+ * objects are what somebody intended; the text is what ships, `var()`
+ * indirections and all, and `resolve` follows those.
  *
  * Every text pair passes. This is here so that stays true: a colour gets
  * changed for how it looks on one screen, and nothing else in a codebase
@@ -20,11 +30,31 @@ import { join, relative } from 'node:path';
  */
 
 const root = process.cwd();
-const css = readFileSync(join(root, 'src/app/(system)/system.css'), 'utf8');
+const sheet = readFileSync(join(root, 'src/app/(system)/system.css'), 'utf8');
+
+/**
+ * Everything that ships: the stylesheet, plus each palette the frame
+ * writes, broken onto lines so the one reader below can parse either.
+ */
+const css =
+  sheet +
+  SYSTEM_THEMES.filter((t) => !(SHEET_THEMES as readonly string[]).includes(t.key))
+    .map(
+      (t) =>
+        '\n' +
+        themeStyle(t.key)
+          .replace('{', ' {\n  ')
+          .replaceAll(';', ';\n  ')
+          .replace(/\s*}$/, '\n}')
+    )
+    .join('\n');
 
 function themes(): Map<string, Map<string, string>> {
   const out = new Map<string, Map<string, string>>();
-  const re = /(?:^|\n)(?::root,\s*)?\[data-sys-theme='([a-z]+)'\]\s*\{([\s\S]*?)\n\}/g;
+  // `[a-z0-9-]+`, not `[a-z]+`: «islamic-epic» and «islamic-calm» carry a
+  // hyphen, and the narrower class skipped them in silence — which is a
+  // sweep that passes by not looking.
+  const re = /(?:^|\n)(?::root,\s*)?\[data-sys-theme='([a-z0-9-]+)'\]\s*\{([\s\S]*?)\n\}/g;
   for (const m of css.matchAll(re)) {
     const vars = new Map<string, string>();
     for (const v of m[2].matchAll(/--sys-([a-z0-9-]+)\s*:\s*([^;]+);/g)) vars.set(v[1], v[2].trim());
@@ -71,7 +101,8 @@ const TEXT_PAIRS: [string, string][] = [
 
 describe('every text pair clears 4.5:1, in every theme', () => {
   it('found the palettes — a sweep over nothing proves nothing', () => {
-    expect([...themes().keys()].sort()).toEqual(['calm', 'day', 'ops']);
+    // Every palette with colours of its own — all eleven. `auto` has none.
+    expect([...themes().keys()].sort()).toEqual(SYSTEM_THEMES.map((t) => t.key).sort());
     for (const vars of themes().values()) expect(vars.size).toBeGreaterThan(30);
   });
 

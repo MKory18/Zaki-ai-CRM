@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * UNDO, AND THE PERMISSION TO EXPERIMENT.
@@ -104,4 +104,45 @@ export function useHistory<T>(initial: T, settleMs = 600): History<T> {
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
   };
+}
+
+/**
+ * THE KEYSTROKE, SO EVERY EDITOR ANSWERS THE SAME ONE.
+ *
+ * Ctrl+Z and Ctrl+Shift+Z, and Ctrl+Y which is what a Windows seller
+ * reaches for. The page editor wired these by hand and the other two
+ * editors did not, so the same two fingers did two different things
+ * depending on which screen a seller happened to be standing on.
+ *
+ * IGNORED WHILE THE CARET IS IN A FIELD. Ctrl+Z inside a textarea is the
+ * browser's own undo for that text, and stealing it would make typing feel
+ * broken in order to deliver a feature nobody asked to be global. A
+ * `contenteditable` counts as a field for the same reason — the block
+ * builder lets a seller type directly on the page.
+ *
+ * It does NOT take Ctrl+S. Saving is a different act with a different
+ * owner: the page editor saves a draft, the templates screen saves a
+ * theme, and one of them asks before it publishes. A shared hook that
+ * pressed a save button would be reaching across that line.
+ */
+export function useUndoKeys(history: Pick<History<unknown>, 'undo' | 'redo'>, enabled = true): void {
+  const { undo, redo } = history;
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((key === 'z' && e.shiftKey) || key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo, enabled]);
 }

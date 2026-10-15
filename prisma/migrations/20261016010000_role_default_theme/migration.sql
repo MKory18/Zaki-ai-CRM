@@ -1,0 +1,15 @@
+-- The look a new person in a role opens on.
+--
+-- ── NOT ONE ROW IS CHANGED ──
+--
+-- The column is NULLABLE with NO DEFAULT, so every role that exists keeps
+-- meaning exactly what it meant: null is «the product's default», which is
+-- what all of them have today. An `ADD COLUMN … DEFAULT 'ops'` would have
+-- written a value into every row and turned «nobody chose» into «somebody
+-- chose the default», which are different facts the day the default moves.
+--
+-- A person's own choice still wins. `users.system_theme` is consulted
+-- first; this is only read when that is null. Same shape as the menu
+-- arrangement in `nav_arrangements`: a base for the role, overridden per
+-- person.
+ALTER TABLE "roles" ADD COLUMN "system_theme" TEXT;

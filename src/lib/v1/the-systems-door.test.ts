@@ -258,6 +258,57 @@ describe('what the door never hands back', () => {
   });
 });
 
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * AN EXISTING ORDER'S MONEY IS READ, NEVER RECOMPUTED.
+ *
+ * S7 put `OrderAddOn` on the thank-you page: a customer may add a product
+ * AFTER ordering, and the courier collects it. `computeCod` takes `addOns`
+ * for exactly that reason, and `money.ts` says why in writing — «the
+ * add-on raised the order's total when it was accepted, and the next
+ * recompute … rebuilt the total from the lines alone and wrote it back. The
+ * courier collected the order without the add-on.»
+ *
+ * So a door that answered «what is this order worth?» by totalling its
+ * LINES would disagree with the figure `order.confirmed` carries, which is
+ * `Number(order.totalAmount)` — the committed column. Two numbers for one
+ * order, and the replies system matching on the wrong one.
+ *
+ * This door never recomputes. `createSystemOrder` prices a NEW order, where
+ * there is nothing to add on to yet; every read of an order that already
+ * exists takes the stored column.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+describe('an existing order’s money is read, never recomputed', () => {
+  it('no route in the tree totals an order it did not just create', () => {
+    const offenders: string[] = [];
+    for (const file of ROUTES) {
+      const src = read(join(ROOT, file));
+      for (const m of src.matchAll(/\b(?:computeCod|codForOrder|allocateDiscount)\s*\(/g)) {
+        offenders.push(`${file} → ${m[0]}`);
+      }
+    }
+    expect(
+      offenders,
+      `بابٌ يُعيدُ حسابَ مالِ طلبٍ قائمٍ من أسطرِه — والزيادةُ بعدَ الطلب تَسقُط:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and the one figure it reports for a past order is the stored column', () => {
+    // `totalAmount` is what `order.confirmed` and `order.shipped` carry, and
+    // what settlement reconciles against. Summing `orderItem.lineTotal`
+    // instead would drop every accepted add-on.
+    const lookupSrc = read(join(ROOT, 'src/app/api/v1/customers/lookup/route.ts'));
+    expect(lookupSrc).toMatch(/_sum: \{ totalAmount: true \}/);
+    expect(lookupSrc).not.toMatch(/orderItem|lineTotal/);
+  });
+
+  it('and the status endpoint reports no money at all, so it cannot disagree', () => {
+    const statusSrc = read(join(ROOT, 'src/app/api/v1/orders/[id]/route.ts'));
+    expect(statusSrc).not.toMatch(/totalAmount|sellingPrice|collectedAmount|lineTotal/);
+  });
+});
+
 describe('the refusal envelope another system parses', () => {
   it('is {error:{code,message,details},request_id} and nothing else', () => {
     const body = v1FaultBody('rep_1', new V1Fault(422, V1_CODE.VALIDATION_FAILED, 'bad', { field: 'x' }));
