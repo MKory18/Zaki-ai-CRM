@@ -377,6 +377,21 @@ const REACHED_BUT_UNSEEN: Record<string, string> = {
     'OrderForm يبنيه من ${orderEndpoint} وهو متغيّر، فلا تظهر البادئةُ في أيِّ نصّ',
   '/api/public/landing-pages/[slug]/media/[file]': 'صفحةُ الهبوطِ المرفوعةُ تحمل الرابطَ في HTMLها المخزَّن في القاعدة، لا في المصدر',
   '/api/settings/launch-flags': 'لا شاشةَ له بالقصد — توثيقُه يقول إنه نصفُ القرارِ الذي يجعل حالةَ الرايةِ مكتوبةً بصلاحيةٍ وسجلٍّ',
+  /*
+   * ── O7: THE FIVE DOORS WHOSE CALLER IS ANOTHER REPOSITORY ──
+   *
+   * `/api/v1/**` exists so that a program outside this building can reach
+   * us. Its caller is `MKory18/AIresponse` → `src/modules/oms/client.ts`,
+   * which this sweep cannot see and never will — that is the whole point of
+   * the door. They are the clearest possible case of «reached by a path
+   * this sweep is blind to», and the only honest thing a blind method can
+   * do is say so.
+   */
+  '/api/v1/products': 'نظامُ الردود (MKory18/AIresponse) يقرأ الكتالوجَ منه بتوكن — المستدعي في مستودعٍ آخر',
+  '/api/v1/customers/lookup': 'نظامُ الردود يسأل عن رقمٍ قبل أن يوعِدَ بتسليم — المستدعي خارجَ هذا المستودع',
+  '/api/v1/orders': 'بابُ ترحيلِ الطلبِ من نظامِ الردود — لا ملفَّ هنا يستدعيه، وهذا هو الغرضُ منه',
+  '/api/v1/orders/[id]': 'نظامُ الردود يتابع حالةَ الطلبِ الذي رحّله — المستدعي في مستودعٍ آخر',
+  '/api/v1/orders/[id]/notes': 'نظامُ الردود يكتب ما عرفه من المحادثةِ على الطلب — المستدعي في مستودعٍ آخر',
 };
 
 /**
