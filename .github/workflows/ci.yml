@@ -44,6 +44,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # ── Right after the linter, and for the same reason ──
+      #
+      # This repository is public. A password written into a file here is
+      # published the moment the commit is, and deleting the line later
+      # does not unpublish it — the history keeps it. The demo password
+      # that thirteen real accounts were still using got in exactly that
+      # way, and sat in `prisma/seed.ts` and the README until somebody
+      # went looking.
+      #
+      # It costs about a second and it reads only tracked files, so it
+      # runs before the tests rather than after: a leaked credential is
+      # not something to learn about four minutes later.
+      - name: Secrets
+        run: npm run scan:secrets
+
       # The suite reads a secret on import in a few places; the value is
       # irrelevant to every assertion and only has to exist.
       - name: Tests

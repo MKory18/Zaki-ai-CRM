@@ -57,6 +57,33 @@ export const HEARTBEAT_JOBS = [
  */
 export const SCHEDULER_STALE_SECONDS = 180;
 
+/**
+ * HOW LONG THE HEALTH QUESTION MAY TAKE BEFORE «NO ANSWER» IS THE ANSWER.
+ *
+ * A database that REFUSES a connection is easy: the query rejects and this
+ * file says `db: 'down'` at once. The dangerous state is a database that
+ * accepts the connection and never replies — the pool exhausted, the
+ * server swapping, a lock held by a long transaction. Then the query hangs,
+ * the route hangs with it, and the probe reading it learns nothing:
+ *
+ *   - Docker's `HEALTHCHECK` eventually kills its own `wget` on `--timeout`
+ *     and counts a failure, so the container does come out right, three
+ *     intervals late.
+ *   - An uptime monitor records a slow 200 or a client timeout, which is
+ *     not the same as 503 and does not page anybody.
+ *   - And the hung request is holding a connection from the same exhausted
+ *     pool it is waiting on.
+ *
+ * Two seconds. The real query is one index seek — about 0.1 ms measured —
+ * so anything near this is already a sick database, and no honest reading
+ * is lost by refusing to wait longer. It is not a retry and not a
+ * circuit-breaker: it only turns «hanging» into the word the probe needs.
+ */
+export const DB_PING_TIMEOUT_MS = 2_000;
+
+/** The race's loser, as a value that cannot collide with a row or `null`. */
+const TIMED_OUT = Symbol('db-ping-timeout');
+
 export type SchedulerState =
   /** A heartbeat row inside the window. The worker loop is turning. */
   | 'alive'
@@ -113,17 +140,38 @@ function missingTable(e: unknown): boolean {
  */
 export async function readHeartbeat(now: Date = new Date()): Promise<HeartbeatReading> {
   let latest: { startedAt: Date } | null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    latest = await db.jobRun.findFirst({
+    const query = db.jobRun.findFirst({
       where: { jobName: { in: HEARTBEAT_JOBS as unknown as string[] } },
       orderBy: { startedAt: 'desc' },
       select: { startedAt: true },
     });
+    /*
+     * `Promise.race` subscribes to `query` itself, so a rejection that
+     * arrives AFTER the timer won is already handled — it is ignored
+     * rather than left to crash the process as an unhandled rejection.
+     * That is the whole reason there is no second `.catch()` here.
+     */
+    const answer = await Promise.race([
+      query,
+      new Promise<typeof TIMED_OUT>((resolve) => {
+        timer = setTimeout(() => resolve(TIMED_OUT), DB_PING_TIMEOUT_MS);
+      }),
+    ]);
+    // A database that hangs is reported exactly like one that refused: the
+    // app cannot serve, and the probe needs a word, not a longer wait.
+    if (answer === TIMED_OUT) return { db: 'down', scheduler: 'unknown' };
+    latest = answer;
   } catch (e) {
     // The query reaching the server and failing on a missing relation
     // proves the connection; anything else does not.
     if (missingTable(e)) return { db: 'up', scheduler: 'unknown' };
     return { db: 'down', scheduler: 'unknown' };
+  } finally {
+    // Otherwise every answered request leaves a pending timer behind, and
+    // a process with pending timers does not exit when it is asked to.
+    clearTimeout(timer);
   }
 
   if (!latest) return { db: 'up', scheduler: 'stale' };

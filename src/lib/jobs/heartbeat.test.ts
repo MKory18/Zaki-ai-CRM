@@ -15,7 +15,7 @@ const { db } = vi.hoisted(() => ({
 }));
 vi.mock('../db', () => ({ db }));
 
-import { HEARTBEAT_JOBS, SCHEDULER_STALE_SECONDS, readHeartbeat } from './heartbeat';
+import { DB_PING_TIMEOUT_MS, HEARTBEAT_JOBS, SCHEDULER_STALE_SECONDS, readHeartbeat } from './heartbeat';
 
 const NOW = new Date('2026-10-02T12:00:00.000Z');
 const agoSeconds = (s: number) => new Date(NOW.getTime() - s * 1000);
@@ -124,5 +124,58 @@ describe('the copied job names cannot drift', () => {
     // transaction turns the monitor red. A monitor that flaps gets muted,
     // and a muted monitor is decoration.
     expect(SCHEDULER_STALE_SECONDS).toBeGreaterThanOrEqual(120);
+  });
+});
+
+describe('a database that never answers', () => {
+  /*
+   * The case the rest of this file does not cover. Every test above has the
+   * query RESOLVE or REJECT — and a rejection was always easy, because the
+   * old code already read it as `db: 'down'`. What was missing is the state
+   * in between: the connection is accepted and the answer never comes,
+   * because the pool is exhausted, a lock is held, or the server is
+   * swapping. Then the route hung, and a probe reading a hung route learns
+   * nothing at all. Docker's own `--timeout` eventually kills its `wget`
+   * and the container does come out right, three intervals late; an uptime
+   * monitor records a slow 200 and pages nobody.
+   */
+  it('is reported as down once the cap passes, not waited for', async () => {
+    vi.useFakeTimers();
+    try {
+      // Accepted, never answered.
+      db.jobRun.findFirst.mockReturnValue(new Promise(() => {}));
+
+      const reading = readHeartbeat(NOW);
+      await vi.advanceTimersByTimeAsync(DB_PING_TIMEOUT_MS);
+
+      expect(await reading, 'القاعدة ما ردّت والجواب ضلّ معلّقاً').toEqual({
+        db: 'down',
+        scheduler: 'unknown',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('and the cap is short enough to be read as an outage, not as slowness', async () => {
+    // The real query is one index seek — tenths of a millisecond. A cap in
+    // the tens of seconds would be longer than the probe's own timeout, so
+    // the word would arrive after the thing that needed it had given up.
+    expect(DB_PING_TIMEOUT_MS).toBeLessThanOrEqual(5_000);
+  });
+
+  it('leaves no timer behind when the answer comes in time', async () => {
+    // The timer is armed on EVERY call — once a minute per monitor, for
+    // ever. Forgetting to clear it holds the event loop open, so the
+    // process stops exiting when it is asked to and a test run hangs after
+    // its last assertion passes.
+    vi.useFakeTimers();
+    try {
+      db.jobRun.findFirst.mockResolvedValue({ startedAt: agoSeconds(1) });
+      await readHeartbeat(NOW);
+      expect(vi.getTimerCount(), 'مؤقّت ضلّ شغّالاً بعد الجواب').toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
