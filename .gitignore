@@ -84,3 +84,11 @@ tmp*.mjs
 # a 260 KB zip on each build, and — the real cost — let a stale dist survive
 # a source fix while looking correct.
 packages/zaki-ui/dist/
+
+# Worktrees an agent session makes for itself. One was left behind under
+# `.claude/worktrees/` after its branch had already been merged, and every
+# one of the 33 eslint errors a local `npm run lint` reported came from it —
+# so the project read as broken while it was not. CI never saw it (nothing
+# in there is tracked), which is the worst shape for a false alarm: it fires
+# only on the machine somebody is working on.
+/.claude/worktrees/
