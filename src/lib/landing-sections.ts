@@ -361,11 +361,29 @@ const urgency = z.object({
   ...base,
   type: z.literal('urgency'),
   text: richTextSchema(140).default(''),
-  /** 0 = no countdown. */
+  /**
+   * RETIRED — NAMED, NOT DELETED, AND NOT SILENT.
+   *
+   * It was «a countdown of this many minutes», counted from the moment the
+   * visitor arrived, and it had no source: nothing happened when it reached
+   * zero because no price was tied to it. «عدّاد فقط من تاريخ انتهاء عرض
+   * حقيقي» — so the clock now reads `Offer.endsAt`, the column that also
+   * stops the price applying, and this field reaches no renderer.
+   *
+   * The key stays because pages have it stored and dropping it from the
+   * schema would make the editor's next save silently rewrite their block.
+   * `MINUTES_RETIRED_AR` is what the seller is told on their own screen,
+   * where the «silent» half is paid off — the same shape `layout-slots.ts`
+   * uses for a retired variant: quiet for the shopper, loud for the seller.
+   */
   minutes: z.number().int().min(0).max(1440).default(0),
   /** Show the real remaining stock when it is genuinely low. */
   showRealStock: z.boolean().default(false),
 });
+
+/** What the seller reads where the minutes field used to be. */
+export const MINUTES_RETIRED_AR =
+  'العدّاد صار يقرأ تاريخ انتهاء العرض من العروض نفسها — ما في حقل دقائق. حدِّد «ينتهي في» على العرض وبيظهر العدّاد لحاله.';
 
 /**
  * THE SENTENCE THAT SAYS NOBODY PAYS NOW.
@@ -674,13 +692,22 @@ export function newSection(type: SectionType): LandingSection {
     mechanism: { title: 'كيف يشتغل', steps: [{ title: '', text: '' }], ingredients: [{ name: '', does: '' }] },
     urgency: { text: '', minutes: 0, showRealStock: false },
     form: { title: 'أكمل الطلب', subtitle: 'املأ بياناتك ويتواصل معك فريقنا للتأكيد' },
-    trust: {
-      items: [
-        { title: 'طلب آمن', text: 'بياناتك محفوظة' },
-        { title: 'توصيل سريع', text: 'خلال أيام' },
-        { title: 'دفع عند الاستلام', text: 'تدفع بعد ما تستلم' },
-      ],
-    },
+    /*
+     * EMPTY ON PURPOSE — AND THAT IS NOT AN EMPTY ROW.
+     *
+     * It used to arrive holding «طلب آمن · بياناتك محفوظة» and «توصيل سريع ·
+     * خلال أيام»: two sentences nobody measured, pre-written into the one
+     * block whose whole job is to be believed, on a shop that had never
+     * delivered anything. A seller who never opened the block published
+     * them, and a shopper cannot check «سريع».
+     *
+     * With no items the renderer draws the facts instead (`trustRow`): cash
+     * on delivery always, the delivery window only once this shop's own
+     * deliveries clear the sample floor, the returns line only when the
+     * seller wrote a guarantee or published a policy. Typing items still
+     * wins — those are their words about their shop.
+     */
+    trust: { items: [] },
     footer: {
       text: '',
       phone: '',
@@ -709,10 +736,48 @@ export function starterSections(): LandingSection[] {
     .map(newSection);
 }
 
+/**
+ * THE TWO BLOCKS A SELLING PAGE IS NEVER WITHOUT.
+ *
+ * The form, because without it the page cannot take an order — and the
+ * floating button, because «النموذج على بُعد ضغطة واحدة من أي موضع
+ * تمرير». A page a visitor has scrolled two screens down has its order
+ * form off the screen, and the only thing that keeps the order one tap
+ * away at that depth is a button that came with them.
+ *
+ * It is the same rule the structure contract already states twice — every
+ * one of the ten sequences must contain `sticky`, and `stickyOnMobile` is a
+ * `z.literal(true)` with no value that turns it off — and nothing kept it
+ * on a page assembled by hand in the builder. A seller who pressed «إخفاء»
+ * on it, or built a page before the block existed, shipped a page where
+ * the order was a scroll away at every depth.
+ *
+ * ENABLED, NOT APPENDED BLINDLY: a page that already holds the block keeps
+ * the seller's own words and its own id, because the words on the button
+ * are theirs and only its presence is ours. Its POSITION in the list means
+ * nothing — it is fixed to the bottom of the screen wherever it sits — so
+ * appending at the end moves nothing anybody arranged.
+ */
+export const LOCKED_SECTIONS: SectionType[] = ['form', 'sticky'];
+
+function ensureEnabled(sections: LandingSection[], type: SectionType): LandingSection[] {
+  if (sections.some((s) => s.type === type && s.enabled)) return sections;
+  const existing = sections.find((s) => s.type === type);
+  if (existing) return sections.map((s) => (s.id === existing.id ? { ...s, enabled: true } : s));
+  return [...sections, newSection(type)];
+}
+
 /** The form is not optional: without it the page cannot take an order. */
 export function ensureForm(sections: LandingSection[]): LandingSection[] {
-  if (sections.some((s) => s.type === 'form' && s.enabled)) return sections;
-  const existing = sections.find((s) => s.type === 'form');
-  if (existing) return sections.map((s) => (s.id === existing.id ? { ...s, enabled: true } : s));
-  return [...sections, newSection('form')];
+  return ensureEnabled(sections, 'form');
+}
+
+/** Nor is the button that carries a visitor back to it from any depth. */
+export function ensureSticky(sections: LandingSection[]): LandingSection[] {
+  return ensureEnabled(sections, 'sticky');
+}
+
+/** Both, for the one caller that renders a page to a shopper. */
+export function ensureSellingCore(sections: LandingSection[]): LandingSection[] {
+  return ensureSticky(ensureForm(sections));
 }

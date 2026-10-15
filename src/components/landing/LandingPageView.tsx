@@ -12,7 +12,10 @@ import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 import { detectOrderIntent } from '@/lib/landing-dynamic';
 import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
-import { parseSections, ensureForm } from '@/lib/landing-sections';
+import { parseSections, ensureSellingCore } from '@/lib/landing-sections';
+import { familyOf, trustRow } from '@/lib/selling-blocks';
+import { whatsappHref } from '@/lib/store-contact';
+import { sellingFacts } from '@/lib/selling-facts';
 import { paletteFor, paletteVars, DEFAULT_THEME } from '@/lib/landing-theme';
 import { parseStoreTheme, themeForPage, wearsShopChrome } from '@/lib/store-theme';
 import { directionOf } from '@/lib/store-languages';
@@ -257,7 +260,17 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
 
   // A block page may carry its own `offers` block. Then THAT is the picker
   // and the form must not draw a second one.
-  const sections = lp.builderMode === 'BLOCKS' ? forVisitors(ensureForm(parseSections(lp.sections))) : [];
+  /*
+   * THE SELLING CORE, NOT JUST THE FORM.
+   *
+   * `ensureForm` guaranteed the page could take an order; it did not
+   * guarantee the order was REACHABLE from two screens down. A page the
+   * visitor has scrolled past the form on had nothing to carry them back,
+   * and the floating button is the only thing that does — which is why
+   * every one of the ten structures is refused by its own contract without
+   * one. See `ensureSellingCore`.
+   */
+  const sections = lp.builderMode === 'BLOCKS' ? forVisitors(ensureSellingCore(parseSections(lp.sections))) : [];
   const pageHasOffersBlock = sections.some((s) => s.type === 'offers' && s.enabled);
   // What the customer reads after ordering — the seller's words when the page
   // has a thank-you block, ours when it does not.
@@ -308,19 +321,66 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
       stock = await availableStock(db, companyId, lp.product.id, undefined, lp.storeId).catch(() => null);
     }
 
+    /*
+     * ── THE SELLING BLOCKS' FACTS ──
+     *
+     * «صف ثقة (دفع عند الاستلام · مدّة التوصيل · إرجاع/ضمان فقط إذا البائع
+     * حدّده)». Resolved HERE, where the shop is known, and handed to the
+     * renderer as sentences — so the renderer has no way to invent one and
+     * the two claims that must be earned are earned in one place.
+     *
+     * The guarantee comes from the page's own objections block: it is the
+     * seller's words about their own guarantee, and it beats a link to a
+     * policy page.
+     */
+    const objections = sections.find((s) => s.type === 'objections' && s.enabled);
+    const facts = await sellingFacts({
+      companyId,
+      storeId: lp.storeId ?? null,
+      storeSlug: lp.store?.slug ?? null,
+      guarantee: objections && objections.type === 'objections' ? objections.guarantee : null,
+    });
+    // The look, derived from the template the seller chose — never stored
+    // beside it. `familyOf` says why at length.
+    const family = familyOf(parseStoreTheme(lp.store?.theme).template);
+
     const body = (
       <>
         {href && <link rel="stylesheet" href={href} />}
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
-        <PageBlocks
-          sections={sections}
-          ctx={{
-            palette, productName, price, currency, stock, offers, form: orderForm,
-            store: lp.store ? { name: lp.store.name, logo: lp.store.logo, phone: lp.store.supportPhone } : null,
-          }}
-        />
+        {/*
+          ONE ATTRIBUTE IS THE WHOLE FAMILY, AND IT IS WHY THIS IS A WRAPPER
+          AND NOT A CLASS ON EACH BLOCK.
+
+          A family is a LOOK: type rhythm, weight, colour emphasis, the
+          ornament a section header may carry. Every rule that implements
+          one is scoped to this attribute, so the blocks themselves carry no
+          family-specific markup — which is the property that keeps the
+          promise «المظهر لا يغيّر ترتيب شي رتّبه إنسان». A look that needed
+          its own element order would be a look that moves the seller's
+          blocks, and there is nowhere here for it to do that from.
+
+          A wrapper rather than the root, because the root is the shop's
+          shell when this page IS a shop's front, and the shell belongs to
+          the storefront. One element, both paths, no second owner.
+        */}
+        <div className="lp-family" data-family={family}>
+          <PageBlocks
+            sections={sections}
+            ctx={{
+              palette, productName, price, currency, stock, offers, form: orderForm, family,
+              // The country's own decimals. Absent read as two, so a currency
+              // with three places was printed with none — on the first screen
+              // of the page that sells it, and in the offer cards under it.
+              minorUnit: lp.store?.country.minorUnit ?? 2,
+              trust: trustRow(facts),
+              whatsapp: whatsappHref(lp.store?.supportPhone),
+              store: lp.store ? { name: lp.store.name, logo: lp.store.logo, phone: lp.store.supportPhone } : null,
+            }}
+          />
+        </div>
       </>
     );
 

@@ -130,7 +130,21 @@ describe('what the browser is allowed to remember', () => {
   const ALLOWED: Record<string, string> = {
     'ai/AiDock.tsx': 'the assistant conversation — aggregates only, session storage, gone on reload',
     'labels/LabelSize.tsx': 'the paper loaded in this device’s printer',
-    'blocks/Countdown.tsx': 'when a public page’s countdown started, for that visitor',
+    /*
+     * `blocks/Countdown.tsx` USED TO BE HERE, and its leaving is the whole
+     * story of that component.
+     *
+     * It kept «when this visitor's countdown started» in their browser, so
+     * that a reload could not hand out a fresh deadline. That defence was
+     * the giveaway: the deadline it was protecting was invented — `minutes`
+     * a seller typed, counted from the moment the visitor arrived — and a
+     * deadline that has to be remembered per browser is a deadline that is
+     * not real. The clock now counts to `Offer.endsAt`, which is one moment
+     * for every visitor, so there is nothing left to keep.
+     *
+     * One fewer thing written into a shopper's browser, and it went by
+     * making the feature honest rather than by arguing for an exception.
+     */
     'landing/OrderForm.tsx': 'which campaign a visitor arrived from',
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',

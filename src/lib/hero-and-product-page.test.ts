@@ -69,13 +69,41 @@ describe('the hero’s price goes through the one door', () => {
    * none, on the first screen of the page that sells it.
    */
   it('uses the formatter, not a locale call', () => {
-    const body = page().slice(page().indexOf('function Hero'), page().indexOf('function Urgency'));
-    expect(body).toContain('moneyText(ctx.price');
+    const body = page().slice(page().indexOf('function Hero'), page().indexOf('function Trust'));
+    expect(body).toContain('moneyText(');
     expect(body, 'منسّق مال في البطل').not.toContain('toLocaleString');
+  });
+
+  /**
+   * AND THE FIGURE IT FORMATS IS THE ONE THE VISITOR IS BUYING.
+   *
+   * It formatted `ctx.price`, the product's BASE price, while every one of
+   * the ten structures declares `firstScreen.priceWithOffer: true`. A page
+   * selling «3 قطع بـ45» opened with «20» and the visitor met the real
+   * number for the first time at the button. `shown` is the preselected
+   * bundle's price, falling back to the base price only when the page sells
+   * no bundles at all.
+   */
+  it('and it is the price of the bundle the form preselected', () => {
+    const body = page().slice(page().indexOf('function Hero'), page().indexOf('function Trust'));
+    expect(body).toContain("ctx.offers.find((o) => o.isDefault) ?? ctx.offers[0]");
+    expect(body).toContain('const shown = selected ? selected.price : ctx.price');
+    expect(body).toContain('moneyText(shown, ctx.currency, ctx.minorUnit ?? 2)');
   });
 
   it('and the block context carries the country’s decimals', () => {
     expect(page()).toMatch(/minorUnit\?: number;/);
+    /*
+     * AND SOMETHING ACTUALLY PUTS THEM IN IT.
+     *
+     * The field was declared, documented and read, and the one renderer
+     * that serves a visitor never passed it — so every price on every
+     * block-built page took the `?? 2` fallback, and a currency that keeps
+     * three decimals was rendered with two on the page that sells it. A
+     * field nobody fills is the same bug the field was added to fix.
+     */
+    const view = stripComments(repoFile('src/components/landing/LandingPageView.tsx'));
+    expect(view, 'السياق بيعلن الفواصل وما حدا بيعطيها').toMatch(/minorUnit: lp\.store\?\.country\.minorUnit \?\? 2/);
   });
 });
 

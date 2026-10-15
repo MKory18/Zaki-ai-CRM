@@ -11,7 +11,7 @@ import { useInlineEdit } from '@/components/landing/blocks/useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
-  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
+  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection, MINUTES_RETIRED_AR,
 } from '@/lib/landing-sections';
 import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
@@ -1220,15 +1220,16 @@ function SectionFields({
       return (
         <div className="space-y-2.5">
           <Field label="الملاحظة" value={s.text} onChange={(v) => patch({ text: v })} placeholder="العرض ساري اليوم فقط" />
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">عدّاد (دقائق، 0 = بلا عدّاد)</label>
-            <Input
-              type="number" min="0" max="1440" dir="ltr"
-              value={s.minutes}
-              onChange={(e) => patch({ minutes: Math.max(0, Math.min(1440, Number(e.target.value) || 0)) })}
-              className="text-xs"
-            />
-          </div>
+          {/*
+            THE MINUTES FIELD IS GONE, AND THE SELLER IS TOLD WHY.
+            It counted from the visitor's arrival, so nothing happened when
+            it hit zero. The clock now reads «ينتهي في» from the offer
+            itself — the same date that stops the price applying — and
+            `MINUTES_RETIRED_AR` is the one wording of that fact.
+          */}
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            {MINUTES_RETIRED_AR}
+          </p>
           <Check
             label="إظهار المخزون المتبقي الحقيقي"
             checked={s.showRealStock}
@@ -1251,18 +1252,27 @@ function SectionFields({
 
     case 'trust':
       return (
-        <Repeater
-          items={s.items}
-          max={4}
-          blank={{ title: '', text: '' }}
-          onChange={(items) => patch({ items })}
-          render={(item, set) => (
-            <>
-              <Field label="الضمان" value={item.title} onChange={(v) => set({ ...item, title: v })} />
-              <Field label="سطر صغير" value={item.text} onChange={(v) => set({ ...item, text: v })} />
-            </>
-          )}
-        />
+        <div className="space-y-2.5">
+          {/* An empty repeater is not an empty row, and a seller who is not
+              told that will type three sentences the shop already knows. */}
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            اتركه فاضي وبيعرض الحقائق لحاله: <b>الدفع عند الاستلام</b> دايماً، و<b>مدّة
+            التوصيل</b> من تسليماتك الحقيقيّة إذا صارت كافية، و<b>الإرجاع</b> إذا كتبت
+            ضماناً بقسم الاعتراضات أو نشرت سياسة الإرجاع. إذا كتبت أسطرك، كلامك يغلب.
+          </p>
+          <Repeater
+            items={s.items}
+            max={4}
+            blank={{ title: '', text: '' }}
+            onChange={(items) => patch({ items })}
+            render={(item, set) => (
+              <>
+                <Field label="الضمان" value={item.title} onChange={(v) => set({ ...item, title: v })} />
+                <Field label="سطر صغير" value={item.text} onChange={(v) => set({ ...item, text: v })} />
+              </>
+            )}
+          />
+        </div>
       );
 
     case 'footer':
@@ -1316,6 +1326,9 @@ function SectionFields({
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يلاحق الزائر أسفل الشاشة، وبالضغط عليه ينزل مباشرة إلى تعبئة البيانات.
             موقعه في الترتيب لا يغيّر شيئاً — هو مثبّت على الشاشة لا على الصفحة.
+            وما في «إخفاء» له ولا للنموذج: الطلب لازم يضلّ على بُعد ضغطة من أي
+            موضع تمرير، فالكلمة إلّي تكتبها هي الشي الوحيد إلّي يتغيّر فيه.
+            وإذا للمتجر رقم واتساب، بيوقف جنبه زرّ تواصل.
           </p>
         </div>
       );

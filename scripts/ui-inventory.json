@@ -71,7 +71,7 @@
   },
   "src/components/landing-editor/BlockBuilder.tsx": {
     "buttons": 24,
-    "inputs": 14,
+    "inputs": 13,
     "columns": 0,
     "cards": 0,
     "modals": 0,

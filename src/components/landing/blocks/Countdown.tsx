@@ -3,67 +3,75 @@
 import React, { useEffect, useState } from 'react';
 
 /**
- * A countdown of real minutes from the moment this visitor arrived.
+ * A COUNTDOWN TO A DEADLINE THAT EXISTS.
  *
- * It counts down and it stops. It does not reset on reload to fake a fresh
- * deadline, and when it reaches zero it says so rather than looping — a timer
- * that restarts forever teaches the visitor that the deadline is theatre, and
- * they are right.
+ * «عدّاد فقط من تاريخ انتهاء عرض حقيقي». It counts to `Offer.endsAt` — the
+ * same column that stops the price applying — so when it reaches zero
+ * something actually happens, which is the only thing that makes the number
+ * worth reading.
  *
- * That promise used to be broken by the timer itself: it started from the
- * full minutes on every mount, so a reload gave a fresh deadline. The
- * deadline is now kept in this browser, per page and block. A visitor who
- * comes back a day after it ran out is on a new visit and gets a new one.
+ * WHAT IT USED TO BE, AND WHY THAT HAD TO GO. It counted `minutes` a seller
+ * typed, from the moment the visitor arrived. That had no source: a page
+ * with no offer ending anywhere still showed a clock running out, and when
+ * it ran out the price was the same. The component defended that invention
+ * carefully — it kept the deadline in `localStorage` so a reload would not
+ * hand out a fresh one — and the defence was the giveaway: a deadline that
+ * has to be remembered per browser is a deadline that is not real.
+ *
+ * So there is no storage here any more, and nothing to keep: the offer's end
+ * is one moment for every visitor, and two people on two phones see the same
+ * number. That also removes the last reason this block had to behave
+ * differently in the builder from on the page.
  */
-const DAY_MS = 24 * 60 * 60 * 1000;
 
-function deadlineFor(key: string, minutes: number): number {
-  const now = Date.now();
-  try {
-    const stored = Number(window.localStorage.getItem(key));
-    if (Number.isFinite(stored) && stored > 0 && now < stored + DAY_MS) return stored;
-  } catch {
-    // Storage blocked (private mode): the timer still counts — for this view.
-  }
-  const fresh = now + minutes * 60_000;
-  try {
-    window.localStorage.setItem(key, String(fresh));
-  } catch {
-    /* see above */
-  }
-  return fresh;
-}
+/** An ISO instant. Rendered as the time left, never as a date. */
+export function Countdown({ endsAt }: { endsAt: string }) {
+  const deadline = Date.parse(endsAt);
 
-export function Countdown({ minutes, id, persist = true }: { minutes: number; id: string; persist?: boolean }) {
-  const [left, setLeft] = useState(minutes * 60);
+  /*
+   * THE FIRST PAINT IS THE SERVER'S ARITHMETIC, NOT ZERO.
+   *
+   * Rendered on the server too, so this runs with the server's clock and
+   * then again with the browser's. Starting from the real remaining seconds
+   * means the number never flashes «00:00» before the first tick, which on
+   * a slow phone is a visible frame of «the offer is over».
+   */
+  const [left, setLeft] = useState(() => Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
 
   useEffect(() => {
-    // The builder's canvas is the seller editing, not a visitor: keeping its
-    // deadline would show "over" in the editor for a day after one run.
-    const deadline = persist
-      ? deadlineFor(`lp-countdown:${window.location.pathname}:${id}:${minutes}`, minutes)
-      : Date.now() + minutes * 60_000;
+    if (!Number.isFinite(deadline)) return;
     const tick = () => setLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [minutes, id, persist]);
+  }, [deadline]);
 
+  // A date we cannot read is not a deadline. Nothing is drawn rather than a
+  // row of dashes, which a shopper reads as a broken page.
+  if (!Number.isFinite(deadline)) return null;
   if (left <= 0) return <p className="lp-countdown-over">انتهى وقت العرض</p>;
 
-  const h = Math.floor(left / 3600);
+  const d = Math.floor(left / 86400);
+  const h = Math.floor((left % 86400) / 3600);
   const m = Math.floor((left % 3600) / 60);
   const s = left % 60;
   const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
     <div className="lp-countdown" dir="ltr" role="timer" aria-live="off">
-      {h > 0 && (
+      {/* An offer that ends in four days is «4 أيام» and not «96:00:00»:
+          a six-figure clock on a phone is unreadable and reads as fake. The
+          days are named in Arabic beside the hours, which stay a clock. */}
+      {d > 0 && (
         <>
-          <span>{pad(h)}</span>
-          <i>:</i>
+          <span className="lp-countdown-days">
+            {d} {d === 1 ? 'يوم' : d === 2 ? 'يومين' : 'أيام'}
+          </span>
+          <i>·</i>
         </>
       )}
+      <span>{pad(h)}</span>
+      <i>:</i>
       <span>{pad(m)}</span>
       <i>:</i>
       <span>{pad(s)}</span>

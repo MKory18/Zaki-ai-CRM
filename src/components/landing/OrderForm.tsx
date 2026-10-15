@@ -197,6 +197,22 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   // ─── City searchable select ───
   // The options are THIS store's country regions, server-rendered. There is
   // no hard-coded country here: a Jordanian store shows Jordanian regions.
+  /**
+   * THE SHORTEST CHECKOUT THESE FIELDS ALLOW — and the field list is
+   * UNCHANGED.
+   *
+   * «أقصر إتمام ممكن بالحقول الموجودة (الحقول ما تتغيّر)». Four of the five
+   * are required and stay; the fifth is «ملاحظات», optional, and it was a
+   * three-row textarea with a placeholder reading «(اختياري)» — a whole
+   * field's worth of screen, on a phone, between the address and the only
+   * button that matters, that almost nobody fills.
+   *
+   * So it is folded behind one line of text. Nothing is removed: the same
+   * `name="notes"` textarea, the same 500-character limit, one tap away for
+   * the visitor who has something to say. A collapsed optional field is a
+   * shorter form; a deleted one is a different form.
+   */
+  const [notesOpen, setNotesOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [cityQuery, setCityQuery] = useState('');
   const [cityValue, setCityValue] = useState('');
@@ -715,21 +731,32 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 )}
               </div>
 
-              {/* ملاحظات */}
-              <div>
-                <label htmlFor="zf-notes" className={labelCls}>
-                  ملاحظات
-                </label>
-                <textarea
-                  id="zf-notes"
-                  name="notes"
-                  rows={3}
-                  maxLength={500}
-                  placeholder="أي تفاصيل إضافية (اختياري)"
-                  className={`${inputCls} resize-none`}
-                  disabled={state === 'loading'}
-                />
-              </div>
+              {/* ملاحظات — optional, and folded until it is wanted */}
+              {notesOpen ? (
+                <div>
+                  <label htmlFor="zf-notes" className={labelCls}>
+                    ملاحظات
+                  </label>
+                  <textarea
+                    id="zf-notes"
+                    name="notes"
+                    rows={3}
+                    maxLength={500}
+                    autoFocus
+                    placeholder="أي تفاصيل إضافية"
+                    className={`${inputCls} resize-none`}
+                    disabled={state === 'loading'}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setNotesOpen(true)}
+                  className="text-start text-sm font-semibold text-[var(--store-accent,#b8256e)] underline decoration-dotted underline-offset-4"
+                >
+                  + إضافة ملاحظة (اختياري)
+                </button>
+              )}
 
               {/* Honeypot — hidden from humans */}
               {/* Bot honeypot. It used to hide at `left: -9999px`, which in
@@ -786,12 +813,20 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
           )}
         </div>
 
-        {/* Trust badges */}
-        <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-[#697586]">
-          <span>دفع عند الاستلام</span>
-          <span className="text-[#c9d0da]">•</span>
-          <span>توصيل لجميع المحافظات</span>
-        </div>
+        {/*
+          THE BADGES THAT SAID SOMETHING NOBODY MEASURED.
+
+          «توصيل لجميع المحافظات» was written here as a fact about every shop
+          on this system, and it is a fact about none of them: a shop's
+          regions are its country's `Region` rows and its courier's reach,
+          and a new shop delivering to two governorates said this to every
+          visitor. «دفع عند الاستلام» was the third telling of `COD_LINE` on
+          one page — the hero carries it as part of the locked core, and the
+          line above this one has just said «الدفع عند الاستلام» again.
+
+          Both are now the trust row's, where the delivery claim is a
+          measured window or is absent. Nothing is lost that was true.
+        */}
       </div>
     </section>
   );

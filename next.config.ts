@@ -96,6 +96,34 @@ const nextConfig: NextConfig = {
    * default.
    */
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  /**
+   * WHERE TURBOPACK IS ALLOWED TO LOOK — the project, unless something says
+   * otherwise.
+   *
+   * The same shape and the same reason as `distDir` above, for the same
+   * situation: verifying a change must not mean disturbing the checkout
+   * somebody else is working in.
+   *
+   * Work on this repository happens in git worktrees under
+   * `.claude/worktrees/`, and a worktree has no `node_modules` of its own —
+   * it shares the main checkout's, one directory tree up. Node's own
+   * resolution walks up and finds it, which is why `tsc` and `vitest` run
+   * in a worktree without anything special. Turbopack does not: it resolves
+   * only inside the project root it detects from the nearest lockfile, and
+   * a worktree has its own lockfile. So `next dev` and `next build` in a
+   * worktree stop at «Could not find the Next.js package», and a junction
+   * to the real one is refused outright — «Symlink [project]/node_modules
+   * is invalid, it points out of the filesystem root».
+   *
+   * Pointing the root at the directory that contains BOTH the worktree and
+   * the real `node_modules` is the answer the Turbopack documentation gives
+   * for linked dependencies, and it is the only one that does not involve a
+   * second copy of 400 packages per worktree.
+   *
+   * Unset in every normal build and in production: the default is the
+   * default, and nothing here changes what is shipped.
+   */
+  ...(process.env.NEXT_TURBOPACK_ROOT ? { turbopack: { root: process.env.NEXT_TURBOPACK_ROOT } } : {}),
   output: 'standalone',
   serverExternalPackages: ['sharp'],
   // Do not advertise the framework version
