@@ -1,4 +1,4 @@
-import { sanitizeScopes, type AiScope } from './ai-assistants';
+import { ASSISTANTS, sanitizeScopes, type AiScope } from './ai-assistants';
 import { db } from './db';
 import { sanitizePromptOverrides, resolvePrompt, recordVersions, HOUSE_JOB, type PromptHistory } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable } from './secrets';
@@ -730,6 +730,21 @@ export interface ChatRequest {
    * The check happens before the first byte leaves: see `aiChat`.
    */
   localOnly?: boolean;
+  /**
+   * «THE PERSON IS ALREADY OUT OF THIS PAYLOAD.»
+   *
+   * Set by a caller for an assistant declared `pii: true` that has
+   * redacted the customer before building the prompt — the confirmation
+   * assistant replaces the name with a placeholder the screen fills in
+   * from the order it is already showing, and sends `hasNotes` instead of
+   * the notes.
+   *
+   * It is the opposite of `localOnly`: that one says «refuse unless the
+   * model is ours», this one says «it is safe anywhere, and here is why».
+   * The order extractor never passes it — a pasted WhatsApp message IS
+   * the customer, and there is nothing to take out of it.
+   */
+  piiSafe?: true;
 }
 
 export class AiNotConfigured extends Error {
@@ -783,6 +798,33 @@ export async function aiChat(req: ChatRequest): Promise<string> {
    */
   if (req.localOnly && route.provider !== 'LOCAL') {
     throw new AiNotLocal(route.provider);
+  }
+
+  /**
+   * ── AND THE ASSISTANT'S OWN DECLARATION, WHICH NOBODY WAS READING ──
+   *
+   * `ai-assistants.ts` marks three assistants `pii: true` — «whether a
+   * customer's phone or address may be in its payload». The order intake
+   * backs that up with `localOnly`. The confirmation assistant did not:
+   * it declared `pii: true` and sent the customer's name and the seller's
+   * free-text notes to whatever vendor the route resolved to.
+   *
+   * A declaration nothing enforces is a comment. So the declaration is
+   * read here, at the same line `localOnly` is read, and the call is
+   * refused unless the caller says it has already taken the person out —
+   * `piiSafe`. The caller says it because only the caller knows what it
+   * put in the payload; this function cannot look at a JSON blob and tell
+   * a customer's name from a product's.
+   *
+   * ⚠️ Which means `piiSafe` is a PROMISE, and a caller that passes it
+   * while still carrying a name breaks the owner's rule with the guard
+   * switched on. 🔧 Every caller that passes it does its redaction in one
+   * place, with a test that reads the payload — see the confirmation
+   * route.
+   */
+  if (!req.piiSafe && route.provider !== 'LOCAL' && req.job) {
+    const assistant = ASSISTANTS.find((a) => a.promptJob === req.job);
+    if (assistant?.pii) throw new AiNotLocal(route.provider);
   }
 
   const key = route.key;

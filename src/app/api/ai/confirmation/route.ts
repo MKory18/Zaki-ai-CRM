@@ -5,7 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
-import { AiNotConfigured, aiChat } from '@/lib/ai-provider';
+import { AiNotConfigured, aiChat, describeRoute } from '@/lib/ai-provider';
 import { customerHistory, customerRisk } from '@/lib/customer-risk';
 import { assistantByKey } from '@/lib/ai-assistants';
 import { deriveCoreState, STATE_LABEL_AR, type StateSource } from '@/lib/order-state';
@@ -68,6 +68,26 @@ export async function POST(req: Request) {
       ? await customerHistory(db, companyId, order.customer.id, { exceptOrderId: order.id })
       : [];
 
+    /**
+     * ── WHERE THIS WOULD GO, BEFORE DECIDING WHAT TO PUT IN IT ──
+     *
+     * The owner's rule: a customer's name, phone or address reaches a
+     * model running on his own machine and no other. This assistant is
+     * declared `pii: true` and was sending the name and the seller's
+     * free-text notes to whatever vendor the route resolved to.
+     *
+     * Asking first is what makes the two payloads possible: on the
+     * owner's own server the assistant gets everything, because nothing
+     * leaves the building; on anybody else's it gets the same facts with
+     * the person taken out.
+     *
+     * NOT a refusal. Refusing would have left the one assistant that
+     * reads a customer unusable for every company that has not stood up a
+     * local model — which is every company today.
+     */
+    const route = await describeRoute(companyId, assistant.promptJob);
+    const local = route.provider === 'LOCAL';
+
     const context = {
       order: {
         number: order.orderNumber,
@@ -78,12 +98,26 @@ export async function POST(req: Request) {
         // whether one is missing, and an address in the payload is customer
         // data travelling for no reason.
         hasAddress: !!order.customer?.address?.trim(),
-        notes: order.customerNotes ?? null,
+        /*
+         * The notes are the seller's own words about this order, and the
+         * person is often in them — «البيت جنب مدرسة فلان» is an address
+         * written as a sentence. Off the local server the model is told
+         * only that there ARE notes, and the agent reads them on screen,
+         * where they already are.
+         */
+        notes: local ? order.customerNotes ?? null : null,
+        hasNotes: !!order.customerNotes?.trim(),
         items: order.items.map((i) => ({ name: i.productName, quantity: i.quantity + i.freeQuantity })),
       },
       customer: order.customer
         ? {
-            name: order.customer.fullName,
+            /*
+             * The placeholder is filled in by the screen, which is already
+             * showing the order it belongs to. So the suggestion reads as
+             * a sentence addressed to a person without the person's name
+             * ever leaving this machine.
+             */
+            name: local ? order.customer.fullName : '{الاسم}',
             orders: risk?.orders ?? 0,
             returns: risk?.returns ?? 0,
             returnRate: risk?.returnRate ?? 0,
@@ -103,6 +137,10 @@ export async function POST(req: Request) {
       const suggestion = await aiChat({
         companyId,
         job: assistant.promptJob,
+        // The promise this route keeps above: off a local route the name
+        // is a placeholder and the notes are a boolean. `aiChat` refuses a
+        // `pii: true` assistant on a vendor without it.
+        ...(local ? {} : { piiSafe: true as const }),
         user: JSON.stringify(context, null, 2),
         timeoutMs: 20_000,
       });
