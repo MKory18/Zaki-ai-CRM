@@ -4,7 +4,7 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { offerPatchSchema, clearOtherDefaults } from '@/lib/offers';
+import { offerPatchSchema, clearOtherDefaults, clearOtherPostOrderOffers } from '@/lib/offers';
 import { zodMessage } from '@/lib/zod-message';
 
 interface Ctx {
@@ -72,6 +72,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
         },
       });
       await clearOtherDefaults(tx, updated);
+      // And exactly one offer after the order — the same rule, the same way.
+      await clearOtherPostOrderOffers(tx, updated);
       return updated;
     });
 
