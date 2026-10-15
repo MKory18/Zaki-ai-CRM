@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "scan:secrets": "node scripts/scan-secrets.mjs",
+    "freeze:deploy": "tsx scripts/freeze-deploy-steps.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
