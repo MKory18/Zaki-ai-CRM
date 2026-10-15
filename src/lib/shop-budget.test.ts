@@ -32,45 +32,52 @@ const CSS_BUDGET_KB = 50;
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * AND WHAT A WHOLE PAGE WEIGHS — WHICH IS NO LONGER THE SAME NUMBER.
+ * AND WHAT A WHOLE PAGE SENDS — THE SAME 50 KB, MEASURED PER PAGE.
  *
- * The brief's 50 KB is above. It is still what the SHARED sheet is held
- * to, and the shared sheet still meets it. What a page sends is the
- * shared sheet PLUS the slices of the family it wears, and that crossed
- * 50 on 2026-10-16 — measured, and not by the family:
+ * The constant above is the brief's and it does not move. What a shopper
+ * downloads is the shared sheet PLUS the slices of the family the shop
+ * wears, so that is what is measured here: the two shapes that exist, for
+ * each of the four families.
  *
- *     the shared sheet, before S2 «أقسام بتبيع» landed      43.88 KB
- *     the shared sheet, after it                            46.71 KB
- *     + «علامة»'s look in the BLOCK sheet, which S2's own
- *       guard requires of any family a template can reach    0.54 KB
- *     «علامة»'s own layers  (shop 1.76 + page 2.67)          4.43 KB
+ * MEASURED 2026-10-16, minified, in bytes:
+ *
+ *     the shared sheet (BLOCK + STOREFRONT)                  48,385
+ *     «علامة» · shop-wide slice (card, shared pieces)         1,755
+ *     «علامة» · hero slice        (the home only)               934
+ *     «علامة» · product-page slice (that page only)           2,057
  *     ───────────────────────────────────────────────────────────────
- *     its product page                                      51.68 KB
+ *     its home          48,385 + 1,755 + 934 = 51,074   ✓ (cap 51,200)
+ *     its product page  48,385 + 1,755 + 2,057 = 52,197  ✗ over by 997
  *
- * TWO BRANCHES, ONE CAP, AND NEITHER ONE BROKE IT ALONE. S2 added 2.83
- * KB of block rules to a sheet every shop ships whether it draws those
- * blocks or not; S1 added a family that two pages draw. Each was inside
- * the cap on its own branch and the pair is 1.14 KB over.
+ * ⚠️ AND THE 997 BYTES ARE NOT THIS FAMILY'S TO GIVE BACK. The shared
+ * sheet was 44,933 bytes when this branch started and is 48,385 now: S2
+ * «أقسام بتبيع» added 2.83 KB of block rules that every shop ships
+ * whether it draws those blocks or not, and «علامة»'s own look in that
+ * same sheet — which S2's guard REQUIRES of any family a template can
+ * reach — is 0.54 KB of it.
  *
- * WHY THIS IS A RATCHET AT THE TRUTH AND NOT A FAILING GATE. The same
- * argument `quality-gates.test.ts` makes about its own number, in this
- * repository's own words: «a red guard nobody can make green stops being
- * read». Getting under 50 today would mean deleting things the owner
- * asked for by name — the ring of promises in §٤, the specification
- * badges — to pay for bytes another branch spent. So the number is
- * pinned WHERE IT IS, the overshoot is printed on every run, and the
- * decision is the owner's:
+ * What was already taken out of this family to get here, measured: the
+ * world switcher's three pairs of `:has()` selectors became one sibling
+ * rule (−820), the numbered lines became the block library's own list
+ * (−342), the specification pills became its own pills (−220), the ring's
+ * three positions became data on the elements (−250). The home came in
+ * under the cap that way, with 126 bytes to spare.
  *
- *   · raise the cap, now that the shared sheet alone is 46.7; or
- *   · split the block library per block the way the families are split
- *     here, so a page ships the blocks it draws — measured: that is
- *     where the 46.7 is, and it is the only place a kilobyte is left.
+ * WHAT IS LEFT TO CUT IS WHAT THE OWNER NAMED IN §٤, and all three of
+ * them together are just about the 997:
  *
- * Until he says, this cannot grow: a page that gets heavier than it is
- * today fails here, which is the whole of what a ratchet is for.
+ *     the ring of promises (the photograph in the middle, the three
+ *       numbers around it)                                      ~480
+ *     the dark panels the close-up and the video sit in          ~253
+ *     the bar that follows the price up the page                 ~306
+ *
+ * So this is not a thing to fix by trimming: it is a decision, and it is
+ * the owner's. Either the cap moves now that the shared sheet alone is
+ * 47.25 KB, or the block library is split per block the way the families
+ * are split in `styles.ts` — which is where the kilobytes actually are.
+ * Until then this fails, loudly, on the one page it is true of.
  * ═══════════════════════════════════════════════════════════════════════
  */
-const PAGE_CEILING_KB = 51.75;
 
 const kb = (s: string) => Buffer.byteLength(s, 'utf8') / 1024;
 
@@ -119,15 +126,16 @@ describe('what a shop weighs', () => {
     const over = whole - CSS_BUDGET_KB;
     console.log(
       `[shop] ${what}: الأساس ${kb(sheet).toFixed(2)} + الشرائح ${kb(slice).toFixed(2)} ` +
-        `= ${whole.toFixed(2)} ك.ب — هدف البريف ${CSS_BUDGET_KB}` +
-        (over > 0 ? ` (فوقه بـ${over.toFixed(2)} — اقرا PAGE_CEILING_KB)` : `، المتبقّي ${(-over).toFixed(2)}`)
+        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}` +
+        (over > 0 ? ` (فوقه بـ${over.toFixed(2)} ك.ب — قرار للمالك، اقرا التعليق)` : `، المتبقّي ${(-over).toFixed(2)}`)
     );
     expect(
       whole,
-      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف المقيس ${PAGE_CEILING_KB}. ` +
-        'اقرا الملاحظة فوق PAGE_CEILING_KB: الورقة المشتركة لحالها صارت 46.7، والعائلة بتاخد ' +
-        'اللي بقي. الطريق للنزول مكتوب هناك، وهو قرار المالك مش قرار هالملف.'
-    ).toBeLessThan(PAGE_CEILING_KB);
+      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}، ` +
+        `والفرق ${(whole - CSS_BUDGET_KB).toFixed(2)} ك.ب. اقرا الملاحظة فوق: الورقة المشتركة ` +
+        'لحالها 47.25، واللي ضلّ يتشال هو اللي سمّاه المالك بـ§٤ — دائرة الوعود واللوحات ' +
+        'الداكنة والشريط اللاصق. يعني مش تشذيب، قرار.'
+    ).toBeLessThan(CSS_BUDGET_KB);
   });
 
   it('and no shop ships more than one family’s worth', () => {

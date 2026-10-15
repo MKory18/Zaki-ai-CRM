@@ -1122,22 +1122,17 @@ const BRAND_HERO_CSS = `
      stage still catches a tap. */
   visibility: hidden; opacity: 0; transition: opacity 220ms ease;
 }
+/* ONE RULE, NOT ONE PER WORLD. The radio sits immediately before the
+   stage it shows (see StoreHero), so the sibling combinator says it for
+   all three: measured, the three pairs of «:has()» selectors this
+   replaces were 620 bytes on the family with the least budget left. */
+.sf-bw-radio:checked + .sf-bw-stage { visibility: visible; opacity: 1; }
 ${WORLD_STAGES.map(
-  (i) => `.sf-hx:has(#sf-w${i}:checked) .sf-bw-stage[data-w='${i}'] { visibility: visible; opacity: 1; }
-.sf-hx:has(#sf-w${i}:checked) .sf-bw-dot[data-w='${i}'] .sf-hx-img { border-color: var(--store-accent); }`
+  (i) => `.sf-hx:has(#sf-w${i}:checked) .sf-bw-dot[data-w='${i}'] .sf-hx-img { border-color: var(--store-accent); }`
 ).join('\n')}
-/* The miniature draws no radios — eleven previews on one dashboard
-   screen would share these ids — so it falls through to here. */
+/* The miniature draws no radios — eleven previews on one dashboard screen
+   would share these ids — so it falls through to here. */
 .sf-hx[data-hero-slot='worldFirst']:not(:has(.sf-bw-radio)) .sf-bw-stage[data-w='0'] { visibility: visible; opacity: 1; }
-.sf-bw-pick { grid-area: 2 / 1; display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 20px 18px; }
-.sf-bw-dot { display: grid; gap: 5px; justify-items: center; width: 74px; cursor: pointer; }
-.sf-bw-dot .sf-hx-img {
-  width: 56px; height: 56px; border-radius: 50%; max-height: none;
-  background: var(--store-page); border: 2px solid transparent;
-}
-.sf-bw-dot .sf-hx-name { font-size: 11.5px; font-weight: 700; text-align: center; }
-@media (min-width: 720px) { .sf-hx .sf-bw-stage { grid-template-columns: 1.1fr .9fr; align-items: center; padding: 30px; } }
-@media (prefers-reduced-motion: reduce) { .sf-hx .sf-bw-stage { transition: none; } }
 `;
 
 /**
@@ -1156,8 +1151,7 @@ const BRAND_CSS = `
 .sf-bw-ghost {
   position: absolute; inset-block-start: 5%; inset-inline: 0; text-align: center;
   font-size: clamp(44px, 17vw, 124px); font-weight: 800; letter-spacing: .08em;
-  color: var(--store-text); opacity: .13; line-height: 1; pointer-events: none;
-  white-space: nowrap; overflow: hidden;
+  color: var(--store-text); opacity: .13; line-height: 1; overflow: hidden;
 }
 .sf-bw-art .sf-hx-img { background: transparent; aspect-ratio: 4 / 5; max-height: 52vh; }
 .sf-bw-art .sf-hx-img img, .sf-bw-art > img { object-fit: contain; }
@@ -1209,11 +1203,9 @@ export const BRAND_PAGE_CSS = `
    بتضلّ كاملة». */
 .sf-bp { background: var(--store-page); color: var(--store-text); }
 .sf-bp-hero { display: grid; gap: 16px; padding: 22px 20px; }
-.sf-bp-badges { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
-.sf-bp-badges span {
-  font-size: 12.5px; padding: 5px 11px; border-radius: 999px;
-  border: 1px solid var(--store-border); color: var(--store-muted);
-}
+/* The row and the pills are «lp-quiz-options» and «lp-quiz-option», which
+   every shop already ships; this is the one thing that differs. */
+.sf-bp-badges { margin: 0; }
 .sf-bp-line, .sf-bw-line { font-size: 15.5px; line-height: 1.8; color: var(--store-muted); margin: 0; font-style: normal; }
 /* THE PRICE HAS NOTHING BEHIND IT — no wash, no faint word, no pattern.
    The owner's ruling of 15/10, and the one place in this family where it
@@ -1231,21 +1223,23 @@ export const BRAND_PAGE_CSS = `
   position: absolute; inset: 16%; width: 68%; height: 68%; object-fit: contain;
   border-radius: 50%; background: var(--store-card);
 }
+/* One rule for the three numbers: each carries its own seat on the ring
+   as two custom properties — see RING_SEAT in BrandProductPage. */
 .sf-bp-num {
-  position: absolute; width: 34px; height: 34px; border-radius: 50%;
+  position: absolute; inset-block-start: var(--sy); inset-inline-start: var(--sx);
+  width: 34px; height: 34px; border-radius: 50%;
   display: grid; place-items: center; font-size: 14px; font-weight: 800;
   background: var(--store-accent); color: var(--store-accent-text);
 }
-.sf-bp-num[data-n='1'] { inset-block-start: 0; inset-inline-start: calc(50% - 17px); }
-.sf-bp-num[data-n='2'], .sf-bp-num[data-n='3'] { inset-block-end: 12%; }
-.sf-bp-num[data-n='2'] { inset-inline-start: 0; }
-.sf-bp-num[data-n='3'] { inset-inline-end: 0; }
-/* One numbered list, two sections: the promises and «كيف بتستعمله» are
-   both «short lines, in order», and a second list rule would be the same
-   decision twice. */
-.sf-bp-vows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: vow; }
-.sf-bp-vows li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 15.5px; line-height: 1.7; }
-.sf-bp-vows li::before { counter-increment: vow; content: counter(vow); color: var(--store-accent-ink); font-weight: 800; }
+/* ── THE NUMBERED LINES ARE «lp-timeline», NOT A LIST OF OUR OWN ──
+   The promises and «كيف بتستعمله» are both «short lines, in order», and
+   the block library already ships exactly that list — a grid with a
+   first column and a hairline between rows. Writing it again here was
+   342 bytes measured, on the family with the least room of the four. So
+   the markup wears «lp-timeline» and this is the one thing that differs:
+   the first column is a number, so it does not need to be as wide as a
+   date. */
+.sf-bp-vows li { grid-template-columns: 24px 1fr; }
 /* The dark panels sit INSIDE the world rather than on top of it. */
 .sf-bp-close, .sf-bp-video { background: var(--store-card); }
 .sf-bp-close { display: grid; gap: 14px; }

@@ -51,6 +51,19 @@ import type { OfferView } from '@/lib/offers';
  * ═══════════════════════════════════════════════════════════════════════
  */
 
+/**
+ * WHERE THE THREE NUMBERS SIT ON THE RING — twelve o'clock, then the two
+ * lower corners. Written as data because they ARE data: the stylesheet
+ * reads them through two custom properties and has one rule instead of
+ * three. A fourth promise cannot reach this list — `brandContent` caps
+ * them at three, and the circle is why.
+ */
+const RING_SEAT = [
+  { '--sy': '0', '--sx': 'calc(50% - 17px)' },
+  { '--sy': '72%', '--sx': '0' },
+  { '--sy': '72%', '--sx': 'calc(100% - 34px)' },
+] as unknown as React.CSSProperties[];
+
 export interface BrandPageShop {
   slug: string;
   /**
@@ -161,9 +174,14 @@ export function BrandProductPage({
 
         <div className="sf-bw-say sf-bp-say">
           {show.has('badges') && (
-            <p className="sf-bp-badges">
+            // The specification line, in the pill the block library
+            // already ships: «lp-quiz-options» is the row and
+            // «lp-quiz-option» is the pill — border, radius, padding and
+            // the muted ink, all of it already in every shop's sheet.
+            // Writing them again for this family cost 220 bytes.
+            <p className="lp-quiz-options sf-bp-badges">
               {content.badges.map((b) => (
-                <span key={b}>{b}</span>
+                <span className="lp-quiz-option" key={b}>{b}</span>
               ))}
             </p>
           )}
@@ -206,16 +224,42 @@ export function BrandProductPage({
             <div className="sf-bp-ring">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.image} alt="" loading="lazy" decoding="async" />
+              {/*
+                EACH NUMBER CARRIES ITS OWN PLACE AROUND THE CIRCLE.
+
+                Three positions were three rules in the stylesheet; they
+                are three pairs of numbers, which is data. The rule that
+                reads them is one, and the shopper's stylesheet is 250
+                bytes lighter — on the family that has the least of them.
+              */}
               {content.promises.map((_, i) => (
-                <span key={i} className="sf-bp-num" data-n={i + 1} aria-hidden>
+                <span
+                  key={i}
+                  className="sf-bp-num"
+                  aria-hidden
+                  style={RING_SEAT[i] as React.CSSProperties}
+                >
                   {i + 1}
                 </span>
               ))}
             </div>
           )}
-          <ol className="sf-bp-vows">
-            {content.promises.map((p) => (
-              <li key={p}>{p}</li>
+          {/*
+            NUMBERED, IN THE BLOCK LIBRARY'S OWN LIST.
+
+            «lp-timeline» is already a list with a first column and a
+            hairline between rows, and it is already in every shop's
+            stylesheet. Writing a second numbered list for this family
+            cost 342 bytes of a budget «علامة» does not have — the
+            number goes in the column the list already has, and nothing
+            new is styled. Western digits, as everywhere in this product.
+          */}
+          <ol className="lp-timeline sf-bp-vows">
+            {content.promises.map((p, i) => (
+              <li key={p}>
+                <span className="lp-timeline-when">{i + 1}</span>
+                <span className="lp-timeline-what">{p}</span>
+              </li>
             ))}
           </ol>
         </section>
@@ -266,9 +310,12 @@ export function BrandProductPage({
       {show.has('howto') && (
         <section className="lp-section">
           <h2 className="lp-h2">كيف بتستعمله</h2>
-          <ol className="sf-bp-vows">
-            {content.steps.map((s) => (
-              <li key={s}>{s}</li>
+          <ol className="lp-timeline sf-bp-vows">
+            {content.steps.map((s, i) => (
+              <li key={s}>
+                <span className="lp-timeline-when">{i + 1}</span>
+                <span className="lp-timeline-what">{s}</span>
+              </li>
             ))}
           </ol>
         </section>
