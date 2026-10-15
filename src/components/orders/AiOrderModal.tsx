@@ -293,7 +293,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
               <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
                 <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
                 مستخرج الطلبات بالذكاء يعمل على نموذج محلي فقط حمايةً لبيانات الزبون، فقُرئ النص بالقواعد.
-                لتشغيله: إعدادات الذكاء ← مستخرج الطلبات ← LOCAL.
+                لتشغيله: إعدادات الذكاء ← المساعدون ← مستخرج الطلبات ← نموذج على خادمك.
               </div>
             )}
 

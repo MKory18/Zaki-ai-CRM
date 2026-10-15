@@ -45,6 +45,14 @@ interface Answer {
   error?: string;
 }
 
+/** The placeholder the server sends in place of a customer's name. */
+const NAME_SLOT = '{الاسم}';
+
+/** The suggestion as a person should read it: the name put back locally. */
+function readable(text: string, name: string): string {
+  return name ? text.split(NAME_SLOT).join(name) : text;
+}
+
 const TIER_TEXT: Record<string, string> = {
   SAFE: 'خطورة منخفضة',
   WATCH: 'تحت المراقبة',
@@ -68,10 +76,23 @@ function Fact({ label, value, alarm }: { label: string; value: string; alarm?: b
 export function AssistantDialog({
   orderId,
   orderNumber,
+  customerName,
   onClose,
 }: {
   orderId: string;
   orderNumber: string;
+  /**
+   * THE NAME THE MODEL WAS NOT GIVEN.
+   *
+   * Off the owner's own server the assistant is handed `{الاسم}` instead
+   * of the customer — the name must not reach a vendor. Which means the
+   * suggestion comes back with that placeholder still in it, and without
+   * this the agent would read «مرحبا {الاسم}» and paste it to a customer.
+   *
+   * This screen is already showing the order, so the name never had to
+   * travel to be put back.
+   */
+  customerName: string;
   onClose: () => void;
 }) {
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -94,7 +115,7 @@ export function AssistantDialog({
 
   const copy = useCallback(() => {
     if (!answer?.suggestion) return;
-    navigator.clipboard.writeText(answer.suggestion).then(() => {
+    navigator.clipboard.writeText(readable(answer.suggestion, customerName)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
@@ -178,7 +199,7 @@ export function AssistantDialog({
               </button>
             </div>
             <p className="whitespace-pre-wrap text-sm text-[var(--sys-heading)] leading-7 rounded-lg border border-[var(--sys-border)] px-4 py-3">
-              {answer.suggestion}
+              {readable(answer.suggestion, customerName)}
             </p>
           </section>
         )}

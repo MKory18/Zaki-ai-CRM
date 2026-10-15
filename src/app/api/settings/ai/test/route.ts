@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { AiEndpointMissing, AiNotConfigured, aiChat, aiSettings } from '@/lib/ai-provider';
+import { aiChat, describeRoute } from '@/lib/ai-provider';
+import { explainAiError } from '@/lib/ai-error-message';
 
 /**
  * POST /api/settings/ai/test — does the key actually work?
@@ -18,36 +19,6 @@ import { AiEndpointMissing, AiNotConfigured, aiChat, aiSettings } from '@/lib/ai
  * it was.
  */
 
-/** What went wrong, in words a seller can act on. */
-function diagnose(error: unknown): { ok: false; error: string } {
-  if (error instanceof AiEndpointMissing) {
-    // A local model was chosen and nobody said where it lives. Distinct from
-    // "no key": the local provider usually needs no key at all, so telling
-    // somebody to paste one would send them looking for a thing that does
-    // not exist.
-    return { ok: false, error: 'لم يُحفظ عنوان الخادم المحلي بعد — اكتب العنوان في إعدادات النظام واحفظ.' };
-  }
-  if (error instanceof AiNotConfigured) {
-    return { ok: false, error: 'لم يُحفظ مفتاح بعد — الصق المفتاح واحفظ، ثم جرّب الاتصال.' };
-  }
-  const message = error instanceof Error ? error.message : '';
-  const status = message.match(/^AI_HTTP_(\d+)$/)?.[1];
-
-  if (status === '401' || status === '403') {
-    return { ok: false, error: 'المزوّد رفض المفتاح — تأكد أنه مفتاح هذا المزوّد وأنه ما زال صالحاً.' };
-  }
-  if (status === '404') {
-    return { ok: false, error: 'النموذج غير موجود عند هذا المزوّد — اختر نموذجاً من القائمة.' };
-  }
-  if (status === '429') {
-    return { ok: false, error: 'المزوّد يطلب التمهّل — الحساب تجاوز حدّه أو رصيده انتهى.' };
-  }
-  if (status) return { ok: false, error: `المزوّد ردّ بخطأ ${status}.` };
-  if (message.includes('abort')) {
-    return { ok: false, error: 'انتهت المهلة بلا رد — تحقق من الاتصال بالإنترنت من الخادم.' };
-  }
-  return { ok: false, error: 'تعذّر الوصول إلى المزوّد.' };
-}
 
 export async function POST() {
   try {
@@ -55,7 +26,22 @@ export async function POST() {
     // Testing spends the company's own credit with their provider.
     await requirePermission('settings.edit');
 
-    const settings = await aiSettings(companyId);
+    /**
+     * ── IT REPORTS WHERE IT WENT, NOT WHAT THE COMPANY CHOSE ──
+     *
+     * The answer used to be labelled with `aiSettings()`'s provider and
+     * model — the COMPANY's choice. The call itself is routed by the same
+     * resolution every other call uses, which also reads the installation
+     * default and the keys that actually exist. So the two disagreed
+     * exactly when it mattered: the owner read «Anthropic» under a reply
+     * that had come from OpenRouter, pressed on, and the assistant kept
+     * answering from somewhere he had not chosen.
+     *
+     * And `keyFrom` is reported with it, because «it worked» raises the
+     * next question by itself — with WHICH key — and the answer decides
+     * who pays for it.
+     */
+    const route = await describeRoute(companyId);
 
     try {
       const reply = await aiChat({
@@ -70,14 +56,20 @@ export async function POST() {
 
       return NextResponse.json({
         ok: true,
-        provider: settings.provider,
-        model: settings.model,
+        provider: route.provider,
+        model: route.model,
+        keyFrom: route.keyFrom,
         // The first words back, so a seller sees a real reply rather than a
         // green tick they have to trust.
         reply: reply.trim().slice(0, 120),
       });
     } catch (error) {
-      return NextResponse.json({ ...diagnose(error), provider: settings.provider, model: settings.model });
+      return NextResponse.json({
+        ...explainAiError(error),
+        provider: route.provider,
+        model: route.model,
+        keyFrom: route.keyFrom,
+      });
     }
   } catch (error) {
     return apiErrorResponse(error);
