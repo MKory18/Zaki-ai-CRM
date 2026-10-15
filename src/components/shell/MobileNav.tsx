@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { isActiveRoute } from '@/lib/active-route';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -65,7 +65,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
    * more than one item whenever one path is a prefix of another, and the
    * drawer had exactly that: on «صفحات الهبوط» it lit «المتجر» too.
    */
-  const drawnPaths = useMemo(() => primary.map((r) => r.path), [primary]);
+  const drawnPaths = primary.map((r) => r.path);
   const active = (path: string) => isActiveRoute(pathname, path, drawnPaths);
 
   if (primary.length === 0 || yielding) return null;
