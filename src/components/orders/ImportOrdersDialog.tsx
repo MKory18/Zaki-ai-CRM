@@ -135,6 +135,16 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
             ...(r.sellingPrice !== null ? { sellingPrice: r.sellingPrice } : {}),
             customerNotes: r.values.notes || undefined,
             source: 'استيراد ملفّ',
+            /*
+             * THE DIALOG SAYS WHAT IT IS.
+             *
+             * There is no bulk endpoint — every row above is a separate
+             * `POST /api/orders`, indistinguishable from somebody typing
+             * one order. So the request names itself, and the door asks
+             * for `orders.import` when it sees this. Without the flag a
+             * row is a row, which is what it was before.
+             */
+            viaImport: true,
           }),
         });
         made += 1;

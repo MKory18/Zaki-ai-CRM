@@ -116,7 +116,14 @@ const post = (body: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks();
   requireContext.mockResolvedValue(ctx);
-  can.mockReturnValue(false);
+  /*
+   * `false` for everything EXCEPT the permission that recording a call now
+   * needs. This file is about WHO GETS TOLD when a confirmation ends, and
+   * `orders.unlock` must stay false here — that is the override this suite
+   * deliberately does not hold. `orders.contact_log` is new and is simply
+   * the door into the `contact_result` action these cases drive.
+   */
+  can.mockImplementation((_u: unknown, key: string) => key === 'orders.contact_log');
   createNotification.mockResolvedValue(1);
   db.$transaction.mockImplementation(async (fn: any) => (typeof fn === 'function' ? fn(db) : fn));
   db.order.updateMany.mockResolvedValue({ count: 1 });

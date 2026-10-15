@@ -19,7 +19,7 @@ import {
   PERMISSION_MODULES, MODULE_LABELS, SCOPE_LABELS,
   type ScopeValue, type CatalogItem,
 } from '@/lib/permission-catalog';
-import { RiAddCircleLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine } from '@remixicon/react';
+import { RiAddCircleLine, RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine, RiToolsLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 interface RolePerm { permission: string; scope: string; scopeIds?: unknown }
@@ -493,6 +493,43 @@ export function PermissionsScreen() {
                 {ar
                   ? 'تم تحميل الصلاحيات الافتراضية للدور — لن تُطبّق حتى تضغط حفظ التغييرات.'
                   : 'The role defaults are loaded — nothing changes until you press Save.'}
+              </div>
+            )}
+
+            {/*
+              ── A ROLE THAT CANNOT FINISH ITS OWN WORK ──
+
+              C1's rule: a confirmation agent cannot confirm, postpone or
+              cancel an order until she has tried to reach the customer.
+              Recording that attempt is `orders.contact_log`. So a role with
+              `confirmation.work` and without it is handed a queue it can
+              open and can never dispose of — every button locked, with a
+              line underneath telling her to call first and no way to say
+              that she did.
+
+              Nothing here refuses the combination; the owner may want it
+              for a read-only supervisor. It just says what it will do,
+              beside the ticks that cause it, rather than in a support
+              message three days later.
+            */}
+            {draft['confirmation.work'] && !draft['orders.contact_log'] && (
+              <div className="rounded-lg bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)] px-4 py-3 space-y-1.5">
+                <p className="flex items-start gap-2 text-xs font-bold text-[var(--sys-warning)]">
+                  <RiAlertLine className="w-4 h-4 shrink-0 mt-px" />
+                  <span>
+                    {ar
+                      ? 'هالدور ما بيقدر يأكّد ولا يأجّل طلباته — القاعدة: اتصال أوّل'
+                      : 'This role cannot confirm or postpone its own orders — the rule is: contact first'}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2 text-xs text-[var(--sys-heading)]">
+                  <RiToolsLine className="w-4 h-4 shrink-0 mt-px text-[var(--sys-warning)]" />
+                  <span>
+                    {ar
+                      ? 'فعّل «تسجيل نتيجة الاتصال»'
+                      : 'Enable «Log contact result»'}
+                  </span>
+                </p>
               </div>
             )}
 

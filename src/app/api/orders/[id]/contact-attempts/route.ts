@@ -65,6 +65,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
 
+    /**
+     * ── THE TELEPHONE HAS ITS OWN PERMISSION NOW ──
+     *
+     * This door used to open for `orders.edit` OR `orders.claim`, and the
+     * `contact_result` action next door rode on `orders.confirm`. Three
+     * permissions, none of them about recording what happened on a call —
+     * so the owner could not grant or withhold it from «الصلاحيات» at all.
+     *
+     * `orders.contact_log` is granted on deploy to every role that held
+     * any of those three, so nobody loses a door; from then on he unticks
+     * per role.
+     */
+    if (!can(user, 'orders.contact_log')) {
+      return NextResponse.json(
+        {
+          error: 'Forbidden: cannot record contact attempts',
+          errorAr: 'لا تملك صلاحية تسجيل نتيجة الاتصال.',
+          code: 'CONTACT_LOG_NOT_ALLOWED',
+        },
+        { status: 403 }
+      );
+    }
+
     if (!can(user, 'orders.edit') && !can(user, 'orders.claim')) {
       return NextResponse.json({ error: 'Forbidden: cannot record contact attempts' }, { status: 403 });
     }
