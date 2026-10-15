@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PASSWORD_MAX, checkPassword } from '@/lib/password-rules';
 import { db } from '@/lib/db';
-import { hashPassword, sessionCookieOptions, COOKIE_NAME, createSessionToken } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { storedForm } from '@/lib/reset-token';
 import { UserRole, UserStatus, ROLE_PERMISSIONS } from '@/types/auth';
@@ -67,15 +67,19 @@ export async function POST(req: Request) {
       },
     });
 
-    // Auto-login after successful reset
-    const sessionToken = await createSessionToken({
-      userId: updated.id,
-      email: updated.email,
-      role: updated.role as UserRole,
-      status: updated.status as UserStatus,
-      companyId: updated.companyId,
-      tv: updated.tokenVersion,
-    });
+    /*
+     * ── NO SESSION IS CREATED HERE ──
+     *
+     * This door used to sign a session token and set the cookie itself:
+     * «Auto-login after successful reset». That is a login that never
+     * passes `stepFor`, so whoever came through it was inside with a
+     * password alone — and now that every account carries a second
+     * factor, this would have been the one way around all of them.
+     *
+     * Anybody who holds a reset link holds the password; the second
+     * factor is the half that says they are also the person. So the reset
+     * ends at the login screen, where both halves are asked.
+     */
 
     await (await import('@/lib/audit')).logAudit({
       companyId: updated.companyId || 'platform',
@@ -86,13 +90,9 @@ export async function POST(req: Request) {
       newData: { email: updated.email, allSessionsInvalidated: true },
     });
 
-    const response = NextResponse.json({ success: true, status: updated.status });
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: sessionToken,
-      ...sessionCookieOptions(false),
-    });
-    return response;
+    // `signIn: true` tells the screen to send them to the login page —
+    // the password changed, and the second factor is still owed.
+    return NextResponse.json({ success: true, status: updated.status, signIn: true });
   } catch (e: any) {
     console.error('Reset password error:', e);
     return NextResponse.json({ error: 'حدث خطأ داخلي' }, { status: 500 });

@@ -161,6 +161,22 @@ export async function POST(req: Request) {
      * `remember` is the browser's to ask for and ours to honour, exactly as
      * on the password form. The session itself is issued by the one
      * function every door uses — including its `tokenVersion` bump.
+     *
+     * ── AND NO SECOND FACTOR IS ASKED FOR, BECAUSE THIS WAS ONE ──
+     *
+     * Every account now carries a second factor, and `stepFor` is what the
+     * PASSWORD door asks. This door does not, and that is not a gap in the
+     * rule — it is the rule being satisfied by a different means.
+     *
+     * A TOTP code proves possession of an enrolled phone. A passkey proves
+     * possession of a key held in this device's secure hardware, and the
+     * signature just verified is that proof. Sending somebody who signed
+     * with a passkey on to type a six-digit code would be asking them to
+     * prove possession twice, and the usual answer to that is that people
+     * stop using the stronger one.
+     *
+     * `factor: 'passkey'` records which half was shown, so the audit can
+     * tell the two entrances apart.
      */
     return await issueSession({
       user,
