@@ -106,6 +106,14 @@ describe('the rules themselves', () => {
      */
     const at = builder.indexOf('if (lateDays)');
     const block = builder.slice(at, builder.indexOf('\n  }', at) + 4);
+    /*
+     * A floor, and it is not decoration. `indexOf` returns -1 the moment
+     * somebody rewords the opening — `if (lateDays != null)` is enough —
+     * and then `slice` hands back an empty string and the assertion below
+     * passes having read nothing at all. The two `toContain` checks above
+     * do not cover that case: they read the whole builder, not this block.
+     */
+    expect(block, 'نافذة الفحص فاضية — ما قرأ إشي').toContain('shippedAt');
     expect(block, 'قيس التأخّر من الإنشاء').not.toContain('createdAt');
   });
 

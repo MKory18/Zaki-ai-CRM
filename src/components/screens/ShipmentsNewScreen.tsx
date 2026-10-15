@@ -181,13 +181,19 @@ export function ShipmentsNewScreen() {
    * (`resolveDeliveryFee`) and asks `shipmentBlocks` about it, several
    * queries each, for up to three hundred rows.
    *
-   * ⚠️ AND IT COUNTS TOWARD A SECURITY ALERT. Every response runs
-   * `noteCustomersHandedOut`, which adds that response's distinct
-   * customers to a running fifteen-minute tally; past five hundred it
-   * writes a `CUSTOMER_BULK_VIEW` audit row and alerts everybody holding
-   * `users.manage`. Typing five letters over a three-hundred-row list
-   * would cross it — and the owner would be told his data was swept when
-   * somebody searched for a name.
+   * ⚠️ AND EVERY RESPONSE COUNTS TOWARD A SECURITY ALERT.
+   * `noteCustomersHandedOut` adds that response's distinct customers to a
+   * running fifteen-minute tally per person; past five hundred it writes a
+   * `CUSTOMER_BULK_VIEW` audit row and alerts everybody holding
+   * `users.manage`.
+   *
+   * Said precisely, because the first version of this comment was not:
+   * this list takes up to 300 rows, so the FIRST load already carries up
+   * to 300 — one more sizeable response crosses the threshold, with or
+   * without typing. The debounce turns six requests into two for a
+   * five-letter search; it narrows that path, it does not close it. What
+   * closes it is counting a re-read of the same list differently from a
+   * new one, which is nobody's job in this file. Recorded as RV36.
    *
    * 🔧 250ms, the same figure and the same shape `OrdersScreen` uses for
    * its own search.
