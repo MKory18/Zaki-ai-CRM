@@ -96,8 +96,25 @@ describe('the rules themselves', () => {
     expect(builder).toContain('shippingStatus: { notIn: CLOSED_SHIPPING }');
     expect(builder).toContain('confirmationStatus: { notIn: CLOSED_CONFIRMATION }');
 
+    /*
+     * The `lateDays` block ONLY — to its closing brace, not a fixed 700
+     * characters. The fixed window reached past the block the moment the
+     * code after it got shorter, and then failed on the `createdAt` that
+     * belongs to the date filter two statements later. A guard that breaks
+     * when an unrelated line is deleted is a guard people learn to edit
+     * rather than read.
+     */
     const at = builder.indexOf('if (lateDays)');
-    expect(builder.slice(at, at + 700), 'قيس التأخّر من الإنشاء').not.toContain('createdAt');
+    const block = builder.slice(at, builder.indexOf('\n  }', at) + 4);
+    /*
+     * A floor, and it is not decoration. `indexOf` returns -1 the moment
+     * somebody rewords the opening — `if (lateDays != null)` is enough —
+     * and then `slice` hands back an empty string and the assertion below
+     * passes having read nothing at all. The two `toContain` checks above
+     * do not cover that case: they read the whole builder, not this block.
+     */
+    expect(block, 'نافذة الفحص فاضية — ما قرأ إشي').toContain('shippedAt');
+    expect(block, 'قيس التأخّر من الإنشاء').not.toContain('createdAt');
   });
 
   it('refuse a nonsense day count rather than scanning the table', () => {

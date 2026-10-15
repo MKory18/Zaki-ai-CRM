@@ -648,6 +648,7 @@ export function ConfirmationMineScreen() {
         <AssistantDialog
           orderId={dialog.order.id}
           orderNumber={dialog.order.orderNumber}
+          customerName={dialog.order.customer.fullName}
           onClose={() => setDialog(null)}
         />
       )}

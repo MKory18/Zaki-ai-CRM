@@ -235,11 +235,49 @@ describe('routing a call to a local model', () => {
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('sk-ant-INSTALLATION');
   });
 
-  it('the installation’s vendor wins over a company’s own stored one', async () => {
+  /**
+   * ⚠️ THIS RULE WAS REVERSED, AND THE REVERSAL IS THE OWNER'S TO KEEP.
+   *
+   * It used to read «the installation's vendor wins over a company's own
+   * stored one», on the reasoning that a deployment configured before the
+   * system card existed keeps answering without anybody re-entering
+   * anything.
+   *
+   * That reasoning holds only for a company that never chose. And the
+   * combination of this rule with a second defect is exactly the bug the
+   * owner reported: every key save used to stamp `SYSTEM_AI.provider`, so
+   * every installation that had ever saved a key had one, and it beat
+   * whatever the company picked in «المزوّد». «حطّيت المفتاح وما اشتغل».
+   *
+   * O8 states the order plainly — «the assistant's own vendor+model → the
+   * company's (when it chose one) → the installation default → OPENROUTER»
+   * — so the company's explicit choice now wins. A company that never
+   * chose still falls through to the installation, which is the whole of
+   * what the old reasoning protected.
+   *
+   * The KEY precedence is NOT reversed: the installation's key still wins
+   * for the resolved vendor, because taking the company's would bill the
+   * wrong person. See the case above.
+   */
+  it('a company’s own stored vendor wins over the installation default', async () => {
     withSystem({ provider: 'LOCAL', model: 'llama3.1:8b', localBaseUrl: 'http://localhost:11434' });
     db.company.findUnique.mockResolvedValue({
-      settings: JSON.stringify({ ai: { provider: 'OPENAI', model: 'gpt-4o' } }),
+      settings: JSON.stringify({
+        ai: { provider: 'OPENAI', model: 'gpt-4o', keys: { OPENAI: { enc: encryptSecret('sk-COMPANY') } } },
+      }),
     });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ choices: [{ message: { content: 'ok' } }] }) }));
+    await aiChat({ companyId: 'c1', system: 's', user: 'u' });
+    const [url] = (globalThis.fetch as unknown as { mock: { calls: [string][] } }).mock.calls[0];
+    expect(url, 'افتراض التنصيب لسّا بيغلب اختيار الشركة').toContain('api.openai.com');
+  });
+
+  it('and a company that never chose still falls through to the installation', async () => {
+    // The whole of what the old rule protected: a deployment configured
+    // before the system card existed, whose companies never picked
+    // anything, keeps answering with nobody re-entering a thing.
+    withSystem({ provider: 'LOCAL', model: 'llama3.1:8b', localBaseUrl: 'http://localhost:11434' });
+    db.company.findUnique.mockResolvedValue({ settings: JSON.stringify({ ai: { prompts: {} } }) });
     await aiChat({ companyId: 'c1', system: 's', user: 'u' });
     const [url] = (globalThis.fetch as unknown as { mock: { calls: [string][] } }).mock.calls[0];
     expect(url).toBe('http://localhost:11434/v1/chat/completions');

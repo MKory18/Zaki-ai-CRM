@@ -33,7 +33,18 @@ const { db, requireContext, requirePermission, aiChat, customerRisk, customerHis
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
-vi.mock('@/lib/ai-provider', () => ({ aiChat: (...a: unknown[]) => aiChat(...a), AiNotConfigured }));
+/*
+ * `describeRoute` is new: the route now asks WHERE the call would go
+ * before deciding what to put in the payload, because this assistant is
+ * declared `pii: true` and the customer's name must not reach a vendor.
+ * LOCAL here, so these cases keep reading the full payload they were
+ * written for — the redaction has its own file.
+ */
+vi.mock('@/lib/ai-provider', () => ({
+  aiChat: (...a: unknown[]) => aiChat(...a),
+  describeRoute: async () => ({ provider: 'LOCAL', model: 'llama3.1:8b', keyFrom: 'none', baseUrl: 'http://127.0.0.1:11434' }),
+  AiNotConfigured,
+}));
 vi.mock('@/lib/customer-risk', () => ({
   customerRisk: (...a: unknown[]) => customerRisk(...a),
   customerHistory: (...a: unknown[]) => customerHistory(...a),
