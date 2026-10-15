@@ -34,6 +34,8 @@ interface Offer {
   endsAt: string | null;
   discount: number;
   deliveryIncluded: boolean;
+  /** The one bundle shown on the thank-you screen — and on no door. */
+  postOrderOffer: boolean;
   isDefault: boolean;
   sortOrder: number;
   status: string;
@@ -147,6 +149,7 @@ export function ProductOffers({
         compareAtPrice: draft.compareAtPrice ?? null,
         discount: draft.discount,
         deliveryIncluded: draft.deliveryIncluded,
+        postOrderOffer: draft.postOrderOffer,
         isDefault: draft.isDefault,
         sortOrder: draft.sortOrder,
         status: draft.status,
@@ -367,6 +370,17 @@ export function ProductOffers({
                       <span className="truncate">{o.name}</span>
                       {o.isDefault && <RiStarLine className="w-4 h-4 shrink-0 fill-[var(--sys-warning)] text-[var(--sys-warning)]" />}
                       {inactive && <RiEyeOffLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" />}
+                      {/* A WORD, NOT AN ICON. This row already carries two
+                          glyphs whose meaning a seller learns by hovering;
+                          «بعد الطلب» is a third meaning and the one most
+                          easily mistaken for an ordinary bundle, because its
+                          price is the lowest in the list and it is the only
+                          row the page does not show. */}
+                      {o.postOrderOffer && (
+                        <span className="shrink-0 rounded-md bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-xs font-bold text-[var(--sys-primary)]">
+                          بعد الطلب
+                        </span>
+                      )}
                     </p>
                     {/* Every run of digits + Latin currency is isolated, or
                         Arabic bidi reorders "100 USD · 50 USD/قطعة" into
@@ -545,7 +559,46 @@ export function ProductOffers({
                 />
                 السعر شامل التوصيل
               </label>
+              {/*
+                «العرض بعد الطلب» — the one bundle the thank-you screen may
+                show, and the only one withheld from the page itself.
+
+                It sits beside the other two because it IS the same kind of
+                decision about the same bundle, and putting it on a screen of
+                its own would have been a second place a price lives — which
+                is the defect this whole file exists to have fixed.
+              */}
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--sys-foreground)]">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-[var(--sys-primary)]"
+                  checked={!!draft.postOrderOffer}
+                  onChange={(e) => setDraft({ ...draft, postOrderOffer: e.target.checked })}
+                />
+                العرض بعد الطلب
+              </label>
             </div>
+            {/*
+              THE RULES OF THIS BOX, ON THE SCREEN AND NOT ONLY IN THE CODE.
+
+              Each sentence is a server rule the seller would otherwise meet
+              as a refusal: the bundle disappears from the page, only one
+              product may carry it, the window is a company setting, gift
+              units are refused, and the delivery flag has no effect on an
+              order whose fee policy was already decided.
+            */}
+            {draft.postOrderOffer && (
+              <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                «العرض بعد الطلب» يظهر على شاشة الشكر وحده — بعد أن يصير الطلب، لا قبله: هذا
+                العرض <b>لا يظهر</b> في صفحة الهبوط ولا في المتجر ولا يمكن للزبون اختياره عند
+                الطلب. <b>عرضٌ واحد</b> لكل منتج: تأشيره هنا يرفع التأشير عن أيّ عرضٍ آخر لنفس
+                المنتج. الزبون يقدر يزيده <b>مرة واحدة</b>، وما دام الطلب جديداً لم يتواصل معه
+                أحدٌ بعد، وخلال مهلةٍ من لحظة الطلب (15 دقيقة افتراضاً — تُضبَط من إعدادات النظام). ولا
+                يقبل <b>كمية مجانية</b>، لأنّ الزيادة تُسجَّل كسطرٍ بسعرٍ وكمية لا مكان للهدية
+                فيه. و«السعر شامل التوصيل» لا أثر له هنا: أجرة التوصيل حُسِمت مع الطلب الأول
+                ولا تتغيّر بزيادةٍ بعده.
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" size="sm" onClick={() => setDraft(null)}>إلغاء</Button>
               <Button size="sm" onClick={save} disabled={busy || !draft.name?.trim()}>

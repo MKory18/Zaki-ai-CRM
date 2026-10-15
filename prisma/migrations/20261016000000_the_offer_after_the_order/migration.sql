@@ -1,0 +1,58 @@
+-- THE OFFER AFTER THE ORDER — two columns, and not one existing row moves.
+--
+-- «وصلنا طلبك!» → «زيد علبة كمان؟ 15 بدل 25». The owner said yes to an
+-- offer shown on the thank-you screen, and the price it quotes has to be a
+-- price the SELLER set, in the one place a bundle's price is allowed to
+-- live: the product's own offers (`src/lib/offers.ts`).
+--
+-- ── WHY A FLAG ON `offers` AND NOT A TABLE OF ITS OWN ──
+--
+-- A second table would be a second place a price lives, and this file has
+-- the scars of that already: a landing page used to carry its own copy of
+-- the same three tiers, so raising a price in the catalogue left the page
+-- selling at the old one. The post-order offer is a bundle like any other —
+-- a name, a quantity, a selling price, an ending, a discount — differing in
+-- exactly one fact: WHEN it may be shown. One boolean says that fact.
+--
+--   `postOrderOffer = false`  the bundles a visitor chooses between at the
+--                             door. Every row that exists today, which is
+--                             why nothing changes for anybody.
+--   `postOrderOffer = true`   shown only after an order exists, and
+--                             withheld from every door predicate — see
+--                             `liveOfferWhere` / `postOrderOfferWhere`.
+--
+-- NOT NULL with a DEFAULT of false is safe here precisely because false is
+-- what every stored offer already means. The one place a `DEFAULT` would be
+-- wrong is a column whose default is a DECISION about existing rows; this
+-- one only writes down what they were.
+--
+-- No unique index on «one post-order offer per product». `isDefault` has
+-- answered the identical question since this table was created, and it does
+-- it with `clearOtherDefaults` inside the write transaction rather than a
+-- partial unique index — because the create happens BEFORE the clear, so an
+-- index would refuse the second offer at the create and the seller could
+-- never move the flag. The same shape, `clearOtherPostOrderOffers`, for the
+-- same reason.
+ALTER TABLE "offers" ADD COLUMN "postOrderOffer" BOOLEAN NOT NULL DEFAULT false;
+
+-- ── AND THE ADD-ON REMEMBERS WHICH OFFER IT CAME FROM ──
+--
+-- `order_add_ons` is the row a post-order addition has always written — the
+-- thank-you-page upsell, money the courier must collect, carried into COD
+-- by `computeCod({ addOns })` and read by the waybill, the labels, the
+-- shipment, the settlement and the partial-delivery rule. The post-order
+-- offer writes the same row, for the same reason: it is the ONE post-order
+-- money path that every one of those readers already honours, and a second
+-- one would be the «upsell money the settlement never saw» defect rebuilt
+-- by hand.
+--
+-- NULLABLE, and NULL means «this add-on came from the recommendation list»,
+-- which is every one of the rows that exist. The column is what makes
+-- «once only» a fact on the row rather than a hope: the service counts the
+-- add-ons on this order that carry an offer id, and one is already too many.
+--
+-- Deliberately NOT a foreign key, for the reason `SystemSetting.updatedById`
+-- gives in the schema: a retired offer must not take an order's record of
+-- what was sold with it, and `offers` rows ARE retired (`status: INACTIVE`)
+-- rather than deleted once an order points at them.
+ALTER TABLE "order_add_ons" ADD COLUMN "offerId" TEXT;
