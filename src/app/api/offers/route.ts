@@ -6,7 +6,7 @@ import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
-import { offerInputSchema, clearOtherDefaults } from '@/lib/offers';
+import { offerInputSchema, clearOtherDefaults, clearOtherPostOrderOffers } from '@/lib/offers';
 import { zodMessage } from '@/lib/zod-message';
 
 /**
@@ -85,6 +85,7 @@ export async function POST(req: Request) {
           endsAt: input.endsAt ?? null,
           discount: input.discount,
           deliveryIncluded: input.deliveryIncluded,
+          postOrderOffer: input.postOrderOffer,
           isDefault: input.isDefault,
           sortOrder: input.sortOrder,
           status: input.status,
@@ -92,6 +93,8 @@ export async function POST(req: Request) {
       });
       // Exactly one default per product — see clearOtherDefaults.
       await clearOtherDefaults(tx, created);
+      // And exactly one offer after the order — the same rule, the same way.
+      await clearOtherPostOrderOffers(tx, created);
       return created;
     });
 

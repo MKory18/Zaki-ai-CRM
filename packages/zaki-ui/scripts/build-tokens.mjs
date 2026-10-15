@@ -24,6 +24,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG = resolve(HERE, '..');
 const REPO = resolve(PKG, '..', '..');
 const SYSTEM_CSS = join(REPO, 'src', 'app', '(system)', 'system.css');
+/** The product's palettes. The stylesheet mirrors two of them; this holds all. */
+const SYSTEM_THEMES_TS = join(REPO, 'src', 'lib', 'system-themes.ts');
 
 export const VERSION = '0.1.0';
 
@@ -51,6 +53,13 @@ export const RENAME = {
   'foreground': 'color-text',
   'muted-foreground': 'color-text-muted',
   'muted': 'color-text-faint',
+  /*
+   * The product now STATES this value per palette (it used to be an alias
+   * that resolved against the default theme's grey). It is named here so
+   * it is carried rather than reported as unmapped — and then deliberately
+   * replaced by a REFERENCE a few lines below, for the reason given there.
+   */
+  'border-input': 'color-border-input',
   'sidebar-foreground': 'color-text-sidebar',
   // ── border ───────────────────────────────────────────────────────────
   'border': 'color-border',
@@ -112,9 +121,9 @@ export const THEMES = [
    * emitted, so `[data-theme="dark"]` on any element returns it to the
    * default palette from inside a light one.
    */
-  { key: 'dark', from: "[data-sys-theme='ops']", selector: ':root, [data-theme="dark"]', note: 'الافتراضيّة — وهي لوحة «العمليّات» الغامقة، وتُطلَب بالاسم أيضاً' },
-  { key: 'light', from: "[data-sys-theme='day']", selector: '[data-theme="light"]', note: 'لوحة «النهار»' },
-  { key: 'calm', from: "[data-sys-theme='calm']", selector: '[data-theme="calm"]', note: 'لوحة «الهادئة» — فاتحةٌ ثانيةٌ موجودةٌ في المنتج' },
+  { key: 'dark', from: 'ops', selector: ':root, [data-theme="dark"]', note: 'الافتراضيّة — وهي لوحة «العمليّات» الغامقة، وتُطلَب بالاسم أيضاً' },
+  { key: 'light', from: 'day', selector: '[data-theme="light"]', note: 'لوحة «النهار»' },
+  { key: 'calm', from: 'calm', selector: '[data-theme="calm"]', note: 'لوحة «الهادئة» — فاتحةٌ ثانيةٌ موجودةٌ في المنتج' },
 ];
 
 /**
@@ -280,25 +289,54 @@ function repoint(value, rename) {
   });
 }
 
-function paletteOf(css, selector) {
-  const start = css.indexOf(selector);
-  if (start === -1) throw new Error(`palette not found in system.css: ${selector}`);
-  const end = css.indexOf('}', start);
-  const block = css.slice(start, end);
+/**
+ * ── WHERE A PALETTE IS READ FROM, NOW THAT THE SHEET HOLDS ONLY TWO ──
+ *
+ * `system.css` used to carry every palette, and this read the selector's
+ * block out of it. It now carries the DEFAULT and «تلقائي» only: the other
+ * nine are written into the document by `SystemFrame`, because eleven
+ * palettes in the first-load stylesheet is ten kilobytes of colours nine
+ * people in ten never see (see `SHEET_THEMES` in
+ * src/lib/system-themes.ts).
+ *
+ * So the palettes are read from the REGISTRY — the TypeScript objects that
+ * the stylesheet itself mirrors, and that `system-themes.test.ts` holds
+ * the two in step with. «Extraction, not redesign» is unchanged; what
+ * changed is which copy of the product's colours is the one copy.
+ *
+ * Parsed rather than imported because this is a plain .mjs run by node
+ * with no TypeScript in the loop, and a build step that needs a compiler
+ * is a build step that breaks on a Tuesday. The shape it reads is an
+ * object literal of `name: '#hex'` lines, and it fails loudly on a
+ * palette it cannot find rather than emitting a theme with no colours.
+ */
+function registryPalettes(ts) {
   const out = {};
-  for (const m of block.matchAll(/--sys-([a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    out[m[1]] = m[2].trim();
+  const re = /\n {2}\{\n {4}key: '([a-z0-9-]+)',[\s\S]*?\n {4}vars: \{\n([\s\S]*?)\n {4}\},/g;
+  for (const m of ts.matchAll(re)) {
+    const vars = {};
+    for (const v of m[2].matchAll(/^\s*'?([a-z0-9-]+)'?:\s*'([^']+)',/gm)) vars[v[1]] = v[2].trim();
+    out[m[1]] = vars;
   }
   return out;
 }
 
+function paletteOf(palettes, key) {
+  const found = palettes[key];
+  if (!found || Object.keys(found).length < 20) {
+    throw new Error(`palette not found in system-themes.ts: ${key}`);
+  }
+  return found;
+}
+
 export function build() {
   const css = readFileSync(SYSTEM_CSS, 'utf8');
+  const palettes = registryPalettes(readFileSync(SYSTEM_THEMES_TS, 'utf8'));
   const unmapped = new Set();
 
   const themes = {};
   for (const t of THEMES) {
-    const raw = paletteOf(css, t.from);
+    const raw = paletteOf(palettes, t.from);
     const named = {};
     for (const [key, value] of Object.entries(raw)) {
       const to = RENAME[key];
@@ -325,6 +363,12 @@ export function build() {
      * The decorative borders keep their values on purpose. 1.4.11 is about
      * the boundary of a CONTROL, and a rule between two paragraphs that
      * met 3:1 would draw the eye to the furniture instead of the content.
+     *
+     * ⚠️ The product states its own `--sys-border-input` now, and this
+     * still overwrites it — on purpose. Inside one `[data-theme]` block a
+     * reference resolves against that block's own `text-faint`, so the
+     * package keeps one colour with one place to change it, which a copied
+     * hex would not.
      */
     named['color-border-input'] = 'var(--zk-color-text-faint)';
 

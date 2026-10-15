@@ -69,6 +69,26 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/landing-editor/Advanced.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/landing-editor/AiCopyPanel.tsx": {
+    "buttons": 3,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/landing-editor/BlockBuilder.tsx": {
     "buttons": 25,
     "inputs": 16,
@@ -79,6 +99,16 @@
     "links": 1,
     "tabs": 0
   },
+  "src/components/landing-editor/EditorPanes.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/landing-editor/SelectionBar.tsx": {
     "buttons": 12,
     "inputs": 0,
@@ -86,6 +116,26 @@
     "cards": 0,
     "modals": 0,
     "icons": 6,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/landing-editor/StoreThemePreview.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/landing-editor/UndoBar.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
     "links": 0,
     "tabs": 0
   },
@@ -381,7 +431,7 @@
   },
   "src/components/products/ProductOffers.tsx": {
     "buttons": 10,
-    "inputs": 8,
+    "inputs": 9,
     "columns": 0,
     "cards": 1,
     "modals": 0,
@@ -1301,7 +1351,7 @@
   },
   "src/components/settings/MenuOrderCard.tsx": {
     "buttons": 6,
-    "inputs": 1,
+    "inputs": 2,
     "columns": 0,
     "cards": 2,
     "modals": 0,
@@ -1349,6 +1399,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/settings/PostOrderOfferCard.tsx": {
+    "buttons": 1,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 2,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/settings/StoreBrandField.tsx": {
     "buttons": 2,
     "inputs": 1,
@@ -1390,7 +1450,7 @@
     "tabs": 0
   },
   "src/components/settings/ThemePicker.tsx": {
-    "buttons": 1,
+    "buttons": 2,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
@@ -1420,12 +1480,12 @@
     "tabs": 0
   },
   "src/components/shell/CommandPalette.tsx": {
-    "buttons": 2,
+    "buttons": 3,
     "inputs": 1,
-    "columns": 3,
+    "columns": 5,
     "cards": 0,
     "modals": 0,
-    "icons": 4,
+    "icons": 5,
     "links": 0,
     "tabs": 0
   },

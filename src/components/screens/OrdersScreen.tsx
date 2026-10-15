@@ -71,12 +71,26 @@ export function OrdersScreen() {
     // to load the screen.
     askedState && (FILTERABLE_STATES as string[]).includes(askedState) ? askedState : 'all'
   );
-  const [productId, setProductId] = useState('all');
+  /*
+   * AND TWO MORE FILTERS ARRIVE BY LINK NOW.
+   *
+   * The palette (Ctrl+K) answers «مؤجل» and «متأخر» and a product's name
+   * with a COUNT, and every count is pressable: pressing it has to land on
+   * the list whose length is the number that was just printed. `state` was
+   * already read; «متأخرة» and «المنتج» were not, so two of the three
+   * counts would have landed on the unfiltered list — the very defect the
+   * note above records being fixed for `state`.
+   *
+   * `late=1` and not `lateDays=10`: the screen owns the number of days (it
+   * is 10 in three places in this file), and a URL that could name its own
+   * threshold would be a second rule for «متأخرة».
+   */
+  const [productId, setProductId] = useState(asked.get('productId') ?? 'all');
   const [source, setSource] = useState('all');
   const [courierId, setCourierId] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [lateOnly, setLateOnly] = useState(false);
+  const [lateOnly, setLateOnly] = useState(asked.get('late') === '1');
   const [regionId, setRegionId] = useState('all');
   // The governorates of the selected country — the same list the order forms use.
   const { regions } = useRegions();

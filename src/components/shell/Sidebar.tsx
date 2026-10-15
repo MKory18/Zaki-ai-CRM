@@ -10,6 +10,7 @@ import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
 import { RiArrowDownSLine, RiListSettingsLine, RiSideBarLine, RiTreeLine } from '@remixicon/react';
 import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail';
+import { ThemeDecor } from './ThemeDecor';
 
 const OPEN_GROUPS_KEY = 'osm.sidebar.open';
 const PINNED_KEY = 'osm.sidebar.pinned';
@@ -187,8 +188,13 @@ export function Sidebar({
           mobileOpen ? 'flex animate-in slide-in-from-right duration-200' : 'hidden'
         )}
       >
-        <div className="rail-center flex items-center gap-2 h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
-          <Link href="/" className="flex min-w-0 items-center gap-3" onClick={onClose}>
+        <div className="rail-center relative flex items-center gap-2 h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
+          {/* The theme's own mood, in one of the three places it is allowed:
+              above the menu, where the wordmark is — and not one pixel of it
+              behind a figure. It draws nothing unless the person's level is
+              «light» or «full». See src/lib/theme-decoration.ts. */}
+          <ThemeDecor place="sidebar" />
+          <Link href="/" className="relative flex min-w-0 items-center gap-3" onClick={onClose}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/mark.png" alt="" aria-hidden className="h-11 w-11 shrink-0 object-contain" />
             <div className="rail-hide min-w-0">

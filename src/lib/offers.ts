@@ -51,6 +51,16 @@ const offerFields = z.object({
   endsAt: z.coerce.date().nullable().optional(),
   discount: money(1_000_000).default(0),
   deliveryIncluded: z.coerce.boolean().default(true),
+  /**
+   * «العرض بعد الطلب» — shown on the thank-you screen, and nowhere else.
+   *
+   * The seller sets it HERE, among the product's bundles, because a price
+   * belongs to the product and this file is the one place a bundle's price
+   * is allowed to live. Marking a bundle as the post-order offer withholds
+   * it from every door — see `liveOfferWhere` — so the cheap «زيد علبة
+   * كمان؟ 15 بدل 25» cannot be picked as the FIRST order's price.
+   */
+  postOrderOffer: z.coerce.boolean().default(false),
   isDefault: z.coerce.boolean().default(false),
   sortOrder: count(9999).default(0),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
@@ -102,9 +112,47 @@ function discountBelowPrice(sellingPrice: number, discount: number, ctx: z.Refin
   }
 }
 
-export const offerInputSchema = offerFields.superRefine((o, ctx) =>
-  discountBelowPrice(o.sellingPrice, o.discount, ctx)
-);
+/**
+ * A GIFT UNIT THE ORDER HAS NOWHERE TO WRITE DOWN IS A BROKEN PROMISE.
+ *
+ * The post-order offer is taken on the thank-you screen and recorded as an
+ * `OrderAddOn` — see `post-order-offer.ts` for why that row and not an
+ * `OrderItem`. That row has `quantity`, `price` and `total`, and it has NO
+ * `freeQuantity` column: gift units are a concept of the order's own lines,
+ * where they are real stock at zero price and feed COGS.
+ *
+ * So «ثلاث قطع + واحدة هدية» as a post-order offer would be advertised to
+ * the customer, accepted, charged correctly — and the free piece would exist
+ * nowhere. Nobody would pick it, nobody would ship it, and the customer
+ * would be short one piece of what they were promised.
+ *
+ * Refused where it ENTERS rather than silently dropped at the door, which is
+ * the same decision `discountBelowPrice` above makes and for the same
+ * reason: four downstream readers reinterpreting an impossible row is worse
+ * than one clear sentence to the seller who typed it. Any bundle may carry
+ * gift units; a bundle marked as the offer after the order may not.
+ */
+function noGiftsAfterTheOrder(
+  postOrderOffer: boolean,
+  freeQuantity: number,
+  ctx: z.RefinementCtx
+) {
+  if (postOrderOffer && freeQuantity > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        'العرض بعد الطلب لا يقبل كمية مجانية — الزيادة بعد الطلب تُسجَّل كسطر ' +
+        'بسعرٍ وكمية، وما إلها مكان تكتب فيه الهدية. اكتب الهدية داخل الكمية ' +
+        'والسعر، أو شيل علامة «العرض بعد الطلب».',
+      path: ['freeQuantity'],
+    });
+  }
+}
+
+export const offerInputSchema = offerFields.superRefine((o, ctx) => {
+  discountBelowPrice(o.sellingPrice, o.discount, ctx);
+  noGiftsAfterTheOrder(o.postOrderOffer, o.freeQuantity, ctx);
+});
 
 /**
  * AN EDIT THAT DID NOT MENTION A FIELD USED TO OVERWRITE IT ANYWAY.
@@ -174,14 +222,31 @@ const offerPatchFields = z.object(omittedMeansOmitted(offerFields.shape));
  * object that already carries a refinement — it throws rather than silently
  * dropping the rule, so `offerInputSchema.partial()` is not an option.
  */
-export function offerPatchSchema(existing: { sellingPrice: number; discount: number }) {
-  return offerPatchFields.superRefine((o, ctx) =>
+export function offerPatchSchema(existing: {
+  sellingPrice: number;
+  discount: number;
+  /**
+   * The two fields the gift rule reads, supplied by the stored row for the
+   * same reason the discount's price is: `{ postOrderOffer: true }` alone
+   * says nothing about the gift units the offer already carries, and a rule
+   * that only looked at what was sent would shut the create door and leave
+   * this one open.
+   */
+  postOrderOffer?: boolean;
+  freeQuantity?: number;
+}) {
+  return offerPatchFields.superRefine((o, ctx) => {
     discountBelowPrice(
       o.sellingPrice ?? existing.sellingPrice,
       o.discount ?? existing.discount,
       ctx
-    )
-  );
+    );
+    noGiftsAfterTheOrder(
+      o.postOrderOffer ?? existing.postOrderOffer ?? false,
+      o.freeQuantity ?? existing.freeQuantity ?? 0,
+      ctx
+    );
+  });
 }
 
 export type OfferInput = z.infer<typeof offerInputSchema>;
@@ -212,16 +277,36 @@ export async function clearOtherDefaults(
 }
 
 /**
- * WHAT «ON SALE RIGHT NOW» MEANS, in one place.
+ * WHAT «ON SALE AT THE DOOR RIGHT NOW» MEANS, in one place.
  *
  * Three queries used to spell `status: 'ACTIVE'` themselves — this one and
  * the two in storefront.ts. Adding an ending would have been three edits,
  * and the one that was forgotten would have gone on selling an offer that
  * had finished. A predicate instead, so there is one answer.
+ *
+ * ── AND THE POST-ORDER OFFER IS NOT ONE OF THEM ──
+ *
+ * `postOrderOffer: false` is part of the predicate rather than bolted onto
+ * its three callers, and the direction of that default is the whole
+ * argument. Every one of those callers is a DOOR — the storefront grid's
+ * from-price, the product page's picker, and `activeOffersFor`, which is
+ * what `resolvePublicLines` prices an order from. A bundle the seller
+ * priced for «زيد علبة كمان؟ 15 بدل 25» reaching any of them is not a
+ * cosmetic slip: the visitor picks 15 before ordering anything, and the
+ * after-order price has become a price cut on the whole catalogue.
+ *
+ * So the safe answer is the one a forgetful future caller gets for free,
+ * and the single place that wants the other answer has to ask for it by
+ * name — `postOrderOfferWhere` below.
+ *
+ * NOTHING STORED TODAY MOVES. The column is new and false on every existing
+ * row, so this predicate returns exactly what it returned before for every
+ * offer in the database.
  */
 export function liveOfferWhere(now: Date) {
   return {
     status: 'ACTIVE',
+    postOrderOffer: false,
     OR: [{ endsAt: null }, { endsAt: { gt: now } }],
   };
 }
@@ -244,6 +329,13 @@ export function liveOfferWhere(now: Date) {
  *
  * `scope` is the product or the whole store: a landing page sells one
  * article, a shop's home page sells the shelf.
+ *
+ * AND IT SKIPS THE AFTER-ORDER BUNDLE, for the same reason
+ * `liveOfferWhere` does: that one is not pickable at the door, so its
+ * ending is not a deadline anybody standing at the door is under. A clock
+ * counting down to it would be counting down to an offer the visitor
+ * cannot take — which is the exact dishonesty this countdown exists to
+ * remove.
  */
 export async function offerEndings(
   tx: Tx,
@@ -254,11 +346,55 @@ export async function offerEndings(
     where: {
       companyId,
       status: 'ACTIVE',
+      postOrderOffer: false,
       ...('productId' in scope ? { productId: scope.productId } : { product: { storeId: scope.storeId } }),
     },
     select: { endsAt: true },
   });
   return rows.map((o) => o.endsAt);
+}
+
+/**
+ * The complement: live, and shown ONLY after an order exists.
+ *
+ * Written as the exact mirror of `liveOfferWhere` so the two can never
+ * drift into overlapping — an offer that is both pickable at the door and
+ * offered after the order would let the same customer buy the same bundle
+ * at the after-order price twice over.
+ */
+export function postOrderOfferWhere(now: Date) {
+  return {
+    status: 'ACTIVE',
+    postOrderOffer: true,
+    OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+  };
+}
+
+/**
+ * Exactly one post-order offer per product.
+ *
+ * The same rule, and the same mechanism, as `clearOtherDefaults` above:
+ * the brief says the thank-you screen shows ONE offer, and two rows flagged
+ * for it would make «which one» a question answered by whatever
+ * `orderBy` happened to run. It is kept inside the write transaction
+ * rather than by a partial unique index because the create lands before
+ * the clear, so an index would refuse the second row and leave the seller
+ * unable to move the flag at all.
+ */
+export async function clearOtherPostOrderOffers(
+  tx: Tx,
+  offer: { id: string; productId: string; companyId: string; postOrderOffer: boolean }
+) {
+  if (!offer.postOrderOffer) return;
+  await tx.offer.updateMany({
+    where: {
+      companyId: offer.companyId,
+      productId: offer.productId,
+      id: { not: offer.id },
+      postOrderOffer: true,
+    },
+    data: { postOrderOffer: false },
+  });
 }
 
 /**
@@ -312,6 +448,56 @@ export async function activeOffersFor(
 
   const evidence = await evidencedWasPrices(tx, rows);
   return rows.map((o) => toOfferView(o, minorUnit, evidence.get(o.id)));
+}
+
+/**
+ * THE ONE OFFER SHOWN AFTER THE ORDER — «زيد علبة كمان؟ 15 بدل 25».
+ *
+ * `activeOffersFor` with the mirror predicate, and the rest of it
+ * deliberately identical: the same `select`, the same `evidencedWasPrices`,
+ * the same `toOfferView`. The price a customer reads on the thank-you
+ * screen is therefore produced by the same arithmetic as the price they
+ * read on the landing page — `allocateDiscount` once, rounded by the
+ * order's own currency — rather than by a second mapping free to get the
+ * discount or the struck-through rule a little differently.
+ *
+ * ONE, not a list, and `null` when the seller set none. `take: 1` is the
+ * query saying what the screen says: the brief is «ONE offer», and a
+ * second flagged row is already prevented by `clearOtherPostOrderOffers`.
+ * The ordering is kept anyway so that a row that slipped past — restored
+ * from a backup, written by a script — resolves to the same one every time
+ * rather than to whatever the planner returned first.
+ */
+export async function postOrderOfferFor(
+  tx: Tx,
+  companyId: string,
+  productId: string,
+  /** The order's own currency. See `activeOffersFor` for why it is required. */
+  minorUnit: number,
+  now: Date = new Date()
+): Promise<OfferView | null> {
+  const rows = await tx.offer.findMany({
+    where: { companyId, productId, ...postOrderOfferWhere(now) },
+    orderBy: [{ sortOrder: 'asc' }, { quantity: 'asc' }],
+    take: 1,
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      freeQuantity: true,
+      sellingPrice: true,
+      discount: true,
+      compareAtPrice: true,
+      isDefault: true,
+      deliveryIncluded: true,
+      endsAt: true,
+    },
+  });
+  const row = rows[0];
+  if (!row) return null;
+
+  const evidence = await evidencedWasPrices(tx, rows);
+  return toOfferView(row, minorUnit, evidence.get(row.id));
 }
 
 /**
