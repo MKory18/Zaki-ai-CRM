@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { RiBookmarkLine, RiCloseLine } from '@remixicon/react';
+import { apiJson } from '@/lib/api-client';
 
 /**
  * THE SAME SIX FILTERS, SET AGAIN EVERY MORNING.
@@ -19,13 +20,24 @@ import { RiBookmarkLine, RiCloseLine } from '@remixicon/react';
  * when the data has moved on. Recalling a view re-asks the question; it
  * never replays an answer.
  *
- * AND IT IS THIS BROWSER'S, NOT THE ACCOUNT'S.
+ * AND A PERSON'S OWN ARE THIS BROWSER'S, NOT THE ACCOUNT'S.
  *
- * `localStorage`, keyed per screen. Saving it on the server would make it a
- * shared object with an owner, permissions and a lifecycle — for a habit.
- * The cost is that it does not follow somebody to another machine, which is
- * the right trade for a convenience and is why nothing here is relied upon:
- * a browser that refuses storage simply shows no views.
+ * `localStorage`, keyed per screen. Saving a habit on the server would make
+ * it a shared object with an owner, permissions and a lifecycle. The cost
+ * is that it does not follow somebody to another machine, which is the
+ * right trade for a convenience and is why nothing here is relied upon: a
+ * browser that refuses storage simply shows no views.
+ *
+ * ── AND THE OWNER'S ARE THE ACCOUNT'S ──
+ *
+ * The other half, asked for in U3: a view HE publishes to a ROLE, so a new
+ * agent's first morning already has the question their job is about. Those
+ * come from the server (`/api/views`), are read-only here, and are marked
+ * so nobody wonders why they cannot delete one.
+ *
+ * A published view still cannot widen what the role sees: it is a query
+ * string, and applying it re-asks `GET /api/orders`, which applies the
+ * same visibility envelope it always did.
  */
 
 const KEY = 'osm.views.';
@@ -68,10 +80,28 @@ export function SavedViews({
   onApply: (query: string) => void;
 }) {
   const [views, setViews] = useState<SavedView[]>([]);
+  const [published, setPublished] = useState<SavedView[]>([]);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState('');
 
   useEffect(() => setViews(read(screen)), [screen]);
+
+  /*
+   * The role's published views, fetched once. A failure is silence rather
+   * than an error: the screen works without them, and a banner about a
+   * convenience on a working list is noise.
+   */
+  useEffect(() => {
+    let alive = true;
+    apiJson<{ published: SavedView[] }>(`/api/views?screen=${encodeURIComponent(screen)}`)
+      .then((d) => {
+        if (alive && Array.isArray(d.published)) setPublished(d.published);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [screen]);
 
   const save = useCallback(() => {
     const clean = name.trim().slice(0, 40);
@@ -94,6 +124,25 @@ export function SavedViews({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {/*
+        THE OWNER'S FIRST, AND WITHOUT A DELETE.
+        They are not this person's to remove, and a close button that
+        refuses is worse than no close button. The dot says whose they are.
+      */}
+      {published
+        .filter((p) => !views.some((v) => v.name === p.name))
+        .map((v) => (
+          <button
+            key={`pub-${v.name}`}
+            type="button"
+            onClick={() => onApply(v.query)}
+            title="عرض نشره المالك لدورك"
+            className="min-h-11 md:min-h-0 inline-flex items-center max-w-[10rem] truncate rounded-sm border border-[var(--sys-primary)]/40 bg-[var(--sys-primary-soft)] px-2 py-1 text-xs text-[var(--sys-foreground)] hover:text-[var(--sys-primary)]"
+          >
+            {v.name}
+          </button>
+        ))}
+
       {views.map((v) => (
         <span
           key={v.name}
