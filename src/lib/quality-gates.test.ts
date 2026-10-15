@@ -312,10 +312,43 @@ describe('the payload', () => {
    * Locally, with no flag, it still skips — nobody is made to build
    * before running the suite.
    */
-  const CSS_BUDGET_KB = 102.61;
+  /*
+   * ── 102.61 → 96.03, AND THE 6.5 KB CAME FROM THE FONTS ──
+   *
+   * A ratchet that only ever holds is half a ratchet: when the sheet
+   * SHRINKS, the slack has to be taken away or the next screen spends it
+   * without anybody choosing to.
+   *
+   * `src/app/(system)/fonts.ts` moved from `next/font/google` to
+   * `next/font/local`. Google's loader writes an `@font-face` block per
+   * script per weight with a `unicode-range` on each — and it was writing
+   * them for cyrillic, cyrillic-ext, latin-ext and vietnamese, which no
+   * screen in this product renders. Measured on a clean build, with
+   * `.next-verify` deleted first:
+   *
+   *     before   105,028 bytes   102.566 KB   19 woff2 files
+   *     after     98,329 bytes    96.024 KB   10 woff2 files
+   *
+   * Nine font files and 6.5 KB of stylesheet, for subsets nobody reads.
+   * The number below is the measurement, not a round figure, and it is
+   * re-pegged the same way it was last time: to the truth.
+   */
+  const CSS_BUDGET_KB = 96.03;
 
   it(`keeps the first-load stylesheet at or under ${CSS_BUDGET_KB} KB`, () => {
-    const dir = join(process.cwd(), '.next/static');
+    /*
+     * MEASURED WHEREVER THE BUILD WAS WRITTEN.
+     *
+     * This read `.next/static` outright, and `next dev` writes there too —
+     * so running the suite beside a dev server measured the DEV sheet and
+     * reported it as the production one. `next.config.ts` exists partly
+     * for this: `NEXT_DIST_DIR` builds elsewhere precisely so these
+     * budgets can be measured without stopping the server somebody is
+     * working against. Honouring it here is what makes that possible.
+     *
+     * CI sets nothing, so it reads `.next` exactly as before.
+     */
+    const dir = join(process.cwd(), process.env.NEXT_DIST_DIR || '.next', 'static');
     /*
      * WHY THE FLAG IS CHECKED AND NOT JUST THE DIRECTORY.
      *
