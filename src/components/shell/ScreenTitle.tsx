@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { activePath } from '@/lib/active-route';
 import { usePathname } from 'next/navigation';
 import { ALL_ROUTES } from '@/lib/route-registry';
 
@@ -31,11 +32,17 @@ import { ALL_ROUTES } from '@/lib/route-registry';
 export function ScreenTitle({ note, children }: { note?: React.ReactNode; children?: React.ReactNode }) {
   const pathname = usePathname();
 
-  // The longest matching prefix, so /settings/geo/countries/5 is still the
-  // countries screen rather than nothing.
-  const route = ALL_ROUTES.filter(
-    (r) => pathname === r.path || pathname.startsWith(r.path + '/')
-  ).sort((a, b) => b.path.length - a.path.length)[0];
+  /*
+   * The longest matching prefix, so /settings/geo/countries/5 is still the
+   * countries screen rather than nothing.
+   *
+   * This file had the rule right and kept it to itself, while the sidebar
+   * and the phone drawer each asked per item and lit two. It is one
+   * function now — `src/lib/active-route.ts` — so the heading and the menu
+   * cannot disagree about where somebody is.
+   */
+  const lit = activePath(pathname, ALL_ROUTES.map((r) => r.path));
+  const route = ALL_ROUTES.find((r) => r.path === lit);
 
   // A path outside the registry has no name to borrow, and inventing one
   // here would be a heading nobody could find in the menu.

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { isActiveRoute } from '@/lib/active-route';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavGroup } from '@/lib/route-registry';
@@ -59,7 +60,13 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
     };
   }, [sheet]);
 
-  const active = (path: string) => pathname === path || pathname.startsWith(path + '/');
+  /*
+   * The same single answer the sidebar uses. Per-item `startsWith` lights
+   * more than one item whenever one path is a prefix of another, and the
+   * drawer had exactly that: on «صفحات الهبوط» it lit «المتجر» too.
+   */
+  const drawnPaths = primary.map((r) => r.path);
+  const active = (path: string) => isActiveRoute(pathname, path, drawnPaths);
 
   if (primary.length === 0 || yielding) return null;
 

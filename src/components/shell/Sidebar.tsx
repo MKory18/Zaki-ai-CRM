@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { isActiveGroup, isActiveRoute } from '@/lib/active-route';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from './NotificationsProvider';
@@ -37,13 +38,19 @@ export function Sidebar({
   // NotificationsProvider; this only reads it.
   const { byRoute } = useNotifications();
 
+  /**
+   * Every path this menu draws. The «which item is lit» question cannot be
+   * answered per item — `/store` matches on `/store/landing-pages` too —
+   * so the answer needs the whole set. See src/lib/active-route.ts.
+   */
+  const drawnPaths = useMemo(() => groups.flatMap((g) => g.routes.map((r) => r.path)), [groups]);
+
   /** The group the current page lives in — always open, never collapsible shut. */
   const activeGroup = useMemo(
     () =>
-      groups.find((g) =>
-        g.routes.some((r) => pathname === r.path || pathname.startsWith(r.path + '/'))
-      )?.key ?? null,
-    [groups, pathname]
+      groups.find((g) => isActiveGroup(pathname, g.routes.map((r) => r.path), drawnPaths))?.key ??
+      null,
+    [groups, pathname, drawnPaths]
   );
 
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -258,7 +265,7 @@ export function Sidebar({
                 </button>
               )}
               {isOpen && group.routes.map((route) => {
-                const isActive = pathname === route.path || pathname.startsWith(route.path + '/');
+                const isActive = isActiveRoute(pathname, route.path, drawnPaths);
                 // Line at rest, filled on the one you are on. Four items of
                 // the same shape, one of them slightly brighter, is a
                 // difference people miss; a filled glyph is not.
