@@ -199,6 +199,14 @@ describe('what «on sale right now» means', () => {
   it('is active, and either endless or not yet over', () => {
     expect(liveOfferWhere(now)).toEqual({
       status: 'ACTIVE',
+      // AND NOT THE OFFER AFTER THE ORDER. «العرض بعد الطلب» is a live
+      // bundle with a live price — it is simply not for sale AT THE DOOR,
+      // and every caller of this predicate is a door: the storefront
+      // grid's from-price, the product page's picker, and
+      // `activeOffersFor`, which is what an order is priced from. See
+      // `the-offer-after-the-order.test.ts` for why the exclusion lives
+      // in the predicate rather than in its three callers.
+      postOrderOffer: false,
       OR: [{ endsAt: null }, { endsAt: { gt: now } }],
     });
   });
@@ -206,7 +214,7 @@ describe('what «on sale right now» means', () => {
   it('asks the database, not the page', () => {
     // A finished offer must be unreachable by guessing its id, the same way
     // an inactive one is — so the rule is a `where`, never a filter after.
-    expect(Object.keys(liveOfferWhere(now))).toEqual(['status', 'OR']);
+    expect(Object.keys(liveOfferWhere(now))).toEqual(['status', 'postOrderOffer', 'OR']);
   });
 });
 
@@ -529,7 +537,8 @@ describe('editing an offer obeys the same rule', () => {
     expect(fields.sort()).toEqual(
       [
         'compareAtPrice', 'deliveryIncluded', 'discount', 'endsAt', 'freeQuantity',
-        'isDefault', 'name', 'quantity', 'sellingPrice', 'sortOrder', 'status',
+        'isDefault', 'name', 'postOrderOffer', 'quantity', 'sellingPrice', 'sortOrder',
+        'status',
       ].sort()
     );
     for (const field of fields) {
@@ -556,6 +565,10 @@ describe('editing an offer obeys the same rule', () => {
       freeQuantity: 0,
       discount: 0,
       deliveryIncluded: true,
+      // «العرض بعد الطلب» — false on a new bundle, which is also what the
+      // column says, so an unstated flag is an ordinary bundle on sale at
+      // the door rather than one hidden until an order exists.
+      postOrderOffer: false,
       isDefault: false,
       sortOrder: 0,
       status: 'ACTIVE',
