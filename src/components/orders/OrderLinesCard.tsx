@@ -8,7 +8,7 @@ import { amount, type Currency } from '@/lib/format';
 import { ProductLinesEditor, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { RiArchiveLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { raiseEditRequest } from '@/components/orders/raiseEditRequest';
-import { BEFORE_OPERATIONS } from '@/lib/change-request-routing';
+import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import type { ChangeableField } from '@/lib/change-request-fields';
 import { MAX_REASON, MIN_REASON } from '@/lib/order-edit-reason';
 import { useAsk } from '@/components/ui/Confirm';
@@ -200,7 +200,7 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
    * So a multi-line confirmed order is refused in words that say what to
    * do instead, and it is recorded as RV44 rather than half-built.
    */
-  const pastConfirmation = !BEFORE_OPERATIONS.includes(order.confirmationStatus);
+  const pastConfirmation = (TERMINAL_CONFIRMATION_STATUSES as string[]).includes(order.confirmationStatus);
 
   function lineChanges():
     | { ok: true; changes: Partial<Record<ChangeableField, string | number | null>> }

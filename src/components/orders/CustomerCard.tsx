@@ -7,7 +7,7 @@ import { useRegions } from '@/hooks/useRegions';
 import { RiHistoryLine, RiLoader4Line, RiPencilLine, RiUserLine } from '@remixicon/react';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import { raiseEditRequest } from '@/components/orders/raiseEditRequest';
-import { BEFORE_OPERATIONS } from '@/lib/change-request-routing';
+import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import type { ChangeableField } from '@/lib/change-request-fields';
 import { MAX_REASON, MIN_REASON } from '@/lib/order-edit-reason';
 import { useAsk } from '@/components/ui/Confirm';
@@ -115,7 +115,7 @@ export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved,
    * name, to the same name» is a row a supervisor has to read and decide
    * for nothing.
    */
-  const pastConfirmation = !BEFORE_OPERATIONS.includes(order.confirmationStatus);
+  const pastConfirmation = (TERMINAL_CONFIRMATION_STATUSES as string[]).includes(order.confirmationStatus);
 
   function changedFields(): Partial<Record<ChangeableField, string | number | null>> {
     const now = {
