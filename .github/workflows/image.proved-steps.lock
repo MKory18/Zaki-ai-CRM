@@ -1,0 +1,98 @@
+      - name: The image name and the tag
+        id: image
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=ghcr.io/$owner/zaki-ai-crm" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-$(echo "${{ github.sha }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Build it, into this runner
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: zaki-ai-crm:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── THE PROOF, AND NOT A READING OF THE DOCKERFILE ──
+      #
+      # The line this replaces was `CMD wget …`, indented, with no
+      # HEALTHCHECK keyword — so for as long as it existed `docker inspect`
+      # reported this image as having no health check at all, and nothing
+      # anywhere said so. A guard that reads the Dockerfile would have
+      # passed on that line too. This one asks Docker.
+
+      - name: Does the image declare a health check?
+        run: |
+          set -eu
+          declared=$(docker inspect --format '{{if .Config.Healthcheck}}yes{{else}}no{{end}}' zaki-ai-crm:smoke)
+          echo "Healthcheck declared: $declared"
+          if [ "$declared" != "yes" ]; then
+            echo "::error::الصورة بلا HEALTHCHECK — Coolify ما رح يعرف إذا الحاوية جاهزة"
+            exit 1
+          fi
+
+      - name: Does it start, migrate, and report itself healthy?
+        run: |
+          set -eu
+          # `--network host`: the postgres service above listens on the
+          # runner's own localhost, and the entrypoint runs
+          # `prisma migrate deploy` before the server listens.
+          docker run -d --name smoke --network host \
+            -e DATABASE_URL='postgresql://smoke:smoke-test-password-not-used-anywhere@127.0.0.1:5432/smoke?schema=public' \
+            -e JWT_SECRET='smoke-test-secret-not-used-anywhere' \
+            -e RUN_WORKER=false \
+            zaki-ai-crm:smoke
+
+          # Up to three minutes: the migrations run first, and the health
+          # check's own start period is 120s.
+          status=starting
+          for _ in $(seq 1 36); do
+            status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' smoke 2>/dev/null || echo gone)
+            case "$status" in
+              healthy) break ;;
+              none) echo "::error::الحاوية اشتغلت بلا فحص صحّة"; break ;;
+              gone) echo "::error::الحاوية وقعت قبل ما تردّ"; break ;;
+            esac
+            sleep 5
+          done
+
+          echo "Final health: $status"
+          if [ "$status" != "healthy" ]; then
+            echo "── docker logs ──"
+            docker logs smoke 2>&1 | tail -80 || true
+            echo "── /api/health ──"
+            # The body, for the person reading this failure: it is a closed
+            # vocabulary of fixed words and carries nothing private.
+            curl -s -o - -w ' (HTTP %{http_code})\n' http://127.0.0.1:3000/api/health || true
+            exit 1
+          fi
+
+          # And the route itself, not only Docker's verdict on it.
+          curl -fsS http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -q '"status"'
+
+      - name: Publish the proved image, under both tags
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -eu
+          name='${{ steps.image.outputs.name }}'
+          tag='${{ steps.image.outputs.tag }}'
+          docker tag zaki-ai-crm:smoke "$name:$tag"
+          docker tag zaki-ai-crm:smoke "$name:main"
+          docker push "$name:$tag"
+          docker push "$name:main"
+          # The digest, so the tag can be traced back to the bytes that ran.
+          docker inspect --format '{{index .RepoDigests 0}}' "$name:$tag"
+
+      # ── AND THE LAST STEP DOES NOTHING UNTIL THE OWNER IS READY ──
+      #
+      # The two secrets come from Coolify's own «Webhooks» panel and are
+      # added by hand (docs/ops/DEPLOY.md). While either is missing this
+      # step prints one line and succeeds, so production keeps deploying
+      # from the mirrors and merging this file changes nothing.
+      #
+      # They are read through `env:` and never interpolated into the script.
+      # A `${{ secrets.… }}` inside a `run:` block is substituted into the
+      # shell BEFORE the shell runs, so it reaches the log on `set -x`, on a
+      # syntax error, and in any error message that quotes the command.
