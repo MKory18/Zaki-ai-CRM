@@ -595,13 +595,30 @@ export interface AiRoute {
 async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const ai = readStored(company?.settings ?? null);
-  // The installation's own accounts come first; a company's stored settings
-  // are the fallback, so a deployment configured before «احفظو للـ System»
-  // existed keeps answering without anybody re-entering anything.
   const sys = (await readSystemSetting<SystemAi>(SYSTEM_AI)) ?? {};
 
-  const fallback = (AI_PROVIDERS.find((p) => p.id === sys.provider)?.id ??
-    AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ??
+  /**
+   * ── NARROWEST FIRST, AND A COMPANY'S CHOICE IS NARROWER THAN A
+   *    DEFAULT ──
+   *
+   * This read the installation's provider BEFORE the company's, with the
+   * reasoning that «a deployment configured before the system card
+   * existed keeps answering without anybody re-entering anything». That
+   * holds only for a company that never chose — and it is why «المزوّد»
+   * appeared to do nothing: on `main` every key save stamped
+   * `SYSTEM_AI.provider`, so every installation that ever saved a key had
+   * one, and it beat whatever the company picked. «حطّيت المفتاح وما
+   * اشتغل», exactly.
+   *
+   * The order is the one the task names: the assistant's own choice, then
+   * the COMPANY's when it made one, then the installation default, then
+   * OpenRouter. `readStored` hands back the raw stored object, so an
+   * absent `ai.provider` is genuinely «never chose» and not a default
+   * standing in for one — which is what makes «when it chose one»
+   * expressible at all.
+   */
+  const fallback = (AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ??
+    AI_PROVIDERS.find((p) => p.id === sys.provider)?.id ??
     'OPENROUTER') as AiProvider;
   const override = job ? ai.assistants?.[job] : undefined;
   const chosen = AI_PROVIDERS.find((p) => p.id === override?.provider)?.id as AiProvider | undefined;
@@ -616,7 +633,9 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
     override?.model?.trim() ||
       (chosen && chosen !== fallback
         ? providerInfo(provider).defaultModel
-        : sys.model || ai.model || providerInfo(provider).defaultModel)
+        // The same order as the vendor above: the company's own model
+        // first, because it is the narrower statement.
+        : ai.model || sys.model || providerInfo(provider).defaultModel)
   );
 
   let key: string | null = null;
@@ -709,7 +728,27 @@ async function vendorError(res: Response, model: string): Promise<Error> {
   } catch {
     said = '';
   }
-  return new Error(`AI_HTTP_${res.status}|${model}|${said.replace(/\s+/g, ' ').trim()}`);
+  /*
+   * ── AND NOTHING KEY-SHAPED SURVIVES THE TRIP ──
+   *
+   * The body is the vendor's words about OUR request, and some vendors
+   * quote the request back. OpenAI's 401 reads «Incorrect API key
+   * provided: sk-proj-…», and a proxy in front of a local model can echo
+   * the whole `Authorization` header.
+   *
+   * This message is thrown, and three callers log the error — the daily
+   * summary, the assistant and the order intake all `console.warn` it. So
+   * without this line a rotated key would put its own prefix in the
+   * server log, in a repository that deliberately refuses to show even
+   * the last four characters on the settings screen.
+   *
+   * The body is kept for CLASSIFICATION — «credit balance» and nothing
+   * else is read out of it — so redacting it costs nothing.
+   */
+  const scrubbed = said
+    .replace(/(sk|sk-ant|sk-or|sk-proj|ghp|gho|xox[baprs])[-_][A-Za-z0-9_-]{6,}/gi, '«مفتاح»')
+    .replace(/(Bearer|x-api-key|api[-_]?key)\s*[:=]?\s*[A-Za-z0-9_\-.]{12,}/gi, '$1 «مفتاح»');
+  return new Error(`AI_HTTP_${res.status}|${model}|${scrubbed.replace(/\s+/g, ' ').trim()}`);
 }
 
 export interface ChatRequest {

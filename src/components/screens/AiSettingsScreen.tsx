@@ -292,15 +292,29 @@ export function AiSettingsScreen() {
       const res = await fetch('/api/settings/ai/system', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: system.provider,
-          model: system.model,
-          providerKeys: { [id]: null },
-        }),
+        /*
+         * ── AND DELETING A KEY IS DELETING A KEY ──
+         *
+         * This sent `provider` and `model` too, and the independent
+         * review found why that is worse than it looks: `systemAi()`
+         * COMPUTES them when nothing is stored, so what looks like
+         * echoing the current value is in fact a write. Deleting an
+         * unused OpenAI key would stamp OpenRouter and a free Llama as
+         * the installation default and kill a company's Anthropic choice.
+         *
+         * The sibling `saveSystem` was fixed and this one was not —
+         * which is the whole reason the review reads the code and not
+         * the commit message.
+         */
+        body: JSON.stringify({ providerKeys: { [id]: null } }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'تعذر الحذف');
       setSystem(json.system);
+      savedDefault.current = {
+        provider: json.system?.provider ?? null,
+        model: json.system?.model ?? null,
+      };
       setSystemMsg({ ok: true, text: 'حُذف المفتاح.' });
     } catch (e) {
       setSystemMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحذف' });
