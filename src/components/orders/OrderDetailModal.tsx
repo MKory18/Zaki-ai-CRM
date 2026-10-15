@@ -29,6 +29,7 @@ import { orderStages } from '@/lib/order-stages';
 import { useRegions } from '@/hooks/useRegions';
 import { amount, arDateShort, arDateTime, type Currency } from '@/lib/format';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiEBike2Line, RiLockLine, RiMoneyDollarCircleLine, RiPencilLine, RiTimerLine, RiTruckLine, RiUserFollowLine } from '@remixicon/react';
+import { POST_ORDER_ADDITION_AR } from '@/lib/post-order-offer-copy';
 
 /** Settlement is its own fact, never merged into the delivery status. */
 const SETTLEMENT_AR: Record<string, string> = {
@@ -631,9 +632,26 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   {order.offer?.name || 'مباشر'} ({order.quantity} {t.units}{order.freeQuantity ? ` + ${order.freeQuantity} هدية` : ''})
                 </span>
               </div>
+              {/*
+                  «زيادة بعد الطلب» — WHEN it happened, not only what it is.
+
+                  Every `OrderAddOn` is a line the CUSTOMER added on the
+                  thank-you screen after their order was taken: either from
+                  the page's recommendation list or by accepting the
+                  product's post-order offer. «منتجات إضافية» named the row
+                  and said nothing about the moment, and the moment is the
+                  whole of what the person on the phone needs — a line the
+                  customer chose before anybody called is not a line this
+                  agent sold, and the total they are about to read aloud
+                  moved after the order was placed.
+
+                  The words come from `POST_ORDER_ADDITION_AR`, the same
+                  constant the server writes into the activity entry, so the
+                  timeline and this row can never say two different things.
+              */}
               {order.addOns?.length > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[var(--sys-muted-foreground)]">منتجات إضافية:</span>
+                  <span className="text-[var(--sys-muted-foreground)]">{POST_ORDER_ADDITION_AR}:</span>
                   <span className="font-medium text-[var(--sys-heading)] text-end">
                     {order.addOns.map((a: any) => `${a.productName} ×${a.quantity} (${money(a.total)})`).join(' + ')}
                   </span>

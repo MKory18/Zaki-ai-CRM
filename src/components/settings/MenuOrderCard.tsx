@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { THEME_CHOICES } from '@/lib/system-themes';
 import { Select } from '@/components/ui/Input';
 import { NAV } from '@/lib/route-registry';
 import { applyArrangement, EMPTY_LAYOUT, type NavLayout } from '@/lib/nav-arrangement';
@@ -216,9 +217,24 @@ export function MenuOrderCard() {
               ))}
             </Select>
             {forRole && (
-              <p className="mt-1.5 text-xs text-[var(--sys-warning)]">
-                هذا أساس الدور — بيشوفه كلّ واحد فيه إلا إذا رتّب لحاله.
-              </p>
+              <>
+                <p className="mt-1.5 text-xs text-[var(--sys-warning)]">
+                  هذا أساس الدور — بيشوفه كلّ واحد فيه إلا إذا رتّب لحاله.
+                </p>
+                {/*
+                  AND THE LOOK THE ROLE OPENS ON, IN THE SAME PLACE.
+
+                  The menu base and the opening theme are the same kind of
+                  decision — what a new person in this role finds on their
+                  first morning — set by the same permission. Two screens
+                  for one decision is how one of them is never found.
+
+                  ⚠️ It is a BASE, not a cage, and the sentence says so:
+                  the moment that person picks a look of their own, this
+                  stops being read for them.
+                */}
+                <RoleOpeningTheme roleId={forRole} />
+              </>
             )}
           </CardContent>
         </Card>
@@ -302,6 +318,63 @@ export function MenuOrderCard() {
           </CardContent>
         </Card>
       ))}
+    </div>
+  );
+}
+
+/**
+ * THE LOOK A NEW PERSON IN THIS ROLE OPENS ON.
+ *
+ * «بلا» writes NULL and not the default's key — «nobody chose» and «somebody
+ * chose the default» are different facts the day the default moves, and the
+ * door refuses to collapse them.
+ */
+function RoleOpeningTheme({ roleId }: { roleId: string }) {
+  const [theme, setTheme] = useState('');
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+
+  // The role changed under us — forget what the previous one was set to,
+  // rather than showing it against the new name.
+  useEffect(() => {
+    setTheme('');
+    setState('idle');
+  }, [roleId]);
+
+  const save = async (next: string) => {
+    setTheme(next);
+    setState('saving');
+    try {
+      await apiJson(`/api/roles/${roleId}/theme`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: next }),
+      });
+      setState('saved');
+    } catch {
+      setState('failed');
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-[var(--sys-border)] pt-2.5">
+      <label className="block text-xs text-[var(--sys-muted-foreground)] mb-1">
+        المظهر الذي يفتح عليه هذا الدور
+      </label>
+      <Select value={theme} onChange={(e) => void save(e.target.value)}>
+        <option value="">بلا — الافتراضي</option>
+        {THEME_CHOICES.map((c) => (
+          <option key={c.key} value={c.key}>
+            {c.ar}
+          </option>
+        ))}
+      </Select>
+      <p className="mt-1.5 text-xs text-[var(--sys-muted-foreground)]">
+        أساسٌ لا قيد: أوّلُ ما يختارُ الواحدُ مظهرَه، يُقرأُ اختيارُه هو ولا يُقرأُ هذا.
+      </p>
+      {state === 'saved' && <p className="mt-1 text-xs text-[var(--sys-success)]">انحفظ.</p>}
+      {state === 'failed' && (
+        <p className="mt-1 text-xs text-[var(--sys-destructive)]">تعذّر الحفظ — جرّب مرّة ثانية.</p>
+      )}
     </div>
   );
 }

@@ -26,15 +26,38 @@ import { join, relative } from 'node:path';
 const root = process.cwd();
 
 /**
- * THE ONE THAT MUST STAY BARE, AND WHY.
+ * THE ONES THAT MUST STAY BARE, AND WHY.
  *
  * `OrderDetailModal` releases its editing lock on unmount with
  * `keepalive`, so the request survives the page navigation that is
  * unmounting it. `apiFetch` would attach a 15s `AbortSignal` — which
  * defeats `keepalive` — and would redirect to /login on a 401 at the
  * worst possible moment, while a component is being torn down.
+ *
+ * `OrderForm` is the SELLER'S OWN PAGE, read by an anonymous shopper who
+ * has no session and must never be given one. Every call it makes carries
+ * `credentials: 'omit'` on purpose, and `apiFetch` would send a customer
+ * who has just placed an order to OUR sign-in screen on a 401 — on a page
+ * that is not ours and has no account behind it. The order submit and the
+ * recommendation add-on have always been bare for this reason; they are
+ * invisible to the counter below only because their URL is assembled from
+ * a prop, and «the one that happens to match the regex» is not a rule.
+ * The post-order offer's door is spelled out, so it is listed.
  */
-const DELIBERATE = new Map<string, number>([['src/components/orders/OrderDetailModal.tsx', 1]]);
+/*
+ * EACH EXCEPTION CARRIES ITS OWN REASON, as a string the file must still
+ * contain. It used to be one literal — `keepalive: true` — checked against
+ * every entry, which was correct while there was exactly one entry and
+ * became a wrong test the moment there were two: the second file is bare
+ * for a different reason and would have been failed for not having the
+ * first one's. The point of the check is that an exception stops being
+ * granted when the thing that earned it leaves the file, so the thing
+ * itself is named per file.
+ */
+const DELIBERATE = new Map<string, { n: number; because: string }>([
+  ['src/components/orders/OrderDetailModal.tsx', { n: 1, because: 'keepalive: true' }],
+  ['src/components/landing/OrderForm.tsx', { n: 1, because: "credentials: 'omit'" }],
+]);
 
 /** What is left to move, file by file. Every number here may only fall. */
 const DEBT = new Map<string, number>([
@@ -119,7 +142,7 @@ describe('the bare-fetch debt only goes down', () => {
   it('adds no new one', () => {
     const news: string[] = [];
     for (const [file, n] of found) {
-      const allowed = (DEBT.get(file) ?? 0) + (DELIBERATE.get(file) ?? 0);
+      const allowed = (DEBT.get(file) ?? 0) + (DELIBERATE.get(file)?.n ?? 0);
       if (n > allowed) news.push(`${file}: ${n} > ${allowed}`);
     }
     expect(
@@ -131,18 +154,18 @@ describe('the bare-fetch debt only goes down', () => {
   it('and the ledger says the truth about what is left', () => {
     const stale: string[] = [];
     for (const [file, n] of DEBT) {
-      const now = (found.get(file) ?? 0) - (DELIBERATE.get(file) ?? 0);
+      const now = (found.get(file) ?? 0) - (DELIBERATE.get(file)?.n ?? 0);
       if (now < n) stale.push(`${file}: صار ${now} — أنزِل الرقم من ${n}`);
     }
     expect(stale, `دَينٌ سُدِّد ولم يُسجَّل:\n${stale.join('\n')}`).toEqual([]);
   });
 
-  it('and the one deliberate exception is still deliberate', () => {
-    for (const [file, n] of DELIBERATE) {
+  it('and every deliberate exception is still deliberate', () => {
+    for (const [file, { n, because }] of DELIBERATE) {
       const src = code(readFileSync(join(root, file), 'utf8'));
       expect(bareApiCalls(src), `${file}: لم يعد فيه النداءُ المقصود`).toBe(n);
-      // It is bare because of `keepalive`; if that goes, so does the reason.
-      expect(src, `${file}: زال سببُ الاستثناء`).toContain('keepalive: true');
+      // The thing that earned the exception. If it goes, so does the reason.
+      expect(src, `${file}: زال سببُ الاستثناء «${because}»`).toContain(because);
     }
   });
 });

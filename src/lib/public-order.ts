@@ -1,5 +1,6 @@
 import { priceIncludesDeliveryFor } from './delivery-fees';
-import { activeOffersFor, type OfferView } from './offers';
+import { activeOffersFor, postOrderOfferFor, type OfferView } from './offers';
+import { DEFAULT_POST_ORDER_OFFER, postOrderOfferSettings } from './post-order-offer';
 import { db } from './db';
 import { findOrCreateCustomer } from './customer-identity';
 import { normalizePhoneNumber } from './phone';
@@ -671,12 +672,68 @@ export async function createPublicOrder(
       })
     : [];
 
+  /*
+   * ─── THE OFFER AFTER THE ORDER ───
+   *
+   * «وصلنا طلبك!» → «زيد علبة كمان؟ 15 بدل 25». ONE offer, the one the
+   * seller flagged on the head product, at the price the SERVER computes —
+   * `postOrderOfferFor` runs the same `toOfferView` the door's own prices
+   * came from, so the figure on the thank-you screen is the figure this
+   * shop charges and not a number a page remembered.
+   *
+   * NOTHING ABOUT THE ORDER THAT WAS JUST CREATED CHANGES HERE. This is a
+   * read, after the write, added to the RESPONSE — the same shape and the
+   * same place `recommendations` and `addonToken` already occupy. The order
+   * row, its lines, its total and its events are byte-for-byte what they
+   * were before this block existed, which is the one thing this brief was
+   * allowed to touch order creation for and the one thing it must not do.
+   *
+   * The HEAD product, because the head is the line every screen shows and
+   * the one the customer was looking at. A basket of four products offering
+   * four after-order bundles is four decisions on a screen that has just
+   * been thanked; the brief says one.
+   *
+   * Never fatal. A thank-you screen that fails to load because an upsell
+   * query threw is a customer who does not know their order was taken.
+   */
+  let postOrderOffer: OfferView | null = null;
+  let postOrderWindowMinutes = DEFAULT_POST_ORDER_OFFER.windowMinutes;
+  try {
+    postOrderOffer = await postOrderOfferFor(
+      db,
+      companyId,
+      head.product.id,
+      store.country.minorUnit
+    );
+    if (postOrderOffer) {
+      postOrderWindowMinutes = (await postOrderOfferSettings(companyId)).windowMinutes;
+    }
+  } catch (e) {
+    console.error('Post-order offer lookup failed (non-fatal):', e);
+  }
+
   return {
     ok: true,
     body: {
       success: true,
       orderNumber: order.orderNumber,
       addonToken,
+      /**
+       * The one after-order bundle, or null when the seller set none.
+       *
+       * `OfferView` and not a shape of its own: `price` on it is already
+       * what the customer is CHARGED, and `listPrice` is the bundle before
+       * its own reduction — which is exactly «15 بدل 25» and is the only
+       * honest way for a screen to print those two numbers without
+       * subtracting anything itself.
+       */
+      postOrderOffer,
+      /**
+       * How long the offer may still be taken, in minutes, from the
+       * company's own setting. The screen STATES it; it does not enforce it
+       * — every gate is on the server, in `postOrderGate`.
+       */
+      postOrderWindowMinutes,
       // Server-authoritative amounts — the ONLY source for Purchase
       // conversion tracking (client/browser values are never trusted).
       total: Number(order.totalAmount),

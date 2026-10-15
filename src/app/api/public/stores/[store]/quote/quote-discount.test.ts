@@ -384,6 +384,24 @@ const NO_OFFER_BOUND: Record<string, string> = {
   'src/app/api/orders/ai-intake/route.ts':
     'the write path prices a reviewer-confirmed total with no offer bound; its preview call already ' +
     'passes the offer’s discount, so subtracting it again here would take it off twice',
+  /*
+   * «العرض بعد الطلب» — `computeCod({ lines: [], addOns: [one] })`, called
+   * for one reason: to read back `.addOns`, which is the add-on's value
+   * computed by the one COD authority and rounded by the order's own
+   * currency. There are no LINES in that call, so there is nothing for a
+   * discount to be allocated across — and the offer's own reduction is
+   * already inside the price it is handed, because `postOrderOfferFor`
+   * returns what the customer is CHARGED (`toOfferView` applies it through
+   * `allocateDiscount`). Passing it again here would take it off twice,
+   * which is the same trap the AI intake's entry above describes.
+   *
+   * `computeCod` itself says why an add-on is never discounted: «the
+   * order's discount was agreed on the original order, before any add-on
+   * existed». An add-on changes what is collected, not what was discounted.
+   */
+  'src/lib/post-order-offer.ts':
+    'computeCod is called with no lines, only to value one add-on; the offer’s own reduction is ' +
+    'already inside the charged price it is handed, and an add-on is never discounted by contract',
 };
 
 describe('every door that computes money passes a discount', () => {
