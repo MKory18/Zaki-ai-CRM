@@ -210,7 +210,20 @@ export async function ownedCounts(tx: Tx, scope: QueueScope, userId: string): Pr
  * asked to succeed, only to try.
  * ═══════════════════════════════════════════════════════════════════════
  */
-export const CONTACT_FIRST_ACTIONS = ['confirm', 'reject', 'cancel', 'schedule_follow_up'] as const;
+/*
+ * AND `edit` JOINED THEM, because it was the way around all four.
+ *
+ * «افتح وعدّل» was open from the first second: an agent who had rung
+ * nobody could open the order, change the quantity, the price or the
+ * address, and save — while «تأكيد» and «تأجيل» and «ألغِ» were still
+ * locked behind the same rule. The owner's words: it opens after a contact
+ * attempt too.
+ *
+ * «رقم خطأ» unlocks it, as it unlocks the others: it IS an attempt, and it
+ * is exactly the finding that most often makes an edit the right next
+ * move.
+ */
+export const CONTACT_FIRST_ACTIONS = ['confirm', 'reject', 'cancel', 'schedule_follow_up', 'edit'] as const;
 export type ContactFirstAction = (typeof CONTACT_FIRST_ACTIONS)[number];
 
 export function needsContactFirst(args: {

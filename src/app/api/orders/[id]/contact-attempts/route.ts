@@ -3,7 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable } from '@/lib/rbac';
-import { CONTACT_METHODS, CONTACT_RESULTS } from '@/lib/confirmation-workflow';
+import { CONTACT_METHODS, CONTACT_RESULTS, NO_ANSWER_RESULTS } from '@/lib/confirmation-workflow';
 import { logAudit } from '@/lib/audit';
 import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
 import { assertCancellable, type StateSource } from '@/lib/order-state';
@@ -151,7 +151,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
 
       const noAnswers = await tx.orderContactAttempt.count({
-        where: { orderId: id, result: { in: ['NO_ANSWER', 'BUSY'] } },
+        where: { orderId: id, result: { in: [...NO_ANSWER_RESULTS] } },
       });
 
       const terminal = ['CONFIRMED', 'REJECTED', 'CANCELLED'].includes(order.confirmationStatus);
@@ -173,7 +173,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
        * the returns door, counted — not by a status written here.
        */
       const stillOurs = assertCancellable(order as unknown as StateSource).allowed;
-      if (result === 'NO_ANSWER' && noAnswers >= NO_ANSWER_LIMIT && !terminal && stillOurs) {
+      /*
+       * ANY of the three, not `NO_ANSWER` alone.
+       *
+       * The counter above has always counted BUSY too, and the close fired
+       * only on `NO_ANSWER` — so an order whose third attempt was busy
+       * reached «3/3» and then closed nothing, and sat there with no door
+       * out of it. Three calls that never reached anybody is the same
+       * evidence whichever way the line failed.
+       */
+      if (
+        (NO_ANSWER_RESULTS as readonly string[]).includes(result!) &&
+        noAnswers >= NO_ANSWER_LIMIT &&
+        !terminal &&
+        stillOurs
+      ) {
         await tx.order.update({
           where: { id },
           data: {

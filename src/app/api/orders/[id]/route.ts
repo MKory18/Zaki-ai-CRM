@@ -22,6 +22,7 @@ import { authorize, can, getPermissionScope } from '@/lib/authorization';
 import { MAX_REASON, MIN_REASON, reasonRefusal } from '@/lib/order-edit-reason';
 import { CHANGEABLE_FIELDS, CHANGE_FIELD_AR } from '@/lib/change-request-fields';
 import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
+import { CONTACT_FIRST_MESSAGE, needsContactFirst } from '@/lib/confirmation-queue';
 
 import { orderSeal, sealedFieldsIn, sealMessage, handedToCourier } from '@/lib/order-seal';
 import { courierActionAr, courierActionFor, courierMessage, sealedAmong } from '@/lib/courier-change';
@@ -919,6 +920,39 @@ export async function PATCH(
      * through — this refuses the door, not the decision.
      * ═══════════════════════════════════════════════════════════════════
      */
+    /*
+     * ═══════════════════════════════════════════════════════════════════
+     * AND BEFORE CONFIRMATION, THE AGENT HOLDING IT HAS TO HAVE TRIED.
+     *
+     * «تأكيد الطلب» and «تأجيل» and «ألغِ» were locked until the order
+     * carried a contact attempt (C1) — and «افتح وعدّل» was not. So an
+     * agent who had rung nobody could open the order, change the quantity,
+     * the price or the address, and save. The rule existed and the widest
+     * door in it was open.
+     *
+     * It binds exactly the person the queue handed the order to, which is
+     * what `needsContactFirst` has always said: a supervisor correcting a
+     * record is not being asked to ring a customer first.
+     *
+     * «رقم خطأ» unlocks it, like the others — it IS an attempt, and it is
+     * the finding that most often makes an edit the right next move.
+     * ═══════════════════════════════════════════════════════════════════
+     */
+    if (!viaRequest && existing.claimedById === user.id) {
+      const asked = CHANGEABLE_FIELDS.filter(
+        (f) => (data as Record<string, unknown>)[f] !== undefined
+      );
+      if (asked.length > 0) {
+        const attempts = await db.orderContactAttempt.count({ where: { orderId: id } });
+        if (needsContactFirst({ action: 'edit', isHolder: true, hasAttempt: attempts > 0 })) {
+          return NextResponse.json(
+            { errorAr: CONTACT_FIRST_MESSAGE, code: 'CONTACT_FIRST', fields: asked },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     if (
       !viaRequest &&
       /*

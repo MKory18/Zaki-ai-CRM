@@ -55,18 +55,35 @@ describe('the blacklist', () => {
 describe('«طلباتي»', () => {
   const src = () => repoFile('src/components/screens/ConfirmationMineScreen.tsx');
 
-  it('tells the in-confirmation section apart from a search that matched nothing', () => {
+  it('tells a tab that is empty apart from a search that matched nothing', () => {
     const body = src();
     expect(body).toContain("findOpen.trim() ? (");
-    expect(body).toContain('لا طلبَ بيدك يطابق هذا البحث');
+    expect(body).toContain('لا طلبَ في هذا التبويب يطابق هذا البحث');
     expect(body).toContain('لا يوجد طلب بيدك الآن');
   });
 
-  it('gives the confirmed section its own words, not the other section’s', () => {
+  it('and «لا يرد» says what it holds rather than borrowing «للشغل»’s words', () => {
+    /*
+     * The three tabs are three different jobs, so «اسحب طلباً من مركز
+     * التأكيد» — which is advice about «للشغل» — would be the same fault
+     * the confirmed list used to have, one tab over.
+     */
     const body = src();
-    expect(body).toContain("findDone.trim() ? (");
-    expect(body).toContain('لا طلبَ مؤكَّداً يطابق هذا البحث');
-    expect(body).toContain('لم تؤكّد طلباً بعد');
+    expect(body).toContain('ما في طلب ما ردّ عليه حدا');
+    expect(body).toContain('جرت محاولة أو محاولتان معها بلا رد');
+  });
+
+  it('gives «أكّدتها» its own words — and says WHICH day it looked in', () => {
+    const body = src();
+    expect(body).toContain('confirmed.q ? (');
+    expect(body).toContain('لا طلبَ مؤكَّداً في هذا اليوم يطابق هذا البحث');
+    /*
+     * «لم تؤكّد طلباً بعد» was a lie the moment this list became one day:
+     * she has confirmed four hundred, none of them on the day on screen.
+     * The day is named in both sentences, and the way out is to change it.
+     */
+    expect(body).toMatch(/title=\{`لم تؤكّد طلباً في \$\{confirmed\.day\}`\}/);
+    expect(body).toContain('غيِّر اليومَ أعلاه');
     // The copy that used to sit under the confirmed list belonged above it.
     expect(
       (body.match(/اسحب طلباً من الطابور/g) ?? []).length,
@@ -74,10 +91,12 @@ describe('«طلباتي»', () => {
     ).toBeLessThanOrEqual(1);
   });
 
-  it('offers a way out of the search it is reporting', () => {
+  it('offers a way out of the search it is reporting, in both kinds of tab', () => {
     const body = src();
     expect(body).toMatch(/label: 'امسح البحث', onClick: \(\) => setFindOpen\(''\)/);
-    expect(body).toMatch(/label: 'امسح البحث', onClick: \(\) => setFindDone\(''\)/);
+    // «أكّدتها» searched the server, so clearing it has to ask again — and
+    // from page one, because page nine of the old search does not exist.
+    expect(body).toMatch(/setDoneQuery\(''\); setDonePage\(1\);/);
   });
 
   it('is a whole screen, with its actions still on it', () => {
