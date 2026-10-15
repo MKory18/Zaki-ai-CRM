@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeDecor } from './ThemeDecor';
 
 /**
  * THE THREE SCREENS BEFORE THE WORK.
@@ -35,6 +36,11 @@ export function BrandStage({
 }) {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4">
+      {/* The door: sign in, pick a country, pick a store. The brand earns
+          attention here; inside, the numbers do. The theme's own ambient
+          layer rides on top of the brand gradient below, built from the
+          same tokens. See src/lib/theme-decoration.ts. */}
+      <ThemeDecor place="door" />
       {/* Navy into petrol into the glow: the brand's own three, in order. */}
       <div
         aria-hidden

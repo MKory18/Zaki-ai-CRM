@@ -143,6 +143,16 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         company: {
           select: { id: true, name: true },
         },
+        /*
+         * THE LOOK THIS PERSON'S ROLE OPENS ON.
+         *
+         * Read here, with the user, because the layout asks for it on
+         * every single page render and a second query per page for one
+         * nullable string is a round trip nobody needs. It is consulted
+         * ONLY when the person has not chosen a theme of their own — see
+         * `openingTheme`.
+         */
+        roleRef: { select: { systemTheme: true } },
       },
     });
 
@@ -170,6 +180,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       companyName: user.company?.name,
       commissionRate: user.commissionRate,
       systemTheme: user.systemTheme,
+      /** The base their role opens on. Their own choice above wins over it. */
+      roleTheme: user.roleRef?.systemTheme ?? null,
       permissions: Object.keys(effective.grants),
       legacyPermissions: !user.roleId,
     };

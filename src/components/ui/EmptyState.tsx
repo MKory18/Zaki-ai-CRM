@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { RemixiconComponentType } from '@remixicon/react';
 import { Button } from './Button';
+import { ThemeDecor } from '@/components/shell/ThemeDecor';
 
 /**
  * WHAT A SCREEN SAYS WHEN IT HAS NOTHING.
@@ -40,7 +41,12 @@ export function EmptyState({
   action?: { label: string; onClick?: () => unknown; href?: string };
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+    <div className="relative flex flex-col items-center gap-3 px-6 py-12 text-center">
+      {/* An empty list is the other place nothing is being measured. The
+          moment a row appears, the row is what the layer sits behind — so
+          this is drawn by the empty state and by nothing that renders data.
+          See src/lib/theme-decoration.ts. */}
+      <ThemeDecor place="empty" />
       {Icon && <Icon className="w-6 h-6 text-[var(--sys-muted)]" aria-hidden />}
       <p className="text-sm font-semibold text-[var(--sys-heading)]">{title}</p>
       {why && <p className="max-w-sm text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{why}</p>}
