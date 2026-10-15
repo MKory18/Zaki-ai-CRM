@@ -53,14 +53,23 @@ describe('the shop is two menu entries', () => {
     ]);
   });
 
-  it('and the eight that dressed the shop are no longer screens of their own', () => {
+  it('and the nine that dressed the shop are no longer screens of their own', () => {
     const paths = ALL_ROUTES.map((r) => r.path);
     for (const moved of Object.keys(OLD_STORE_ROUTES)) {
       expect(paths, `${moved} ما زال مدخلاً في العقد`).not.toContain(moved);
     }
-    // Eight is the number that moved. A ninth appearing here without a
-    // redirect beside it would be a screen nobody can reach.
-    expect(Object.keys(OLD_STORE_ROUTES)).toHaveLength(8);
+    /*
+     * NINE, AND IT WAS EIGHT WHEN THIS WAS WRITTEN.
+     *
+     * «الآراء» (`/store/reviews`, owner decision D8) landed on main while
+     * this task was being built, as a third entry in the group — and its
+     * own comment in the registry gave the reason it belongs in «المحتوى»:
+     * «this is about what the shop SAYS». So it moved with the other
+     * eight, and this number is the count of what moved, not a constant.
+     * A tenth appearing without a redirect beside it is a screen nobody
+     * can reach, which is what the describe above this one holds.
+     */
+    expect(Object.keys(OLD_STORE_ROUTES)).toHaveLength(9);
   });
 
   it('and «منصّة التجريب» did not move into the shop', () => {
@@ -87,7 +96,7 @@ describe('the shop is two menu entries', () => {
 describe('no old storefront address answers 404', () => {
   const config = stripComments(repoFile('next.config.ts'));
 
-  it('every one of the eight redirects permanently to its own panel', () => {
+  it('every one of the nine redirects permanently to its own panel', () => {
     for (const [old, target] of Object.entries(OLD_STORE_ROUTES)) {
       const want = storeTabHref(target.tab, target.section);
       /*

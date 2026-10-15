@@ -87,6 +87,21 @@ export const STORE_TABS: StoreTabDef[] = [
     line: 'كلام المتجر عن نفسه، وكيف يتنقّل الزبون فيه ويبحث.',
     sections: [
       { key: 'pages', label: 'الصفحات والسياسات', permissions: LOOK },
+      /**
+       * «الآراء», FOLDED IN RATHER THAN LEFT A THIRD ENTRY.
+       *
+       * The reviews screen (owner decision D8) landed on `main` while this
+       * task was being built, as a third entry in the storefront group —
+       * and its own comment in the registry gave the reason it belongs
+       * here: «this is about what the shop SAYS, not about how the system
+       * RUNS». That is the sentence that defines this tab.
+       *
+       * Nothing of it changed but its place in the MENU: the screen, the
+       * moderation, the rating links and the notification that points at
+       * `/store/reviews` all work, because that address redirects to this
+       * panel like the other eight.
+       */
+      { key: 'reviews', label: 'الآراء', permissions: LOOK },
       { key: 'menus', label: 'القوائم', permissions: LOOK },
       { key: 'search', label: 'البحث والفلاتر', permissions: LOOK },
       { key: 'languages', label: 'اللغة', permissions: LOOK },
@@ -116,6 +131,7 @@ export const OLD_STORE_ROUTES: Record<string, { tab: StoreTab; section: string }
   '/store/design': { tab: 'front', section: 'home' },
   '/store/themes': { tab: 'front', section: 'look' },
   '/store/pages': { tab: 'content', section: 'pages' },
+  '/store/reviews': { tab: 'content', section: 'reviews' },
   '/store/menus': { tab: 'content', section: 'menus' },
   '/store/search': { tab: 'content', section: 'search' },
   '/store/languages': { tab: 'content', section: 'languages' },

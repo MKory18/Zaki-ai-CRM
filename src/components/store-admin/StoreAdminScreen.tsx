@@ -8,6 +8,7 @@ import { StoresScreen } from '@/components/screens/StoresScreen';
 import { StoreDesignScreen } from '@/components/screens/StoreDesignScreen';
 import { StoreThemeScreen } from '@/components/screens/StoreThemeScreen';
 import { StorePagesScreen } from '@/components/screens/StorePagesScreen';
+import { StoreReviewsScreen } from '@/components/screens/StoreReviewsScreen';
 import { StoreMenusScreen } from '@/components/screens/StoreMenusScreen';
 import { StoreSearchScreen } from '@/components/screens/StoreSearchScreen';
 import { StoreLanguagesScreen } from '@/components/screens/StoreLanguagesScreen';
@@ -54,6 +55,7 @@ const PANELS: Record<string, () => React.ReactElement> = {
   'front/home': () => <StoreDesignScreen />,
   'front/look': () => <StoreThemeScreen />,
   'content/pages': () => <StorePagesScreen />,
+  'content/reviews': () => <StoreReviewsScreen />,
   'content/menus': () => <StoreMenusScreen />,
   'content/search': () => <StoreSearchScreen />,
   'content/languages': () => <StoreLanguagesScreen />,

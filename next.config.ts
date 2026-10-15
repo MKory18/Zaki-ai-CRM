@@ -140,6 +140,13 @@ const nextConfig: NextConfig = {
       { source: '/store/design', destination: '/store?tab=front&sec=home', permanent: true },
       { source: '/store/themes', destination: '/store?tab=front&sec=look', permanent: true },
       { source: '/store/pages', destination: '/store?tab=content&sec=pages', permanent: true },
+      /*
+       * «الآراء» landed on main as a NINTH entry while this was being
+       * built. It is a panel of «المحتوى» now, for the reason its own
+       * registry comment gave — «what the shop SAYS» — and the
+       * notification that links to the old address still arrives.
+       */
+      { source: '/store/reviews', destination: '/store?tab=content&sec=reviews', permanent: true },
       { source: '/store/menus', destination: '/store?tab=content&sec=menus', permanent: true },
       { source: '/store/search', destination: '/store?tab=content&sec=search', permanent: true },
       { source: '/store/languages', destination: '/store?tab=content&sec=languages', permanent: true },

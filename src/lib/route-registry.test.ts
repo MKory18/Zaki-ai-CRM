@@ -38,16 +38,22 @@ describe('navigation contract', () => {
     // by, which are one job and so one screen. 62 with /growth/bench,
     // the test bench's results table — a growth screen whose numbers are
     // deliberately outside every figure the rest of the product shows.
+    // 63 with /store/reviews — «الآراء», owner decision D8: what buyers
+    // said after delivery, and the three things done about it (publish,
+    // hide with a recorded reason, choose the product's source).
     // A screen is registered when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
     //
-    // 54 when the storefront group went from ten entries to two. Eight
+    // 54 when the storefront group went from eleven entries to two. NINE
     // screens stopped being MENU ENTRIES and became the three tabs of
-    // `/store` (src/lib/store-admin.ts); not one of them was deleted, and
-    // each old address redirects to its panel permanently. A registry
-    // entry is a place in the menu, and eight places in the menu for one
-    // shop is what the owner called «معجّق … بتضيع».
+    // `/store` (src/lib/store-admin.ts) — the eight that dressed the shop,
+    // and «الآراء», which arrived as a third entry while that was being
+    // built and whose own comment here said it belongs with the shop's
+    // CONTENT. Not one of them was deleted, and each old address redirects
+    // to its panel permanently. A registry entry is a place in the menu,
+    // and nine places in the menu for one shop is what the owner called
+    // «معجّق … بتضيع».
     const paths = ALL_ROUTES.map((route) => route.path);
     expect(paths).toHaveLength(54);
     expect(new Set(paths).size).toBe(54);

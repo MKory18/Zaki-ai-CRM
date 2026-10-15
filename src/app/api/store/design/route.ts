@@ -4,8 +4,9 @@ import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
-import { parseSections, landingSectionsSchema } from '@/lib/landing-sections';
+import { countdownRefusalIn, parseSections, landingSectionsSchema, stampManualReviews } from '@/lib/landing-sections';
 import { parseStoreTheme } from '@/lib/store-theme';
+import { offerEndings } from '@/lib/offers';
 import { cartBarApplies } from '@/lib/store-theme';
 import { z } from 'zod';
 
@@ -112,15 +113,35 @@ export async function PUT(req: Request) {
     const parsed = saveSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: 'تعذّر قراءة الأقسام' }, { status: 400 });
 
+    /**
+     * A COUNTDOWN SET TO «تلقائي» NEEDS A REAL ENDING TO READ.
+     *
+     * Owner decision D8 — the same rule as the landing-page save door, and
+     * the SAME FUNCTION, not a second copy of it. The difference is which
+     * offers are the ones in question: a shop's home page sells the whole
+     * store, so the ending it may read is the soonest one across the
+     * store's active offers.
+     */
+    const wantsOfferClock = parsed.data.sections.some(
+      (s) => s.type === 'urgency' && s.enabled && s.countdown === 'offer'
+    );
+    const endsAt = wantsOfferClock ? await offerEndings(db, companyId, { storeId: store.id }) : [];
+    const refusal = countdownRefusalIn(parsed.data.sections, { endsAt, now: new Date() });
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
+
+    // The same stamp as the landing-page door, from the same function: a
+    // manual review's author is the server's to write, never the browser's.
+    const stamp = stampManualReviews(parsed.data.sections, { name: user.name || user.email || '' });
+
     await db.store.update({
       where: { id: store.id },
-      data: { homeDraft: JSON.stringify(parsed.data.sections) },
+      data: { homeDraft: JSON.stringify(stamp.sections) },
     });
 
     await logAudit({
       companyId, userId: user.id, action: 'STORE_HOME_SAVED',
       entity: 'Store', entityId: store.id,
-      newData: { sections: parsed.data.sections.length },
+      newData: { sections: stamp.sections.length, manualReviewsStamped: stamp.stamped },
     });
 
     const after = await load(store.id, companyId);

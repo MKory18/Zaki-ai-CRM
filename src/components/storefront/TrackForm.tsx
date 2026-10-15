@@ -27,6 +27,15 @@ interface Tracking {
   stepLabelAr: string | null;
   eta: string | null;
   finished: boolean;
+  /**
+   * WHERE THIS CUSTOMER MAY RATE WHAT ARRIVED — owner decision D8.
+   *
+   * Sent only for a delivered order, and sent HERE because this is the one
+   * place a stranger has already proved they hold both halves: the phone
+   * and the reference. A path, never a URL — the host is the one they are
+   * already on, which is the shop's own domain when it has one.
+   */
+  ratingPath: string | null;
 }
 
 export function TrackForm({ slug }: { slug: string }) {
@@ -177,6 +186,23 @@ export function TrackForm({ slug }: { slug: string }) {
             طلب <bdi dir="ltr">{result.orderNumber}</bdi> — بتاريخ{' '}
             <bdi dir="ltr">{result.placedAt}</bdi>
           </p>
+
+          {/* ASKED ONCE THE GOODS ARRIVED, AND ONLY THEN. A link offered
+              before delivery is an invitation to rate a parcel nobody has
+              opened; the server decides, and a null means «not yet». */}
+          {result.ratingPath && (
+            <a
+              href={result.ratingPath}
+              className="block px-5 py-3 text-center text-base font-bold"
+              style={{
+                background: 'var(--store-accent)',
+                color: 'var(--store-accent-text)',
+                borderRadius: 'var(--store-radius)',
+              }}
+            >
+              قيّم المنتج
+            </a>
+          )}
         </div>
       )}
     </div>
