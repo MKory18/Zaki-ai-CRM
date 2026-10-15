@@ -5,7 +5,9 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { STORE_TYPE_LABEL } from '@/lib/store-types';
 import { publicAddress } from '@/lib/public-address';
 import { RiAlertLine, RiCheckLine, RiEqualizer2Line, RiExternalLinkLine, RiInformationLine, RiLinksLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
+import { storeTabHref } from '@/lib/store-admin';
 import { useToast } from '@/components/ui/Toast';
 import { apiJson } from '@/lib/api-client';
 import { catalogModeAr } from '@/lib/catalog-mode';
@@ -91,6 +93,9 @@ export function StoresScreen() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  /** The shop the header is editing. Its tabs are the one primary action. */
+  const current = shops?.find((s) => s.current) ?? null;
 
   async function patchStore(shop: Shop, body: Record<string, unknown>) {
     setBusy(shop.id);
@@ -206,9 +211,39 @@ export function StoresScreen() {
 
   return (
     <div className="space-y-4" dir="rtl">
-      <PageHeader
+      {/*
+        LEVEL ONE OF TWO. This screen is every shop; the tabs behind «أدِر
+        هالمتجر» are one shop. There is nothing deeper, as D5 asks.
+
+        The one primary action is the way INTO the shop you are already
+        standing in — the thing somebody who opened «المتجر» came to do.
+        Creating a shop is not here and never was: a shop is created in
+        «البلدان والمتاجر», and that link is in the empty state.
+      */}
+      <PanelHeader
         title="المتجر"
-        description="كل متاجر الشركة — بطاقة لكل متجر: الشعار والاسم وحالة الفتح والرابط والقالب والمنتجات المعروضة وصحة المتجر."
+        line="كل متاجر الشركة — بطاقة لكل متجر: الفتح والرابط والقالب والمعروض وصحة المتجر."
+        primary={
+          current ? (
+            <a href={storeTabHref('front')}>
+              <Button size="sm">
+                <RiEqualizer2Line className="h-4 w-4" /> أدِر «{current.name}»
+              </Button>
+            </a>
+          ) : null
+        }
+        help={
+          <>
+            <p>
+              إدارة متجر تفتح ثلاثة تبويبات: «الواجهة» شكله وصفحته الرئيسية، «المحتوى» كلامه وقوائمه
+              وبحثه ولغته، و«العنوان» رابطه ومساراته القديمة.
+            </p>
+            <p>
+              «أدِر» من بطاقةِ متجرٍ آخر يبدّل متجرك الحالي إليه في الطريق — فلا شاشةَ تطلب منك
+              التبديل يدوياً ثمّ العودة.
+            </p>
+          </>
+        }
       />
 
       {loadFailed && (
@@ -452,9 +487,12 @@ function Card({
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {/* Into the shop's own tabs, switching store on the way. It used
+            to open the landing-pages list — one of ten entries, and not the
+            one somebody pressing «أدِر» means. */}
         <button
           type="button"
-          onClick={() => onOpen('/store/landing-pages')}
+          onClick={() => onOpen(storeTabHref('front'))}
           className="tap-safe inline-flex items-center gap-1 rounded-lg bg-[var(--sys-primary)] px-2.5 py-1 text-xs font-bold text-[var(--sys-primary-foreground)] hover:bg-[var(--sys-primary)]/90"
         >
           <RiEqualizer2Line className="h-4 w-4" /> أدِر هالمتجر
@@ -488,11 +526,11 @@ function Card({
           have one editor; this links to it rather than growing fields. ── */}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--sys-surface-strong)] pt-2 text-xs">
         <span className="text-[var(--sys-muted)]">مظهر المتجر:</span>
-        <button type="button" onClick={() => onOpen('/store/design')} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
-          التصميم
+        <button type="button" onClick={() => onOpen(storeTabHref('front', 'home'))} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+          الصفحة الرئيسية
         </button>
-        <button type="button" onClick={() => onOpen('/store/themes')} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
-          القوالب
+        <button type="button" onClick={() => onOpen(storeTabHref('front', 'look'))} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
+          القالب والألوان
         </button>
         <a href={`/settings/geo?store=${shop.id}`} className="tap-safe flex items-center gap-1 font-semibold text-[var(--sys-primary)] hover:underline">
           الشعار والأيقونة

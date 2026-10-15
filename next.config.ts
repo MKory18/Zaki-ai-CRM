@@ -119,6 +119,32 @@ const nextConfig: NextConfig = {
       // The single-product shop is one card on /store now: its old address
       // moves bookmarks and pasted links along permanently.
       { source: '/store/single-product', destination: '/store', permanent: true },
+
+      /*
+       * THE EIGHT STOREFRONT SCREENS THAT BECAME THREE TABS.
+       *
+       * Ten menu entries for one shop is what the owner called «معجّق …
+       * بتضيع»; the entries are gone and the screens are not — each one
+       * renders as a panel of `/store?tab=…&sec=…`. Every old address is
+       * a bookmark somebody has, a link in a chat, and a line in a note,
+       * so none of them may ever answer 404.
+       *
+       * `permanent: true` is a 308: a browser that followed it once stops
+       * asking, which is the point — the old address is not coming back.
+       *
+       * These are written out rather than generated from
+       * `src/lib/store-admin.ts` because this file is read at build time
+       * by the Next config loader; `a-shop-is-two-entries.test.ts` holds
+       * the two lists in step instead, and fails the moment they differ.
+       */
+      { source: '/store/design', destination: '/store?tab=front&sec=home', permanent: true },
+      { source: '/store/themes', destination: '/store?tab=front&sec=look', permanent: true },
+      { source: '/store/pages', destination: '/store?tab=content&sec=pages', permanent: true },
+      { source: '/store/menus', destination: '/store?tab=content&sec=menus', permanent: true },
+      { source: '/store/search', destination: '/store?tab=content&sec=search', permanent: true },
+      { source: '/store/languages', destination: '/store?tab=content&sec=languages', permanent: true },
+      { source: '/store/domain', destination: '/store?tab=address&sec=domain', permanent: true },
+      { source: '/store/routes', destination: '/store?tab=address&sec=routes', permanent: true },
     ];
   },
   typescript: {

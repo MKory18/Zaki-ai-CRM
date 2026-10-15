@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { repoFile, stripComments } from './guard-source';
 import { UNCATEGORISED_LABEL } from '@/components/ui/ProductPicker';
 import { ALL_ROUTES, NAV } from './route-registry';
+import { OLD_STORE_ROUTES, STORE_TABS } from './store-admin';
 import { PAGE_TEMPLATES, buildTemplate } from './page-templates';
 
 /**
@@ -174,7 +175,20 @@ describe('the shop’s screens are in the shop’s tab', () => {
     // single-product address redirects to /store permanently instead of
     // living on as a second entry for the same thing.
     expect(paths).not.toContain('/store/single-product');
-    expect(paths.indexOf('/store')).toBeLessThan(paths.indexOf('/store/design'));
+    expect(paths.indexOf('/store')).toBe(0);
+
+    /*
+     * AND THE THINGS THAT DRESS IT ARE NOT MENU ENTRIES ANY MORE.
+     *
+     * This line used to read «/store comes before /store/design», which
+     * was the right rule for a group of ten. The eight are the three tabs
+     * of `/store` now, so the rule is stronger: nothing in this group is
+     * an eighth of a shop.
+     */
+    for (const moved of Object.keys(OLD_STORE_ROUTES)) {
+      expect(paths, `${moved} ما زال مدخلاً في القائمة`).not.toContain(moved);
+      expect(ALL_ROUTES.map((r) => r.path), `${moved} ما زال في العقد`).not.toContain(moved);
+    }
 
     const growth = NAV.find((g) => g.key === 'growth')!;
     for (const gone of ['/growth/landing-pages', '/growth/single-product-stores']) {
@@ -187,14 +201,23 @@ describe('the shop’s screens are in the shop’s tab', () => {
   it('and two menu entries do not both read «الصفحات»', () => {
     const labels = NAV.flatMap((g) => g.routes.map((r) => r.label));
     expect(new Set(labels).size, 'مدخلان بالاسم نفسه').toBe(labels.length);
-    const pages = ALL_ROUTES.find((r) => r.path === '/store/pages')!;
+    /*
+     * The policy pages are a SECTION now, not an entry, and the rule
+     * applies to the sections too: «الصفحات» alone would be the same
+     * word the landing pages wear, inside a shop that has both.
+     */
+    const pages = STORE_TABS.flatMap((t) => t.sections).find((x) => x.key === 'pages')!;
     expect(pages.label).not.toBe('الصفحات');
+    const sectionLabels = STORE_TABS.flatMap((t) => t.sections).map((x) => x.label);
+    expect(new Set(sectionLabels).size, 'قسمان بالاسم نفسه').toBe(sectionLabels.length);
   });
 
   it('and the store card reaches its design, templates and icon', () => {
     const src = stripComments(repoFile('src/components/screens/StoresScreen.tsx'));
-    for (const path of ['/store/design', '/store/themes']) {
-      expect(src, `البطاقة لا تصل إلى ${path}`).toContain(path);
+    // The addresses are BUILT, not spelled: one map of tabs, so a card
+    // cannot link to a panel that was renamed out from under it.
+    for (const target of ["storeTabHref('front', 'home')", "storeTabHref('front', 'look')"]) {
+      expect(src, `البطاقة لا تصل إلى ${target}`).toContain(target);
     }
     // The logo and the icon have one editor; this links to it rather than
     // growing a second copy of the fields.
@@ -222,8 +245,11 @@ describe('the shop’s screens are in the shop’s tab', () => {
     // …a full navigation, because the selection is read server-side…
     expect(src).toMatch(/window\.location\.href = href/);
     // …and the screens are opened through it, not with a bare link.
-    for (const path of ['/store/design', '/store/themes', '/store/landing-pages']) {
-      expect(src, `${path} يُفتح برابطٍ لا يبدّل المتجر`).toContain(`onOpen('${path}`);
+    expect(src, 'صفحات الهبوط تُفتح برابطٍ لا يبدّل المتجر').toContain(
+      "onOpen('/store/landing-pages'"
+    );
+    for (const target of ["onOpen(storeTabHref('front'))", "onOpen(storeTabHref('front', 'home'))", "onOpen(storeTabHref('front', 'look'))"]) {
+      expect(src, `${target} يُفتح برابطٍ لا يبدّل المتجر`).toContain(target);
     }
     // No screen sends somebody away to do something first.
     expect(src, 'ما زالت البطاقة تطلب التبديل يدوياً').not.toMatch(/بدّل إلى هذا المتجر من الأعلى/);

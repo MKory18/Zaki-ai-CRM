@@ -8,8 +8,7 @@ import { apiJson } from '@/lib/api-client';
 import type { DomainCheck } from '@/lib/domain-verify';
 import { publicAddress } from '@/lib/public-address';
 import { RiCheckboxBlankCircleLine, RiCheckLine, RiDeleteBinLine, RiFileCopyLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiShieldFlashLine, RiShieldKeyholeLine } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { routeLabel } from '@/lib/route-registry';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { arDateTime } from '@/lib/format';
 
 /**
@@ -22,8 +21,10 @@ import { arDateTime } from '@/lib/format';
  * them the shop is reachable while every customer gets an error.
  *
  * BUYING A DOMAIN needs a registrar's API and an account nobody has given
- * this system. The tab says so, in one line, and points at the tab that
- * works — rather than a form that takes a domain name and does nothing.
+ * this system. It used to be a second TAB — a tab whose whole content was
+ * «not available» and a button back to the first one. It is one line behind
+ * this panel's ⓘ now: the fact is unchanged, and the seller arriving to
+ * connect a domain is no longer asked to choose between two tabs first.
  *
  * The records are shown with a copy button and NO provider's instructions:
  * a seller on a registrar we named steps we did not check is worse off than
@@ -77,7 +78,6 @@ function CopyField({ label, value }: { label: string; value: string }) {
 export function StoreDomainScreen() {
   const confirm = useConfirm();
   const [data, setData] = useState<Payload | null>(null);
-  const [tab, setTab] = useState<'connect' | 'buy'>('connect');
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -145,56 +145,47 @@ export function StoreDomainScreen() {
   });
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        {/* `description` is a STRING rendered as text (PageHeader.tsx), so an
-            HTML tag written into it was printed to the seller verbatim: the
-            first line of this screen read «عنوانه الداخلي <code
-            dir="ltr">/s/…</code>». The address belongs in the address card
-            below, where it can be copied — not in a sentence. */}
-        <PageHeader title={routeLabel('/store/domain')}
-          description={`عنوان المتجر الذي يراه الزبون. عنوانه الداخلي ${data.publicPath} يبقى يعمل دائماً.`}
-        />
-        {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
-            {msg.text}
-          </span>
-        )}
-      </header>
-
-      <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
-        {([['connect', 'ربط نطاق موجود'], ['buy', 'شراء نطاق']] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`-mb-px border-b-2 px-3 py-2 text-xs font-semibold transition ${
-              tab === key ? 'border-[var(--sys-primary)] text-[var(--sys-primary)]' : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      {tab === 'buy' ? (
-        <div className={CARD}>
-          <p className="text-sm font-bold text-[var(--sys-heading)]">شراء نطاق من هنا غير متاح</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            الشراء يحتاج حساباً ومفتاحاً عند مُسجِّل نطاقات (registrar)، وهذا ما لم يُربط بالنظام بعد.
-            اشترِ النطاق من أي مُسجِّل تختاره، ثم اربطه من تبويب «ربط نطاق موجود» — الخطوات هي نفسها
-            أيًّا كان المُسجِّل.
-          </p>
-          <p className="mt-2 text-xs text-[var(--sys-muted)]">
-            لا نعرض لك تعليمات مُسجِّل بعينه: القيم المطلوبة واحدة، ومكان إدخالها يختلف من لوحة إلى أخرى.
-          </p>
-          <Button className="mt-3" size="sm" variant="secondary" onClick={() => setTab('connect')}>
-            اذهب إلى ربط نطاق موجود
+    <div className="space-y-4 pt-4" dir="rtl">
+      {/* `line` is a STRING rendered as text, so an HTML tag written into it
+          is printed to the seller verbatim — this screen's first line once
+          read «عنوانه الداخلي <code dir="ltr">/s/…</code>». The address
+          belongs in the address card below, where it can be copied. */}
+      <PanelHeader
+        title="الدومين"
+        line={`عنوان المتجر الذي يراه الزبون. عنوانه الداخلي ${data.publicPath} يبقى يعمل دائماً.`}
+        note={
+          msg && (
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
+              {msg.text}
+            </span>
+          )
+        }
+        primary={
+          <Button size="sm" disabled={busy || draft.trim() === (data.domain ?? '')} onClick={() => void bind()}>
+            {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} اربط النطاق
           </Button>
-        </div>
-      ) : (
-        <>
+        }
+        help={
+          <>
+            <p>
+              الشراء من هنا غير متاح: يحتاج حساباً ومفتاحاً عند مُسجِّل نطاقات، وهذا ما لم يُربط
+              بالنظام بعد. اشترِ النطاق من أي مُسجِّل، ثم اربطه هنا — الخطوات واحدة أيًّا كان.
+            </p>
+            <p>
+              النطاق لا يصبح عنوان متجرك حتى يَنجح فحص DNS حقيقي. قبل ذلك يُعرض العنوان الداخلي،
+              لأنّ رابطاً قد لا يُفتح أسوأُ من لا رابط.
+            </p>
+            <p>
+              السجلّات تُضاف في لوحة إدارة النطاق عند مُسجِّلك — أيّ سجلِّ توجيهٍ يقبله لهذا النطاق —
+              وانتشارها قد يستغرق من دقائق إلى ساعات. لا نعرض تعليمات مُسجِّلٍ بعينه: القيم واحدة،
+              ومكان إدخالها يختلف من لوحة إلى أخرى.
+            </p>
+          </>
+        }
+      />
+
+      <>
           <div className={CARD}>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-[var(--sys-heading)]">النطاق</span>
@@ -207,9 +198,6 @@ export function StoreDomainScreen() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                 />
-                <Button size="sm" disabled={busy || draft.trim() === (data.domain ?? '')} onClick={() => void bind()}>
-                  {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} اربطه
-                </Button>
                 {data.domain && (
                   <button
                     type="button"
@@ -325,15 +313,12 @@ export function StoreDomainScreen() {
               <div className={CARD}>
                 <p className="text-sm font-bold text-[var(--sys-heading)]">السجلّات المطلوبة</p>
                 <p className="mb-3 mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-                  أضف سجل TXT، <strong>وواحداً</strong> من سجلّي التوجيه (أيّهما يقبله مُسجِّلك لهذا
-                  النطاق)، في لوحة إدارة النطاق، ثم اضغط «تحقّق الآن». انتشار السجلّات قد يستغرق من
-                  دقائق إلى ساعات.
+                  أضف سجل TXT <strong>وواحداً</strong> من سجلّي التوجيه، ثم اضغط «تحقّق الآن».
                 </p>
                 {data.records.length === 0 || !data.target ? (
                   <p className="rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 p-3 text-xs leading-relaxed text-[var(--sys-warning)]">
-                    لم يُضبط عنوان التطبيق على الخادم بعد (<code dir="ltr">APP_DOMAIN</code> أو{' '}
-                    <code dir="ltr">APP_PUBLIC_IP</code>)، فلا يمكن إخبارك بقيمة التوجيه المطلوبة — لن نخترع لك
-                    قيمة تُخرج متجرك عن الخدمة. اضبطها على الخادم وستظهر هنا.
+                    لم يُضبط عنوان التطبيق على الخادم (<code dir="ltr">APP_DOMAIN</code> أو{' '}
+                    <code dir="ltr">APP_PUBLIC_IP</code>)، فلا قيمةَ توجيهٍ نعطيكها — ولن نخترع واحدة.
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -359,8 +344,7 @@ export function StoreDomainScreen() {
               </div>
             </>
           )}
-        </>
-      )}
+      </>
     </div>
   );
 }

@@ -95,12 +95,52 @@ export async function GET(req: Request) {
      * across; and the cheapest columns, because a preview is a drawing and
      * not a page.
      */
-    const sample = await db.product.findMany({
+    const productColumns = {
+      id: true, name: true, image: true, basePrice: true,
+      images: { select: { url: true }, take: 1, orderBy: { sortOrder: 'asc' } },
+    } as const;
+
+    /**
+     * AND THE SHELF COMES FIRST, NOT THE CATALOGUE TABLE.
+     *
+     * Reported 15/10: «previews show ؟ and لا منتجات although the store
+     * has published landing pages». Both were true at once, and this
+     * query is why: `Product.storeId` is NULLABLE — «null only until a
+     * product from before this is placed» (prisma/schema.prisma) — so a
+     * shop whose goods predate per-store catalogues matched nothing here,
+     * and the gallery told a shop with twelve live pages that it had no
+     * products.
+     *
+     * What a shopper actually sees on the shelf is the product of a
+     * published, shown landing page (owner's rule D2), and those pages
+     * carry `storeId` themselves. So they are asked first; the store's own
+     * ACTIVE products top the list up to four. Only a shop with neither
+     * gets the empty state, and then it is the truth.
+     */
+    const shelf = await db.landingPage.findMany({
+      where: {
+        companyId, storeId: store.id, isPublished: true, showInStore: true,
+        product: { is: { status: 'ACTIVE' } },
+      },
+      select: { product: { select: productColumns } },
+      orderBy: { updatedAt: 'desc' },
+      take: 4,
+    });
+
+    const placed = await db.product.findMany({
       where: { companyId, storeId: store.id, status: 'ACTIVE' },
-      select: { name: true, image: true, basePrice: true, images: { select: { url: true }, take: 1, orderBy: { sortOrder: 'asc' } } },
+      select: productColumns,
       orderBy: { createdAt: 'desc' },
       take: 4,
     });
+
+    // One card per product: two shown pages for one product are one
+    // product, exactly as the storefront's own shelf counts it.
+    const seen = new Set<string>();
+    const sample = [...shelf.map((p) => p.product), ...placed]
+      .filter((p): p is NonNullable<typeof p> => !!p)
+      .filter((p) => !seen.has(p.id) && (seen.add(p.id), true))
+      .slice(0, 4);
 
     return NextResponse.json({
       // The gallery's cards: enough to choose by, and no page built until
