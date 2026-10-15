@@ -38,12 +38,15 @@ describe('navigation contract', () => {
     // by, which are one job and so one screen. 62 with /growth/bench,
     // the test bench's results table — a growth screen whose numbers are
     // deliberately outside every figure the rest of the product shows.
+    // 63 with /store/reviews — «الآراء», owner decision D8: what buyers
+    // said after delivery, and the three things done about it (publish,
+    // hide with a recorded reason, choose the product's source).
     // A screen is registered when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(62);
-    expect(new Set(paths).size).toBe(62);
+    expect(paths).toHaveLength(63);
+    expect(new Set(paths).size).toBe(63);
   });
 
   it('the store section is its own group, and reads as one', () => {

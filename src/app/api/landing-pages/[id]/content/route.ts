@@ -14,7 +14,8 @@ import {
   MAX_LANDING_CSS_BYTES,
 } from '@/lib/landing-html-sanitize';
 import { landingThemeSchema } from '@/lib/landing-theme';
-import { landingSectionsSchema } from '@/lib/landing-sections';
+import { offerEndings } from '@/lib/offers';
+import { countdownRefusalIn, landingSectionsSchema, stampManualReviews } from '@/lib/landing-sections';
 import { draftState, publishContent, revertContent, saveContent, type PageContent } from '@/lib/landing-draft';
 
 interface Ctx {
@@ -70,6 +71,8 @@ export async function PUT(req: Request, ctx: Ctx) {
     }
 
     const data: Record<string, unknown> = {};
+    // How many transcribed reviews this save attributed, for the audit row.
+    let manualReviewsStamped = 0;
     if (parsed.data.html !== undefined) {
       const html = clampStoredHtml(parsed.data.html ?? '');
       if (parsed.data.html && html === null) {
@@ -102,7 +105,41 @@ export async function PUT(req: Request, ctx: Ctx) {
       if (!sections.success) {
         return NextResponse.json({ error: 'أقسام الصفحة غير صالحة' }, { status: 400 });
       }
-      data.sections = sections.data.length ? JSON.stringify(sections.data) : null;
+
+      /**
+       * A COUNTDOWN SET TO «تلقائي» NEEDS A REAL ENDING TO READ.
+       *
+       * Owner decision D8: the clock and the price read one fact. The
+       * fact is `Offer.endsAt`, and it lives on the PRODUCT'S offers —
+       * which the schema cannot see, so the rule is enforced here, where
+       * the page is written and the product is known.
+       *
+       * Asked only when an offer-bound countdown is actually present:
+       * every other save pays no query for it.
+       */
+      const wantsOfferClock = sections.data.some(
+        (s) => s.type === 'urgency' && s.enabled && s.countdown === 'offer'
+      );
+      // A page attached to no product has no offer and therefore no ending
+      // to read — which the refusal below says, instead of this guessing.
+      const endsAt =
+        wantsOfferClock && lp.productId
+          ? await offerEndings(db, companyId, { productId: lp.productId })
+          : [];
+      const refusal = countdownRefusalIn(sections.data, { endsAt, now: new Date() });
+      if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
+
+      /*
+       * AND A MANUAL REVIEW GETS ITS AUTHOR HERE, NOT IN THE BROWSER.
+       *
+       * A value the editor sends is a value the person at the editor can
+       * choose, and «أضافه المالك» typed by somebody else is worse than no
+       * attribution. Only items with no stamp are stamped: whoever fixes a
+       * typo in a colleague's transcription is not its source.
+       */
+      const stamp = stampManualReviews(sections.data, { name: user.name || user.email || '' });
+      manualReviewsStamped = stamp.stamped;
+      data.sections = stamp.sections.length ? JSON.stringify(stamp.sections) : null;
     }
 
     // Sanitised above, so what reaches the draft is what would reach a
@@ -127,6 +164,10 @@ export async function PUT(req: Request, ctx: Ctx) {
         // Which of the two this save was, in the log that gets read after
         // somebody asks «من غيّر الصفحة المنشورة؟».
         into: lp.isPublished ? 'draft' : 'live',
+        // «Who added this manual review, and when» — the editor's fields
+        // carry the answer and this is the row that proves it was stamped
+        // by the server rather than typed into the browser.
+        manualReviewsStamped,
       },
     });
 
