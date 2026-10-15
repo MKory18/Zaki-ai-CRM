@@ -59,6 +59,46 @@ export type OrdersWhereResult =
 const CLOSED_SHIPPING = ['DELIVERED', 'PARTIALLY_DELIVERED', 'RETURNED', 'CANCELLED'];
 const CLOSED_CONFIRMATION = ['CANCELLED', 'REJECTED'];
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * EVERYTHING A PARCEL IN SOMEBODY'S HAND CAN BE IDENTIFIED BY.
+ *
+ * A label carries two references — our merchant reference in the QR and
+ * the courier's barcode printed beside it — so a scan must find the order
+ * by either. The phone is matched both as typed and normalised, because a
+ * person searches with the spacing they read off a screen.
+ *
+ * LIFTED OUT OF `ordersWhere` SO «إنشاء شحنة» CAN ASK THE SAME QUESTION.
+ *
+ * That screen had no search at all, and the obvious way to give it one is
+ * to write a second `OR` beside this one. Then the two drift: somebody
+ * adds a field here, the shipment screen does not get it, and «بحثت عنه
+ * بالطلبات ولقيته وما لقيته بالشحنات» is a bug report nobody can read.
+ * One builder, two callers.
+ *
+ * `withCity` is off by default ON PURPOSE. Adding the city to the orders
+ * list's search would change what today's searches return — a governorate
+ * typed into the box would start matching every customer in it — and
+ * nobody asked for that. «إنشاء شحنة» is sorted by where parcels go, so
+ * there the city is the point.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export function orderSearchOr(
+  search: string,
+  opts: { withCity?: boolean } = {}
+): Record<string, unknown>[] {
+  const normalised = normalizePhoneNumber(search);
+  return [
+    { orderNumber: typed(search) },
+    { merchantRef: typed(search) },
+    { trackingNumber: typed(search) },
+    { customer: { fullName: typed(search) } },
+    { customer: { phone: typed(normalised || search) } },
+    { customer: { rawPhone: typed(search) } },
+    ...(opts.withCity ? [{ customer: { city: typed(search) } }] : []),
+  ];
+}
+
 export function ordersWhere(params: URLSearchParams, input: OrdersWhereInput = {}): OrdersWhereResult {
   const where: Record<string, unknown> = {};
   const and: unknown[] = [];
@@ -119,25 +159,9 @@ export function ordersWhere(params: URLSearchParams, input: OrdersWhereInput = {
     );
   }
 
-  /*
-   * EVERYTHING A PARCEL IN SOMEBODY'S HAND CAN BE IDENTIFIED BY.
-   *
-   * A label carries two references — our merchant reference in the QR and
-   * the courier's barcode printed beside it — so a scan must find the
-   * order by either. The phone is matched both as typed and normalised,
-   * because a person searches with the spacing they read off a screen.
-   */
   const search = params.get('q')?.trim();
   if (search) {
-    const normalised = normalizePhoneNumber(search);
-    where.OR = [
-      { orderNumber: typed(search) },
-      { merchantRef: typed(search) },
-      { trackingNumber: typed(search) },
-      { customer: { fullName: typed(search) } },
-      { customer: { phone: typed(normalised || search) } },
-      { customer: { rawPhone: typed(search) } },
-    ];
+    where.OR = orderSearchOr(search);
   }
 
   if (input.createdAt && (input.createdAt.gte || input.createdAt.lte)) {

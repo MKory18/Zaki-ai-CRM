@@ -10,6 +10,7 @@ import { codForOrder, resolveDeliveryFee } from '@/lib/delivery-fees';
 import { assertCancellable, assertReadyToShip, type StateSource } from '@/lib/order-state';
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { orderSearchOr } from '@/lib/order-filters';
 
 /**
  * Shipment creation.
@@ -47,6 +48,21 @@ export async function GET(req: Request) {
     /** 'only' lists what is on hold instead of what is ready. */
     const held = q.get('held');
     const productId = q.get('product');
+    /**
+     * THE SAME SEARCH THE ORDERS LIST USES, PLUS THE CITY.
+     *
+     * This screen had no search at all: a hundred confirmed orders and the
+     * only way to the one the courier is asking about was the eye. And the
+     * obvious way to give it one is to write a second `OR` here — after
+     * which the two drift, somebody adds a field to the orders list, this
+     * screen does not get it, and «لقيته بالطلبات وما لقيته بالشحنات»
+     * becomes a bug report nobody can read.
+     *
+     * So it is the one builder, with the city switched on — this list is
+     * sorted by where parcels are going, so the governorate is the thing
+     * a person types.
+     */
+    const search = q.get('q')?.trim();
 
     const orders = await db.order.findMany({
       where: {
@@ -61,6 +77,11 @@ export async function GET(req: Request) {
           : { OR: [{ shipHoldUntil: null }, { shipHoldUntil: { lte: new Date() } }] }),
         ...(regionId ? { regionId } : {}),
         ...(productId ? { items: { some: { productId } } } : {}),
+        // ANDed as its own clause, not spread: the where above already has
+        // an `OR` for the hold window, and a second one at the same level
+        // would silently replace it — the held filter would stop working
+        // the moment somebody typed in the search box.
+        ...(search ? { AND: [{ OR: orderSearchOr(search, { withCity: true }) }] } : {}),
         ...(from || to
           ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
           : {}),

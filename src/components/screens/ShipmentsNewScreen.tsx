@@ -51,7 +51,7 @@ export function ShipmentsNewScreen() {
   /** The row whose delay is being chosen — one dialog, two ways out. */
   const [delaying, setDelaying] = useState<Row | null>(null);
   const [standingDown, setStandingDown] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
+  const [filters, setFilters] = useState({ q: '', courier: '', region: '', from: '', to: '' });
   const [rows, setRows] = useState<Row[] | null>(null);
   /** How many are being held back, shown on the tab so none can seem to vanish. */
   const [heldCount, setHeldCount] = useState(0);
@@ -235,7 +235,20 @@ export function ShipmentsNewScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
+      {/*
+        FIRST, BECAUSE IT IS THE FIRST THING A PERSON DOES.
+        The courier rings about one parcel. Before this box the only way to
+        it was the eye, down a list of a hundred confirmed orders — the
+        filters below narrow by where and when, and neither of those is
+        «the one he just named».
+      */}
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-5">
+        <div className="md:col-span-5">
+          <SearchField
+            value={filters.q}
+            onChange={(v) => setFilters({ ...filters, q: v })}
+          />
+        </div>
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
@@ -547,6 +560,28 @@ function Select({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+/**
+ * The one control that is not a filter but a question: «where is this
+ * parcel». It names what it matches, because a search box that says
+ * «بحث» leaves the person guessing whether the phone will work.
+ */
+function SearchField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
+        بحث
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="رقم الطلب · اسم الزبون · رقم التلفون · رقم التتبّع · المدينة"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm"
+      />
     </label>
   );
 }
