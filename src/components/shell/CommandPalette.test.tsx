@@ -37,11 +37,40 @@ const GROUPS = [
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+/**
+ * THE BOX ASKS TWO DOORS NOW, SO «DID IT ASK» HAS TO NAME ONE.
+ *
+ * K1 gave the palette its own door: `GET /api/palette` on open for the
+ * summary, and `POST /api/palette` for the counters a typed word asks for.
+ * Both go through `apiFetch`, so a bare `expect(fetch).not.toHaveBeenCalled()`
+ * now proves only that the palette opened — not that the RECORD search
+ * stayed where it was.
+ *
+ * Which is the whole point of the four claims below, so they count calls to
+ * `/api/orders` specifically. The claim is unchanged: record lookup is the
+ * owner's alone, and a barcode is one request.
+ */
+const ordersCalls = () =>
+  fetchMock.mock.calls.filter(([url]) => String(url).startsWith('/api/orders'));
+
+/** What the palette's own door answers: five counts and what the account may do. */
+const SUMMARY = {
+  facts: [
+    { key: 'today', label: 'طلبات اليوم', count: 6, rule: 'أُنشئت اليوم في هذا المتجر', href: '/orders' },
+    { key: 'postponed', label: 'مؤجّلة', count: 2, rule: 'حالتها «مؤجّل»', href: '/orders?state=POSTPONED' },
+  ],
+  may: { pull: true, people: true, wide: true },
+};
+
 beforeEach(() => {
   viewer = { id: 'u1', role: 'SUPER_ADMIN', permissions: [] };
-  fetchMock = vi.fn(async () => ({
+  fetchMock = vi.fn(async (url: string) => ({
     ok: true,
-    json: async () => ({ orders: [{ id: 'o1', orderNumber: 'ORD-4821', customer: { fullName: 'سميّة' } }] }),
+    status: 200,
+    json: async () =>
+      String(url).startsWith('/api/palette')
+        ? SUMMARY
+        : { orders: [{ id: 'o1', orderNumber: 'ORD-4821', customer: { fullName: 'سميّة' } }] },
   }));
   vi.stubGlobal('fetch', fetchMock);
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -174,7 +203,7 @@ describe('record lookup', () => {
     open({ canSearchRecords: false });
     await type('01234567');
     await settle();
-    expect(fetchMock, 'البحث في السجلات اتّسع لمن لم يكن يملكه').not.toHaveBeenCalled();
+    expect(ordersCalls(), 'البحث في السجلات اتّسع لمن لم يكن يملكه').toEqual([]);
     expect(screen.queryByText('ORD-4821')).toBeNull();
   });
 
@@ -182,7 +211,7 @@ describe('record lookup', () => {
     open();
     await type('01234567');
     await settle();
-    expect(fetchMock).toHaveBeenCalled();
+    expect(ordersCalls().length).toBeGreaterThan(0);
     expect(screen.queryByText('ORD-4821')).toBeTruthy();
   });
 
@@ -190,7 +219,7 @@ describe('record lookup', () => {
     open();
     await type('4821');
     await settle();
-    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/orders?q=');
+    expect(String(ordersCalls()[0][0])).toContain('/api/orders?q=');
   });
 
   it('and a barcode is one request, not one per character', async () => {
@@ -203,14 +232,14 @@ describe('record lookup', () => {
       });
     }
     await settle();
-    expect(fetchMock.mock.calls.length, 'كل حرف أطلق طلباً').toBe(1);
+    expect(ordersCalls().length, 'كل حرف أطلق طلباً').toBe(1);
   });
 
   it('and two letters is the floor — one letter asks nothing', async () => {
     open();
     await type('A');
     await settle();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(ordersCalls(), 'حرفٌ واحدٌ أطلق بحثاً في السجلات').toEqual([]);
   });
 
   it('and a refused request leaves the box usable, not broken', async () => {
@@ -305,6 +334,143 @@ describe('the header it replaced', () => {
     expect(shell, 'قاعدة البحث في السجلات تغيّرت أثناء النقل').toMatch(
       /canSearchRecords\s*=\s*userRole === 'SUPER_ADMIN'/
     );
+  });
+});
+
+/**
+ * ───────────────────────────────────────────────────────────────────────
+ * K1 — THE BOX ANSWERS BEFORE ANYTHING IS TYPED.
+ *
+ * An empty palette used to be three commands and a sentence telling you to
+ * type. It opens on the state of the desk now — and the two things that
+ * can go wrong with that are a number without its rule, and a number that
+ * belongs to somebody else.
+ *
+ * The scope itself is asked of the SERVER, in
+ * `src/lib/palette-intel.test.ts` and `src/app/api/palette/…`, because
+ * that is where it is decided. What is asked here is what the box does
+ * with the answer.
+ * ───────────────────────────────────────────────────────────────────────
+ */
+describe('an open box, before a letter is typed', () => {
+  /** Let the summary request land. */
+  async function opened() {
+    const r = open();
+    await act(async () => undefined);
+    await act(async () => undefined);
+    return r;
+  }
+
+  it('shows the counts the summary came back with', async () => {
+    await opened();
+    expect(String(fetchMock.mock.calls[0][0]), 'الصندوق ما سأل بابه').toBe('/api/palette');
+    expect(screen.queryByText('طلبات اليوم')).toBeTruthy();
+    expect(screen.queryByText('6')).toBeTruthy();
+  });
+
+  it('and prints the rule under every one of them', async () => {
+    // «متأخرة» is the kind of number two people read two ways. A figure
+    // whose rule lives in a comment in a file is a figure somebody argues
+    // with at a desk.
+    await opened();
+    for (const fact of SUMMARY.facts) {
+      expect(screen.queryByText(fact.rule), `«${fact.label}» رقمٌ بلا قاعدة على الشاشة`).toBeTruthy();
+    }
+  });
+
+  it('and the commands are still there under it, not replaced by it', async () => {
+    await opened();
+    expect(screen.queryByText('تسجيل الخروج'), 'الملخّص أكل الأوامر').toBeTruthy();
+    expect(screen.queryByText('الشحنات'), 'الملخّص جاء معه بالشاشات').toBeNull();
+  });
+
+  it('and «اسحب» appears only when the server said this account pulls', async () => {
+    await opened();
+    expect(screen.queryByText('اسحب الطلب التالي')).toBeTruthy();
+    cleanup();
+    fetchMock.mockImplementation(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...SUMMARY, may: { pull: false, people: false, wide: false } }),
+    }));
+    await opened();
+    expect(screen.queryByText('اسحب الطلب التالي'), 'سحبٌ معروضٌ لمن لا يسحب').toBeNull();
+  });
+});
+
+describe('«اسحب» from the palette is the pull screen’s own door', () => {
+  async function pressPull() {
+    open();
+    await act(async () => undefined);
+    await act(async () => undefined);
+    const button = screen.getByText('اسحب الطلب التالي');
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    await act(async () => undefined);
+    return button;
+  }
+
+  it('so it posts to /api/confirmation/pull and nowhere else', async () => {
+    /*
+     * There is no second pull path and there must not be: the caps, «سجّل
+     * محاولة اتصال أولاً» and «لا توجد طلبات بانتظار التأكيد» all live
+     * behind that one route. A palette that picked its own candidate would
+     * be a way around every one of them.
+     */
+    await pressPull();
+    const pulls = fetchMock.mock.calls.filter(([url]) => String(url) === '/api/confirmation/pull');
+    expect(pulls.length, 'السحب ما مرّ من باب السحب').toBe(1);
+    expect(pulls[0][1].method).toBe('POST');
+  });
+
+  it('and shows the refusal the server gave, in the box, rather than nothing', async () => {
+    const REFUSAL = 'سجّل محاولة اتصال على طلبك الحالي قبل سحب طلب جديد';
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: !String(url).includes('/confirmation/pull'),
+      status: String(url).includes('/confirmation/pull') ? 409 : 200,
+      json: async () =>
+        String(url).includes('/confirmation/pull') ? { error: REFUSAL } : SUMMARY,
+    }));
+    await pressPull();
+    // The box stays open for it. Closing first would draw the refusal on a
+    // sheet that is already gone — «كبست وما صار شي».
+    expect(screen.queryByText(REFUSAL), 'الرفض ضاع مع إغلاق الصندوق').toBeTruthy();
+    expect(push, 'انتُقِل إلى «طلباتي» بعد رفض').not.toHaveBeenCalled();
+  });
+
+  it('and goes to «طلباتي» when the pull was granted', async () => {
+    await pressPull();
+    expect(push).toHaveBeenCalledWith('/confirmation/mine');
+  });
+});
+
+describe('«لخّصلي اليوم»', () => {
+  async function pressSummarise(answer: Record<string, unknown>) {
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (String(url) === '/api/palette/today' ? answer : SUMMARY),
+    }));
+    open();
+    await act(async () => undefined);
+    await act(async () => undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByText('لخّصلي اليوم'));
+    });
+    await act(async () => undefined);
+  }
+
+  it('writes the paragraph into the box it was asked from', async () => {
+    await pressSummarise({ text: 'اليوم فيه ستّة طلبات جديدة.', from: 'LOCAL_MODEL' });
+    expect(screen.queryByText(/ستّة طلبات جديدة/)).toBeTruthy();
+  });
+
+  it('and says when the text is the numbers rather than a model', async () => {
+    // Silence about it reads as a worse model instead of an unused one —
+    // and «المسار ليس LOCAL» is a setting the owner can change.
+    await pressSummarise({ text: 'اليوم: ٦ طلبات.', from: 'NUMBERS', why: 'NOT_LOCAL' });
+    expect(screen.queryByText(/مسار الذكاء ليس LOCAL/), 'ما قال لماذا النصّ عاديّ').toBeTruthy();
   });
 });
 
