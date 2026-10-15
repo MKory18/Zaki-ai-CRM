@@ -1,0 +1,263 @@
+# THE IMAGE IS BUILT HERE, NOT ON THE SERVER THAT SERVES PRODUCTION.
+#
+# Every deployment so far has taken the live site down, and the measured
+# shape of it is always the same: the push lands, the site keeps answering
+# for a minute or two, and then it stops ANSWERING WHILE THE BUILD IS STILL
+# RUNNING — minutes before any container is swapped — and comes back when
+# the build ends.
+#
+#   | deploy        | what changed                | site down   |
+#   |---------------|-----------------------------|-------------|
+#   | C2  14/10     | a migration and code        | ~11 minutes |
+#   | C3  15/10     | login code and screens      | 3m 54s      |
+#   | C5  15/10     | code and one screen         | 1m 22s      |
+#   | R1  15/10     | TWO LINES in a .md file     | 4m 07s      |
+#   | O8  15/10     | code and screens            | 51s         |
+#   | C2b 15/10     | code and screens            | 1m 25s      |
+#
+# R1 is the row that settles it: two lines in a document production never
+# reads, and a longer outage than C5, which changed real code. The duration
+# does not track the change — it tracks what else the machine was doing. A
+# `next build` is the heaviest thing this project ever asks of a computer,
+# and Coolify was asking for it on the one machine that was also serving
+# customers. The running app was being starved of memory and CPU by its own
+# replacement being built beside it.
+#
+# So the build moves off that machine. This workflow builds the SAME
+# Dockerfile on a GitHub runner, proves the image starts and reports itself
+# healthy, and publishes it to the registry. The server's job shrinks to
+# pulling a finished image — seconds of disk, no compiler.
+#
+# ── NOTHING SWITCHES UNTIL THE OWNER SWITCHES IT ──
+#
+# Publishing an image changes nothing by itself. Production keeps deploying
+# from the mirrors exactly as it does today until the owner follows
+# `docs/ops/DEPLOY.md` and points Coolify at this image. The webhook step at
+# the end stays silent while its two secrets are missing, so this file is
+# safe to merge on a day when nobody touches the server.
+#
+# ── THE REPOSITORY IS PUBLIC ──
+#
+# So is the image: anybody may pull it. It therefore carries NO secret. The
+# only value built into it is the placeholder `JWT_SECRET` the Dockerfile
+# already sets for `next build`, which production overrides from Coolify.
+# `GITHUB_TOKEN` below is minted for this run and expires with it.
+name: Image
+
+on:
+  # ON A PULL REQUEST IT BUILDS AND PROVES, AND PUBLISHES NOTHING.
+  #
+  # Otherwise the first time anybody learns that the image does not start is
+  # after it is merged and published — and the proof below is the whole
+  # point of this file. The paths are the ones that can change the image:
+  # everything else in a pull request cannot, and this job is the most
+  # expensive thing in the repository.
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker-entrypoint.sh'
+      - '.github/workflows/image.yml'
+      - 'package-lock.json'
+      - 'package.json'
+      - 'next.config.ts'
+      - 'prisma/**'
+  push:
+    branches: [main]
+  # So the owner can publish an image again — after a registry change, or to
+  # get a tag back — without pushing an empty commit. Run it ON main: the
+  # publishing steps are gated on that ref, so a dispatch from any other
+  # branch builds and proves the image and publishes nothing.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The one write this file needs, and nothing else: not contents, not
+  # pull-requests, not actions.
+  packages: write
+
+# Two merges a minute apart used to mean two builds racing to write `:main`,
+# and the loser could be the newer commit. The older run is cancelled.
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+
+    # A real database for the smoke test below. It exists for the length of
+    # this job, holds nothing but the migrations, and is thrown away.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smoke
+          POSTGRES_PASSWORD: smoke-test-password-not-used-anywhere
+          POSTGRES_DB: smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smoke -d smoke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # A registry path must be lowercase, and the owner's account is not.
+      # Deriving it instead of writing `mkory18` keeps this file correct if
+      # the repository ever moves.
+      - name: The image name and the tag
+        id: image
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=ghcr.io/$owner/zaki-ai-crm" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-$(echo "${{ github.sha }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built into THIS runner first, not pushed. An image nobody can start
+      # is not an image, and finding that out after publishing it means the
+      # registry holds a tag that breaks production the moment it is pulled.
+      # The layer cache makes the second build (the push, below) a re-export
+      # rather than a second compile.
+      - name: Build it, into this runner
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: zaki-ai-crm:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── THE PROOF, AND NOT A READING OF THE DOCKERFILE ──
+      #
+      # The line this replaces was `CMD wget …`, indented, with no
+      # HEALTHCHECK keyword — so for as long as it existed `docker inspect`
+      # reported this image as having no health check at all, and nothing
+      # anywhere said so. A guard that reads the Dockerfile would have
+      # passed on that line too. This one asks Docker.
+      - name: Does the image declare a health check?
+        run: |
+          set -eu
+          declared=$(docker inspect --format '{{if .Config.Healthcheck}}yes{{else}}no{{end}}' zaki-ai-crm:smoke)
+          echo "Healthcheck declared: $declared"
+          if [ "$declared" != "yes" ]; then
+            echo "::error::الصورة بلا HEALTHCHECK — Coolify ما رح يعرف إذا الحاوية جاهزة"
+            exit 1
+          fi
+
+      - name: Does it start, migrate, and report itself healthy?
+        run: |
+          set -eu
+          # `--network host`: the postgres service above listens on the
+          # runner's own localhost, and the entrypoint runs
+          # `prisma migrate deploy` before the server listens.
+          docker run -d --name smoke --network host \
+            -e DATABASE_URL='postgresql://smoke:smoke-test-password-not-used-anywhere@127.0.0.1:5432/smoke?schema=public' \
+            -e JWT_SECRET='smoke-test-secret-not-used-anywhere' \
+            -e RUN_WORKER=false \
+            zaki-ai-crm:smoke
+
+          # Up to three minutes: the migrations run first, and the health
+          # check's own start period is 120s.
+          status=starting
+          for _ in $(seq 1 36); do
+            status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' smoke 2>/dev/null || echo gone)
+            case "$status" in
+              healthy) break ;;
+              none) echo "::error::الحاوية اشتغلت بلا فحص صحّة"; break ;;
+              gone) echo "::error::الحاوية وقعت قبل ما تردّ"; break ;;
+            esac
+            sleep 5
+          done
+
+          echo "Final health: $status"
+          if [ "$status" != "healthy" ]; then
+            echo "── docker logs ──"
+            docker logs smoke 2>&1 | tail -80 || true
+            echo "── /api/health ──"
+            # The body, for the person reading this failure: it is a closed
+            # vocabulary of fixed words and carries nothing private.
+            curl -s -o - -w ' (HTTP %{http_code})\n' http://127.0.0.1:3000/api/health || true
+            exit 1
+          fi
+
+          # And the route itself, not only Docker's verdict on it.
+          curl -fsS http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -q '"status"'
+
+      - name: Stop it
+        if: always()
+        run: docker rm -f smoke 2>/dev/null || true
+
+      # ── FROM HERE DOWN, NOTHING RUNS EXCEPT ON main ──
+      #
+      # The gate is the BRANCH and not «this is not a pull request».
+      # `workflow_dispatch` can be fired on any ref, so the weaker test
+      # would let a dispatch from a feature branch publish that branch's
+      # image as `:main` — the tag the production server follows.
+      - uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── THE IMAGE THAT IS PUBLISHED IS THE IMAGE THAT WAS PROVED ──
+      #
+      # This step used to call the builder a SECOND time with `push: true`
+      # and a warm cache. Almost always that re-exports the same layers —
+      # but «almost» is the whole problem: a cache miss seconds later, or
+      # any input the cache key does not cover, and the registry holds an
+      # image that never started while the log above says «healthy». The
+      # proof would then be about a different image.
+      #
+      # So the local tag that just ran, migrated and reported healthy is
+      # the one that is tagged and pushed. There is exactly ONE build in
+      # this file, and a guard holds that.
+      #
+      # Two tags on purpose. `:main` is what a server follows; `sha-xxxxxxx`
+      # is what a rollback names, and it cannot move under anybody's feet.
+      - name: Publish the proved image, under both tags
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -eu
+          name='${{ steps.image.outputs.name }}'
+          tag='${{ steps.image.outputs.tag }}'
+          docker tag zaki-ai-crm:smoke "$name:$tag"
+          docker tag zaki-ai-crm:smoke "$name:main"
+          docker push "$name:$tag"
+          docker push "$name:main"
+          # The digest, so the tag can be traced back to the bytes that ran.
+          docker inspect --format '{{index .RepoDigests 0}}' "$name:$tag"
+
+      # ── AND THE LAST STEP DOES NOTHING UNTIL THE OWNER IS READY ──
+      #
+      # The two secrets come from Coolify's own «Webhooks» panel and are
+      # added by hand (docs/ops/DEPLOY.md). While either is missing this
+      # step prints one line and succeeds, so production keeps deploying
+      # from the mirrors and merging this file changes nothing.
+      #
+      # They are read through `env:` and never interpolated into the script.
+      # A `${{ secrets.… }}` inside a `run:` block is substituted into the
+      # shell BEFORE the shell runs, so it reaches the log on `set -x`, on a
+      # syntax error, and in any error message that quotes the command.
+      - name: Tell Coolify to pull it
+        if: github.ref == 'refs/heads/main'
+        env:
+          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${COOLIFY_WEBHOOK_URL:-}" ] || [ -z "${COOLIFY_TOKEN:-}" ]; then
+            echo "COOLIFY_WEBHOOK_URL / COOLIFY_TOKEN غير مضبوطين — التنزيل لسّا من المرايا. docs/ops/DEPLOY.md"
+            exit 0
+          fi
+          # -f so a 4xx/5xx fails this step instead of passing quietly, and
+          # the token travels in a header, never in the URL.
+          curl -fsS --max-time 30 -X POST \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            "$COOLIFY_WEBHOOK_URL" > /dev/null
+          echo "نُودي Coolify ليسحب ${{ steps.image.outputs.tag }}"

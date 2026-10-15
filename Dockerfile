@@ -96,6 +96,39 @@ USER nextjs
 
 EXPOSE 3000
 
-  CMD wget -qO- http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1
+# ── WHETHER THIS CONTAINER IS READY TO BE SENT TRAFFIC ──
+#
+# What stood here was `CMD wget …/login`, indented, with no HEALTHCHECK
+# keyword in front of it. Docker does not read that as a health probe at
+# all: it reads it as the container's default COMMAND, and because an
+# ENTRYPOINT is set below, the words become ARGUMENTS to the entrypoint
+# script — which ends in `exec node server.js` and never looks at "$@". So
+# the line ran nothing, probed nothing, and `docker inspect` reported this
+# image as having no health check from the day it was written.
+#
+# The consequence is not the whole of the deploy outage — the site goes
+# down in the MIDDLE of the build, minutes before any container is
+# swapped — but it is the reason nothing can be done about the swap: an
+# orchestrator with no readiness signal can only stop the old container
+# and start the new one, and it cannot wait for «ready» because it was
+# never told what ready means.
+#
+# `/api/health` is the route written for this (src/app/api/health/route.ts):
+# no session, nothing interpolated into the body, one indexed query at most
+# once per five seconds, 200 while the app can do its job and 503 only when
+# the database is unreachable. A late worker deliberately does NOT turn it
+# red — restarting the website does not fix the worker, and a probe that
+# restarts the wrong process manufactures the outage it was added to catch.
+#
+# --start-period=120s: the entrypoint runs `prisma migrate deploy` before
+#   the server listens, and on a server that is also building an image that
+#   is the slowest part of the start. Nothing inside this window counts as
+#   a failure.
+# --interval=30s with the route's own 5-second cache: at most one database
+#   query every 30 seconds, which is cheaper than the uptime monitor
+#   already polling the same URL.
+# --retries=3: a single refused connection during a long migration or a
+#   brief database blip is not a dead container. Three in a row is.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
