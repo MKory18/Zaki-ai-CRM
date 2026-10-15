@@ -186,6 +186,46 @@ export const BLOCK_CSS = `
   margin: 20px 0 0;
 }
 .lp-price span { font-size: 15px; font-weight: 700; }
+/* The figure this bundle replaced, beside the one being charged. Smaller and
+   quiet: a struck price the same size as the real one is two prices. */
+.lp-price s {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--store-muted);
+  text-decoration-thickness: 1.5px;
+  margin-inline-end: 10px;
+}
+/* THE OFFER, NAMED IN THE FIRST SCREEN, AS A WAY INTO THE PICKER.
+   A line, not a card: a card here would read as a fourth place to choose a
+   bundle beside the offers block and the form's own list. */
+.lp-hero-offers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--store-accent-border);
+  border-radius: var(--store-radius);
+  background: var(--store-accent-tint);
+  color: var(--store-text);
+  text-decoration: none;
+  font-size: 13.5px;
+  /* 44px of tappable height on a phone, at 13.5px type. */
+  min-height: 44px;
+}
+.lp-hero-offers b { font-weight: 800; color: var(--store-accent); }
+.lp-hero-offers em { font-style: normal; font-weight: 700; color: var(--store-accent); }
+/* A rule between the bundle's name and the count, because «قطعة واحدة 5
+   عروض» with only a gap between them reads as one sentence that does not
+   parse. The rule is a separator, not an ornament: it sits between two
+   pieces of text and behind neither. */
+.lp-hero-offers span {
+  color: var(--store-muted);
+  border-inline-start: 1px solid var(--store-accent-border);
+  padding-inline-start: 9px;
+}
 
 /* ── the one button shape on the page ── */
 .lp-cta {
@@ -577,6 +617,9 @@ export const BLOCK_CSS = `
   border-radius: calc(var(--store-radius) / 1.6);
 }
 .lp-countdown i { color: var(--store-accent); font-style: normal; font-weight: 900; }
+/* Days are named, not counted in hours: «96:00:00» is unreadable on a phone
+   and reads as a machine, while «4 أيام» is what the offer actually says. */
+.lp-countdown-days { padding-inline: 10px; }
 .lp-countdown-over { font-size: 13px; color: var(--store-muted); }
 .lp-stock { font-size: 13px; color: var(--store-muted); }
 .lp-stock strong { color: var(--store-accent); font-weight: 900; }
@@ -754,7 +797,8 @@ export const BLOCK_CSS = `
   margin: 0 auto;
   padding: 8px 20px 30px;
 }
-.lp-trust > div {
+.lp-trust > div,
+.lp-trust > a {
   flex: 1 1 140px;
   display: grid;
   justify-items: center;
@@ -768,6 +812,9 @@ export const BLOCK_CSS = `
 }
 .lp-trust strong { font-size: 13px; font-weight: 800; color: var(--store-text); }
 .lp-trust span { font-size: 11.5px; color: var(--store-muted); }
+/* The one item that is a page to open rather than a sentence to read. */
+.lp-trust > a { text-decoration: none; }
+.lp-trust > a span { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 
 /* ── footer ── */
 .lp-footer {
@@ -816,18 +863,40 @@ export const BLOCK_CSS = `
 }
 .lp-footer p { font-size: 11.5px; color: var(--store-muted); }
 
-/* ── the button that follows you down ── */
-.lp-sticky {
+/* ── the bar that follows you down: the order, and a person to ask ── */
+.lp-sticky-bar {
   position: fixed;
   inset-inline: 12px;
   bottom: 12px;
   z-index: 50;
   display: flex;
+  align-items: stretch;
+  gap: 8px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+/* WhatsApp's own green, which is not the shop's accent and is not ours to
+   recolour: a contact button painted in the brand's colour is the thing a
+   shopper recognises without reading it. Same reason «one-palette» lets a
+   handful of third-party marks through — identity, not decoration. */
+.lp-sticky-wa {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 48px square: the tap target rule, and a shape the thumb finds. */
+  width: 48px;
+  background: #25d366;
+  color: #fff;
+  border-radius: var(--store-radius);
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .45);
+}
+.lp-sticky {
+  flex: 1 1 auto;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  max-width: 520px;
-  margin: 0 auto;
   background: var(--store-accent);
   color: var(--store-accent-text);
   font-size: 15px;
@@ -843,22 +912,111 @@ export const BLOCK_CSS = `
    A button that says "order now" sitting on top of the order the visitor is
    already filling in is not urgency, it is an obstacle — and on a 375px
    phone it covered two of the fields. It leaves downwards and comes back
-   the same way, so it reads as one object moving rather than two appearing. */
-.lp-sticky {
+   the same way, so it reads as one object moving rather than two appearing.
+
+   THE WHOLE BAR, not the button inside it: half a bar sliding out from
+   under a contact icon that stays is two objects where there is one. */
+.lp-sticky-bar {
   transition: transform .22s ease, opacity .22s ease;
 }
-.lp-sticky[data-away] {
+.lp-sticky-bar[data-away] {
   transform: translateY(160%);
   opacity: 0;
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .lp-sticky { transition: none; }
+  .lp-sticky-bar { transition: none; }
 }
 /* The button sends you to the form; it must not then sit on top of it,
    nor on the last line of the footer. Only when the button is there. */
 .lp-root:has(.lp-sticky) .lp-form-section { padding-bottom: 80px; }
 .lp-root:has(.lp-sticky) .lp-footer { padding-bottom: 86px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE THREE FAMILIES — «عيادة» · «عطّار» · «ترند» (AUDIT.md §7.2)
+
+   Three looks a customer can tell apart at a glance, and all three are
+   written here as DIFFERENCES ON THE SELLING BLOCKS ONLY: the trust row,
+   the objections, the questions, the offer line in the first screen, the
+   clock and the bar at the bottom. Those are the blocks this stage
+   redesigned, and a family that also restyled the gallery and the timeline
+   would be making promises about blocks nobody has looked at yet.
+
+   TWO RULES BIND EVERY LINE BELOW, AND THEY ARE GUARDED:
+
+   1. A LOOK NEVER MOVES ANYTHING ANYBODY ARRANGED. There is no «order»,
+      no «row-reverse», no «column-reverse», no «direction» and no
+      «grid-template-areas» in this section. The seller arranged the
+      blocks; the family decides how they are drawn, and the two are
+      different jobs. «the-three-families.test.ts» fails the build on any
+      of those properties appearing inside a «[data-family=…]» rule.
+
+   2. NO DECORATION BEHIND A FIGURE. Ornament belongs at a door, on an
+      empty state, on a section header or a welcome card — never behind a
+      price, a saving, a remaining count or a clock. So no rule here puts
+      «content», a «background-image», a «mask», a «filter», a
+      «text-shadow» or an «opacity» on «.lp-price», «.lp-offer-price»,
+      «.lp-countdown», «.lp-stock» or the figure on the bar. A flat
+      surface colour is not decoration and is allowed; a pattern a number
+      has to be read through is.
+
+   NO FACE IS NAMED HERE EITHER. §7.2 gives each family two typefaces, and
+   those faces are not in this repository — the font engine and its
+   licences are the storefront stage's, and downloading one to make a
+   stylesheet look finished is how a build starts fetching from Google.
+   What a family sets is WEIGHT, RHYTHM, SHAPE and EMPHASIS, on whatever
+   face the seller's theme resolved. The faces land with the font work.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── عيادة — a clinic solves a problem: no ornament, one colour, and
+      every block squared off so the eye reads rather than browses. ── */
+[data-family='clinic'] .lp-trust > div,
+[data-family='clinic'] .lp-trust > a,
+[data-family='clinic'] .lp-faq-item,
+[data-family='clinic'] .lp-objection { border-radius: 6px; }
+[data-family='clinic'] .lp-faq-item,
+[data-family='clinic'] .lp-objection { border-inline-start: 3px solid var(--store-accent); }
+[data-family='clinic'] .lp-h2 { letter-spacing: 0; }
+/* The proof stands beside the claim, not under a flourish. */
+[data-family='clinic'] .lp-hero-offers { border-style: solid; }
+
+/* ── عطّار — a herbalist comes from somewhere: a dotted rule under each
+      heading, a second frame around the reassurances, and longer lines
+      because this family is read and not scanned. ── */
+[data-family='herbal'] .lp-h2::after {
+  /* ON THE HEADING, which is one of the four places ornament may sit. */
+  content: '';
+  display: block;
+  width: 72px;
+  margin: 10px auto 0;
+  border-top: 2px dotted var(--store-accent-border);
+}
+[data-family='herbal'] .lp-trust > div,
+[data-family='herbal'] .lp-trust > a {
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 3px var(--store-page), inset 0 0 0 4px var(--store-accent-border);
+}
+[data-family='herbal'] .lp-prose p,
+[data-family='herbal'] .lp-objection-answer { line-height: 2; }
+[data-family='herbal'] .lp-objection,
+[data-family='herbal'] .lp-faq-item { border-radius: 3px; }
+
+/* ── ترند — the offer leads: heavier headings, the offer line in the first
+      screen filled rather than outlined, and the bar at the bottom loud
+      enough to be the thing a thumb finds without looking. ── */
+[data-family='trend'] .lp-h2 { font-weight: 900; letter-spacing: -.4px; }
+[data-family='trend'] .lp-hero-offers {
+  background: var(--store-accent);
+  border-color: var(--store-accent);
+  color: var(--store-accent-text);
+}
+[data-family='trend'] .lp-hero-offers b,
+[data-family='trend'] .lp-hero-offers em,
+[data-family='trend'] .lp-hero-offers span { color: var(--store-accent-text); }
+[data-family='trend'] .lp-sticky { font-size: 16px; padding-block: 15px; }
+[data-family='trend'] .lp-objection,
+[data-family='trend'] .lp-faq-item { border-radius: 14px; }
+[data-family='trend'] .lp-urgency { font-weight: 800; }
 
 @media (min-width: 640px) {
   .lp-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
