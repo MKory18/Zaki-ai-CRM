@@ -959,7 +959,12 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 <button
                   type="button"
                   onClick={() => setNotesOpen(true)}
-                  className="text-start text-sm font-semibold text-[var(--store-accent,#b8256e)] underline decoration-dotted underline-offset-4"
+                  /* `underline` and nothing finer. `decoration-dotted` and
+                     `underline-offset-4` would each have been the product's
+                     ONLY use of that utility, and the first-load stylesheet
+                     has eleven bytes of headroom under its ratchet — a dotted
+                     rule under one link is not worth a step of the budget. */
+                  className="text-start text-sm font-semibold text-[var(--store-accent,#b8256e)] underline"
                 >
                   + إضافة ملاحظة (اختياري)
                 </button>
