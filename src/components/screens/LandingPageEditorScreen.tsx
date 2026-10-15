@@ -796,6 +796,11 @@ export function LandingPageEditorScreen() {
             onSections={(s) => { setSections(s); setDirty(true); }}
             onUpload={uploadFiles}
             product={lp.product ? { name: lp.product.name, price: lp.product.basePrice } : null}
+            // The copy assistant's brief is about THIS product, so the panel
+            // inside the builder is offered only when the page has one. It
+            // proposes words for the blocks that are already there and never
+            // rearranges them — see AiCopyPanel.
+            productId={lp.product?.id ?? lp.productId ?? null}
             store={lp.store ? { name: lp.store.name, logo: lp.store.logo ?? null, phone: lp.store.supportPhone ?? null } : null}
             currency={previewData?.currency || 'USD'}
             offers={previewData?.offers || []}

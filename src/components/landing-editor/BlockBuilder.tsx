@@ -21,6 +21,9 @@ import { FormPlaceholder } from '@/components/landing/blocks/FormPlaceholder';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref, specimenHref } from '@/components/landing/blocks/styles';
 import { FontUploader, type StoreFontRow } from '@/components/landing/blocks/FontUploader';
 import { SelectionBar } from './SelectionBar';
+import { Advanced } from './Advanced';
+import { AiCopyPanel } from './AiCopyPanel';
+import { PaneToggle, editPaneClass, previewPaneClass, type EditorPane } from './EditorPanes';
 import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { useConfirm } from '@/components/ui/Confirm';
 import { sanitizeRich } from '@/lib/rich-text';
@@ -42,6 +45,16 @@ interface Props {
   /** Uploads images and returns their URLs. */
   onUpload: (files: FileList) => Promise<string[]>;
   product: { name: string; price: number } | null;
+  /**
+   * The id of the product this page sells, when it sells one.
+   *
+   * `product` above is the name and the price, which is what the preview
+   * needs to DRAW the page. This is what the copy assistant needs to ask
+   * about it — and the two are separate because the shop's home page has
+   * the first and not the second: it sells the whole shelf, so there is no
+   * product to write a brief about and the assistant is simply not offered.
+   */
+  productId?: string | null;
   /** The page's store identity, as the published footer shows it. */
   store?: { name: string; logo: string | null; phone: string | null } | null;
   currency: string;
@@ -81,6 +94,15 @@ export function BlockBuilder(props: Props) {
 
   /** Whether the template list is open. Never saved — it is a menu. */
   const [pickingTemplate, setPickingTemplate] = useState(false);
+
+  /**
+   * WHICH HALF OF THE EDITOR A PHONE IS SHOWING.
+   *
+   * Ignored from `lg` up, where both halves are on the screen at once and
+   * the toggle is not drawn. See `EditorPanes.tsx` for why a stacked editor
+   * is not the same thing as a side-by-side one.
+   */
+  const [pane, setPane] = useState<EditorPane>('edit');
 
   const confirm = useConfirm();
 
@@ -264,8 +286,16 @@ export function BlockBuilder(props: Props) {
       {/* Declared at the top so the PANEL can draw its specimens in them
           too, not only the preview below. */}
       {storeFontCss && <style dangerouslySetInnerHTML={{ __html: storeFontCss }} />}
+      {/*
+        ONE TAP BETWEEN THE CONTROLS AND THE PAGE, ON A PHONE ONLY.
+
+        `lg:hidden` lives on the toggle itself, and a hidden grid item takes
+        no cell — so the two-column arrangement above 1024px is exactly what
+        it was before this existed.
+      */}
+      <PaneToggle pane={pane} onPane={setPane} />
       {/* ─── Controls ─── */}
-      <div className="space-y-3">
+      <div className={`space-y-3 ${editPaneClass(pane)}`}>
         {/*
           FIRST, not buried.
 
@@ -433,10 +463,23 @@ export function BlockBuilder(props: Props) {
             ))}
           </div>
 
+          {/*
+            THE THREE A SELLER SETS ONCE, OR NEVER.
+
+            The colour, the mood and the typeface are the decisions somebody
+            makes on every page; their own uploaded font, the corner style
+            and a photograph behind the whole page are decisions a brand
+            makes once. Keeping all six open meant the first three were the
+            same size as the last three, and the panel ran 1184px before a
+            seller reached the blocks the page is actually made of.
+
+            Nothing is gone — the row says what is inside.
+          */}
+          <Advanced holds="خطّك · الزوايا · خلفية الصفحة">
           {/* The seller's own typefaces, beneath the library — a brand that
               bought a font should not have to settle for the nearest free
               one. Uploading is per store, like everything a store owns. */}
-          <div className="mb-4 border-t border-[var(--sys-surface)] pt-3">
+          <div className="mb-4">
             <FontUploader onChanged={setStoreFonts} />
           </div>
 
@@ -495,7 +538,19 @@ export function BlockBuilder(props: Props) {
               </div>
             ) : null}
           </div>
+          </Advanced>
         </div>
+
+        {/*
+          THE WORDS, PROPOSED — FROM INSIDE THE EDITOR.
+
+          Offered only for a page that sells a product: the shop's home page
+          has a shelf rather than a product, so there is nothing to write a
+          brief about and no button that would answer the press.
+        */}
+        {props.productId && (
+          <AiCopyPanel productId={props.productId} sections={sections} onSections={onSections} />
+        )}
 
         {/* Sections */}
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4">
@@ -640,7 +695,9 @@ export function BlockBuilder(props: Props) {
       </div>
 
       {/* ─── Live preview, drawn by the public renderer ─── */}
-      <div className="flex min-h-[500px] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+      <div
+        className={`${previewPaneClass(pane)} min-h-[500px] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]`}
+      >
         <div className="flex items-center justify-between border-b border-[var(--sys-border)] px-3 py-2">
           <span className="text-xs font-semibold text-[var(--sys-heading)]">معاينة مباشرة</span>
           <div className="flex items-center gap-1">
