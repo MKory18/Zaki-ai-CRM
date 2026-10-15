@@ -51,7 +51,7 @@ export function ShipmentsNewScreen() {
   /** The row whose delay is being chosen — one dialog, two ways out. */
   const [delaying, setDelaying] = useState<Row | null>(null);
   const [standingDown, setStandingDown] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ courier: '', region: '', from: '', to: '' });
+  const [filters, setFilters] = useState({ q: '', courier: '', region: '', from: '', to: '' });
   const [rows, setRows] = useState<Row[] | null>(null);
   /** How many are being held back, shown on the tab so none can seem to vanish. */
   const [heldCount, setHeldCount] = useState(0);
@@ -171,8 +171,38 @@ export function ShipmentsNewScreen() {
     }
   }, [filters, view]);
 
+  /**
+   * ── A QUARTER-SECOND, AND NOT FOR SMOOTHNESS ──
+   *
+   * `load` is in the dependency list and `load` changes with `filters`, so
+   * before the search box this effect fired on a dropdown — a few times an
+   * hour. A text input fires it on every keystroke, and this particular
+   * request is an expensive one: the route prices every row
+   * (`resolveDeliveryFee`) and asks `shipmentBlocks` about it, several
+   * queries each, for up to three hundred rows.
+   *
+   * ⚠️ AND EVERY RESPONSE COUNTS TOWARD A SECURITY ALERT.
+   * `noteCustomersHandedOut` adds that response's distinct customers to a
+   * running fifteen-minute tally per person; past five hundred it writes a
+   * `CUSTOMER_BULK_VIEW` audit row and alerts everybody holding
+   * `users.manage`.
+   *
+   * Said precisely, because the first version of this comment was not:
+   * this list takes up to 300 rows, so the FIRST load already carries up
+   * to 300 — one more sizeable response crosses the threshold, with or
+   * without typing. The debounce turns six requests into two for a
+   * five-letter search; it narrows that path, it does not close it. What
+   * closes it is counting a re-read of the same list differently from a
+   * new one, which is nobody's job in this file. Recorded as RV36.
+   *
+   * 🔧 250ms, the same figure and the same shape `OrdersScreen` uses for
+   * its own search.
+   */
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 250);
+    return () => clearTimeout(timer);
   }, [load]);
 
   const create = async () => {
@@ -235,7 +265,27 @@ export function ShipmentsNewScreen() {
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 grid gap-3 md:grid-cols-5">
+      {/*
+        FIRST, BECAUSE IT IS THE FIRST THING A PERSON DOES.
+        The courier rings about one parcel. Before this box the only way to
+        it was the eye, down a list of a hundred confirmed orders — the
+        filters below narrow by where and when, and neither of those is
+        «the one he just named».
+      */}
+      {/*
+        ITS OWN ROW, ABOVE THE GRID — AND NOT A FIVE-COLUMN SPAN INSIDE IT.
+        The span read better in the markup and cost a Tailwind utility this
+        repository uses nowhere else, which pushed the first-load stylesheet
+        0.04 KB past the budget `quality-gates.test.ts` holds. The gate's own
+        doctrine is to reuse what the product already has; a box on its own
+        line needs no column arithmetic at all.
+      */}
+      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
+        <SearchField
+          value={filters.q}
+          onChange={(v) => setFilters({ ...filters, q: v })}
+        />
+        <div className="grid gap-3 md:grid-cols-5">
         <Select label="شركة الشحن (للشحنة)" value={filters.courier} onChange={(v) => setFilters({ ...filters, courier: v })} options={providers.map((p) => ({ value: p.id, label: p.name }))} />
         <Select label="المحافظة" value={filters.region} onChange={(v) => setFilters({ ...filters, region: v })} options={regions.map((r) => ({ value: r.id, label: r.name }))} />
         <DateField label="من" value={filters.from} onChange={(v) => setFilters({ ...filters, from: v })} />
@@ -248,6 +298,7 @@ export function ShipmentsNewScreen() {
           >
             {busy ? 'جارٍ الإنشاء…' : `إنشاء شحنة (${selectedCount})`}
           </button>
+        </div>
         </div>
       </div>
 
@@ -547,6 +598,28 @@ function Select({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+/**
+ * The one control that is not a filter but a question: «where is this
+ * parcel». It names what it matches, because a search box that says
+ * «بحث» leaves the person guessing whether the phone will work.
+ */
+function SearchField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">
+        بحث
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="رقم الطلب · اسم الزبون · رقم التلفون · رقم التتبّع · المدينة"
+        className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-sm"
+      />
     </label>
   );
 }
