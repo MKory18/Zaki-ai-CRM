@@ -34,10 +34,42 @@ function deadlineFor(key: string, minutes: number): number {
   return fresh;
 }
 
-export function Countdown({ minutes, id, persist = true }: { minutes: number; id: string; persist?: boolean }) {
+export function Countdown({
+  minutes,
+  id,
+  persist = true,
+  until,
+}: {
+  minutes: number;
+  id: string;
+  persist?: boolean;
+  /**
+   * THE OFFER'S OWN ENDING — an ISO moment, and when it is given it wins.
+   *
+   * Owner decision D8: the clock and the price read ONE FACT. That fact is
+   * `Offer.endsAt`, the column the server stops charging the offer's price
+   * at. With `until` set, nothing is kept in this browser and nothing
+   * restarts for the next visitor: every person who opens the page sees the
+   * same deadline, because there IS one.
+   *
+   * Everything below stays exactly as it was for the per-visitor timer. The
+   * two are not alternatives wearing one name — the editor makes the seller
+   * choose, and `countdownRefusal` refuses «تلقائي» when there is no ending.
+   */
+  until?: string | null;
+}) {
   const [left, setLeft] = useState(minutes * 60);
 
   useEffect(() => {
+    if (until) {
+      const at = Date.parse(until);
+      const tickReal = () =>
+        setLeft(Number.isFinite(at) ? Math.max(0, Math.ceil((at - Date.now()) / 1000)) : 0);
+      tickReal();
+      const timer = setInterval(tickReal, 1000);
+      return () => clearInterval(timer);
+    }
+
     // The builder's canvas is the seller editing, not a visitor: keeping its
     // deadline would show "over" in the editor for a day after one run.
     const deadline = persist
@@ -47,7 +79,7 @@ export function Countdown({ minutes, id, persist = true }: { minutes: number; id
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [minutes, id, persist]);
+  }, [minutes, id, persist, until]);
 
   if (left <= 0) return <p className="lp-countdown-over">انتهى وقت العرض</p>;
 

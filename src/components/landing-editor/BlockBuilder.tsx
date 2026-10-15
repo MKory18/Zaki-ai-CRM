@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Eye, EyeOff, Trash2, Plus, Minus, Upload, Loader2, GripVertical,
-  Monitor, Smartphone, X, LayoutTemplate,
+  Monitor, Smartphone, X, LayoutTemplate, AlertTriangle, Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LookControls } from '@/components/landing/blocks/LookControls';
@@ -24,6 +24,12 @@ import { SelectionBar } from './SelectionBar';
 import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { useConfirm } from '@/components/ui/Confirm';
 import { sanitizeRich } from '@/lib/rich-text';
+import {
+  COUNTDOWN_SOURCES, COUNTDOWN_SOURCE_LABEL, VISITOR_TIMER_FIX, VISITOR_TIMER_WARNING,
+} from '@/lib/countdown';
+// `@/lib/reviews` and NOT `@/lib/product-reviews`: this is a client
+// component, and the service half of that pair imports Prisma.
+import { MANUAL_SOURCES, REVIEW_SOURCE_LABEL } from '@/lib/reviews';
 
 /**
  * The block builder.
@@ -1039,15 +1045,47 @@ function SectionFields({
       return (
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
+          {/*
+            THE SELLER'S OWN ITEMS, AND THE SENTENCE THAT SAYS WHAT THEY ARE.
+            Owner decision D8: these are transcribed, nobody here can check
+            them, and «مشتري مؤكَّد» belongs to a rating that came off a
+            delivered order. There is no field below that could claim it.
+          */}
+          <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            هذه آراء بتنقلها بيدك، فما بتحمل شارة «مشتري مؤكَّد» — الشارة لتقييم جاء من طلب
+            تمّ تسليمه. الإثبات أدناه خاص ولا يُعرض للزوّار أبداً.
+          </p>
           <Repeater
             items={s.items}
             max={12}
-            blank={{ name: '', text: '', stars: 5 }}
+            blank={{ name: '', text: '', stars: 5, source: 'other', proofImage: '', addedBy: '', addedAt: '' }}
             onChange={(items) => patch({ items })}
             render={(item, set) => (
               <>
                 <Field label="الاسم" value={item.name} onChange={(v) => set({ ...item, name: v })} />
                 <Field label="الرأي" value={item.text} onChange={(v) => set({ ...item, text: v })} area />
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">من وين جاء</label>
+                  <select
+                    value={item.source}
+                    onChange={(e) => set({ ...item, source: e.target.value as typeof item.source })}
+                    className="h-11 w-full rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs md:h-8"
+                  >
+                    {MANUAL_SOURCES.map((src) => (
+                      <option key={src} value={src}>{REVIEW_SOURCE_LABEL[src]}</option>
+                    ))}
+                  </select>
+                </div>
+                <Field
+                  label="إثبات خاص (رابط صورة) — لا يُعرض للزوّار"
+                  value={item.proofImage}
+                  onChange={(v) => set({ ...item, proofImage: v })}
+                />
+                {item.addedBy && (
+                  <p className="text-xs text-[var(--sys-muted-foreground)]">
+                    أضافه {item.addedBy}{item.addedAt ? ` — ${item.addedAt}` : ''}
+                  </p>
+                )}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">النجوم</label>
                   <div className="flex gap-1">
@@ -1220,15 +1258,72 @@ function SectionFields({
       return (
         <div className="space-y-2.5">
           <Field label="الملاحظة" value={s.text} onChange={(v) => patch({ text: v })} placeholder="العرض ساري اليوم فقط" />
+
+          {/*
+            WHERE THE COUNTDOWN'S ENDING COMES FROM — owner decision D8.
+            The two sources are offered side by side, and the per-visitor
+            one carries the warning the brief wrote, in red, with the fix
+            beside it. Said here and not in a help page: the seller is
+            choosing it at this moment, and a warning they have to go
+            looking for is a warning nobody reads.
+          */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">عدّاد (دقائق، 0 = بلا عدّاد)</label>
-            <Input
-              type="number" min="0" max="1440" dir="ltr"
-              value={s.minutes}
-              onChange={(e) => patch({ minutes: Math.max(0, Math.min(1440, Number(e.target.value) || 0)) })}
-              className="text-xs"
-            />
+            <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">مصدر العدّاد</label>
+            <div className="flex flex-col gap-1">
+              {COUNTDOWN_SOURCES.map((src) => (
+                <label key={src} className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--sys-heading)]">
+                  <input
+                    type="radio"
+                    name={`countdown-${s.id}`}
+                    checked={s.countdown === src}
+                    onChange={() => patch({ countdown: src })}
+                    className="h-3.5 w-3.5 cursor-pointer accent-[var(--sys-primary)]"
+                  />
+                  {COUNTDOWN_SOURCE_LABEL[src]}
+                </label>
+              ))}
+            </div>
           </div>
+
+          {s.countdown === 'visitor' ? (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-muted-foreground)]">عدّاد (دقائق، 0 = بلا عدّاد)</label>
+                <Input
+                  type="number" min="0" max="1440" dir="ltr"
+                  value={s.minutes}
+                  onChange={(e) => patch({ minutes: Math.max(0, Math.min(1440, Number(e.target.value) || 0)) })}
+                  className="text-xs"
+                />
+              </div>
+              {s.minutes > 0 && (
+                <div className="space-y-1 rounded-md border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] p-2">
+                  {/* The brief drew these two with emoji. The marks come
+                      from the icon set instead — an emoji is a colour
+                      glyph on a phone and a thin outline on a desk, which
+                      `one-icon-family.test.ts` refuses. The WORDS are the
+                      brief's, unchanged. */}
+                  <p className="flex items-start gap-1.5 text-xs font-bold text-[var(--sys-destructive)]">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {VISITOR_TIMER_WARNING}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => patch({ countdown: 'offer' })}
+                    className="flex min-h-11 cursor-pointer items-center gap-1.5 text-xs font-semibold text-[var(--sys-primary)] underline md:min-h-0"
+                  >
+                    <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {VISITOR_TIMER_FIX}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              العدّاد بيقرأ تاريخ انتهاء العرض من المنتج — نفس التاريخ الذي يوقف السعر. إذا ما في
+              عرض له تاريخ انتهاء، الحفظ بيرفض ويقول لك.
+            </p>
+          )}
           <Check
             label="إظهار المخزون المتبقي الحقيقي"
             checked={s.showRealStock}

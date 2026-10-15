@@ -227,6 +227,41 @@ export function liveOfferWhere(now: Date) {
 }
 
 /**
+ * WHEN THESE OFFERS STOP — the `endsAt` column and nothing else.
+ *
+ * Owner decision D8's countdown reads ONE FACT, and `endsAt` is it: the
+ * moment the server stops charging the offer's price. So the clock asks
+ * this, and asking it HERE is the point — `one-calculator.test.ts` sweeps
+ * the repository for a second `offer.findMany` filtered by product and
+ * ACTIVE status, and it is right to: a reader with its own query is a
+ * reader free to disagree about which bundles count.
+ *
+ * It is deliberately NOT `activeOffersFor`. That one withholds a finished
+ * bundle, because a price that is not for sale must not be reachable — and
+ * a countdown needs the finished ones in hand to answer «has this ended».
+ * So this returns the dates, nulls and past ones included, and
+ * `countdownEnd` picks the soonest one still ahead.
+ *
+ * `scope` is the product or the whole store: a landing page sells one
+ * article, a shop's home page sells the shelf.
+ */
+export async function offerEndings(
+  tx: Tx,
+  companyId: string,
+  scope: { productId: string } | { storeId: string }
+): Promise<(Date | null)[]> {
+  const rows = await tx.offer.findMany({
+    where: {
+      companyId,
+      status: 'ACTIVE',
+      ...('productId' in scope ? { productId: scope.productId } : { product: { storeId: scope.storeId } }),
+    },
+    select: { endsAt: true },
+  });
+  return rows.map((o) => o.endsAt);
+}
+
+/**
  * The offers a customer may be shown for this product, in order, in the
  * shape every public surface renders.
  *
