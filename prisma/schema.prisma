@@ -64,6 +64,8 @@ model Company {
   payslips              Payslip[]
   penalties             Penalty[]
   productReviews        ProductReview[]
+  systemTokens          SystemToken[]
+  idempotencyRecords    IdempotencyRecord[]
 
   @@map("companies")
 }
@@ -882,6 +884,49 @@ model Order {
   financeFinalizedAt        DateTime?
   financeFinalizedById      String?
   source                    String    @default("Manual") // Facebook Ads, TikTok, Instagram, WhatsApp, Manual, Website, Landing Page
+  /// ── WHERE AN ORDER THAT CAME THROUGH `/api/v1` CAME FROM ──
+  ///
+  /// Written only by the systems door (the `src/lib/v1` modules) and null on every
+  /// order raised in this product's own screens. They are the media buyer's
+  /// evidence: which ad a conversation started from, and when the customer
+  /// touched it. Nothing here is read by pricing, by stock or by the order's
+  /// state — removing the lot would change no money.
+  ///
+  /// `externalRef` is the OTHER system's own name for the order. It is not
+  /// what makes a retry safe — `IdempotencyRecord` is — so it carries no
+  /// unique index: two systems may legitimately use the same string, and a
+  /// constraint here would make one of them fail at the door for a reason
+  /// nobody could read.
+  externalRef               String?
+  /// The channel word the calling system used («whatsapp», «messenger»).
+  ///
+  /// NOT `channel`: that name is already this model's relation to
+  /// `OrderChannel`, which is the company's own list of doors. This is the
+  /// caller's word for its own transport, kept as it was sent.
+  externalChannel           String?
+  /// CODE | CTWA | REF — how the calling system decided which ad this was.
+  adSourceType              String?
+  adId                      String?
+  /// The click id of a «click to WhatsApp» ad, ENCRYPTED at rest.
+  ///
+  /// It identifies one person's click on one ad. Encrypted with the same
+  /// `encryptSecret` a courier password uses, and never returned by any
+  /// endpoint — the same rule the owner set for an ad token: it reaches no
+  /// model, and it does not reach a screen either.
+  ctwaClidEnc               String?
+  /// The short code the customer quoted («K7Q2») and when they quoted it.
+  refCode                   String?
+  refCodeAt                 DateTime?
+  /// When the customer last touched the ad.
+  touchAt                   DateTime?
+  pageId                    String?
+  /// The platform-scoped id of the person who wrote in, ENCRYPTED at rest —
+  /// same reason as `ctwaClidEnc`.
+  psidEnc                   String?
+  wabaId                    String?
+  /// The calling system's own handle for the conversation this came out of,
+  /// so a reply can be traced back to the order without storing the chat.
+  conversationRef           String?
   landingPageId             String?
   freeQuantity              Int       @default(0) // gift units from a landing-page offer (additive)
   internalNotes             String?
@@ -1046,6 +1091,9 @@ model Order {
   @@index([companyId, labelPrintedAt])
   @@index([companyId, courierSendStartedAt])
   @@index([regionId])
+  /// «Which orders quoted a code?» — the media buyer's question, asked over
+  /// a column that is null on nearly every row.
+  @@index([companyId, refCode])
   @@map("orders")
 }
 
@@ -3221,6 +3269,96 @@ model AppDelivery {
   @@index([status, nextAttemptAt])
   @@index([companyId, createdAt])
   @@map("app_deliveries")
+}
+
+/// A KEY ANOTHER SYSTEM CALLS IN WITH — the door `/api/v1` opens for.
+///
+/// Every other `/api` route in this product needs a browser session, which is why the
+/// replies system (System 7) has worked by copy-and-paste: there was no way
+/// for a program to be let in. This is that way, and it is deliberately
+/// narrower than a session.
+///
+/// WHAT IS STORED IS NOT THE TOKEN. `tokenHash` is the SHA-256 of it; the
+/// token itself is shown once, at creation, and no endpoint can ever return
+/// it again. A stolen database dump is therefore not a stolen door — the
+/// same discipline `App.secret` follows, except that this one cannot even be
+/// decrypted, because nothing here ever needs to send it anywhere.
+///
+/// `prefix` is the first few characters, kept in the clear so a screen can
+/// tell two tokens apart without being told either of them.
+///
+/// THE COMPANY COMES FROM THE TOKEN AND NEVER FROM THE REQUEST. That is the
+/// whole of the tenant rule at this door: a caller cannot name a company,
+/// only prove which one it holds a key to.
+model SystemToken {
+  id              String    @id @default(uuid())
+  companyId       String
+  /// What a person calls it on the screen — «نظام الردود · الإنتاج».
+  name            String
+  /// Which outside system it was made for. `replies` is System 7.
+  system          String
+  /// SHA-256 of the token, hex. Unique across the product: a collision
+  /// would be one company's key opening another's door.
+  tokenHash       String    @unique
+  /// The first characters of the token, for recognising it on a screen.
+  prefix          String
+  /// The named scopes, as a JSON array — the same shape `App.events` uses.
+  /// A Postgres `String[]` would read better and would be the one column in
+  /// this file that is an array; the JSON string keeps the table matching
+  /// the table beside it.
+  scopes          String    @default("[]")
+  rateLimitPerMin Int       @default(60)
+  /// 90 days by default, set by the screen that creates it. Null means it
+  /// never expires, which the screen does not offer.
+  expiresAt       DateTime?
+  /// Stopped immediately, and never deleted: who opened a door and who shut
+  /// it survives the shutting, like a released block or a reversed entry.
+  revokedAt       DateTime?
+  /// The last time this key was accepted. Written at most once a minute —
+  /// a read-only call must not cost a write on every request.
+  lastUsedAt      DateTime?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId, revokedAt])
+  @@map("system_tokens")
+}
+
+/// THE SAME REQUEST, SENT TWICE, IS ONE ORDER.
+///
+/// Another system retries. A webhook times out, a worker restarts, a person
+/// presses «ترحيل» again — and a door that creates an order per call turns
+/// one customer into two orders, two reservations and two waybills. So every
+/// write at `/api/v1` carries an `Idempotency-Key`, and the FIRST answer is
+/// kept here and replayed.
+///
+/// `requestHash` is what makes the key honest. The same key with a DIFFERENT
+/// body is not a retry, it is a mistake — two different orders claiming one
+/// key — and it is refused with 409 rather than silently answered with the
+/// first one's order number.
+model IdempotencyRecord {
+  id          String   @id @default(uuid())
+  companyId   String
+  /// The caller's key. Scoped to the company: two companies' keys live in
+  /// separate spaces, so one cannot collide with — or read — the other's.
+  key         String
+  /// SHA-256 of the method, the path and the body.
+  requestHash String
+  /// The HTTP status the first attempt answered with, replayed as it was.
+  status      Int
+  /// The body the first attempt answered with, replayed verbatim.
+  response    String   @db.Text
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key])
+  @@index([companyId, createdAt])
+  @@map("idempotency_records")
 }
 
 /// THE FINGERPRINT — append-only marks of arriving and leaving.
