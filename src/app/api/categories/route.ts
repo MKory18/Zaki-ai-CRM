@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireCompanyTenant } from '@/lib/auth';
 import { can } from '@/lib/authorization';
 import { z } from 'zod';
 import { logAudit } from '@/lib/audit';
@@ -39,11 +39,24 @@ export async function GET() {
         { status: 403 }
       );
     }
-    if (!user.companyId) {
-      return NextResponse.json({ categories: [] });
-    }
+    /*
+     * ── THE OWNER'S OWN ACCOUNT HAS NO COMPANY ON IT ──
+     *
+     * A SUPER_ADMIN is a PLATFORM account: `user.companyId` is null, and he
+     * works inside a company through the context selector. This line read
+     * that null as «belongs to no company» and answered with an empty
+     * list — so the owner opened «التصنيفات», saw nothing, pressed add, and
+     * was told «لا شركة في السياق». The capability existed and he was the
+     * one person who could not reach it.
+     *
+     * `requireCompanyTenant()` is the answer the rest of the system already
+     * uses for this: it resolves the platform's company for a SUPER_ADMIN
+     * and the user's own for everybody else. Nothing widens — a user with
+     * no company and no SUPER_ADMIN role still throws there.
+     */
+    const { companyId } = await requireCompanyTenant();
     const categories = await db.category.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId },
       select: { id: true, name: true, nameEn: true },
       orderBy: { name: 'asc' },
     });
@@ -59,10 +72,11 @@ async function editor() {
   if (!can(user, 'products.edit')) {
     return { error: NextResponse.json({ error: 'Forbidden: missing products.edit', errorAr: forbiddenAr('Forbidden: missing required permission products.edit') }, { status: 403 }) };
   }
-  if (!user.companyId) {
-    return { error: NextResponse.json({ error: 'لا شركة في السياق' }, { status: 400 }) };
-  }
-  return { user, companyId: user.companyId };
+  // Same reason as the note in GET: the owner's account carries no company,
+  // and `user.companyId` alone refused every write to the one person who
+  // may make them.
+  const { companyId } = await requireCompanyTenant();
+  return { user, companyId };
 }
 
 /** POST /api/categories — create one. */
