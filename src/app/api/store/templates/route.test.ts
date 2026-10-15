@@ -15,6 +15,17 @@ const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
     // so the route reads four of them. A double that does not know
     // about this is a double that has fallen behind the route.
     product: { findMany: vi.fn().mockResolvedValue([]) },
+    /*
+     * AND THE SHELF IS ASKED FIRST.
+     *
+     * `Product.storeId` is nullable, so a shop whose goods predate
+     * per-store catalogues matched nothing in `product.findMany` — and
+     * the gallery told a shop with twelve published pages that it had no
+     * products («؟» · «لا منتجات», reported 15/10). What a shopper
+     * actually sees is the product of a published, shown landing page,
+     * and those carry the store themselves.
+     */
+    landingPage: { findMany: vi.fn().mockResolvedValue([]) },
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
@@ -50,6 +61,7 @@ beforeEach(() => {
   // the factory: a shop with no products still has a gallery, and its
   // previews are drawn with empty boxes.
   db.product.findMany.mockResolvedValue([]);
+  db.landingPage.findMany.mockResolvedValue([]);
   db.store.findFirst.mockResolvedValue({ ...STORE });
   db.store.update.mockResolvedValue({});
 });
@@ -230,6 +242,7 @@ describe('the shop templates', () => {
       // fixture with `p1/a.webp` is refused — correctly — and a test
       // built on one would be testing nothing.
       {
+        id: 'p-1',
         name: 'كريم مرطّب',
         image: null,
         basePrice: 14,
@@ -244,6 +257,53 @@ describe('the shop templates', () => {
     expect(body.sample[0].image).toContain('/api/public/media/');
     // The company id never reaches a public address.
     expect(body.sample[0].image).not.toContain('11111111');
+  });
+
+  /**
+   * THE BUG THE OWNER REPORTED ON 15/10, AS A TEST.
+   *
+   * «previews show ؟ and لا منتجات although the store has published
+   * landing pages». Both halves were true at once: the route asked
+   * `product.findMany` for `storeId: store.id`, and `Product.storeId` is
+   * NULLABLE — «null only until a product from before this is placed».
+   * A shop whose goods predate per-store catalogues matched nothing, and
+   * the gallery drew a letter «؟» for a shop that sells twelve things.
+   */
+  it('and finds them through the shown pages when no product carries the store', async () => {
+    // The catalogue table knows nothing about this shop…
+    db.product.findMany.mockResolvedValue([]);
+    // …and the shelf does.
+    db.landingPage.findMany.mockResolvedValue([
+      { product: { id: 'p-1', name: 'كريم مرطّب', image: null, basePrice: 14, images: [] } },
+    ]);
+    const body = await (await get()).json();
+    expect(body.sample, 'المعاينة ما لقيت منتجات رغم صفحةٍ معروضة').toHaveLength(1);
+    expect(body.sample[0].name).toBe('كريم مرطّب');
+
+    // It asks for the PUBLISHED and SHOWN pages of THIS shop only — the
+    // shelf's own rule (D2), not «every page this company ever made».
+    const where = db.landingPage.findMany.mock.calls[0][0].where;
+    expect(where.storeId).toBe('s1');
+    expect(where.companyId).toBe('c1');
+    expect(where.isPublished).toBe(true);
+    expect(where.showInStore).toBe(true);
+  });
+
+  it('and one product with two shown pages is one card, not two', async () => {
+    db.product.findMany.mockResolvedValue([]);
+    const one = { id: 'p-1', name: 'كريم مرطّب', image: null, basePrice: 14, images: [] };
+    db.landingPage.findMany.mockResolvedValue([{ product: one }, { product: one }]);
+    const body = await (await get()).json();
+    expect(body.sample, 'منتجٌ واحدٌ ظهر مرّتين').toHaveLength(1);
+  });
+
+  it('and a shop with neither gets the honest empty answer', async () => {
+    db.product.findMany.mockResolvedValue([]);
+    db.landingPage.findMany.mockResolvedValue([]);
+    const body = await (await get()).json();
+    // Empty, so the gallery draws labelled placeholders and says why —
+    // which is true for a shop that really has nothing on its shelf.
+    expect(body.sample).toEqual([]);
   });
 
   it('installing one writes the draft and nothing a customer sees', async () => {

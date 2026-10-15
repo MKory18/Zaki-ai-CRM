@@ -4,11 +4,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
+import { uploadStoreImages } from '@/lib/store-image-upload';
 import { BlockBuilder } from '@/components/landing-editor/BlockBuilder';
 import type { LandingSection } from '@/lib/landing-sections';
 import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { arDateTime } from '@/lib/format';
 
 /**
@@ -24,10 +25,18 @@ import { arDateTime } from '@/lib/format';
  * renderer. RiSaveLine writes the draft. Publish is the only one a customer feels,
  * so it asks first and says what it is about to change.
  *
- * THE THEME IS NOT EDITED HERE. It belongs to «القوالب», which is where the
- * colours, the fonts, the header and the checkout are set together. The
- * builder can take an onTheme callback; this screen deliberately does not
- * give it one that saves.
+ * THE THEME IS NOT EDITED HERE. It belongs to «القالب والألوان», the panel
+ * beside this one in the same tab, where the colours, the fonts, the header
+ * and the checkout are set together. The builder can take an onTheme
+ * callback; this screen deliberately does not give it one that saves.
+ *
+ * AND THIS IS NOW THE ONLY PLACE THE HOME PAGE IS ARRANGED.
+ *
+ * The owner, 15/10 01:33: «التصميم» and «القوالب» both edited the home
+ * page. They were two menu entries for one job, and the theme screen's
+ * «الصفحة الرئيسية» tab is where the overlap lived. The two are one tab now
+ * («الواجهة»); that tab is «صورة الغلاف» and nothing else, and the
+ * arrangement of the page is here.
  */
 
 interface Payload {
@@ -111,16 +120,15 @@ export function StoreDesignScreen() {
   }
 
   const upload = useCallback(async (files: FileList): Promise<string[]> => {
-    if (files.length === 0) return [];
-    const fd = new FormData();
-    Array.from(files).slice(0, 5).forEach((f) => fd.append('files', f));
-    const res = await fetch('/api/store/design/image', { method: 'POST', body: fd });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setMsg({ ok: false, text: body.error || 'تعذّر رفع الصور' });
+    try {
+      // The one uploader both panels of «الواجهة» use — it carries the
+      // session, the lost-context redirect and the timeout a raw call does
+      // without (src/lib/store-image-upload.ts).
+      return await uploadStoreImages(Array.from(files));
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر رفع الصور' });
       return [];
     }
-    return (body.urls as string[]) || [];
   }, []);
 
   if (loading || !data) {
@@ -132,51 +140,74 @@ export function StoreDesignScreen() {
   }
 
   return (
-    <div className="flex h-full flex-col" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sys-border)] bg-white px-4 py-3">
-        <PageHeader
-          title={`الصفحة الرئيسية لـ«${data.store.name}»`}
-          description={
-            (data.publishedAt
-              ? `آخر نشر: ${arDateTime(data.publishedAt)}`
-              : data.store.singleProduct && data.store.landingPageId
-                ? // It has a front page, and that page is what its address
-                  // opens today. Saying so here is the difference between
-                  // «nothing happened» and «I have just replaced my shop
-                  // window» — and publishing is the only press that does it.
-                  'لم تُنشر بعد — عنوان متجرك يعرض صفحة الواجهة المختارة. النشر يجعله يعرض هذه الصفحة بدلاً منها.'
-                : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية') +
-            (data.hasUnpublished ? ' · فيها تغييرات غير منشورة' : '')
-          }
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          {msg && (
+    <div className="pt-4" dir="rtl">
+      <PanelHeader
+        title="الصفحة الرئيسية"
+        line={
+          data.publishedAt
+            ? `آخر نشر: ${arDateTime(data.publishedAt)}${data.hasUnpublished ? ' · فيها تغييرات غير منشورة' : ''}`
+            : data.store.singleProduct && data.store.landingPageId
+              ? 'لم تُنشر بعد — عنوان متجرك يعرض صفحة الواجهة المختارة.'
+              : 'لم تُنشر بعد — متجرك يعرض قائمة المنتجات العادية.'
+        }
+        note={
+          msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
-          )}
-          <a href={`/s/${data.store.slug}`} target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary" size="sm">
-              <RiExternalLinkLine className="icon-mirror h-4 w-4" /> المنشورة
-            </Button>
-          </a>
-          <Button variant="secondary" size="sm" disabled={busy} onClick={() => void save()}>
-            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
-          </Button>
+          )
+        }
+        /* THE ONE ACT A CUSTOMER FEELS. Saving is not it, and neither is
+           looking at the published page — those two are beside it. */
+        primary={
           <Button size="sm" disabled={busy} onClick={() => void publish()}>
             <RiRocketLine className="h-4 w-4" /> نشر
           </Button>
-        </div>
-      </header>
+        }
+        secondary={
+          <>
+            <a href={`/s/${data.store.slug}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="secondary" size="sm">
+                <RiExternalLinkLine className="icon-mirror h-4 w-4" /> المنشورة
+              </Button>
+            </a>
+            <Button variant="secondary" size="sm" disabled={busy} onClick={() => void save()}>
+              {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiSaveLine className="h-4 w-4" />} حفظ
+            </Button>
+          </>
+        }
+        help={
+          <>
+            <p>
+              الحفظ والمعاينة والنشر ثلاثة أفعال منفصلة: ما تراه هنا هو المعاينة، و«حفظ» يكتب
+              المسوّدة، و«نشر» وحده هو ما يصل الزبون.
+            </p>
+            <p>
+              {data.store.singleProduct && data.store.landingPageId
+                ? 'عنوان متجرك يعرض صفحة الواجهة المختارة الآن — والنشر يجعله يعرض هذه الصفحة بدلاً منها.'
+                : 'قبل أول نشر، متجرك يعرض قائمة المنتجات العادية.'}
+            </p>
+            <p>الألوان والخطوط والترويسة تُضبط في «القالب والألوان» — نفس التبويب، البطاقة المجاورة.</p>
+          </>
+        }
+      />
 
       {!data.store.storefrontEnabled && (
-        <p className="border-b border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 px-4 py-2 text-xs text-[var(--sys-warning)]">
+        <p className="mb-3 rounded-lg border border-[var(--sys-warning)]/40 bg-[var(--sys-warning)]/10 px-3 py-2 text-xs text-[var(--sys-warning)]">
           واجهة هذا المتجر مطفأة — انشر ما شئت، لن يراه أحد حتى تُشغّلها من «البلدان والمتاجر».
         </p>
       )}
 
-      <div className="min-h-0 flex-1">
+      {/*
+        A DEFINITE HEIGHT, BECAUSE THE BUILDER NEEDS ONE.
+        It used to be `h-full` on a screen of its own, which worked because
+        the shell's <main> is a stretched flex item. Inside a tab panel the
+        parent's height is its content, so `h-full` resolved to nothing and
+        `flex-1 min-h-0` collapsed the canvas to zero. The viewport is what
+        this is really measured against, so the viewport is what it asks.
+      */}
+      <div className="h-[calc(100vh-19rem)] min-h-[26rem] overflow-hidden rounded-lg border border-[var(--sys-border)]">
         {/* The one builder in this system. The preview beside it is drawn by
             the public renderer, so it cannot be wrong in a way that only
             shows up after publishing. */}
@@ -184,8 +215,9 @@ export function StoreDesignScreen() {
           theme={data.theme}
           sections={sections}
           onSections={setSections}
-          // The look belongs to «القوالب», where it is set once for the whole
-          // shop. Changes here would be a second owner for the same values.
+          // The look belongs to «القالب والألوان», where it is set once for
+          // the whole shop. Changes here would be a second owner for the
+          // same values.
           onTheme={() => {}}
           onUpload={upload}
           product={null}

@@ -7,8 +7,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { PAGE_KIND_AR, REQUIRED_FOR_ADS, type PageKind } from '@/lib/store-pages';
 import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { routeLabel } from '@/lib/route-registry';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 
 /**
  * THE SHOP'S OWN PAGES.
@@ -140,23 +139,30 @@ export function StorePagesScreen() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title={routeLabel('/store/pages')}
-          description="كلام المتجر عن نفسه: من نحن، الشروط، الخصوصية، الاستبدال، تواصل معنا."
-        />
-        <div className="flex items-center gap-2">
-          {msg && (
+    <div className="space-y-4 pt-4" dir="rtl">
+      <PanelHeader
+        title="الصفحات والسياسات"
+        line="كلام المتجر عن نفسه: من نحن، الشروط، الخصوصية، الاستبدال، تواصل معنا."
+        note={
+          msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
-          )}
+          )
+        }
+        primary={
           <Button size="sm" onClick={() => void add()} disabled={saving}>
             <RiAddCircleLine className="h-4 w-4" /> صفحة جديدة
           </Button>
-        </div>
-      </header>
+        }
+        help={
+          <p>
+            مراجعة الإعلانات على فيسبوك وتيكتوك تطلب بعض هذه الصفحات منشورة. أُنشئت لك بنصّ مبدئي فيه
+            اسم متجرك — اقرأها وعدّلها لتطابق ما تفعله فعلاً، ثم انشرها.
+          </p>
+        }
+      />
 
       {/* The thing that stops a campaign, said in words. */}
       {missing.length > 0 && (
