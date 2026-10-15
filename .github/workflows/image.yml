@@ -45,6 +45,22 @@
 name: Image
 
 on:
+  # ON A PULL REQUEST IT BUILDS AND PROVES, AND PUBLISHES NOTHING.
+  #
+  # Otherwise the first time anybody learns that the image does not start is
+  # after it is merged and published — and the proof below is the whole
+  # point of this file. The paths are the ones that can change the image:
+  # everything else in a pull request cannot, and this job is the most
+  # expensive thing in the repository.
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker-entrypoint.sh'
+      - '.github/workflows/image.yml'
+      - 'package-lock.json'
+      - 'package.json'
+      - 'next.config.ts'
+      - 'prisma/**'
   push:
     branches: [main]
   # So the owner can publish an image again — after a registry change, or to
@@ -175,6 +191,7 @@ jobs:
         run: docker rm -f smoke 2>/dev/null || true
 
       - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -183,6 +200,7 @@ jobs:
       # Two tags on purpose. `:main` is what a server follows; `sha-xxxxxxx`
       # is what a rollback names, and it cannot move under anybody's feet.
       - name: Publish both tags
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -204,6 +222,7 @@ jobs:
       # shell BEFORE the shell runs, so it reaches the log on `set -x`, on a
       # syntax error, and in any error message that quotes the command.
       - name: Tell Coolify to pull it
+        if: github.event_name != 'pull_request'
         env:
           COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
