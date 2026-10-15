@@ -6,7 +6,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDownLine, RiSparkling2Line } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -117,23 +117,36 @@ export function StoreRoutesScreen() {
   const live = rows.filter((r) => !r.suggested);
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="المسارات"
-          description="عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم."
-        />
-        <div className="flex items-center gap-2">
-          {msg && (
+    <div className="space-y-4 pt-4" dir="rtl">
+      <PanelHeader
+        title="المسارات"
+        line="عنوان قديم ما زال يأتيك منه زوّار — إلى أين تُرسلهم."
+        note={
+          msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
-          )}
+          )
+        }
+        primary={
           <Button size="sm" disabled={busy || !!adding} onClick={() => setAdding({ from: '/lp/', to: '/lp/', kind: 302 })}>
             <RiAddCircleLine className="h-4 w-4" /> تحويل جديد
           </Button>
-        </div>
-      </header>
+        }
+        help={
+          <>
+            <p>
+              302 مؤقّت ويمكن الرجوع عنه في أي وقت. 301 دائم، وتحفظه المتصفحات ومحرّكات البحث مدّة
+              طويلة — فالخطأ فيه يصعب التراجع عنه على الأجهزة التي حفظته. ابدأ بـ302 إن لم تكن واثقاً.
+            </p>
+            <p>
+              الاقتراحات تأتي وحدها حين تغيّر رابط صفحة: الإعلان ما زال يشير إلى القديم، وكل نقرة عليه
+              مدفوعة سلفاً.
+            </p>
+          </>
+        }
+      />
 
       {/* The decision that is costing money while it waits. */}
       {suggestions.length > 0 && (
@@ -143,8 +156,7 @@ export function StoreRoutesScreen() {
             {suggestions.length === 1 ? 'اقتراح ينتظر قرارك' : `${suggestions.length} اقتراحات تنتظر قرارك`}
           </p>
           <p className="text-xs leading-relaxed text-[var(--sys-warning)]">
-            غيّرتَ رابط صفحة، والإعلان ما زال يشير إلى القديم. كل نقرة عليه مدفوعة سلفاً وتصل الآن إلى
-            «غير موجود». حوّلها، أو تجاهل الاقتراح إن كنت تريد للعنوان القديم أن يتوقف.
+            كل نقرة على العنوان القديم مدفوعة سلفاً وتصل الآن إلى «غير موجود».
           </p>
           {suggestions.map((row) => (
             <div key={row.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--sys-card)] p-2.5">
@@ -183,8 +195,7 @@ export function StoreRoutesScreen() {
             </label>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
-            302 مؤقّت ويمكن الرجوع عنه في أي وقت. 301 دائم، وتحفظه المتصفحات ومحرّكات البحث مدّة طويلة —
-            فالخطأ فيه يصعب التراجع عنه على الأجهزة التي حفظته. ابدأ بـ302 إن لم تكن واثقاً.
+            302 مؤقّت ويُرجَع عنه في أي وقت. 301 دائم وتحفظه المتصفحات طويلاً.
           </p>
           <div className="mt-2 flex items-center justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setAdding(null)}>إلغاء</Button>

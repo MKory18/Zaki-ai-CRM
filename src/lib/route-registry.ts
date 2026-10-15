@@ -177,39 +177,33 @@ export const NAV: NavGroup[] = [
     label: 'واجهة المتجر',
     routes: [
       /**
-       * THE SHOP ITSELF, ABOVE THE THINGS THAT DRESS IT.
+       * TWO ENTRIES, WHERE TEN STOOD.
        *
        * `/store` first: every shop on one card each — which are live,
        * which sell anything, and the way into each one. The old
        * single-product address redirects here permanently (next.config.ts)
        * instead of living on as a second entry for the same thing.
        *
-       * Order is the order the work happens in: which shops exist, which
-       * pages exist, then how they look.
+       * AND THE EIGHT THAT USED TO FOLLOW IT ARE NOW ITS TABS.
+       *
+       * «التصميم» «القوالب» «القوائم» «الصفحات التعريفية والسياسات»
+       * «البحث والفلاتر» «اللغات» «المسارات» «الدومين» were eight menu
+       * entries for one shop, and the owner's word for the result was
+       * «معجّق … بتضيع». They are the three tabs of `/store?tab=…` now —
+       * الواجهة · المحتوى · العنوان — defined once in
+       * `src/lib/store-admin.ts`, and every one of the eight addresses
+       * redirects permanently to the tab that holds it.
+       *
+       * NOT A SCREEN WAS DELETED: the same nine components render, in
+       * panels. A menu entry is not a feature, and this group is a menu.
+       *
+       * TWO AND NOT THREE. §7.1 of docs/storefront/AUDIT.md proposed three
+       * and §10 corrected itself in writing: «منصّة التجريب stays under
+       * النمو — the storefront group is المتجر + صفحات الهبوط, two
+       * entries, not three.» The bench is still where it was.
        */
       r('/store', 'المتجر', 'Store', ['storefront.view', 'storefront.manage', 'geo.manage']),
       r('/store/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
-      /**
-       * «الآراء» — what buyers said, and what the shop does about it.
-       *
-       * Owner decision D8. It sits with the shop's content and not under
-       * «الإعدادات», by this group's own dividing rule: this is about what
-       * the shop SAYS, not about how the system RUNS.
-       *
-       * Above the look screens and below the pages, because it is read in
-       * the order the work happens: which pages exist, what customers said
-       * about them, then how any of it is dressed.
-       */
-      r('/store/reviews', 'الآراء', 'Star', ['storefront.view', 'storefront.manage']),
-
-      r('/store/design', 'التصميم', 'LayoutTemplate', ['storefront.view', 'storefront.manage']),
-      r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),
-      r('/store/menus', 'القوائم', 'ListTree', ['storefront.view', 'storefront.manage']),
-      r('/store/pages', 'الصفحات التعريفية والسياسات', 'FileText', ['storefront.view', 'storefront.manage']),
-      r('/store/search', 'البحث والفلاتر', 'Search', ['storefront.view', 'storefront.manage']),
-      r('/store/languages', 'اللغات', 'Languages', ['storefront.view', 'storefront.manage']),
-      r('/store/routes', 'المسارات', 'Signpost', ['storefront.view', 'storefront.manage']),
-      r('/store/domain', 'الدومين', 'Globe', ['storefront.view', 'storefront.domain']),
     ],
   },
   {

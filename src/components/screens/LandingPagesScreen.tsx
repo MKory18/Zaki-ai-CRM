@@ -57,6 +57,22 @@ const BLANK_FORM = {
 /** The library's own theme, which is what a page with no skin is given. */
 const BARE_THEME = buildTemplate('blank').theme as LandingTheme;
 
+/**
+ * THE FOUR STEPS, NAMED ONCE.
+ *
+ * The owner's own order (15/10 01:33): product → family → content →
+ * publish. «الشكل» is this system's word for his «family»: the three
+ * families of S1 dress a SHOP, and what a landing page is started from
+ * here is a persuasion structure with a look, or one of the fifteen
+ * ready-made shapes. Same step, the name this screen already uses.
+ */
+const CREATE_STEPS = [
+  { key: 'product', label: 'المنتج' },
+  { key: 'shape', label: 'الشكل' },
+  { key: 'content', label: 'النصّ' },
+  { key: 'publish', label: 'الاسم والرابط' },
+] as const;
+
 export function LandingPagesScreen() {
   const tell = useTell();
   const confirm = useConfirm();
@@ -70,6 +86,22 @@ export function LandingPagesScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+  /**
+   * WHICH STEP OF FOUR.
+   *
+   * The owner, 15/10 01:33: «the إنشاء صفحة هبوط dialog is cluttered —
+   * make it steps (product → family → content → publish)». It was one
+   * scroll holding a product picker, two kinds of starting point, fifteen
+   * template previews, ten skin previews, a dialect row, an AI button and
+   * every text slot of the chosen structure — about two thousand pixels
+   * of decisions with no order, and the two fields that are actually
+   * REQUIRED (the name and the address) at the very bottom, past all of
+   * it.
+   *
+   * Nothing was removed and nothing was added: the same controls, in the
+   * order the work happens in, four at a time instead of forty.
+   */
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState(BLANK_FORM);
   /**
    * WHICH OF THE TWO STARTING POINTS IS OPEN.
@@ -465,7 +497,7 @@ export function LandingPagesScreen() {
                   اعرض كل الصفحات المنشورة
                 </Button>
               )}
-              <Button onClick={() => { setForm(BLANK_FORM); setCopy({}); setFormError(null); setCreateOpen(true); }}>
+              <Button onClick={() => { setForm(BLANK_FORM); setCopy({}); setFormError(null); setStep(1); setCreateOpen(true); }}>
                 <RiAddCircleLine className="w-4 h-4" /> صفحة جديدة
               </Button>
             </>
@@ -582,17 +614,53 @@ export function LandingPagesScreen() {
       </div>
 
       {/* Create modal */}
-      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="إنشاء صفحة هبوط جديدة" maxWidth="4xl">
+      <Modal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="إنشاء صفحة هبوط جديدة"
+        subtitle={`الخطوة ${step} من 4 — ${CREATE_STEPS[step - 1].label}`}
+        maxWidth="4xl"
+      >
         <div className="space-y-4">
           {/*
-            THE PRODUCT FIRST, AND THE SHAPE SECOND.
+            THE FOUR STEPS, SHOWN AS A ROW AND NOT AS A NUMBER ALONE.
 
-            The order is the whole point: every template below is drawn
-            selling the product chosen here, with its name and its price in
-            it. Asked afterwards, as it used to be, the fifteen previews
-            would all advertise «منتجك», and the question a seller actually
-            has — «هل يناسب هذا منتجي؟» — could not be answered by looking.
+            Each one is reachable backwards by tapping it: a seller on the
+            text step who wants a different shape should not have to cancel
+            and start again. Forwards is the «التالي» button, so the order
+            the previews depend on cannot be skipped — every template on
+            step 2 is drawn selling the product chosen on step 1, and
+            asked the other way round all fifteen advertise «منتجك».
           */}
+          <ol className="flex flex-wrap items-center gap-1.5">
+            {CREATE_STEPS.map((st, i) => {
+              const n = i + 1;
+              const done = n < step;
+              const on = n === step;
+              return (
+                <li key={st.key}>
+                  <button
+                    type="button"
+                    onClick={() => { if (n < step) setStep(n); }}
+                    disabled={n > step}
+                    aria-current={on ? 'step' : undefined}
+                    className={`tap-safe inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs font-bold md:min-h-9 ${
+                      on
+                        ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
+                        : done
+                          ? 'border border-[var(--sys-primary)] text-[var(--sys-primary)]'
+                          : 'border border-[var(--sys-border)] text-[var(--sys-muted)]'
+                    }`}
+                  >
+                    <span className="tabular-nums" dir="ltr">{n}</span>
+                    {st.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          {step === 1 && (
           <div>
             <label className="text-xs font-semibold text-[var(--sys-foreground)]">المنتج المرتبط</label>
             {/*
@@ -622,7 +690,10 @@ export function LandingPagesScreen() {
             />
             <p className="text-xs text-[var(--sys-muted-foreground)] mt-1">المنتج والسعر يُحدَّدان من السيرفر عند إرسال أي طلب — لا يمكن التلاعب بهما من الصفحة.</p>
           </div>
+          )}
 
+          {step === 2 && (
+          <>
           {/*
             THE SHAPE OF THE PAGE, CHOSEN SECOND.
 
@@ -779,15 +850,48 @@ export function LandingPagesScreen() {
                 )}
               </div>
 
+            </>
+          )}
+          </>
+          )}
+
+          {step === 3 && (
+          <>
               {/*
                 THE COPY, THIRD — AND IT REACHES THE PAGE. The route built
                 the sections from an EMPTY copy map, so these fields were a
                 form whose answers were discarded; now every sentence typed
                 here lands in the block its slot names.
+
+                It is step three of four now rather than the third heading
+                of nine on one scroll — and the two REQUIRED fields, the
+                name and the address, moved out of the bottom of that
+                scroll into step four where nothing hides them.
               */}
-              {chosenStructure && (
+              {source === 'structure' && chosenStructure && (
                 <div>
-                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">3 · النصّ — خاناتُ هذه البنية</label>
+                  <label className="text-xs font-semibold text-[var(--sys-foreground)]">النصّ — خاناتُ هذه البنية</label>
+                  {/*
+                    THE PREVIEW COMES WITH THE WORDS TO THIS STEP.
+
+                    The hint under this label promises «وما تكتبه هنا يظهر
+                    في المعاينة فوراً», and before the four steps that was
+                    true by accident: the ten skin cards were on the same
+                    scroll, so typing redrew them. Separating the steps
+                    would have quietly broken the promise — so one
+                    preview, of the chosen structure in the chosen skin,
+                    stands beside the fields. Ten were a choice; one is a
+                    mirror.
+                  */}
+                  <div className="mt-2 overflow-hidden rounded-lg border border-[var(--sys-border)]">
+                    <TemplatePreview
+                      sections={previewSections}
+                      theme={form.skin ? skinThemes[form.skin] : BARE_THEME}
+                      product={chosenProduct}
+                      height={220}
+                      zoom={0.42}
+                    />
+                  </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <span className="text-xs text-[var(--sys-muted)]">اللهجة</span>
                     {DIALECTS.map((d) => (
@@ -854,33 +958,94 @@ export function LandingPagesScreen() {
                   </div>
                 </div>
               )}
-            </>
+              {source === 'template' && (
+                <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                  الشكل الجاهز يأتي بنصّه المبدئي — تعدّله في المحرّر بعد الإنشاء، كلمةً كلمة.
+                </p>
+              )}
+          </>
           )}
-          <div>
-            <label className="text-xs font-semibold text-[var(--sys-foreground)]">اسم الصفحة *</label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: صفحة Tremella" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-[var(--sys-foreground)]">الرابط (slug) * — سيصبح /lp/…</label>
-            <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="tremella" dir="ltr" />
-          </div>
+
+          {step === 4 && (
+          <>
+            {/*
+              WHAT IS ABOUT TO BE CREATED, AND THE TWO FIELDS IT CANNOT BE
+              CREATED WITHOUT.
+
+              They used to be the last two of nine blocks on one scroll,
+              under fifteen previews — so the thing the dialog REQUIRES was
+              the thing hardest to reach. Here they are the step, with the
+              three choices already made printed above them.
+            */}
+            <dl className="grid gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-3 text-xs sm:grid-cols-3">
+              <div>
+                <dt className="text-[var(--sys-muted)]">المنتج</dt>
+                <dd className="font-semibold text-[var(--sys-heading)]">{chosenProduct?.name ?? 'بلا منتج'}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--sys-muted)]">الشكل</dt>
+                <dd className="font-semibold text-[var(--sys-heading)]">
+                  {source === 'template'
+                    ? (form.template ? 'شكل جاهز' : 'لم يُختر بعد')
+                    : (chosenStructure?.name ?? 'لم تُختر بنية')}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--sys-muted)]">المظهر</dt>
+                <dd className="font-semibold text-[var(--sys-heading)]">
+                  {source === 'template'
+                    ? 'ألوان الشكل الجاهز'
+                    : (STORE_TEMPLATES.find((t) => t.id === form.skin)?.name ?? 'ألوان المكتبة')}
+                </dd>
+              </div>
+            </dl>
+            <div>
+              <label className="text-xs font-semibold text-[var(--sys-foreground)]">اسم الصفحة *</label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: صفحة Tremella" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-[var(--sys-foreground)]">الرابط (slug) * — سيصبح /lp/…</label>
+              <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="tremella" dir="ltr" />
+            </div>
+            {/* Creating is not publishing, and the step that is called
+                «النشر» must not be read as doing it. */}
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              تُنشأ مسوّدةً: لا يراها زبونٌ حتى تنشرها من محرّرها.
+            </p>
+          </>
+          )}
+
           {formError && <div className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] rounded-lg px-3 py-2">{formError}</div>}
-          <div className="flex justify-end gap-2 pt-2">
+
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>إلغاء</Button>
-            {/* A structure is not optional on its own tab: there is no
-                default story, and a silent fallback would hand somebody a
-                first screen that contradicts the advert pointing at it. */}
-            <Button
-              onClick={createLandingPage}
-              disabled={
-                saving ||
-                form.name.trim().length < 2 ||
-                form.slug.trim().length < 3 ||
-                (source === 'structure' && !form.structure)
-              }
-            >
-              {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إنشاء
-            </Button>
+            {step > 1 && (
+              <Button variant="secondary" onClick={() => setStep((n) => n - 1)}>السابق</Button>
+            )}
+            {step < 4 ? (
+              /* A structure is not optional on its own tab: there is no
+                 default story, and a silent fallback would hand somebody a
+                 first screen that contradicts the advert pointing at it.
+                 So the shape step will not let you past it empty. */
+              <Button
+                onClick={() => setStep((n) => n + 1)}
+                disabled={step === 2 && source === 'structure' && !form.structure}
+              >
+                التالي
+              </Button>
+            ) : (
+              <Button
+                onClick={createLandingPage}
+                disabled={
+                  saving ||
+                  form.name.trim().length < 2 ||
+                  form.slug.trim().length < 3 ||
+                  (source === 'structure' && !form.structure)
+                }
+              >
+                {saving ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiAddCircleLine className="w-4 h-4" />} إنشاء
+              </Button>
+            )}
           </div>
         </div>
       </Modal>

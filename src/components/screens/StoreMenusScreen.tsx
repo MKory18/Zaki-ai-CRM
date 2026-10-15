@@ -6,8 +6,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
 import { MENU_AR, MENU_KEYS, storePageHref, type MenuItem, type MenuKey } from '@/lib/store-menus';
 import { RiAddCircleLine, RiArrowDownLine, RiArrowUpLine, RiCheckLine, RiDeleteBinLine, RiEyeLine, RiEyeOffLine, RiLoader4Line } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { routeLabel } from '@/lib/route-registry';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 
 /**
  * THE SHOP'S FIVE MENUS.
@@ -93,18 +92,51 @@ export function StoreMenusScreen() {
   const items = menus[open] ?? [];
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title={routeLabel('/store/menus')}
-          description="أين يذهب الزبون من كل صفحة. الوجهة تُختار من صفحات متجرك، أو تُكتب لرابط خارجي."
-        />
-        {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
-            {msg.text}
-          </span>
-        )}
-      </header>
+    <div className="space-y-4 pt-4" dir="rtl">
+      <PanelHeader
+        title="القوائم"
+        line="أين يذهب الزبون من كل صفحة في متجرك."
+        note={
+          msg && (
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
+              {msg.text}
+            </span>
+          )
+        }
+        primary={
+          <Button size="sm" disabled={savingKey === open} onClick={() => void save(open)}>
+            {savingKey === open && <RiLoader4Line className="h-4 w-4 animate-spin" />}
+            احفظ «{MENU_AR[open].label}»
+          </Button>
+        }
+        secondary={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={items.length >= 30}
+            onClick={() => edit(open, [...items, { label: '', href: '', visible: true }])}
+          >
+            <RiAddCircleLine className="h-4 w-4" /> أضف عنصراً
+          </Button>
+        }
+        help={
+          <>
+            <p>
+              الوجهة تُختار من صفحات متجرك، أو تُكتب لرابط خارجي. المسار المكتوب من الذاكرة هو مسار
+              يُعطب بصمت: الزبون يرى رابطاً ميّتاً، وأنت لا ترى شيئاً.
+            </p>
+            <p>
+              الرابط الخارجي يبدأ بـ https. مسار داخلي يبدأ بشرطة مائلة واحدة — شرطتان تعني موقعاً آخر،
+              وهي مرفوضة.
+            </p>
+            <p>
+              صفحة ما زالت مسوّدة يمكن الربط بها، وتُوسم بذلك: من يبني التذييل قبل نشر السياسات أمرٌ
+              عادي، ومنعه يجبره على ترتيبٍ مقلوب.
+            </p>
+          </>
+        }
+      />
 
       <nav className="flex flex-wrap gap-1 border-b border-[var(--sys-border)]">
         {MENU_KEYS.map((key) => (
@@ -249,23 +281,6 @@ export function StoreMenusScreen() {
           })}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={items.length >= 30}
-            onClick={() => edit(open, [...items, { label: '', href: '', visible: true }])}
-          >
-            <RiAddCircleLine className="h-4 w-4" /> أضف عنصراً
-          </Button>
-          <Button size="sm" disabled={savingKey === open} onClick={() => void save(open)}>
-            {savingKey === open && <RiLoader4Line className="h-4 w-4 animate-spin" />}
-            احفظ «{MENU_AR[open].label}»
-          </Button>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
-          الرابط الخارجي يبدأ بـ https. مسار داخلي يبدأ بشرطة مائلة واحدة — شرطتان تعني موقعاً آخر، وهي مرفوضة.
-        </p>
       </div>
     </div>
   );

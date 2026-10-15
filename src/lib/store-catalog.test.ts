@@ -244,15 +244,27 @@ describe('a price of zero is not a price', () => {
 });
 
 describe('the way in', () => {
-  it('«التصميم» opens the store’s own designer, not a landing page’s', () => {
+  it('«الصفحة الرئيسية» opens the store’s own designer, not a landing page’s', () => {
     const src = stripComments(repoFile('src/components/screens/StoresScreen.tsx'));
-    // THE BUTTON THAT CARRIES THE LABEL, not any link to the designer:
-    // the card has a second, plain-text one further down, and matching
-    // that passed while the button itself had gone back to opening a
-    // landing page's editor — the exact bug being fixed.
+    /*
+     * THE BUTTON THAT CARRIES THE LABEL, not any link to the designer:
+     * the card has a second, plain-text one further down, and matching
+     * that passed while the button itself had gone back to opening a
+     * landing page's editor — the exact bug being fixed.
+     *
+     * THE ADDRESS MOVED AND THE RULE DID NOT. `/store/design` was one of
+     * ten storefront menu entries; it is the `front/home` panel of
+     * `/store` now, and the card builds that address through
+     * `storeTabHref` rather than spelling it — so the day the tab is
+     * renamed the card follows it, instead of this guard passing on a
+     * link to nowhere. The label follows the panel's own name.
+     */
     expect(src).toMatch(
-      /onClick=\{\(\) => onOpen\('\/store\/design'\)\}[\s\S]{0,400}التصميم\s*<\/button>/
+      /onClick=\{\(\) => onOpen\(storeTabHref\('front', 'home'\)\)\}[\s\S]{0,400}الصفحة الرئيسية\s*<\/button>/
     );
+    // And it is the designer it names, not a guessed string: the one map
+    // of tabs is what both the menu and this card read.
+    expect(src).toContain("from '@/lib/store-admin'");
   });
 
   it('and the designer no longer turns a single-product store away', () => {
