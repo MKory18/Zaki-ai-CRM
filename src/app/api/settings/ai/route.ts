@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { AI_PROVIDERS, aiSettings, saveAiSettings } from '@/lib/ai-provider';
+import { AI_PROVIDERS, aiSettings, saveAiSettings, systemAi } from '@/lib/ai-provider';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
 import { AI_JOBS, MAX_PROMPT } from '@/lib/ai-prompts';
@@ -18,7 +18,20 @@ import { AI_JOBS, MAX_PROMPT } from '@/lib/ai-prompts';
  */
 
 const schema = z.object({
-  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC']),
+  /**
+   * LOCAL IS ONE OF THEM, AND THE DROPDOWN HAS BEEN OFFERING IT.
+   *
+   * «نموذج على خادمك» is in `AI_PROVIDERS`, the company's provider
+   * dropdown lists it, and this enum refused it — so choosing it and
+   * pressing save answered with a validation error and no explanation of
+   * which field was wrong. The system-settings route has accepted LOCAL
+   * all along; this one simply never caught up.
+   *
+   * And it is refused WITHOUT an address, in the words that route already
+   * uses, because a local model with nowhere to send the request saves
+   * cleanly and fails at the moment somebody asks a question.
+   */
+  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'LOCAL']),
   model: z.string().trim().max(120),
   /**
    * The company's own wording per AI job — the house prompt is the 'house'
@@ -83,6 +96,24 @@ export async function PUT(req: Request) {
     }
 
     const before = await aiSettings(companyId);
+
+    /*
+     * A local model with nowhere to send the request saves cleanly and
+     * then fails at the moment somebody asks a question. The address is
+     * the installation's, not the company's, so the check reads the
+     * system settings — the same sentence `settings/ai/system` answers
+     * with, because two wordings for one refusal is two things to learn.
+     */
+    if (parsed.data.provider === 'LOCAL') {
+      const { localBaseUrl } = await systemAi();
+      if (!localBaseUrl) {
+        return NextResponse.json(
+          { error: 'اكتب عنوان الخادم الذي يشغّل النموذج قبل اختياره مزوّداً.', code: 'ENDPOINT_REQUIRED' },
+          { status: 400 }
+        );
+      }
+    }
+
     let saved;
     try {
       saved = await saveAiSettings(companyId, parsed.data, { name: user.name ?? null });

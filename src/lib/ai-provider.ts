@@ -76,9 +76,19 @@ export const AI_PROVIDERS: ProviderInfo[] = [
   {
     id: 'ANTHROPIC',
     label: 'Anthropic',
-    defaultModel: 'claude-sonnet-5',
+    /*
+     * `claude-sonnet-5-5` and `claude-haiku-5-5` are the current ids and
+     * neither was offered — so the owner could not pick the model that is
+     * both newer and cheaper than the one the box defaulted to. The older
+     * names stay listed rather than deleted: a company already answering
+     * on one of them keeps answering, and a list that removes what people
+     * chose is a list that breaks them to look tidy.
+     */
+    defaultModel: 'claude-sonnet-5-5',
     models: [
       'claude-opus-5-5',
+      'claude-sonnet-5-5',
+      'claude-haiku-5-5',
       'claude-sonnet-5',
       'claude-fable-5-1',
       'claude-haiku-4-5-20251001',
@@ -560,6 +570,12 @@ export interface AiRoute {
   provider: AiProvider;
   model: string;
   key: string | null;
+  /**
+   * WHICH stored key this is — never its value. The screen and the test
+   * button both need to say «المفتاح من النظام» or «من الشركة», and the
+   * only honest source for that is the resolution that picked it.
+   */
+  keyFrom: KeySource;
   /** Only for LOCAL: the server the owner runs. Null for a vendor. */
   baseUrl?: string | null;
 }
@@ -592,11 +608,15 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   );
 
   let key: string | null = null;
+  let keyFrom: KeySource = 'none';
   // The installation's key for THIS vendor, then the company's own.
-  const stored = sys.keys?.[provider]?.enc ?? ai.keys?.[provider]?.enc;
+  const fromSystem = sys.keys?.[provider]?.enc;
+  const fromCompany = ai.keys?.[provider]?.enc;
+  const stored = fromSystem ?? fromCompany;
   if (stored) {
     try {
       key = decryptSecret(stored);
+      keyFrom = fromSystem ? 'system' : 'company';
     } catch {
       key = null;
     }
@@ -605,13 +625,79 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
     // when it was entered — never handed to a vendor it was not issued by.
     try {
       key = decryptSecret(ai.apiKeyEncrypted);
+      keyFrom = 'legacy';
     } catch {
       key = null;
     }
   }
-  if (!key && provider === 'OPENROUTER') key = process.env.OPENROUTER_API_KEY ?? null;
+  if (!key && provider === 'OPENROUTER') {
+    key = process.env.OPENROUTER_API_KEY ?? null;
+    if (key) keyFrom = 'env';
+  }
+  if (!key) keyFrom = 'none';
 
-  return { provider, model, key, baseUrl: provider === 'LOCAL' ? sys.localBaseUrl ?? null : null };
+  return {
+    provider,
+    model,
+    key,
+    keyFrom,
+    baseUrl: provider === 'LOCAL' ? sys.localBaseUrl ?? null : null,
+  };
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * WHERE A CALL WOULD GO, WITHOUT CARRYING THE KEY THERE.
+ *
+ * The settings screen needs to say «بيروح على: Anthropic · claude-sonnet-5-5
+ * — المفتاح من النظام» beside each assistant, and the test button needs to
+ * report the same thing. Both of those used to re-derive it: the screen
+ * read the company's own provider and model, and the test labelled its
+ * answer with those — so a call routed by an assistant override, or by the
+ * installation default, was described as something else entirely. Two
+ * answers to one question, and the wrong one on the screen.
+ *
+ * This is the same resolution `aiChat` uses, with the key dropped before
+ * it leaves. `keyFrom` says WHICH stored key would be used, never its
+ * value — that is the whole reason this exists rather than a `route.key`
+ * the screen could read.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export type KeySource = 'system' | 'company' | 'legacy' | 'env' | 'none';
+
+export interface RouteDescription {
+  provider: AiProvider;
+  model: string;
+  keyFrom: KeySource;
+  /** The local server's address, when the route is LOCAL. Never a secret. */
+  baseUrl: string | null;
+}
+
+export async function describeRoute(companyId: string, job?: string): Promise<RouteDescription> {
+  const { provider, model, keyFrom, baseUrl } = await routeFor(companyId, job);
+  return { provider, model, keyFrom, baseUrl: baseUrl ?? null };
+}
+
+/**
+ * ── WHAT THE VENDOR ACTUALLY SAID, CARRIED WITH THE STATUS ──
+ *
+ * The thrown error used to be the status and nothing else, so every 400
+ * from Anthropic arrived at the owner as «المزوّد ردّ بخطأ 400» — including
+ * the one that means «your credit balance is too low», which is not a
+ * programming error at all and has a four-word answer he can act on.
+ *
+ * The body is the VENDOR's words about the request. It carries no key: the
+ * key goes up in a header and nothing sends it back. Trimmed to 300
+ * characters so a vendor's HTML error page cannot become the message.
+ */
+async function vendorError(res: Response, model: string): Promise<Error> {
+  let said = '';
+  try {
+    said = (await res.text()).slice(0, 300);
+  } catch {
+    said = '';
+  }
+  return new Error(`AI_HTTP_${res.status}|${model}|${said.replace(/\s+/g, ' ').trim()}`);
 }
 
 export interface ChatRequest {
@@ -718,8 +804,32 @@ export async function aiChat(req: ChatRequest): Promise<string> {
   const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 30_000);
 
   try {
+    /**
+     * ── THE JOB'S OWN WORDING, AND NEVER THE WORD «undefined» ──
+     *
+     * `ChatRequest` says it plainly ten lines up: «Pass a `job` instead to
+     * use the company's own wording». Three callers do exactly that and
+     * pass no `system` — picking, the confirmation assistant and the
+     * landing copywriter — and this line never looked the job up. So the
+     * template literal stringified `undefined`, and what reached the model
+     * was the house prompt, two newlines, and the literal word
+     * «undefined» as its instructions. With no house prompt it was
+     * `undefined` alone.
+     *
+     * Three assistants have been running that way. They answered — models
+     * answer almost anything — which is why nobody saw it: a worse answer
+     * looks like a worse model.
+     *
+     * `resolvePrompt` is the function the settings screen edits through,
+     * so this is the line that makes «عدّلت النصّ» mean something for
+     * those three.
+     */
+    const job = req.system ?? (req.job ? resolvePrompt(req.job, settings.prompts) : '');
     const house = settings.prompt.trim();
-    const system = house ? `${house}\n\n${req.system}` : req.system;
+    const body = job.trim();
+    // Neither half is sent empty: an empty system prompt is a different
+    // request from no system prompt, and «\n\n» on its own is noise.
+    const system = house && body ? `${house}\n\n${body}` : house || body;
 
     if (route.provider === 'ANTHROPIC') {
       // Proved by the guard above; re-stated because the compiler cannot
@@ -740,7 +850,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
           messages: [{ role: 'user', content: req.user }],
         }),
       });
-      if (!res.ok) throw new Error(`AI_HTTP_${res.status}`);
+      if (!res.ok) throw await vendorError(res, route.model);
       const data = await res.json();
       return data?.content?.[0]?.text ?? '';
     }
@@ -781,7 +891,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
         ...(req.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
-    if (!res.ok) throw new Error(`AI_HTTP_${res.status}`);
+    if (!res.ok) throw await vendorError(res, route.model);
     const data = await res.json();
     return data?.choices?.[0]?.message?.content ?? '';
   } finally {

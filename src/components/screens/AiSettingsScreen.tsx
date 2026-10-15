@@ -167,6 +167,16 @@ export function AiSettingsScreen() {
           provider: settings.provider,
           model: settings.model,
           prompts: drafts,
+          /*
+            AND THE PER-ASSISTANT ROUTING, WHICH NEVER LEFT THIS SCREEN.
+
+            `AssistantsTable` wrote every choice into local state through
+            `onRouted` and the body here never carried it, so «المساعدون»
+            was a tab where every control worked, nothing was refused, and
+            nothing survived a reload. The route has accepted `assistants`
+            all along.
+          */
+          assistants: settings.assistants ?? {},
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -625,7 +635,14 @@ export function AiSettingsScreen() {
         <MessageTemplatesCard />
       </section>
 
-      <div className={`items-center gap-2 ${tab === 'assistants' ? 'hidden' : 'flex'}`}>
+      {/*
+        AND THE SAVE BUTTON IS ON EVERY TAB.
+
+        It was hidden on «المساعدون» — which made sense while that tab's
+        choices were not saved by it. Now they are, and a tab with changes
+        and no way to keep them is the shape of the original defect.
+      */}
+      <div className="flex items-center gap-2">
         <Button onClick={save} disabled={busy}>
           {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiCheckLine className="h-4 w-4" />}
           احفظ الإعدادات والنصوص
