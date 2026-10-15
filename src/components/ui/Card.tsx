@@ -124,6 +124,7 @@ export function KpiCard({
   series,
   goodWhen,
   health,
+  rule,
   href,
 }: {
   title: string;
@@ -146,6 +147,22 @@ export function KpiCard({
    * arrow over it is telling a comforting lie.
    */
   health?: HealthVerdict;
+  /**
+   * HOW THIS FIGURE IS WORKED OUT — in a sentence, on the card.
+   *
+   * The owner's rule for every indicator: «كل مؤشّر يبيّن قاعدة
+   * الاحتساب». A percentage on a dashboard is read as a verdict on
+   * somebody's work, and two people reading the same percentage with
+   * different ideas of its denominator are not disagreeing about the
+   * business — they are disagreeing about arithmetic, and one of them is
+   * going to act on it.
+   *
+   * It says WHAT is counted, FROM WHICH statuses, and OVER WHICH period.
+   * Not optional: a card that ships without one is a number nobody can
+   * check, and the type is the only guard strong enough to stop that
+   * happening again next month.
+   */
+  rule: string;
   /** The list behind the number. */
   href?: string;
 }) {
@@ -190,6 +207,29 @@ export function KpiCard({
       )}
 
       {subtitle && <p className="mt-2 text-xs text-[var(--sys-muted-foreground)]">{subtitle}</p>}
+
+      {/*
+        THE RULE, ON THE CARD AND NOT IN A TOOLTIP.
+        A `title` attribute does not exist on a phone, and the phone is
+        where this screen is read. `<details>` costs one line closed,
+        needs no state, and opens with a tap or with a keyboard — and a
+        screen reader announces it as a disclosure rather than as a
+        decoration.
+      */}
+      {/*
+        AND THE CLASSES ARE ONES THE SHEET ALREADY HAS.
+        `list-none` and `group` were used nowhere else in the product, and
+        the stylesheet ratchet measured them: +32 bytes, over the cap. The
+        marker is hidden in `system.css` with the other element defaults
+        instead, where it costs nothing and applies to every disclosure
+        this product ever draws.
+      */}
+      <details className="mt-2">
+        <summary className="cursor-pointer text-xs text-[var(--sys-muted)] hover:text-[var(--sys-primary)]">
+          قاعدة الاحتساب
+        </summary>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{rule}</p>
+      </details>
     </>
   );
 

@@ -489,6 +489,27 @@ summary:active {
 }
 
 /*
+ * AND A DISCLOSURE DOES NOT DRAW THE BROWSER'S OWN TRIANGLE.
+ *
+ * `<details>` is how a card shows «قاعدة الاحتساب» without state and
+ * without a tooltip — a `title` attribute does not exist on a phone, and
+ * the phone is where these screens are read. What it brings with it is the
+ * platform marker: a triangle in Chrome, a disc in Safari, on the wrong
+ * side in RTL.
+ *
+ * Here and not as a utility class on the element: `list-none` was used
+ * nowhere else in this product, so adding it cost the stylesheet 32 bytes
+ * and crossed the payload ratchet. One rule in the element defaults costs
+ * nothing extra and applies to every disclosure this product ever draws.
+ */
+summary::-webkit-details-marker {
+  display: none;
+}
+summary {
+  list-style: none;
+}
+
+/*
  * 44 PIXELS OF THUMB, WITHOUT 44 PIXELS OF BOX.
  *
  * For a CHIP OR AN INLINE LINK ONLY. A button gets a real height instead —

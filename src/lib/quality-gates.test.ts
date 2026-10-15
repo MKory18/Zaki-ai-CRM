@@ -333,7 +333,30 @@ describe('the payload', () => {
    * The number below is the measurement, not a round figure, and it is
    * re-pegged the same way it was last time: to the truth.
    */
-  const CSS_BUDGET_KB = 96.03;
+  /*
+   * ── 96.03 → 96.13, AND THE 101 BYTES BOUGHT «قاعدة الاحتساب» ──
+   *
+   * Every indicator card now states how its figure is worked out, behind
+   * a `<details>` the person can open on a phone — the owner's rule for
+   * every indicator, and not decoration: «نسبة التأكيد ٩٧٪» means one
+   * thing out of the orders that were DECIDED and another out of every
+   * order created, and the second falls whenever intake speeds up.
+   *
+   * A disclosure brings the platform's own marker with it — a triangle in
+   * Chrome, a disc in Safari, on the wrong side in RTL — so it is hidden
+   * in the element defaults in `system.css`. The first version used
+   * `list-none` and `group` as utilities instead: both were used nowhere
+   * else in the product, measured +32 bytes, and this ratchet caught
+   * them. Two CSS rules in the defaults cost 101 bytes once and apply to
+   * every disclosure this product ever draws, rather than per element.
+   *
+   * Measured on a clean build:  98,329 → 98,430 bytes.
+   *
+   * The number is the measurement, not a round figure, and it is re-pegged
+   * the same way it was the last two times: to the truth. Growth here is
+   * meant to be DELIBERATE and recorded — which this is — not impossible.
+   */
+  const CSS_BUDGET_KB = 96.13;
 
   it(`keeps the first-load stylesheet at or under ${CSS_BUDGET_KB} KB`, () => {
     /*

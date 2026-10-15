@@ -394,6 +394,7 @@ export function DashboardScreen() {
           {canFinance && (
             <KpiCard
               title={t.netProfit}
+              rule="إيراد الطلبات الموصَّلة ناقص كلفة البضاعة ناقص أجور التوصيل ناقص العمولات ناقص المصاريف التشغيليّة المسجَّلة في المدّة. الموصَّل وحده يُحسَب — طلب في الفان ما إله ربح بعد. والمدّة هي المختارة فوق."
               value={profitStated ? fmt(fin.netProfit) : '—'}
               /**
                * When the figure is stated, the margin goes under it — and an
@@ -418,6 +419,7 @@ export function DashboardScreen() {
           {canFinance && (
             <KpiCard
               title={t.deliveredRevenue}
+              rule="مجموع المحصَّل فعلاً للطلبات اللي انحصّلت، زائد إجمالي الطلبات الموصَّلة اللي ما انسجّل إلها تحصيل. الموصَّل وحده، وبالمدّة المختارة فوق."
               value={fmt(fin.deliveredRevenue)}
               subtitle={`${counts.delivered} ${locale === 'ar' ? 'طلب موصّل' : 'delivered orders'}`}
               icon={RiArrowUpCircleLine}
@@ -429,6 +431,7 @@ export function DashboardScreen() {
 
           <KpiCard
             title={t.confirmationRate}
+            rule="المؤكَّد ÷ (المؤكَّد + المرفوض). مقسوم على اللي **انبتّ فيه** لا على كلّ الطلبات — لأنّ القسمة على الكلّ بتحسب اللي ما حدا شافه بعد فشلاً، فالنسبة بتنزل كلّ ما زاد الإدخال. والمرفوض هو رفض تأكيد بس، مش طرد رجع."
             value={`${rates.confirmationRate}%`}
             subtitle={`${counts.confirmed} / ${counts.decided ?? counts.total} ${t.decidedOrders}`}
             icon={RiPercentLine}
@@ -440,6 +443,7 @@ export function DashboardScreen() {
 
           <KpiCard
             title={t.deliveryRate}
+            rule="الموصَّل ÷ المؤكَّد، بالمدّة المختارة فوق. المقام هو المؤكَّد لأنّ الطلب لازم يتأكّد قبل ما ينشحن."
             value={`${rates.deliveryRate}%`}
             subtitle={`${counts.delivered} / ${counts.confirmed} ${t.confirmedOrders}`}
             icon={RiTruckLine}
@@ -451,6 +455,7 @@ export function DashboardScreen() {
 
           <KpiCard
             title="نسبة الإرجاع"
+            rule="المرجَّع ÷ اللي بتّ فيه الباب (موصَّل + فاشل + مرجَّع). مش مقسوم على المُنشَأ: طلب لسّا بالفان ما فشل، وحسابه كان بينزّل النسبة كلّ ما سرّعنا الإدخال."
             value={vitals?.door.returnRate === null || vitals === undefined ? '—' : `${vitals.door.returnRate}%`}
             // Out of what the DOOR decided — delivered, failed and returned
             // — never out of orders created. An order still in a van has not
@@ -467,6 +472,7 @@ export function DashboardScreen() {
           {canFinance && (
             <KpiCard
               title="لم يُحصَّل بعد"
+              rule="مجموع مبالغ الطلبات الموصَّلة اللي ما وصل تحصيلها للمحفظة بعد. موصَّل وغير محصَّل بس — لا المشحون ولا المرجَّع."
               value={fmt(vitals?.outstanding.money ?? 0)}
               /**
                * «كل المدة» is not filler — it is the one figure on this screen
