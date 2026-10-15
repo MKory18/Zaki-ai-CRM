@@ -404,7 +404,14 @@ describe('the payload', () => {
    * ambient CSS — is still none of it: all of that is written into the
    * document for the one theme that person chose.
    */
-  const CSS_BUDGET_KB = 94.03;
+  /*
+   * ⚠️ 94.04 and not 94.03: the measurement is 96,288 bytes, which is
+   * 94.03125 KB — and `94.03` is BELOW it. The same two bytes read 96,286
+   * on this machine, because the working tree is CRLF and the build on CI
+   * is LF. The cap is stated above the measurement, never at a figure the
+   * build has to round down to meet.
+   */
+  const CSS_BUDGET_KB = 94.04;
 
   it(`keeps the first-load stylesheet at or under ${CSS_BUDGET_KB} KB`, () => {
     /*
