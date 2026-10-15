@@ -61,6 +61,7 @@
  * into the limit says so under «محطّات لم تُمشَ» rather than reporting a
  * figure it never obtained.
  */
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -235,7 +236,22 @@ const NEEDED_GRANTS = [
 
 /** The second pair of hands the daily closing insists on. See STOP 12. */
 const APPROVER_EMAIL = 'golden.path.approver@osm.local';
-const APPROVER_PASSWORD = 'GoldenPath-Approver-2026!';
+/**
+ * NOT WRITTEN DOWN, BECAUSE IT NEVER NEEDS TO BE.
+ *
+ * This password used to be a literal in this file, in a public repository.
+ * It did not need to be: the script creates the approver account and signs
+ * in as it inside the same process, and re-hashes the password on every
+ * run — so nothing outside this run has ever had to know it.
+ *
+ * A fresh random value per run is therefore strictly better than any fixed
+ * one: there is no literal to read, and nothing is left behind that would
+ * still open the account tomorrow. `GOLDEN_PATH_APPROVER_PASSWORD` is there
+ * for the case where somebody needs to sign in as this account by hand
+ * afterwards.
+ */
+const APPROVER_PASSWORD =
+  process.env.GOLDEN_PATH_APPROVER_PASSWORD || `gp-${randomBytes(18).toString('base64url')}`;
 
 interface Stage {
   storeId: string;
@@ -421,10 +437,14 @@ async function setUpStage(userId: string, roleId: string | null, companyId: stri
     },
     select: { id: true, createdAt: true, updatedAt: true },
   });
-  // The password is rewritten on every run so the credential in this file is
+  // The password is rewritten on every run, so the one this run generated is
   // always the live one — an approver nobody can sign in as is no approver.
+  // It is not written down anywhere; this run holds it and then it is gone.
   await db.user.update({ where: { id: approver.id }, data: { passwordHash: await bcrypt.hash(APPROVER_PASSWORD, 10) } });
-  made(`User ${APPROVER_EMAIL} (${approver.id}) — كلمة المرور في رأس السكربت`);
+  made(
+    `User ${APPROVER_EMAIL} (${approver.id}) — كلمة المرور مولّدة لهالتشغيل` +
+      ' (حطّ GOLDEN_PATH_APPROVER_PASSWORD إذا بدّك تدخل عليه بإيدك بعدين)'
+  );
   /*
    * AND THE COUNTRY, or `/api/context` answers «Forbidden: country not
    * accessible» and the second pair of hands never gets through the door.

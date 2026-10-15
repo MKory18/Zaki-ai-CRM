@@ -7,12 +7,20 @@ import bcrypt from 'bcryptjs';
 // production database. Explicit escape hatch: SEED_ALLOW_DESTRUCTIVE=1
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction && process.env.SEED_ALLOW_DESTRUCTIVE !== '1') {
+  /*
+   * The message is Arabic because the person who reads it at four in the
+   * morning, on a server, is the owner — and the one sentence that has to
+   * land is «هاد بيمسح كلّ إشي»: the entrypoint runs this file on every
+   * deploy, so this refusal is the thing standing between a bad NODE_ENV
+   * and an empty database.
+   */
   console.error(
-    '\n⛔ BLOCKED: prisma seed is DESTRUCTIVE (it deletes ALL companies, users, orders,\n' +
-    '   customers and products) and creates accounts with known development passwords.\n' +
-    '   Running it against NODE_ENV=production is forbidden.\n\n' +
-    '   If you are ABSOLUTELY certain (e.g. a disposable environment), set\n' +
-    '   SEED_ALLOW_DESTRUCTIVE=1 — and never do this against a production database.\n'
+    '\n⛔ ممنوع: هالملفّ بيمسح البيانات، وما بيشتغل على الإنتاج.\n' +
+    '   بيحذف كلّ الشركات والمستخدمين والطلبات والزباين والمنتجات،\n' +
+    '   وبيعمل حسابات التجربة بكلمة سرّ وحدة.\n\n' +
+    '   إذا إنت متأكّد إنّ هاي قاعدة بيانات للرمي: SEED_ALLOW_DESTRUCTIVE=1\n' +
+    '   ولا مرّة على قاعدة بيانات فيها شغل حقيقي.\n\n' +
+    '   BLOCKED: this seed is destructive and refuses NODE_ENV=production.\n'
   );
   process.exit(1);
 }
@@ -20,14 +28,43 @@ if (process.env.SEED_ALLOW_DESTRUCTIVE === '1' && !isProduction) {
   console.warn('⚠️  SEED_ALLOW_DESTRUCTIVE=1 — running destructive seed anyway (non-production).');
 }
 
-// ─── No production credentials in source code ───
-// Dev-only default kept for local seeding; production bootstrap must inject
-// SEED_OWNER_EMAIL / SEED_OWNER_PASSWORD (initial password is NOT logged).
-const DEV_DEMO_PASSWORD = 'password123';
+/**
+ * ─── NO CREDENTIAL IS WRITTEN IN THIS FILE ───
+ *
+ * The demo password used to sit here as a literal, and the literal was the
+ * leak: this repository is public, so everybody who could read the file
+ * knew the password of every demo account — and the launch ledger says
+ * thirteen real accounts were still carrying it.
+ *
+ * A gate that refuses to run in production did not help with that. The
+ * password was readable whether the seed ever ran or not. So the fix is
+ * not another gate: it is that the value is no longer here to read.
+ *
+ * `SEED_DEMO_PASSWORD` is now the only source. Without it the seed stops
+ * and says so, rather than inventing a default — because a default is how
+ * a known password gets into a database in the first place.
+ */
+const demoPasswordFromEnv = process.env.SEED_DEMO_PASSWORD;
 if (isProduction) {
-  console.error('⛔ BLOCKED: demo password seeding is not allowed in production.');
+  console.error(
+    '\n⛔ ممنوع: حسابات التجربة ما بتتعمل على الإنتاج.\n' +
+    '   هاد الملفّ بيمسح كلّ الشركات والمستخدمين والطلبات وبيعمل حسابات بكلمة سرّ معروفة.\n' +
+    '   إذا بدّك تبني مالك الإنتاج: SEED_OWNER_EMAIL و SEED_OWNER_PASSWORD، وبلا هالملفّ.\n'
+  );
   process.exit(1);
 }
+if (!demoPasswordFromEnv) {
+  console.error(
+    '\n⛔ ناقص SEED_DEMO_PASSWORD.\n' +
+    '   كلمة سرّ حسابات التجربة ما عادت مكتوبة بالملفّ — الريبو عامّ، وأي حدا كان بيقراها.\n' +
+    '   حطّها بالبيئة قبل ما تشغّل:\n\n' +
+    '     SEED_DEMO_PASSWORD="$(openssl rand -base64 18)" npx prisma db seed\n\n' +
+    '   أو بملفّ .env المحلّي عندك (وهو مستثنى من git).\n'
+  );
+  process.exit(1);
+}
+/** Narrowed once, so nothing below has to ask whether it exists. */
+const DEV_DEMO_PASSWORD: string = demoPasswordFromEnv;
 const ownerEmail = process.env.SEED_OWNER_EMAIL || 'mkory4268@gmail.com';
 const ownerPassword = process.env.SEED_OWNER_PASSWORD;
 if (isProduction && !ownerPassword) {
