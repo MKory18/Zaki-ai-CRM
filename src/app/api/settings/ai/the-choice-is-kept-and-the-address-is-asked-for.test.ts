@@ -87,6 +87,31 @@ describe('an assistant’s own vendor and model', () => {
   });
 });
 
+describe('and editing a prompt is not choosing a vendor', () => {
+  it('a save that carries no provider does not store one', async () => {
+    /*
+     * `aiSettings()` COMPUTES `provider` and `model` when the company
+     * never chose, so the screen echoing them back was a write. Saving a
+     * sentence used to store `provider: 'OPENROUTER'` — and since a
+     * company's choice now outranks the installation default, that stamp
+     * would override a deliberate LOCAL on the owner's own server.
+     */
+    const res = await put({ prompts: { picking: 'رتّب حسب الرفّ' } });
+
+    expect(res.status, await res.clone().text()).toBeLessThan(400);
+    const sent = saveAiSettings.mock.calls[0][1];
+    expect(sent.provider, 'حفظُ نصٍّ خزّن مزوّداً ما حدا اختاره').toBeUndefined();
+    expect(sent.model).toBeUndefined();
+    expect(sent.prompts).toEqual({ picking: 'رتّب حسب الرفّ' });
+  });
+
+  it('and a provider sent explicitly still lands', async () => {
+    systemAi.mockResolvedValue({ provider: 'OPENROUTER', localBaseUrl: null });
+    await put({ provider: 'ANTHROPIC', model: 'claude-sonnet-5-5', prompts: {} });
+    expect(saveAiSettings.mock.calls[0][1].provider).toBe('ANTHROPIC');
+  });
+});
+
 describe('«نموذج على خادمك»', () => {
   it('is accepted — the dropdown has been offering it all along', async () => {
     systemAi.mockResolvedValue({ provider: 'LOCAL', localBaseUrl: 'http://127.0.0.1:11434' });

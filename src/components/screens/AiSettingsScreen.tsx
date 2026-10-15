@@ -149,6 +149,12 @@ export function AiSettingsScreen() {
     const res = await fetch('/api/settings/ai');
     const json = await res.json();
     setSettings(json.settings);
+    // What the SERVER holds, so a save can tell a changed dropdown from an
+    // untouched one — the same rule the installation card follows.
+    savedCompany.current = {
+      provider: json.settings?.provider ?? null,
+      model: json.settings?.model ?? null,
+    };
     setProviders(json.providers || []);
     setJobs(json.jobs || []);
     // Where each assistant's call would actually go, answered by the
@@ -199,9 +205,16 @@ export function AiSettingsScreen() {
           the accounts are the installation's, and they are saved by the card
           above through their own endpoint.
         */
+        /*
+          AND THE SAME RULE ON THIS CARD: a prompt save is a prompt save.
+          `aiSettings()` COMPUTES provider and model when the company
+          never chose, so echoing them back stored a choice nobody made —
+          and since a company's choice now outranks the installation
+          default, that stamp would override a deliberate LOCAL.
+        */
         body: JSON.stringify({
-          provider: settings.provider,
-          model: settings.model,
+          ...(settings.provider !== savedCompany.current.provider ? { provider: settings.provider } : {}),
+          ...(settings.model !== savedCompany.current.model ? { model: settings.model } : {}),
           prompts: drafts,
           /*
             AND THE PER-ASSISTANT ROUTING, WHICH NEVER LEFT THIS SCREEN.
@@ -235,6 +248,8 @@ export function AiSettingsScreen() {
    */
   /** What the server last gave us, so a save can tell changed from untouched. */
   const savedDefault = useRef<{ provider: string | null; model: string | null }>({ provider: null, model: null });
+  /** The same, for the COMPANY's own choice. */
+  const savedCompany = useRef<{ provider: string | null; model: string | null }>({ provider: null, model: null });
 
   async function saveSystem() {
     if (!system) return;

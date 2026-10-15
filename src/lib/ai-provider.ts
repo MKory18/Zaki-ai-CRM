@@ -460,8 +460,13 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
 export async function saveAiSettings(
   companyId: string,
   input: {
-    provider: AiProvider;
-    model: string;
+    /**
+     * ABSENT MEANS «LEAVE IT», for the same reason as the installation
+     * settings: the screen echoes the COMPUTED value, so a required field
+     * turns «I edited a prompt» into «I chose OpenRouter».
+     */
+    provider?: AiProvider;
+    model?: string;
     prompts?: Record<string, string>;
     intelligenceScopes?: string[];
     apiKey?: string | null;
@@ -486,8 +491,25 @@ export async function saveAiSettings(
       input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts;
 
     const next: StoredAi = {
-      provider: input.provider,
-      model: input.model.trim() || providerInfo(input.provider).defaultModel,
+      /*
+       * ── EDITING A PROMPT IS NOT CHOOSING A VENDOR ──
+       *
+       * `aiSettings()` COMPUTES `provider` and `model` when the company
+       * never chose, so the screen echoing them back is a write, not an
+       * echo. Saving a sentence, or ticking an intelligence scope, used
+       * to store `provider: 'OPENROUTER'` — and since the company's
+       * choice now outranks the installation default, that stamp would
+       * override a deliberate installation LOCAL or Anthropic.
+       *
+       * The same defect the key card had, on the other card. Absent
+       * leaves what is stored, and «never chose» stays expressible.
+       */
+      provider: input.provider ?? current.provider,
+      model:
+        input.model === undefined
+          ? current.model
+          : input.model.trim() ||
+            providerInfo((input.provider ?? current.provider ?? 'OPENROUTER') as AiProvider).defaultModel,
       // Sanitised on the way in: unknown jobs are dropped, and an override
       // equal to the default is not stored at all.
       prompts: nextPrompts,

@@ -32,8 +32,8 @@ const schema = z.object({
    * uses, because a local model with nowhere to send the request saves
    * cleanly and fails at the moment somebody asks a question.
    */
-  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'LOCAL']),
-  model: z.string().trim().max(120),
+  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'LOCAL']).optional(),
+  model: z.string().trim().max(120).optional(),
   /**
    * The company's own wording per AI job — the house prompt is the 'house'
    * job. Omitted leaves the stored ones alone; a job set to its default, or
@@ -196,10 +196,15 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
 
+    // Read for the audit's «before», not to be written back.
     const before = await aiSettings(companyId);
+    /*
+     * No `provider`/`model` here: ticking an intelligence scope is not
+     * choosing a vendor, and `aiSettings()` computes those two when the
+     * company never chose — so passing them was a write dressed as an
+     * echo. Absent leaves what is stored.
+     */
     const saved = await saveAiSettings(companyId, {
-      provider: before.provider,
-      model: before.model,
       intelligenceScopes: parsed.data.intelligenceScopes,
     });
 
