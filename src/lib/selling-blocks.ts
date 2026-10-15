@@ -1,5 +1,6 @@
 import { deliveryWindowAr, type DeliveryWindow } from './delivery-time';
 import { COD_LINE } from './landing-sections';
+import { LANDING_FAMILIES, familyById, type LandingFamilyId } from './landing-matcher';
 
 /**
  * WHAT A SELLING BLOCK IS ALLOWED TO SAY — in one place.
@@ -32,21 +33,23 @@ import { COD_LINE } from './landing-sections';
 // ─────────────────────────────────────────────────────
 
 /**
- * THE THREE LOOKS A SHOPPER CAN TELL APART — `AUDIT.md` §7.2.
+ * THE FAMILIES ARE THE MATCHER'S LIST, NOT A SECOND ONE.
  *
- * «عيادة» solves a problem, «عطّار» comes from somewhere, «ترند» leads with
- * the offer. They are keyed in Latin because a CSS attribute selector and a
- * `data-` value are written in Latin everywhere else in this codebase; the
- * Arabic name a seller reads is beside it.
+ * `landing-matcher.ts` declares them and says why in its own words: «two
+ * lists of the same four would be two lists to keep in step, so the ids are
+ * the contract and they are chosen to be the ones a renderer would choose».
+ * This file is that renderer. It takes the ids and the Arabic names from
+ * there and adds nothing to them — what it owns is which SKIN wears which
+ * family, and what each family LOOKS like, and neither of those belongs in
+ * a list of ids.
  */
-export const SELLING_FAMILIES = ['clinic', 'herbal', 'trend'] as const;
-export type SellingFamily = (typeof SELLING_FAMILIES)[number];
+export type SellingFamily = LandingFamilyId;
+export const SELLING_FAMILIES = LANDING_FAMILIES.map((f) => f.id) as readonly SellingFamily[];
 
-export const FAMILY_AR: Record<SellingFamily, string> = {
-  clinic: 'عيادة',
-  herbal: 'عطّار',
-  trend: 'ترند',
-};
+/** The name a seller reads, from the one place that holds it. */
+export function familyNameAr(id: SellingFamily): string {
+  return familyById(id)?.name ?? id;
+}
 
 /**
  * A SHOP THAT WORE NO TEMPLATE IS NOT A SHOP WITH A MISSING FAMILY.
@@ -71,6 +74,13 @@ export const DEFAULT_FAMILY: SellingFamily = 'clinic';
  * of its own, and a shop wearing it is still a shop that must be drawn —
  * it reads as the default rather than as nothing, the same rule
  * `effectiveVariant` applies to a retired layout slot.
+ *
+ * AND «علامة» IS NOT HERE, DELIBERATELY. It is the owner's fourth family,
+ * added on 15/10, and it is not one of the ten skins: it is built from a
+ * product's own fields — the Latin name, the promises, the close-up — and
+ * its brief is the storefront stage's. No template maps to it, so nothing
+ * here can derive it, and `the-three-families.test.ts` holds that: a
+ * family this stage has not drawn must be one this stage cannot select.
  */
 export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Object.freeze({
   lab: 'clinic',

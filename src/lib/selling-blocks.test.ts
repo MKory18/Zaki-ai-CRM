@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_FAMILY, FAMILY_AR, FAMILY_OF_TEMPLATE, LOW_STOCK_FLOOR, SELLING_FAMILIES,
-  familyOf, lowStock, offerDeadline, offersCountAr, trustRow,
+  DEFAULT_FAMILY, FAMILY_OF_TEMPLATE, LOW_STOCK_FLOOR, SELLING_FAMILIES,
+  familyNameAr, familyOf, lowStock, offerDeadline, offersCountAr, trustRow,
 } from './selling-blocks';
+import { LANDING_FAMILIES } from './landing-matcher';
 import { COD_LINE } from './landing-sections';
 import { STORE_TEMPLATES } from './store-templates';
 import { MIN_DELIVERIES } from './delivery-time';
@@ -17,10 +18,19 @@ import { MIN_DELIVERIES } from './delivery-time';
  */
 
 describe('the three families', () => {
-  it('are three, each with a name a seller reads', () => {
-    expect(SELLING_FAMILIES).toEqual(['clinic', 'herbal', 'trend']);
+  /**
+   * ONE LIST, AND IT IS THE MATCHER'S.
+   *
+   * `landing-matcher.ts` declares the ids and says in its own comment that
+   * «two lists of the same four would be two lists to keep in step». This
+   * file is the renderer that comment is addressed to, so the test is that
+   * it did not start a second list — not that it agrees with the first one
+   * today.
+   */
+  it('are the matcher’s own ids, not a second list of them', () => {
+    expect([...SELLING_FAMILIES]).toEqual(LANDING_FAMILIES.map((f) => f.id));
     for (const f of SELLING_FAMILIES) {
-      expect(FAMILY_AR[f], `العائلة «${f}» بلا اسم عربي`).toBeTruthy();
+      expect(familyNameAr(f), `العائلة «${f}» بلا اسم عربي`).toBeTruthy();
     }
   });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stripComments } from '@/lib/guard-source';
-import { SELLING_FAMILIES, DEFAULT_FAMILY } from '@/lib/selling-blocks';
+import { SELLING_FAMILIES, DEFAULT_FAMILY, FAMILY_OF_TEMPLATE, type SellingFamily } from '@/lib/selling-blocks';
 import { BLOCK_CSS } from './styles';
 
 /**
@@ -25,6 +25,13 @@ import { BLOCK_CSS } from './styles';
 
 /** The stylesheet with its comments blanked, line count preserved. */
 const css = () => stripComments(BLOCK_CSS);
+
+/**
+ * The three this stage redesigned — `AUDIT.md` §7.2 — and not the whole
+ * list, which now also carries the owner's fourth family. See the test
+ * below for what an undrawn family is allowed to be.
+ */
+const DRAWN: SellingFamily[] = ['clinic', 'herbal', 'trend'];
 
 /**
  * Every rule whose selector mentions a family, as `[selector, body]`.
@@ -53,9 +60,29 @@ describe('the three families', () => {
    */
   it('each have a look in the stylesheet', () => {
     const rules = familyRules();
-    for (const family of SELLING_FAMILIES) {
+    for (const family of DRAWN) {
       const mine = rules.filter((r) => r.selector.includes(`[data-family='${family}']`));
       expect(mine.length, `العائلة «${family}» اسم بلا مظهر`).toBeGreaterThan(2);
+    }
+  });
+
+  /**
+   * AND THE ONE THIS STAGE DID NOT DRAW CANNOT BE SELECTED BY IT.
+   *
+   * «علامة» is the owner's fourth family, added on 15/10 — a product with a
+   * world of its own, built from its own fields. Its brief belongs to the
+   * storefront stage and nothing here implements it. So the rule is not
+   * «every id in the list has a look»: it is that an id WITHOUT a look must
+   * be an id `familyOf` can never return, which is the same bargain
+   * `layout-slots.ts` strikes with a retired variant — never silent, and
+   * never a name a shop can be wearing with nothing behind it.
+   */
+  it('and a family this stage has not drawn is one it cannot select', () => {
+    const undrawn = SELLING_FAMILIES.filter((f) => !DRAWN.includes(f));
+    expect(undrawn, 'عائلةٌ بلا مظهرٍ وبلا سببٍ مكتوب').toEqual(['brand']);
+    for (const family of undrawn) {
+      const reachable = Object.values(FAMILY_OF_TEMPLATE).includes(family);
+      expect(reachable, `قالبٌ بيوصل لعائلة «${family}» وما إلها مظهر`).toBe(false);
     }
   });
 
@@ -74,8 +101,8 @@ describe('the three families', () => {
         .map((r) => r.body.replace(/\s+/g, ''))
         .sort()
         .join('|');
-    const shapes = SELLING_FAMILIES.map(shape);
-    expect(new Set(shapes).size, 'عائلتان بنفس المظهر').toBe(SELLING_FAMILIES.length);
+    const shapes = DRAWN.map(shape);
+    expect(new Set(shapes).size, 'عائلتان بنفس المظهر').toBe(DRAWN.length);
   });
 
   /**
@@ -145,6 +172,6 @@ describe('the three families', () => {
    * nobody wrote.
    */
   it('and the one a shop with no template wears is among them', () => {
-    expect(SELLING_FAMILIES).toContain(DEFAULT_FAMILY);
+    expect(DRAWN).toContain(DEFAULT_FAMILY);
   });
 });

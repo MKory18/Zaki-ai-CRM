@@ -12,6 +12,7 @@ import { DIALECTS, structureToSections } from '@/lib/landing-structure';
 import { newSection } from '@/lib/landing-sections';
 import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { skinToLandingTheme } from '@/lib/store-skin';
+import { isValidHex } from '@/lib/landing-theme';
 import { zodMessage } from '@/lib/zod-message';
 import { readLimit, readPage } from '@/lib/numeric-input';
 import { shownPageProductIds } from '@/lib/storefront';
@@ -133,12 +134,27 @@ export async function POST(req: Request) {
         .optional(),
       /** Which dialect the copy above was written in. */
       dialect: z.enum(DIALECTS).optional(),
+      /**
+       * THE WORLD'S OWN COLOUR, DERIVED FROM THE PRODUCT'S PHOTOGRAPH.
+       *
+       * «ابنيلي صفحة الهبوط» proposes one — the accent computed from the
+       * picture by `landing-world-colors.ts` («الألوان بالكود، مش
+       * بالموديل»), which the owner can switch off before he presses.
+       *
+       * It is laid OVER the skin's theme rather than replacing it, so the
+       * mood, the typeface and the corners still come from the look he
+       * chose and only the one colour the derivation actually produced
+       * changes. A hex that does not parse is dropped silently by
+       * `isValidHex` below — a bad colour is not worth refusing a page
+       * over, and the page is perfectly usable in the library's own.
+       */
+      accent: z.string().trim().max(9).optional(),
     });
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const { name, slug, productId, htmlContent, template, structure, skin, copy, dialect } = parsed.data;
+    const { name, slug, productId, htmlContent, template, structure, skin, copy, dialect, accent } = parsed.data;
 
     const slugCheck = validateSlug(slug);
     if (!slugCheck.valid) return NextResponse.json({ error: slugCheck.error }, { status: 400 });
@@ -174,6 +190,7 @@ export async function POST(req: Request) {
       if (!chosen) return NextResponse.json({ error: 'بنية غير معروفة' }, { status: 404 });
       const wearing = skin ? STORE_TEMPLATES.find((x) => x.id === skin) : undefined;
       if (skin && !wearing) return NextResponse.json({ error: 'قالب غير معروف' }, { status: 404 });
+      const look = wearing ? skinToLandingTheme(wearing) : buildTemplate('blank').theme;
       built = {
         // The seller's own words, in the dialect they wrote them in. An
         // unwritten slot keeps the library's seed, so a page created
@@ -181,8 +198,10 @@ export async function POST(req: Request) {
         // what a structure is before anybody writes it.
         sections: structureToSections(chosen, copy ?? {}, dialect ?? 'msa', newSection),
         // The look, from the skin — or the library's default when none was
-        // named, because a structure has no colours to fall back to.
-        theme: wearing ? skinToLandingTheme(wearing) : buildTemplate('blank').theme,
+        // named, because a structure has no colours to fall back to — with
+        // the photograph's own colour over it when «ابنيلي صفحة الهبوط»
+        // derived one and the owner kept it.
+        theme: accent && isValidHex(accent) ? { ...look, accent } : look,
       };
     } else {
       // COPY WITHOUT A STRUCTURE IS REFUSED, NOT DROPPED. The fifteen page
