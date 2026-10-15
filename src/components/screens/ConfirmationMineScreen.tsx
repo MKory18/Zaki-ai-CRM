@@ -451,13 +451,24 @@ export function ConfirmationMineScreen() {
                       amount: order.totalAmount,
                       region: order.customer.city,
                     }}
-                    onContacted={(method) =>
-                      // A dialled call keeps the result it always had. A sent
-                      // message is `MESSAGE_SENT`: filing it as «answered»
-                      // would inflate the answer rate with messages nobody
-                      // has replied to.
-                      logAttempt(order, method, method === 'PHONE' ? 'ANSWERED' : 'MESSAGE_SENT')
-                    }
+                    /*
+                     * THE PRESS IS LOGGED BY THE STRIP, AND IS NOT AN
+                     * OUTCOME.
+                     *
+                     * This screen used to file a dialled call as
+                     * `ANSWERED` — the strongest result there is —
+                     * because it had nothing weaker to say. The answer
+                     * rate then counted every dial as a conversation,
+                     * which is the same inflation the note beside
+                     * `MESSAGE_SENT` warns about for messages.
+                     *
+                     * The strip records `OPENED` on every screen now, so
+                     * a call placed from the orders list leaves the same
+                     * trace as one placed here. The outcome is still
+                     * recorded below, by the person who knows it: «لا
+                     * يرد» or «تأكيد».
+                     */
+                    orderId={order.id}
                   />
                   </>
                   )}

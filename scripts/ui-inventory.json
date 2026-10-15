@@ -625,8 +625,8 @@
     "columns": 5,
     "cards": 0,
     "modals": 2,
-    "icons": 4,
-    "links": 1,
+    "icons": 3,
+    "links": 0,
     "tabs": 0
   },
   "src/components/screens/DashboardScreen.tsx": {
@@ -979,16 +979,6 @@
     "links": 0,
     "tabs": 0
   },
-  "src/components/screens/StoresScreen.tsx": {
-    "buttons": 8,
-    "inputs": 3,
-    "columns": 0,
-    "cards": 1,
-    "modals": 0,
-    "icons": 14,
-    "links": 2,
-    "tabs": 0
-  },
   "src/components/screens/StoreLanguagesScreen.tsx": {
     "buttons": 3,
     "inputs": 0,
@@ -1037,6 +1027,16 @@
     "modals": 0,
     "icons": 7,
     "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/StoresScreen.tsx": {
+    "buttons": 8,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 14,
+    "links": 2,
     "tabs": 0
   },
   "src/components/screens/StoreThemeScreen.tsx": {
@@ -1399,6 +1399,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/shell/EditingStoreBar.tsx": {
+    "buttons": 0,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/shell/EntryPicker.tsx": {
     "buttons": 7,
     "inputs": 1,
@@ -1509,16 +1519,6 @@
     "links": 1,
     "tabs": 0
   },
-  "src/components/shell/EditingStoreBar.tsx": {
-    "buttons": 0,
-    "inputs": 1,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 1,
-    "links": 0,
-    "tabs": 0
-  },
   "src/components/storefront/CartView.tsx": {
     "buttons": 1,
     "inputs": 1,
@@ -1579,16 +1579,6 @@
     "links": 1,
     "tabs": 0
   },
-  "src/components/storefront/StoreHero.tsx": {
-    "buttons": 0,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 0,
-    "links": 1,
-    "tabs": 0
-  },
   "src/components/storefront/StorefrontShell.tsx": {
     "buttons": 1,
     "inputs": 1,
@@ -1597,6 +1587,16 @@
     "modals": 0,
     "icons": 0,
     "links": 8,
+    "tabs": 0
+  },
+  "src/components/storefront/StoreHero.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/storefront/TrackForm.tsx": {

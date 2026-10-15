@@ -25,10 +25,32 @@ export function ContactButtons({
   countryCode,
   compact,
   plain,
+  orderId,
   onContacted,
 }: {
   phone: string | null | undefined;
   context: FillContext;
+  /**
+   * The order this number belongs to — and the whole reason a press leaves
+   * a trace.
+   *
+   * ── WHY THE LOGGING LIVES HERE AND NOT IN THE SCREENS ──
+   *
+   * It used to live in the screens, and exactly one of the four that show
+   * a customer's number passed anything: «طلباتي». So a call placed from
+   * the orders list, from the order window, from the tracking screen or
+   * from the customers screen happened and the contact log never heard of
+   * it — and the log is what the next agent reads before ringing the same
+   * person again.
+   *
+   * Given an `orderId`, this component records the press itself. Nothing
+   * to remember at the call site, and a screen added next year gets it by
+   * passing the id it already has.
+   *
+   * Absent — a courier's office, a rep, a customer with no order in hand —
+   * nothing is recorded, because there is nothing to record it against.
+   */
+  orderId?: string | null;
   /**
    * Called the moment something actually leaves — a message sent, a number
    * dialled. The queue screen counts contact attempts and closes an order
@@ -79,6 +101,37 @@ export function ContactButtons({
   if (!phone) return null;
 
   /**
+   * ONE LINE IN THE CONTACT LOG PER PRESS — AND NOT AN OUTCOME.
+   *
+   * `OPENED` says the dialler or WhatsApp was opened on this number, by
+   * this employee, now. It is deliberately the weakest thing in
+   * `CONTACT_RESULTS`: it is not counted toward the answer rate (that
+   * reads `ANSWERED`) and not toward the 1/2/3 no-answer close (that reads
+   * `NO_ANSWER` and `BUSY`). Whoever made the call still records what
+   * happened with «لا يرد» or «تأكيد» afterwards.
+   *
+   * `MESSAGE_SENT` stays for a template actually chosen and handed to the
+   * app with its text — more is known in that case, and it is already not
+   * an outcome either.
+   *
+   * It never blocks the press. The dialler opens first and the line is
+   * written after; a refusal (a role the owner has not given
+   * `orders.contact_log`) or a dropped connection must not stop somebody
+   * ringing a customer.
+   */
+  const noteContact = (method: 'PHONE' | 'SMS' | 'WHATSAPP', result: 'OPENED' | 'MESSAGE_SENT') => {
+    onContacted?.(method);
+    if (!orderId) return;
+    void apiJson(`/api/orders/${orderId}/contact-attempts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactMethod: method, result }),
+    }).catch(() => {
+      /* the call matters more than its line in the log */
+    });
+  };
+
+  /**
    * Can this machine actually send an SMS?
    *
    * `sms:` is a phone thing. On a desktop browser the link resolves to
@@ -94,7 +147,7 @@ export function ContactButtons({
   /** WhatsApp with no message behind it — for a number that has no order. */
   const openPlainWhatsapp = () => {
     window.open(whatsappLink(phone!, countryCode), '_blank', 'noopener');
-    onContacted?.('WHATSAPP');
+    noteContact('WHATSAPP', 'OPENED');
   };
 
   const send = (t: MessageTemplate) => {
@@ -106,7 +159,7 @@ export function ContactButtons({
       // handsets wanted `?` vs `&` differently and are not a concern here.
       window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
     }
-    onContacted?.(open === 'WHATSAPP' ? 'WHATSAPP' : 'SMS');
+    noteContact(open === 'WHATSAPP' ? 'WHATSAPP' : 'SMS', 'MESSAGE_SENT');
     setOpen(null);
   };
 
@@ -129,26 +182,36 @@ export function ContactButtons({
         href={`tel:${phone.replace(/[^\d+]/g, '')}`}
         title="اتصال"
         className={btn}
-        onClick={() => onContacted?.('PHONE')}
+        onClick={() => noteContact('PHONE', 'OPENED')}
       >
         <RiPhoneLine className="w-4 h-4" />
         {!compact && 'اتصال'}
       </a>
-      {!plain && (
+      {/*
+        SMS, AND WHY IT IS NOT A GREY BUTTON ON A DESK.
+        `sms:` is a phone thing: on a desktop browser the link resolves to
+        nothing at all — pressed, the page does not move, no error. A
+        permanently disabled button there reads as a broken system rather
+        than as «use your phone for this», which is the same fault the
+        order window's arrows had.
+        So it is not drawn, and the REASON is drawn in its place — in
+        words, where the button would have been. In a table row (`compact`)
+        there is no room for a sentence and no room for a lie either, so
+        the strip is simply shorter there.
+      */}
+      {!plain && onPhone && (
         <button
           type="button"
-          disabled={!onPhone}
-          title={
-            onPhone
-              ? 'رسالة نصية'
-              : 'الرسائل النصية تُرسَل من الهاتف — افتح النظام على موبايلك لاستعمالها'
-          }
+          title="رسالة نصية"
           onClick={() => setOpen(open === 'SMS' ? null : 'SMS')}
-          className={`${btn} ${onPhone ? '' : 'opacity-40 cursor-not-allowed'}`}
+          className={btn}
         >
           <RiMessage3Line className="w-4 h-4" />
           {!compact && 'SMS'}
         </button>
+      )}
+      {!plain && !onPhone && !compact && (
+        <span className="text-xs text-[var(--sys-muted)]">الرسائل النصية من الموبايل</span>
       )}
       <button
         type="button"

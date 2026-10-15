@@ -329,6 +329,10 @@ export function TrackingScreen() {
   const contactFor = (o: Row) => ({
     phone: o.customer.phone,
     countryCode: data?.dialCode ?? null,
+    // The strip was here and recorded nothing: a call placed from this
+    // screen left no line in the contact log, so the next agent read «no
+    // attempts» on an order somebody had already rung twice.
+    orderId: o.id,
     context: {
       orderNumber: o.merchantRef ?? o.orderNumber,
       customerName: o.customer.fullName,

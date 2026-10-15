@@ -82,6 +82,8 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [currency, setCurrency] = useState<Currency | null>(null);
+  /** The country's calling code, for the contact strip's `wa.me`. */
+  const [dialCode, setDialCode] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
@@ -222,6 +224,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
         const data = await res.json();
         setOrder(data.order);
         if (data.currency) setCurrency(data.currency);
+        setDialCode(data.dialCode ?? null);
         setCod(data.cod ?? null);
         // The merged timeline is its own endpoint so every screen shows the
         // same history, not whatever one table happens to hold.
@@ -497,6 +500,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
           <CustomerCard
             order={order}
+            dialCode={dialCode}
             canEdit={order.lockedById === currentUser?.id && lockActive}
             onAcquireLock={handleEnterEditMode}
             onSaved={async () => {

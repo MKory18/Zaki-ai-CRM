@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
 import { RiHistoryLine, RiLoader4Line, RiPencilLine, RiUserLine } from '@remixicon/react';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 
 /**
  * Who the order goes to, and the one button that edits all of it.
@@ -22,6 +23,9 @@ interface Props {
   order: {
     id: string;
     version: number;
+    orderNumber: string;
+    totalAmount: number;
+    trackingNumber?: string | null;
     regionId: string | null;
     region?: { id: string; name: string } | null;
     customer: {
@@ -39,12 +43,17 @@ interface Props {
   };
   /** Held by this user with a live editing lock — the server demands it. */
   canEdit: boolean;
+  /**
+   * The country's calling code, from the server. `wa.me` takes full
+   * international digits only, and the number on screen is local.
+   */
+  dialCode?: string | null;
   onAcquireLock: () => Promise<unknown> | void;
   onSaved: () => void;
   onOpenHistory: () => void;
 }
 
-export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHistory }: Props) {
+export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved, onOpenHistory }: Props) {
   // Saves, and asks why when the server says this authority owes a reason.
   const patchOrder = useOrderPatch();
   const { regions, countryName } = useRegions();
@@ -137,6 +146,35 @@ export function CustomerCard({ order, canEdit, onAcquireLock, onSaved, onOpenHis
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <Row label="الاسم" value={order.customer.fullName} />
           <Row label="رقم الهاتف" value={order.customer.rawPhone || order.customer.phone} ltr />
+          {/*
+            AND SOMETHING TO DO WITH THE NUMBER.
+
+            The window printed it as text and offered nothing. Whoever
+            opened an order to ring the customer read the digits off the
+            screen and typed them into a phone — with the transposed digit
+            that goes with that — and the contact log never heard that a
+            call had been made from here at all.
+
+            The shared strip: the company's own ready-made messages filled
+            with this order's words, `wa.me` built from the country's
+            calling code rather than from a local number that opens an
+            empty chat, and one line in the contact log per press.
+          */}
+          <div className="sm:col-span-2 flex items-center gap-2">
+            <span className="text-xs text-[var(--sys-muted)]">تواصل</span>
+            <ContactButtons
+              phone={order.customer.rawPhone || order.customer.phone}
+              orderId={order.id}
+              countryCode={dialCode}
+              context={{
+                orderNumber: order.orderNumber,
+                customerName: order.customer.fullName,
+                amount: order.totalAmount,
+                region: order.region?.name ?? order.customer.city,
+                barcode: order.trackingNumber,
+              }}
+            />
+          </div>
           <Row label="رقم إضافي" value={order.customer.altPhone || '—'} ltr />
           {/*
             A GOVERNORATE IS A ROW IN THE FEE TABLE, NOT A WORD SOMEBODY TYPED.
