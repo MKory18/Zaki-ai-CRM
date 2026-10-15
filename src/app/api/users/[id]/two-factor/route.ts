@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
-import { manageableUserWhere } from '@/lib/manageable-user';
+import { manageableUserWhere, mayActOnUser } from '@/lib/manageable-user';
 import { mayResetTwoFactor, TWO_FACTOR_RESET_ROLES } from '@/lib/two-factor-reset';
 
 /**
@@ -52,9 +52,46 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
      */
     const target = await db.user.findFirst({
       where: manageableUserWhere(user, id),
-      select: { id: true, name: true, email: true, role: true, totpEnabledAt: true },
+      select: { id: true, name: true, email: true, role: true, companyId: true, totpEnabledAt: true },
     });
     if (!target) return NextResponse.json({ error: 'الموظف غير موجود' }, { status: 404 });
+
+    /**
+     * ── SEEING IS NOT ACTING, AND NOBODY RESETS THE ACCOUNT ABOVE THEM ──
+     *
+     * `manageableUserWhere` answers «is this row in front of this person»,
+     * and it says yes to an unplaced account (`companyId: null`) on
+     * purpose, because seeing one is how a new signup gets adopted. It is
+     * NOT a licence to act on one, and `mayActOnUser` is the line between
+     * the two — the same line the password door draws two files away.
+     *
+     * The role guard under it is the one that matters here. Until it was
+     * written, a COMPANY_ADMIN could send this request with the owner's id
+     * in it: the owner is either in their company or unplaced, so the
+     * where-clause matched either way, and `mayResetTwoFactor` admits
+     * COMPANY_ADMIN by design. The press stripped the platform owner's
+     * second factor, deleted their recovery codes — and, since this PR
+     * added the `tokenVersion` bump below, now signs them out of every
+     * device at the same instant. The account that can do everything,
+     * locked out and re-enrolling, at the press of somebody junior to it,
+     * repeatable at will.
+     *
+     * Written here rather than hoisted into a helper because that is where
+     * this system keeps it: `manageable-user.ts` says in its own comment
+     * that «the privilege guards around SUPER_ADMIN targets still live
+     * where the action is». There are two such actions on an account's
+     * login — setting its password and stripping its second factor — and
+     * they now read the same two lines.
+     */
+    if (!mayActOnUser(user, target)) {
+      return NextResponse.json({ error: 'الموظف غير موجود' }, { status: 404 });
+    }
+    if (target.role === 'SUPER_ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { error: 'فقط المدير الأعلى يمكنه إدارة حسابات المدراء الأعلى', code: 'SUPER_ADMIN_ONLY' },
+        { status: 403 }
+      );
+    }
 
     if (!target.totpEnabledAt) {
       return NextResponse.json(
