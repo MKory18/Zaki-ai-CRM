@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RiArrowDownLine, RiArrowUpLine, type RemixiconComponentType } from '@remixicon/react';
 import { Sparkline } from './Sparkline';
 import clsx from 'clsx';
+import { CARD_CLASS } from '@/lib/theme-shape';
 
 interface CardProps {
   children: React.ReactNode;
@@ -40,6 +41,18 @@ export function Card({ children, className }: CardProps) {
   return (
     <div
       className={clsx(
+        /*
+         * `zk-card` is how a THEME reaches this surface — its corner, its
+         * edge, the arch some themes wear on the top line, and the faint
+         * glyph in the corner furthest from the heading. On the shared
+         * card and not on every element painted with the card colour: an
+         * input and a badge wear that colour too, and a 22px crescent
+         * inside a 32px field is not a theme, it is a defect.
+         *
+         * The three palettes the product came with change nothing here.
+         * See src/lib/theme-shape.ts.
+         */
+        CARD_CLASS,
         'bg-[var(--sys-card)] rounded-lg border border-[var(--sys-border)] transition-shadow',
         className
       )}

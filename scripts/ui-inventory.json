@@ -1281,7 +1281,7 @@
   },
   "src/components/settings/MenuOrderCard.tsx": {
     "buttons": 6,
-    "inputs": 1,
+    "inputs": 2,
     "columns": 0,
     "cards": 2,
     "modals": 0,
@@ -1370,7 +1370,7 @@
     "tabs": 0
   },
   "src/components/settings/ThemePicker.tsx": {
-    "buttons": 1,
+    "buttons": 2,
     "inputs": 0,
     "columns": 0,
     "cards": 0,

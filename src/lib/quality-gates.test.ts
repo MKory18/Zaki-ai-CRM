@@ -356,7 +356,62 @@ describe('the payload', () => {
    * the same way it was the last two times: to the truth. Growth here is
    * meant to be DELIBERATE and recorded — which this is — not impossible.
    */
-  const CSS_BUDGET_KB = 96.13;
+  /*
+   * ── 96.13 → 93.90, AND EIGHT NEW THEMES WENT IN AT THE SAME TIME ──
+   *
+   * The owner asked for eight more palettes. Eleven palettes in this file
+   * is about ten kilobytes of colours that nine people in ten never see —
+   * and the failure message below has said all along that the way down is
+   * «فصلُ لوحاتِ الألوانِ غيرِ المختارة». So that is what was done
+   * instead of re-pegging upward:
+   *
+   *   `system.css` keeps the DEFAULT — under `:root` as well, so a page
+   *   rendered outside the system layout still has colours — and
+   *   «تلقائي», which has to be answered by a media query or a phone in
+   *   night mode is shown a white screen at four in the morning.
+   *
+   *   Every other palette is written into the document by `SystemFrame`,
+   *   one rule for the one theme that person chose, in the same HTML
+   *   response. The first paint is still right: no script, no flash.
+   *
+   * Measured on a clean build, eleven palettes in the product:
+   *
+   *     before (3 palettes)   98,430 bytes   96.123 KB
+   *     after  (11 palettes)  96,151 bytes   93.897 KB
+   *
+   * Two palettes left the sheet and eight never entered it, so a twelfth
+   * theme now costs the eleventh's bytes — which is nothing. See
+   * `SHEET_THEMES` and `themeStyle` in src/lib/system-themes.ts.
+   *
+   * ── AND 132 BYTES WENT BACK ON, IN THE SAME BRANCH ──
+   *
+   * The settings control that chooses the decoration level, and the three
+   * places the ambient layer is anchored, are ordinary markup and bring
+   * ordinary utilities with them: 96,151 → 96,286 bytes.
+   *
+   * It is recorded rather than hidden, because that is the whole point of
+   * this gate — growth here is meant to be DELIBERATE and written down,
+   * not impossible. The branch's own arithmetic:
+   *
+   *     before the eight themes   98,430 bytes   96.123 KB
+   *     palettes out of the sheet 96,151 bytes   93.897 KB   (−2,279)
+   *     the decoration control    96,286 bytes   94.029 KB   (+135)
+   *     ───────────────────────────────────────────────────
+   *     net                                      −2.09 KB, with eight
+   *                                              more themes in the product
+   *
+   * And the themes' own weight — eleven palettes, eleven card shapes, the
+   * ambient CSS — is still none of it: all of that is written into the
+   * document for the one theme that person chose.
+   */
+  /*
+   * ⚠️ 94.04 and not 94.03: the measurement is 96,288 bytes, which is
+   * 94.03125 KB — and `94.03` is BELOW it. The same two bytes read 96,286
+   * on this machine, because the working tree is CRLF and the build on CI
+   * is LF. The cap is stated above the measurement, never at a figure the
+   * build has to round down to meet.
+   */
+  const CSS_BUDGET_KB = 94.04;
 
   it(`keeps the first-load stylesheet at or under ${CSS_BUDGET_KB} KB`, () => {
     /*

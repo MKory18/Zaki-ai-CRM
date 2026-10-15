@@ -410,6 +410,14 @@ export interface SessionUser {
   commissionRate?: number;
   /** Which of the system's looks they chose. Null = the default. */
   systemTheme?: string | null;
+  /**
+   * The look this person's ROLE opens on — a base, not a choice.
+   *
+   * Consulted only when `systemTheme` is null. The owner sets one for a
+   * role so a new agent's first morning is not the default grey; the
+   * moment that person picks their own, this stops being read for them.
+   */
+  roleTheme?: string | null;
   /** Effective permission KEYS from the Permission Engine (role + overrides). */
   permissions: string[];
   /** Attached by getCurrentUser — engine scope data (never sent to client). */
