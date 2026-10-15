@@ -220,40 +220,15 @@ export function offersCountAr(count: number): string {
 }
 
 // ─────────────────────────────────────────────────────
-// The clock
+// The clock — NOT HERE. See `countdown.ts`.
+//
+// This module briefly owned «when does the offer stop», as the soonest
+// future `Offer.endsAt`. S6 landed the owner's own D8 first and holds
+// the same rule in `countdownEnd`, beside the two sources a seller may
+// choose between and the refusal that stops «تلقائي» with nothing behind
+// it. Two answers to one question is exactly what this file exists to
+// prevent, so the second one left.
 // ─────────────────────────────────────────────────────
-
-/**
- * WHEN THE OFFER ACTUALLY STOPS — or null, and then there is no clock.
- *
- * «عدّاد فقط من تاريخ انتهاء عرض حقيقي». `Offer.endsAt` is the column the
- * schema already describes as the single owner of this: «The countdown a
- * customer sees and the moment the price stops applying are ONE column on
- * purpose. A clock with a source of its own reaches zero while the offer
- * carries on, and the customer learns the number is decoration.»
- *
- * The SOONEST of the live offers, because that is the first thing on the
- * page that stops being true. Taking the latest would leave the clock
- * running after the bundle it was counting down had gone.
- *
- * A deadline already past is dropped rather than returned as «over»: the
- * offers handed to a public page are the live ones, so a past date here is
- * a clock skew or a page rendered on the boundary, and neither is worth
- * showing a visitor a finished countdown over.
- */
-export function offerDeadline(
-  offers: readonly { endsAt?: Date | string | null }[],
-  now: Date = new Date()
-): string | null {
-  let soonest: number | null = null;
-  for (const o of offers) {
-    if (!o.endsAt) continue;
-    const at = o.endsAt instanceof Date ? o.endsAt.getTime() : Date.parse(String(o.endsAt));
-    if (!Number.isFinite(at) || at <= now.getTime()) continue;
-    if (soonest === null || at < soonest) soonest = at;
-  }
-  return soonest === null ? null : new Date(soonest).toISOString();
-}
 
 // ─────────────────────────────────────────────────────
 // The shelf

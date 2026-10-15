@@ -131,20 +131,23 @@ describe('what the browser is allowed to remember', () => {
     'ai/AiDock.tsx': 'the assistant conversation — aggregates only, session storage, gone on reload',
     'labels/LabelSize.tsx': 'the paper loaded in this device’s printer',
     /*
-     * `blocks/Countdown.tsx` USED TO BE HERE, and its leaving is the whole
-     * story of that component.
+     * THIS ENTRY LEFT ON THIS BRANCH AND CAME BACK, AND THAT IS THE RIGHT
+     * ANSWER.
      *
-     * It kept «when this visitor's countdown started» in their browser, so
-     * that a reload could not hand out a fresh deadline. That defence was
-     * the giveaway: the deadline it was protecting was invented — `minutes`
-     * a seller typed, counted from the moment the visitor arrived — and a
-     * deadline that has to be remembered per browser is a deadline that is
-     * not real. The clock now counts to `Offer.endsAt`, which is one moment
-     * for every visitor, so there is nothing left to keep.
+     * The per-visitor timer keeps «when this visitor's countdown started» in
+     * their browser so a reload cannot hand out a fresh deadline. This
+     * branch read «عدّاد فقط من تاريخ انتهاء عرض حقيقي» as «take the timer
+     * away», and with it gone there was nothing to remember.
      *
-     * One fewer thing written into a shopper's browser, and it went by
-     * making the feature honest rather than by arguing for an exception.
+     * S6 landed first with the owner's own D8 and a better answer: the
+     * per-visitor timer STAYS, the editor makes the seller choose it by
+     * name, it carries its warning out loud, and «تلقائي» — bound to
+     * `Offer.endsAt`, one moment for every visitor and nothing stored — is
+     * refused at the save door when there is no ending to read. A seller
+     * who chooses the honest clock stores nothing; one who chooses the
+     * per-visitor one is told what it is.
      */
+    'blocks/Countdown.tsx': 'when a public page’s per-visitor countdown started, for that visitor',
     'landing/OrderForm.tsx': 'which campaign a visitor arrived from',
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',

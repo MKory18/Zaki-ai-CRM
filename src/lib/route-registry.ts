@@ -189,6 +189,18 @@ export const NAV: NavGroup[] = [
        */
       r('/store', 'المتجر', 'Store', ['storefront.view', 'storefront.manage', 'geo.manage']),
       r('/store/landing-pages', 'صفحات الهبوط', 'PanelsTopLeft', ['landing_pages.view']),
+      /**
+       * «الآراء» — what buyers said, and what the shop does about it.
+       *
+       * Owner decision D8. It sits with the shop's content and not under
+       * «الإعدادات», by this group's own dividing rule: this is about what
+       * the shop SAYS, not about how the system RUNS.
+       *
+       * Above the look screens and below the pages, because it is read in
+       * the order the work happens: which pages exist, what customers said
+       * about them, then how any of it is dressed.
+       */
+      r('/store/reviews', 'الآراء', 'Star', ['storefront.view', 'storefront.manage']),
 
       r('/store/design', 'التصميم', 'LayoutTemplate', ['storefront.view', 'storefront.manage']),
       r('/store/themes', 'القوالب', 'Palette', ['storefront.view', 'storefront.manage']),

@@ -22,6 +22,7 @@ import {
   RETURN_REASON_LABELS as RETURN_REASONS,
 } from '@/lib/shipping-workflow';
 import { RiArchiveDrawerLine, RiArrowGoBackLine, RiCloseCircleLine, RiHistoryLine, RiNumbersLine, RiShipLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RatingLinkButton } from './RatingLinkButton';
 
 
 /*
@@ -232,6 +233,15 @@ export function ShippingSection({ order, ar, isRtl, onRefreshOrder, canEdit = tr
         <Info label={ar ? 'خرج للتوصيل' : 'Out for Delivery'} value={arDateShort(order.outForDeliveryAt)} />
         <Info label={ar ? 'سُلّم في' : 'Delivered At'} value={arDateShort(order.deliveredAt)} />
       </div>
+
+      {/* THE RATING LINK — only once the goods actually arrived.
+          Owner decision D8: the customer is offered it on the tracking
+          page, and the seller gets it here to send over WhatsApp. A link
+          handed out before delivery is an invitation to rate a parcel
+          nobody has opened, so the door refuses it too. */}
+      {['DELIVERED', 'PARTIALLY_DELIVERED'].includes(order?.shippingStatus) && (
+        <RatingLinkButton orderId={order.id} />
+      )}
 
       {/* Failure/return reasons */}
       {order.shippingStatus === 'FAILED_DELIVERY' && order.deliveryFailureReason && (

@@ -548,6 +548,22 @@ export const BLOCK_CSS = `
 .lp-stars { display: flex; gap: 2px; color: var(--store-accent); margin-bottom: 8px; }
 .lp-reviews blockquote { margin: 0; font-size: 14px; }
 .lp-reviews figcaption { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--store-muted); }
+/* The average, and only when the server said it is one — see MIN_SHOWN_FOR_AVERAGE. */
+.lp-reviews-average { margin: 0 0 10px; font-size: 13px; color: var(--store-muted); }
+.lp-reviews-average strong { font-size: 18px; color: var(--store-text); }
+/* «مشتري مؤكَّد». Quiet on purpose: a badge that shouts reads as a sticker
+   the shop printed, which is the opposite of what it is for. */
+.lp-review-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--store-accent);
+  background: var(--store-accent-tint);
+  border: 1px solid var(--store-accent-border);
+}
 
 /* ── faq ── */
 .lp-faq { display: grid; gap: 8px; }

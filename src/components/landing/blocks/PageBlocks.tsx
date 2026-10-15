@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
 import { COD_LINE, LOCKED_SECTIONS, type LandingSection } from '@/lib/landing-sections';
-import { lowStock, offerDeadline, offersCountAr, trustRow, type SellingFamily, type TrustItem } from '@/lib/selling-blocks';
+import { lowStock, offersCountAr, trustRow, type SellingFamily, type TrustItem } from '@/lib/selling-blocks';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
 import { sanitizeRich, isRich } from '@/lib/rich-text';
 import type { Palette } from '@/lib/landing-theme';
@@ -45,11 +45,6 @@ export interface BlockContext {
     /** This bundle's own price before its own reduction — certain, not a claim. */
     listPrice?: number | null;
     compareAtPrice?: number | null; isDefault?: boolean;
-    /**
-     * When this bundle stops being for sale — the only source of a clock.
-     * See `offerDeadline`: the page's countdown is the soonest of these.
-     */
-    endsAt?: Date | string | null;
   }[];
   /**
    * THE THREE THINGS A COD SHOPPER WANTS TO KNOW, ALREADY DECIDED.
@@ -104,6 +99,37 @@ export interface BlockContext {
    * screen is worse than drawing nothing.
    */
   placeholders?: boolean;
+  /**
+   * THE RATINGS THE SERVER FOUND — never stored in the block.
+   *
+   * Owner decision D8. Filled at render time from `shownReviews`, which
+   * already applied the product's mode (يدوي · تلقائي · الاتنين), the
+   * published-and-consented filter and the average's floor. Null or absent
+   * means «this product shows the seller's items only», which is what a
+   * product with no delivered orders honestly is.
+   *
+   * It carries a FIRST NAME and a CITY. There is no field here for a phone,
+   * an address or a surname, and `PUBLIC_REVIEW_FIELDS` in
+   * src/lib/product-reviews.ts is compared against this shape in both
+   * directions by a guard.
+   */
+  reviews?: {
+    items: { id: string; rating: number; text: string; firstName: string; city: string; verified: boolean; at: string }[];
+    count: number;
+    average: number | null;
+    /** False below the floor: an average over two people is not a measurement. */
+    showAverage: boolean;
+  } | null;
+  /**
+   * THE OFFER'S OWN ENDING, as an ISO moment, for an `urgency` block set to
+   * «تلقائي».
+   *
+   * Read from `Offer.endsAt` by the server — the soonest one still ahead —
+   * because that is the column the price stops at. A countdown reading
+   * anything else would be a second source of truth for when the offer
+   * ends, and the two would disagree the first time a seller moved a date.
+   */
+  offerEndsAt?: string | null;
   /**
    * WHAT THE SHOP HAS, FOR THE `catalog` BLOCK.
    *
@@ -500,7 +526,71 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       );
 
     case 'reviews': {
+      /**
+       * TWO SOURCES, ONE BLOCK, AND ONLY ONE OF THEM MAY WEAR THE BADGE.
+       *
+       * Owner decision D8. `ctx.reviews` is what the SERVER found: ratings
+       * from delivered orders, published and consented to, carrying a first
+       * name and a city and nothing else about the person. `s.items` is
+       * what the SELLER typed.
+       *
+       * The verified ones come first, because they are the ones a shopper
+       * can weigh, and each carries «مشتري مؤكَّد». A manual item never
+       * can — there is no field in its schema that could hold an order, so
+       * the badge is not a rule a renderer applies, it is a thing the data
+       * cannot say.
+       *
+       * THE AVERAGE IS SHOWN ONLY ABOVE A FLOOR. `showAverage` is the
+       * server's answer to «is this a measurement or is it two people» —
+       * see `MIN_SHOWN_FOR_AVERAGE`. Below it the shopper gets the
+       * sentences and no statistic.
+       */
+      const verified = ctx.reviews?.items ?? [];
       const items = s.items.map((r, at) => ({ r, at })).filter(({ r }) => r.text.trim());
+
+      if (verified.length) {
+        return (
+          <Section title={s.title}>
+            {ctx.reviews?.showAverage && ctx.reviews.average !== null && (
+              <p className="lp-reviews-average">
+                <strong>{ctx.reviews.average}</strong> من 5 — {ctx.reviews.count} تقييم من مشترين
+              </p>
+            )}
+            <div className="lp-reviews">
+              {verified.map((r) => (
+                <figure key={r.id}>
+                  <div className="lp-stars" aria-label={`${r.rating} من 5`}>
+                    {Array.from({ length: 5 }, (_, n) => (
+                      <Star key={n} size={13} fill={n < r.rating ? 'currentColor' : 'none'} strokeWidth={1.5} />
+                    ))}
+                  </div>
+                  {/* AS TEXT. A child, never dangerouslySetInnerHTML and
+                      never `rich()`: this is what a stranger typed, and the
+                      only safe reading of it is "characters". */}
+                  <blockquote>{r.text}</blockquote>
+                  <figcaption>
+                    {[r.firstName, r.city].filter(Boolean).join(' · ')}
+                    <span className="lp-review-badge">مشتري مؤكَّد</span>
+                  </figcaption>
+                </figure>
+              ))}
+              {/* The seller's own items keep their place below, unbadged. */}
+              {items.map(({ r, at: i }) => (
+                <figure key={`m${i}`}>
+                  <div className="lp-stars" aria-label={`${r.stars} من 5`}>
+                    {Array.from({ length: 5 }, (_, n) => (
+                      <Star key={n} size={13} fill={n < r.stars ? 'currentColor' : 'none'} strokeWidth={1.5} />
+                    ))}
+                  </div>
+                  <blockquote data-edit={`items.${i}.text`} {...rich(r.text)} />
+                  {r.name && <figcaption data-edit={`items.${i}.name`} {...rich(r.name)} />}
+                </figure>
+              ))}
+            </div>
+          </Section>
+        );
+      }
+
       if (!items.length) {
         if (!ctx.placeholders) return null;
         // A template ships no example testimonials, here or anywhere: a
@@ -995,28 +1085,50 @@ function Trust({ section: s, ctx }: { section: Extract<LandingSection, { type: '
 }
 
 function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type: 'urgency' }>; ctx: BlockContext }) {
-  // Only a genuinely low count is worth showing. Inventing scarcity is the
-  // one thing this block deliberately cannot do — `lowStock` holds the
-  // floor, and there is no argument to it that supplies a number.
-  const left = s.showRealStock ? lowStock(ctx.stock) : null;
   /*
-   * THE CLOCK COMES FROM THE OFFER OR IT DOES NOT COME.
+   * Only a genuinely low count is worth showing. Inventing scarcity is the
+   * one thing this block deliberately cannot do.
    *
-   * `s.minutes` is retired (see `landing-sections.ts`): it counted from the
-   * visitor's arrival, so nothing happened when it reached zero. The
-   * deadline is the soonest `endsAt` among the offers this page actually
-   * sells, which is the same column that stops the price applying.
+   * The floor and the three silences (unknown · none · plenty) are
+   * `lowStock` in `selling-blocks.ts` — the same twenty this line used to
+   * carry inline. One place, because «how few is few enough to say out
+   * loud» is a decision, and a decision written in two files is two
+   * decisions the first time either is tuned.
    */
-  const endsAt = offerDeadline(ctx.offers);
-  if (!s.text && !endsAt && left === null) return null;
+  const lowCount = s.showRealStock ? lowStock(ctx.stock) : null;
+
+  /**
+   * «تلقائي» READS THE OFFER'S OWN ENDING, AND THE PAGE SAYS SO BY STOPPING.
+   *
+   * `ctx.offerEndsAt` is filled by the server from `Offer.endsAt` — the
+   * column the price itself stops at — so the clock and the price are one
+   * fact. When there is none, the block renders NOTHING rather than falling
+   * back to the per-visitor timer: a fallback is how a seller ends up
+   * showing the dishonest clock they thought they had replaced. The save
+   * door already refuses this configuration (`countdownRefusal`), so the
+   * only way to be here is an offer that ended after the page was saved —
+   * and a finished offer has no countdown to show.
+   */
+  const offerClock = s.countdown === 'offer';
+  const until = offerClock ? (ctx.offerEndsAt ?? null) : null;
+  const showsClock = offerClock ? Boolean(until) : s.minutes > 0;
+
+  if (!s.text && !showsClock && lowCount === null) return null;
 
   return (
     <div className="lp-urgency">
       {s.text && <p>{s.text}</p>}
-      {endsAt && <Countdown endsAt={endsAt} />}
-      {left !== null && (
+      {showsClock && (
+        <Countdown
+          minutes={s.minutes}
+          id={s.id}
+          persist={!ctx.building}
+          until={until}
+        />
+      )}
+      {lowCount !== null && (
         <p className="lp-stock">
-          بقي <strong>{left}</strong> فقط في المخزون
+          بقي <strong>{lowCount}</strong> فقط في المخزون
         </p>
       )}
     </div>

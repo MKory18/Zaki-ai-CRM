@@ -1,5 +1,6 @@
 import { CORE_STATES, deriveCoreState, type CoreState } from './order-state';
 import { deliveryWindowAr, type DeliveryWindow } from './delivery-time';
+import { reviewPath } from './review-link';
 
 /**
  * WHERE IS MY ORDER — ASKED BY SOMEBODY WITH NO ACCOUNT.
@@ -78,6 +79,7 @@ export const TRACKING_FIELDS = [
   'stepLabelAr',
   'eta',
   'finished',
+  'ratingPath',
 ] as const;
 
 export interface PublicTracking {
@@ -91,6 +93,23 @@ export interface PublicTracking {
   /** «يوصلك خلال ٢–٤ أيام», or null when nothing measured supports one. */
   eta: string | null;
   finished: boolean;
+  /**
+   * WHERE THIS CUSTOMER MAY RATE WHAT THEY RECEIVED, or null.
+   *
+   * Owner decision D8. A PATH and never an absolute URL: a shop on its own
+   * domain must not send its customers to ours, and the host they are
+   * already on is the right one by construction.
+   *
+   * Offered only for a DELIVERED order, and offered HERE because this is
+   * the one place a stranger has already proved they hold both halves —
+   * the phone and the reference. Handing the link out anywhere else would
+   * be handing out the right to rate somebody else's order.
+   *
+   * It is derived, not stored (src/lib/review-link.ts), so a customer who
+   * tracks the same order twice gets the same link, and «once» is enforced
+   * by the database rather than by whether this field was shown.
+   */
+  ratingPath: string | null;
 }
 
 /** An order ends at the door, or on the way back from it. */
@@ -102,7 +121,21 @@ export interface TrackableOrder {
   shippingStatus: string;
   confirmationStatus: string;
   claimedById: string | null;
+  /**
+   * The id and the shop's address, for the rating link — both optional, so
+   * every existing caller and every test that builds one of these by hand
+   * keeps compiling and simply gets `ratingPath: null`.
+   *
+   * The ID IS NOT SENT ANYWHERE. It goes into an HMAC and the signature
+   * comes out; `PublicTracking` carries the path and no identifier a
+   * stranger could use for anything else.
+   */
+  id?: string;
+  storeSlug?: string | null;
 }
+
+/** The states a rating link is offered for — the ones where goods arrived. */
+const RATEABLE: readonly CoreState[] = ['DELIVERED', 'PARTIALLY_DELIVERED'];
 
 /**
  * What to tell whoever asked.
@@ -131,6 +164,16 @@ export function trackingView(order: TrackableOrder, window: DeliveryWindow | nul
     stepLabelAr: told.step ? STEP_LABEL_AR[told.step] : null,
     eta: finished ? null : deliveryWindowAr(window),
     finished,
+    /*
+     * A PARTIALLY_DELIVERED order counts. The customer took goods and paid
+     * for them, and their opinion of what they received is as checkable as
+     * anybody's — refusing it would be the system deciding whose experience
+     * was complete enough to be worth hearing.
+     */
+    ratingPath:
+      order.id && order.storeSlug && RATEABLE.includes(state)
+        ? reviewPath(order.storeSlug, order.id)
+        : null,
   };
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FAMILY, FAMILY_OF_TEMPLATE, LOW_STOCK_FLOOR, SELLING_FAMILIES,
-  familyNameAr, familyOf, lowStock, offerDeadline, offersCountAr, trustRow,
+  familyNameAr, familyOf, lowStock, offersCountAr, trustRow,
 } from './selling-blocks';
 import { LANDING_FAMILIES } from './landing-matcher';
 import { COD_LINE } from './landing-sections';
@@ -148,32 +148,6 @@ describe('how many offers there are', () => {
     expect(offersCountAr(11)).toBe('11 عرضاً');
     // Western digits, which is this product's rule wherever a number shows.
     expect(offersCountAr(7)).not.toMatch(/[٠-٩]/);
-  });
-});
-
-describe('the deadline', () => {
-  const at = (ms: number) => new Date(Date.now() + ms);
-
-  it('is nothing at all when no offer ends', () => {
-    expect(offerDeadline([])).toBeNull();
-    expect(offerDeadline([{ endsAt: null }, { endsAt: undefined }, {}])).toBeNull();
-  });
-
-  it('is the soonest of the offers that do end', () => {
-    const soon = at(3_600_000);
-    const later = at(86_400_000);
-    expect(offerDeadline([{ endsAt: later }, { endsAt: soon }])).toBe(soon.toISOString());
-    // A string from JSON reads the same as a Date from Prisma: the public
-    // page serialises its offers on the way to the browser.
-    expect(offerDeadline([{ endsAt: soon.toISOString() }])).toBe(soon.toISOString());
-  });
-
-  it('ignores a date that is past, and a date that is not a date', () => {
-    expect(offerDeadline([{ endsAt: at(-1000) }])).toBeNull();
-    expect(offerDeadline([{ endsAt: 'يوم الخميس' }])).toBeNull();
-    // And the live one beside the stale one still answers.
-    const soon = at(60_000);
-    expect(offerDeadline([{ endsAt: at(-5000) }, { endsAt: soon }])).toBe(soon.toISOString());
   });
 });
 

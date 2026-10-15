@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { ShieldCheck, Truck, PhoneCall } from 'lucide-react';
 import { db } from '@/lib/db';
-import { activeOffersFor } from '@/lib/offers';
+import { activeOffersFor, offerEndings } from '@/lib/offers';
+import { shownReviews } from '@/lib/product-reviews';
+import { countdownEnd } from '@/lib/countdown';
 import { ruleFor } from '@/lib/phone-rules';
 import { verifyPreviewToken, clampStoredHtml } from '@/lib/landing-pages';
 import { draftState } from '@/lib/landing-draft';
@@ -114,7 +116,10 @@ const PAGE_SELECT = {
   builderMode: true,
   theme: true,
   sections: true,
-  product: { select: { id: true, name: true, basePrice: true } },
+  // `reviewMode` decides whether the reviews block shows the seller's items,
+  // the buyers' ratings, or both — owner decision D8. Read here so the
+  // renderer never has to ask a second question about it.
+  product: { select: { id: true, name: true, basePrice: true, reviewMode: true } },
   company: { select: { id: true } },
   storeId: true,
   store: {
@@ -321,6 +326,33 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
       stock = await availableStock(db, companyId, lp.product.id, undefined, lp.storeId).catch(() => null);
     }
 
+    /**
+     * THE BUYERS' OWN RATINGS, AND THE OFFER'S OWN ENDING.
+     *
+     * Owner decision D8, both halves, and both READ FROM THE SERVER rather
+     * than stored in a block. A rating copied into a page would be wrong
+     * the moment a moderator hid it; an end date copied into a page would
+     * be a second source of truth for when the price stops.
+     *
+     * Asked only when the page actually has the block that uses it — a page
+     * with no reviews block pays no query, which is the same bargain the
+     * stock read above makes.
+     */
+    let reviews: Awaited<ReturnType<typeof shownReviews>> | null = null;
+    if (lp.product && sections.some((s) => s.type === 'reviews' && s.enabled)) {
+      reviews = await shownReviews({
+        companyId,
+        productId: lp.product.id,
+        reviewMode: lp.product.reviewMode,
+      }).catch(() => null);
+    }
+
+    let offerEndsAt: string | null = null;
+    if (lp.product && sections.some((s) => s.type === 'urgency' && s.enabled && s.countdown === 'offer')) {
+      const endsAt = await offerEndings(db, companyId, { productId: lp.product.id }).catch(() => []);
+      offerEndsAt = countdownEnd({ endsAt, now: new Date() })?.toISOString() ?? null;
+    }
+
     /*
      * ── THE SELLING BLOCKS' FACTS ──
      *
@@ -375,7 +407,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
               // with three places was printed with none — on the first screen
               // of the page that sells it, and in the offer cards under it.
               minorUnit: lp.store?.country.minorUnit ?? 2,
-              trust: trustRow(facts),
+              trust: trustRow(facts), reviews, offerEndsAt,
               whatsapp: whatsappHref(lp.store?.supportPhone),
               store: lp.store ? { name: lp.store.name, logo: lp.store.logo, phone: lp.store.supportPhone } : null,
             }}
