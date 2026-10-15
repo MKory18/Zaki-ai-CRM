@@ -7,6 +7,11 @@ import { useProducts } from '@/hooks/useProducts';
 import { amount, type Currency } from '@/lib/format';
 import { ProductLinesEditor, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { RiArchiveLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
+import { raiseEditRequest } from '@/components/orders/raiseEditRequest';
+import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
+import type { ChangeableField } from '@/lib/change-request-fields';
+import { MAX_REASON, MIN_REASON } from '@/lib/order-edit-reason';
+import { useAsk } from '@/components/ui/Confirm';
 
 
 /**
@@ -38,6 +43,10 @@ interface Props {
   order: {
     id: string;
     version: number;
+    /** Confirmation is the line after which an edit becomes a request. */
+    confirmationStatus: string;
+    /** The stored total — read, never recomputed in a screen. */
+    totalAmount: number;
     quantity: number;
     sellingPrice: number;
     discountAmount: number;
@@ -60,9 +69,12 @@ interface Props {
 
 export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSaved }: Props) {
   const patchOrder = useOrderPatch();
+  const ask = useAsk();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** «بانتظار الموافقة» — said out loud, not left to be guessed. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState({
     discountAmount: String(order.discountAmount ?? 0),
     // What the customer asked for, or what this order needs. Internal notes
@@ -169,10 +181,129 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
     setOpen(true);
   }
 
+  /**
+   * ONCE IT IS CONFIRMED, THIS SAVE IS A REQUEST.
+   *
+   * Same rule as the customer card. What is different here is WHAT can be
+   * asked for: the change-request pipeline carries single values —
+   * `productId`, `quantity`, `sellingPrice`, `discountAmount`,
+   * `customerNotes` — and `CHANGEABLE_FIELDS` says so for a reason
+   * («offerId» was removed from it precisely because one id moved five
+   * money inputs through a path built for none of them).
+   *
+   * A ONE-LINE order maps onto those fields exactly, and that is nearly
+   * every order here. A MULTI-LINE one does not: «line 2's quantity» is
+   * not sayable in that vocabulary, and inventing a shape for it would
+   * mean a request a supervisor can approve and the apply path then
+   * refuses — the city bug and the offer bug, for the third time.
+   *
+   * So a multi-line confirmed order is refused in words that say what to
+   * do instead, and it is recorded as RV44 rather than half-built.
+   */
+  const pastConfirmation = (TERMINAL_CONFIRMATION_STATUSES as string[]).includes(order.confirmationStatus);
+
+  function lineChanges():
+    | { ok: true; changes: Partial<Record<ChangeableField, string | number | null>> }
+    | { ok: false; why: string } {
+    const changes: Partial<Record<ChangeableField, string | number | null>> = {};
+    if (Number(form.discountAmount) !== order.discountAmount) {
+      changes.discountAmount = Number(form.discountAmount);
+    }
+    const notes = form.customerNotes.trim() || null;
+    if (notes !== (order.customerNotes ?? null)) changes.customerNotes = notes;
+
+    if (draft.length > 1) {
+      // Only a refusal if the lines are what changed; a discount edit on a
+      // multi-line order is still sayable.
+      const linesTouched =
+        draft.length !== (order.items?.length ?? 1) ||
+        draft.some((l, i) => {
+          const was = order.items?.[i];
+          return !was || was.productId !== l.productId || was.quantity !== l.quantity || String(was.lineTotal) !== String(l.price ?? '');
+        });
+      if (linesTouched) {
+        return {
+          ok: false,
+          why: 'الطلب مؤكَّد وفيه أكتر من سطر — تعديل السطور بينعمل بطلب إلغاء وطلب جديد، أو بموافقة مشرف على كلّ سطر لحاله.',
+        };
+      }
+      return { ok: true, changes };
+    }
+
+    const line = draft[0];
+    const was = order.items?.[0];
+    if (line) {
+      if (line.productId !== (was?.productId ?? null)) changes.productId = line.productId;
+      if (line.quantity !== (was?.quantity ?? order.quantity)) changes.quantity = line.quantity;
+      /*
+       * AND THE PRICE IS NOT MAPPED FROM THIS BOX — ON PURPOSE.
+       *
+       * `DraftLine.price` is the characters in the LINE TOTAL box: the
+       * total for that line's quantity, not a unit price. The request
+       * pipeline carries `sellingPrice`, which IS per unit. Turning one
+       * into the other here would be money arithmetic in a screen, and
+       * this product forbids that for a good reason — the totals come
+       * from one path and a second opinion in a card is how two numbers
+       * start disagreeing.
+       *
+       * So a price change on a confirmed order is refused with the door
+       * that CAN carry it: «تعديل» in the change-request card asks for the
+       * new price directly, as one value the person types. Recorded as
+       * RV45 rather than half-built.
+       */
+      /*
+       * `lineTotal` is a STORED column, read — not `unitPrice × quantity`
+       * computed here. «No money arithmetic in a screen» is a rule in this
+       * product, and the first version of this comparison broke it (the
+       * frontend-invariants guard caught it). A second opinion about a
+       * total in a card is how two numbers start disagreeing.
+       */
+      const totalWas = was ? was.lineTotal : order.totalAmount;
+      if (line.price !== undefined && Number(line.price) !== totalWas) {
+        return {
+          ok: false,
+          why: 'الطلب مؤكَّد — تغيير السعر بينعمل من «تعديل» بكرت طلبات التعديل، لأنّه بيطلب السعر الجديد للوحدة مباشرةً.',
+        };
+      }
+    }
+    return { ok: true, changes };
+  }
+
   async function save() {
     setBusy(true);
     setError(null);
     try {
+      if (pastConfirmation) {
+        const mapped = lineChanges();
+        if (!mapped.ok) {
+          setError(mapped.why);
+          return;
+        }
+        if (Object.keys(mapped.changes).length === 0) {
+          setOpen(false);
+          return;
+        }
+        const reason = await ask({
+          title: 'طلب تعديل',
+          body: 'الطلب مؤكَّد، فالتعديل بيروح كطلب لمن يبتّ فيه. السبب بينحفظ مع الطلب وبيقراه اللي بيوافق.',
+          confirmLabel: 'ارفع الطلب',
+          input: {
+            label: 'ليش بدّه يتعدّل؟',
+            placeholder: 'مثال: الزبون زاد الكمية بالتلفون',
+            required: true,
+            multiline: true,
+            maxLength: MAX_REASON,
+          },
+        });
+        const trimmed = (reason ?? '').trim();
+        if (trimmed.length < MIN_REASON) return;
+        const { applied } = await raiseEditRequest(order.id, mapped.changes, trimmed, order.version);
+        setOpen(false);
+        if (applied) onSaved();
+        else setNotice('بانتظار الموافقة — التعديل انرفع كطلب، والطلب ما تغيّر لحتى حدا يوافق.');
+        return;
+      }
+
       const res = await patchOrder(order.id, {
         expectedVersion: order.version,
         items: draft.map((l) => ({
@@ -311,6 +442,12 @@ export function OrderLinesCard({ order, currency, canEdit, onAcquireLock, onSave
           </p>
 
           {error && <p className="text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-2.5 py-1.5">{error}</p>}
+          {/*
+            «بانتظار الموافقة» — said, not left to be guessed. A save that
+            raises a request closes the form and changes nothing on the
+            order, which otherwise looks exactly like a save that failed.
+          */}
+          {notice && <p className="text-xs text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 rounded-lg px-2.5 py-1.5">{notice}</p>}
 
           <div className="flex gap-2">
             <button

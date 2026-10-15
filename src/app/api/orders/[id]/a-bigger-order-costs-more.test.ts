@@ -109,7 +109,17 @@ const orderRow = (over: Row = {}) => ({
   estimatedCostOfGoods: 0,
   version: 7,
   status: 'CONFIRMED',
-  confirmationStatus: 'CONFIRMED',
+  /*
+   * IN_PROGRESS, NOT CONFIRMED — and the change is the rule, not this file.
+   *
+   * Since «بعد التأكيد: التعديل بطلب», a direct edit of a customer or line
+   * field on a CONFIRMED order is refused with `CHANGE_REQUEST_REQUIRED`
+   * and goes through the change-request pipeline instead. This file's
+   * subject is the money arithmetic on an edit, which is the same whichever
+   * door the edit came through, so the order is put where a direct edit is
+   * still right: still being worked on.
+   */
+  confirmationStatus: 'IN_PROGRESS',
   shippingStatus: 'NOT_READY',
   shippedAt: null,
   deliveredAt: null,

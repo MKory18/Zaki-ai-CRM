@@ -19,7 +19,10 @@ import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { authorize, can, getPermissionScope } from '@/lib/authorization';
-import { MAX_REASON, reasonRefusal } from '@/lib/order-edit-reason';
+import { MAX_REASON, MIN_REASON, reasonRefusal } from '@/lib/order-edit-reason';
+import { CHANGEABLE_FIELDS, CHANGE_FIELD_AR } from '@/lib/change-request-fields';
+import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
+
 import { orderSeal, sealedFieldsIn, sealMessage, handedToCourier } from '@/lib/order-seal';
 import { courierActionAr, courierActionFor, courierMessage, sealedAmong } from '@/lib/courier-change';
 import { expandApproved, mayApply, strayFields } from '@/lib/change-request-apply';
@@ -561,6 +564,61 @@ export async function PATCH(
     const changingCombined = status && status !== existing.status;
     const changingConfirmation = confirmationStatus !== undefined && confirmationStatus !== existing.confirmationStatus;
     const changingShipping = shippingStatus !== undefined && shippingStatus !== existing.shippingStatus;
+    /*
+     * ═══════════════════════════════════════════════════════════════════
+     * THE CONFIRMATION STATUS HAS ONE DOOR, AND THIS IS NOT IT.
+     *
+     * `/api/orders/[id]/confirmation` is where a confirmation status
+     * moves: it holds the transition table, the «call the customer
+     * first» rule (C1), the terminal lock on CONFIRMED / REJECTED /
+     * CANCELLED, and the override that needs `orders.unlock` with a
+     * written reason.
+     *
+     * THIS route accepted `status` and `confirmationStatus` too, and
+     * checked only `orders.confirm` — no table, no contact-first, no
+     * terminal lock. `CONFIRMATION_AGENT` and `MODERATOR` both hold
+     * `orders.confirm`, so whoever held a confirmed order could move it
+     * back to NEW or cancel it outright through here, and none of the
+     * three rules next door applied. Two doors to one decision, and one
+     * of them with none of the rules.
+     *
+     * No screen sends either field through this route — checked across
+     * `src/components`: every status change already goes through the
+     * confirmation door. So this closes a path nothing used and the
+     * rules stop depending on which door somebody knocks on.
+     *
+     * The ONE exception is the override that already exists next door:
+     * `orders.unlock` («تجاوز أقفال التحرير») with a reason in writing,
+     * which is recorded the same way.
+     * ═══════════════════════════════════════════════════════════════════
+     */
+    if (changingCombined || changingConfirmation) {
+      if (!can(user, 'orders.unlock')) {
+        return NextResponse.json(
+          {
+            // No English twin: the `code` is what a caller reads, and
+            // `arabic-refusals.test.ts` holds a falling cap on English
+            // sentences in this API. A sentence nobody shows and nothing
+            // parses is the kind that keeps that number up.
+            errorAr:
+              'حالة التأكيد بتتغيّر من باب التأكيد نفسه — فيه قاعدة الاتصال أوّلاً وجدول الانتقالات وقفل الحالات النهائيّة.',
+            code: 'USE_CONFIRMATION_DOOR',
+          },
+          { status: 409 }
+        );
+      }
+      // With the override, still only with a reason in writing — the same
+      // floor the confirmation door's own override stands on.
+      if (!editReason || editReason.trim().length < MIN_REASON) {
+        return NextResponse.json(
+          {
+            errorAr: 'تجاوز باب التأكيد بيحتاج سبباً مكتوباً.',
+            code: 'REASON_REQUIRED',
+          },
+          { status: 400 }
+        );
+      }
+    }
     if (changingCombined || changingConfirmation) {
       const confirmAuth = authorize(user, 'orders.confirm', existing);
       if (!confirmAuth.allowed) {
@@ -820,6 +878,70 @@ export async function PATCH(
             code: 'ORDER_SEALED',
             fields: sealedAsked,
             batchNumber: seal.batchNumber,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    /*
+     * AND IT COMES AFTER THE SEAL ON PURPOSE.
+     *
+     * A sealed order already answers «ارفع طلب تعديل» with the batch
+     * number and the courier's sentence in it — a better answer than this
+     * one, and the screens read its code. This is the gap the seal never
+     * covered: CONFIRMED, label not printed, nothing sealed, and edited in
+     * place.
+     */
+    /*
+     * ═══════════════════════════════════════════════════════════════════
+     * ONCE IT IS CONFIRMED, AN EDIT IS A REQUEST.
+     *
+     * The owner's rule, in his words: «لما يتأكد الطلب، الموظف ما بيقدر
+     * يعدله ولا يغير حالته — التعديل يصير طلب تعديل، والقرار إلي».
+     *
+     * The whole pipeline for that already existed — `OrderChangeRequest`,
+     * the routing, «طلبات التعديل», the apply path — and it was reached
+     * from exactly two places: the agent's own queue, and the
+     * «تعديل · إلغاء · تأجيل» card. Meanwhile «تعديل» on the customer
+     * card and on the lines card in the order window saved straight
+     * through this route, in every state, and only a SEALED order was
+     * refused. So a confirmed order whose label had not been printed was
+     * edited in place, by anybody holding `orders.edit`, with no request
+     * and nobody deciding.
+     *
+     * Confirmation is the line (`BEFORE_OPERATIONS`): before it the order
+     * is still the agent's and a direct edit is right; after it the order
+     * belongs to operations and the answer is a request.
+     *
+     * An APPROVED request coming back to be applied carries
+     * `changeRequestId`, so `viaRequest` is how the pipeline gets
+     * through — this refuses the door, not the decision.
+     * ═══════════════════════════════════════════════════════════════════
+     */
+    if (
+      !viaRequest &&
+      /*
+       * THE THREE TERMINAL STATUSES BY NAME, not «anything not in
+       * BEFORE_OPERATIONS». The complement of a list is a list nobody
+       * maintains: a sixth status added to the workflow tomorrow would
+       * fall on the REFUSING side of it by accident, and an order being
+       * contacted would start answering «raise a change request».
+       * `TERMINAL_CONFIRMATION_STATUSES` is the same set the confirmation
+       * door locks, so the two read alike.
+       */
+      (TERMINAL_CONFIRMATION_STATUSES as string[]).includes(existing.confirmationStatus)
+    ) {
+      const asked = CHANGEABLE_FIELDS.filter(
+        (f) => (data as Record<string, unknown>)[f] !== undefined
+      );
+      if (asked.length > 0) {
+        return NextResponse.json(
+          {
+            errorAr: 'الطلب مؤكَّد — التعديل بيصير بطلب تعديل.',
+            code: 'CHANGE_REQUEST_REQUIRED',
+            fields: asked,
+            fieldsAr: asked.map((f) => CHANGE_FIELD_AR[f]),
           },
           { status: 409 }
         );
