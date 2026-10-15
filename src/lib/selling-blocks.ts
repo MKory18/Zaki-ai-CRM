@@ -92,6 +92,23 @@ export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Objec
   pulse: 'trend',
   souq: 'trend',
   tender: 'trend',
+  /*
+   * THE FOURTH FAMILY, ADDED BY ITS OWN BRANCH.
+   *
+   * `alama` is the «علامة» template — a skin built entirely from product
+   * fields, so an empty field makes its section disappear rather than
+   * leaving a hole. Its family id is `brand`, which is what
+   * `LANDING_FAMILIES` calls «علامة»; the template key is the Arabic word
+   * transliterated, and the two are deliberately not the same string —
+   * the key is what a seller's theme RECORDED, the id is what this
+   * product calls the look.
+   *
+   * It is mapped here and not left to `DEFAULT_FAMILY` because the
+   * fallback is «عيادة»: a brand skin silently wearing the clinic
+   * family's trust row is the failure this map exists to prevent, and the
+   * claim below would have passed on it.
+   */
+  alama: 'brand',
 });
 
 /**
