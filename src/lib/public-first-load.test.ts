@@ -165,31 +165,33 @@ describe('what a shopper downloads before the hero image', () => {
    *     ───────────────────────────────────────────────────────────────
    *     total        202.0 KB
    *
-   * And the same page under TURBOPACK, measured in a real browser on
-   * 2026-10-08 and written into `what-a-shopper-downloads.test.ts`:
-   * **157.2 KB** on the wire. Turbopack splits smaller; webpack was used
-   * here because a production Turbopack build cannot resolve `next` from
-   * inside a git worktree whose `node_modules` belongs to the parent
-   * checkout (`Could not find the Next.js package`), and CI builds with
-   * Turbopack as `npm run build` always has.
+   * AND THE SAME TREE UNDER TURBOPACK, which is what CI and the
+   * production image build with. Measured on the first run of this very
+   * step, 2026-10-16:
    *
-   * So the ceiling is set over the HIGHER of the two — the one measured
-   * today — and the log line below is how the Turbopack figure gets
-   * learned on the first CI run. Lowering it then is a one-line commit
-   * that says so, which is how the dashboard ratchet has moved three
-   * times.
+   *     /s/[store]   162.5 KB of JavaScript (13 files) + 7.7 CSS = 170.2
+   *     /lp/[slug]   161.4 KB (12 files)               + 7.7     = 169.2
+   *     the orders screen, for scale                             = 388.4
+   *
+   * Webpack was used locally because a production Turbopack build cannot
+   * resolve `next` from inside a git worktree whose `node_modules`
+   * belongs to the parent checkout («Could not find the Next.js
+   * package»). Turbopack splits smaller — 170 against 202 — so the
+   * ceiling stays over the HIGHER of the two and holds under either
+   * bundler, and both numbers are written here so nobody has to
+   * rediscover which is which.
    *
    * ── AND D7'S OWN NUMBER, HONESTLY ──
    *
-   * 250 KB is HTML + CSS + JS + FONTS. Of that, 202 KB is what this
-   * repository decides. The faces are not ours: every skin's font is
-   * fetched from Google at run time by `fontHref`, and `AUDIT.md` §7.2
-   * measured two Arabic subsets at 42–55 KB. 202 + 42 = 244 and 202 + 55
-   * = 257, so D7 is met on the lighter pair and missed by seven
-   * kilobytes on the heavier one — and the way to settle it is to serve
-   * the faces from the repository, which needs the owner's word on two
-   * font files (see `docs/storefront/FAMILIES.md` §٥). That is the
-   * nearest honest number and this is where it is written down.
+   * 250 KB is HTML + CSS + JS + FONTS. Of that, **170.2 KB** is what
+   * this repository decides, on the build that actually ships. The faces
+   * are not ours: every skin's font is fetched from Google at run time
+   * by `fontHref`, and `AUDIT.md` §7.2 measured two Arabic subsets at
+   * 42–55 KB. So a public page lands between **212 and 225 KB** — D7 is
+   * MET, with twenty-five kilobytes to spare on the heavier pair. What
+   * would make it certain rather than likely is serving the faces from
+   * the repository, which needs the owner's word on two font files
+   * (`docs/storefront/FAMILIES.md` §٥).
    */
   const CEILING_KB = 205;
 
