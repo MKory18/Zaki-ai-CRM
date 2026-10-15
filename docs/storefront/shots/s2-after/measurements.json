@@ -1,0 +1,83 @@
+[
+  {
+    "family": "clinic",
+    "page": "demo-problem-solution",
+    "lcpMs": 5460,
+    "cls": 0.013,
+    "tbtMs": 1838,
+    "transferKb": 142.8,
+    "requests": 21
+  },
+  {
+    "family": "clinic",
+    "page": "demo-offer-first",
+    "lcpMs": 2840,
+    "cls": 0.028,
+    "tbtMs": 802,
+    "transferKb": 52.9,
+    "requests": 17
+  },
+  {
+    "family": "clinic",
+    "page": "demo-s-objections",
+    "lcpMs": 2600,
+    "cls": 0.017,
+    "tbtMs": 734,
+    "transferKb": 62.8,
+    "requests": 17
+  },
+  {
+    "family": "herbal",
+    "page": "demo-problem-solution",
+    "lcpMs": 3572,
+    "cls": 0.013,
+    "tbtMs": 1340,
+    "transferKb": 142.8,
+    "requests": 21
+  },
+  {
+    "family": "herbal",
+    "page": "demo-offer-first",
+    "lcpMs": 2772,
+    "cls": 0.028,
+    "tbtMs": 1375,
+    "transferKb": 52.9,
+    "requests": 17
+  },
+  {
+    "family": "herbal",
+    "page": "demo-s-objections",
+    "lcpMs": 3424,
+    "cls": 0.015,
+    "tbtMs": 1030,
+    "transferKb": 62.8,
+    "requests": 17
+  },
+  {
+    "family": "trend",
+    "page": "demo-problem-solution",
+    "lcpMs": 1768,
+    "cls": 0.013,
+    "tbtMs": 782,
+    "transferKb": 142.8,
+    "requests": 21
+  },
+  {
+    "family": "trend",
+    "page": "demo-offer-first",
+    "lcpMs": 1960,
+    "cls": 0.029,
+    "tbtMs": 674,
+    "transferKb": 52.9,
+    "requests": 17
+  },
+  {
+    "family": "trend",
+    "page": "demo-s-objections",
+    "lcpMs": 1948,
+    "cls": 0.015,
+    "tbtMs": 464,
+    "transferKb": 62.8,
+    "requests": 17
+  }
+]

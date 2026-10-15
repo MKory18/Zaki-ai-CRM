@@ -1403,18 +1403,27 @@ function SectionFields({
 
     case 'trust':
       return (
-        <Repeater
-          items={s.items}
-          max={4}
-          blank={{ title: '', text: '' }}
-          onChange={(items) => patch({ items })}
-          render={(item, set) => (
-            <>
-              <Field label="الضمان" value={item.title} onChange={(v) => set({ ...item, title: v })} />
-              <Field label="سطر صغير" value={item.text} onChange={(v) => set({ ...item, text: v })} />
-            </>
-          )}
-        />
+        <div className="space-y-2.5">
+          {/* An empty repeater is not an empty row, and a seller who is not
+              told that will type three sentences the shop already knows. */}
+          <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            اتركه فاضي وبيعرض الحقائق لحاله: <b>الدفع عند الاستلام</b> دايماً، و<b>مدّة
+            التوصيل</b> من تسليماتك الحقيقيّة إذا صارت كافية، و<b>الإرجاع</b> إذا كتبت
+            ضماناً بقسم الاعتراضات أو نشرت سياسة الإرجاع. إذا كتبت أسطرك، كلامك يغلب.
+          </p>
+          <Repeater
+            items={s.items}
+            max={4}
+            blank={{ title: '', text: '' }}
+            onChange={(items) => patch({ items })}
+            render={(item, set) => (
+              <>
+                <Field label="الضمان" value={item.title} onChange={(v) => set({ ...item, title: v })} />
+                <Field label="سطر صغير" value={item.text} onChange={(v) => set({ ...item, text: v })} />
+              </>
+            )}
+          />
+        </div>
       );
 
     case 'footer':
@@ -1468,6 +1477,9 @@ function SectionFields({
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يلاحق الزائر أسفل الشاشة، وبالضغط عليه ينزل مباشرة إلى تعبئة البيانات.
             موقعه في الترتيب لا يغيّر شيئاً — هو مثبّت على الشاشة لا على الصفحة.
+            وما في «إخفاء» له ولا للنموذج: الطلب لازم يضلّ على بُعد ضغطة من أي
+            موضع تمرير، فالكلمة إلّي تكتبها هي الشي الوحيد إلّي يتغيّر فيه.
+            وإذا للمتجر رقم واتساب، بيوقف جنبه زرّ تواصل.
           </p>
         </div>
       );

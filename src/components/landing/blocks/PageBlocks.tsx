@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
-import { COD_LINE, type LandingSection } from '@/lib/landing-sections';
+import { COD_LINE, LOCKED_SECTIONS, type LandingSection } from '@/lib/landing-sections';
+import { lowStock, offersCountAr, trustRow, type SellingFamily, type TrustItem } from '@/lib/selling-blocks';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
 import { sanitizeRich, isRich } from '@/lib/rich-text';
 import type { Palette } from '@/lib/landing-theme';
@@ -39,7 +40,36 @@ export interface BlockContext {
   minorUnit?: number;
   /** Real remaining stock, or null when we do not know it. */
   stock: number | null;
-  offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; compareAtPrice?: number | null; isDefault?: boolean }[];
+  offers: {
+    id: string; name: string; quantity: number; freeQuantity: number; price: number;
+    /** This bundle's own price before its own reduction — certain, not a claim. */
+    listPrice?: number | null;
+    compareAtPrice?: number | null; isDefault?: boolean;
+  }[];
+  /**
+   * THE THREE THINGS A COD SHOPPER WANTS TO KNOW, ALREADY DECIDED.
+   *
+   * Resolved by the server (`trustRow`), not here: two of the three are
+   * claims that have to be earned — a measured delivery window and a
+   * returns policy the seller actually published — and a renderer that
+   * guessed at either would be a second place deciding what this shop may
+   * say about itself.
+   *
+   * Absent (the builder, the template gallery) draws the one item that is
+   * true of every shop on this system, which is how the row looks on a
+   * page whose shop has not learned anything yet.
+   */
+  trust?: TrustItem[];
+  /**
+   * The shop's WhatsApp, as a link, or null when it has no number.
+   *
+   * Built by `whatsappHref` upstream so the digits rule is applied once. A
+   * button that opens nothing is worse than no button, so null means the
+   * contact is simply not drawn.
+   */
+  whatsapp?: string | null;
+  /** Which of the three families this page is drawn in. */
+  family?: SellingFamily;
   /** Rendered in place of the `form` block. */
   form: React.ReactNode;
   /**
@@ -768,25 +798,8 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
         </section>
       );
 
-    case 'trust': {
-      const items = s.items.map((item, at) => ({ item, at })).filter(({ item }) => item.title);
-      if (!items.length) return null;
-      const icons = [ShieldCheck, Truck, Wallet];
-      return (
-        <div className="lp-trust">
-          {items.map(({ item, at: i }) => {
-            const Icon = icons[i % icons.length];
-            return (
-              <div key={i}>
-                <Icon size={18} />
-                <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
-                {item.text && <span data-edit={`items.${i}.text`} {...rich(item.text)} />}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
+    case 'trust':
+      return <Trust section={s} ctx={ctx} />;
 
     case 'footer': {
       // Each column and each link keeps the index it has IN THE DATA, so a
@@ -857,6 +870,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           offers={ctx.offers}
           basePrice={ctx.price}
           currency={ctx.currency}
+          whatsapp={ctx.whatsapp ?? null}
         />
       );
   }
@@ -929,6 +943,26 @@ function ImageFrame({ label, ratio }: { label: string; ratio: number }) {
 
 function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'hero' }>; ctx: BlockContext }) {
   const headline = s.headline || ctx.productName;
+  /*
+   * «السعر مع العرض» — THE FIRST OF THE FOUR, KEPT AT LAST.
+   *
+   * Every one of the ten structures declares `firstScreen.priceWithOffer:
+   * true` and this header rendered `ctx.price`, which is the product's BASE
+   * price. So a page selling «3 قطع بـ45» opened with «20» — the figure for
+   * a quantity the form had not selected — and the visitor met the real
+   * number for the first time at the button, which is where a COD order is
+   * abandoned.
+   *
+   * The bundle shown is the one the form PRESELECTS (`isDefault`, else the
+   * first), so the first screen and the submit button carry one number. The
+   * struck-through figure follows the same rule the offer cards use: the
+   * certain one (`listPrice`) wins over the claim about the past
+   * (`compareAtPrice`), and two strikes on one price is a puzzle, not a
+   * saving.
+   */
+  const selected = ctx.offers.find((o) => o.isDefault) ?? ctx.offers[0] ?? null;
+  const shown = selected ? selected.price : ctx.price;
+  const was = selected ? (selected.listPrice ?? selected.compareAtPrice ?? null) : null;
   return (
     <header className="lp-hero" data-hero={s.variant}>
       {s.image ? (
@@ -939,7 +973,7 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
       )}
       <h1 className="lp-h1" data-edit="headline" {...rich(headline)} />
       {s.subheadline && <p className="lp-hero-sub" data-edit="subheadline" {...rich(s.subheadline)} />}
-      {s.showPrice && ctx.price > 0 && (
+      {s.showPrice && shown > 0 && (
         /*
           THROUGH THE ONE DOOR. This wrote the price with a
           `toLocaleString` of its own — no minor unit, so a currency with
@@ -947,8 +981,25 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
           the page that sells it.
         */
         <p className="lp-price" dir="ltr">
-          {moneyText(ctx.price, ctx.currency, ctx.minorUnit ?? 2)}
+          {was !== null && was > shown && <s>{moneyText(was, ctx.currency, ctx.minorUnit ?? 2)}</s>}
+          {moneyText(shown, ctx.currency, ctx.minorUnit ?? 2)}
         </p>
+      )}
+      {/*
+        «العروض جوّا أول شاشتين» — SAID IN SCREEN ONE, CHOSEN WHERE THEY LIVE.
+        The bundle in the price above is the preselected one; this names the
+        bundle and says how many others there are, and it is a link to the
+        picker the seller already arranged — not a second copy of it. A page
+        with three pickers on it is a page where choosing one does not
+        visibly change the other two, and the arrangement of the blocks
+        stays the seller's.
+      */}
+      {selected && ctx.offers.length > 0 && (
+        <OrderCta className="lp-hero-offers">
+          <b>{selected.name}</b>
+          {selected.freeQuantity > 0 && <em>+{selected.freeQuantity} مجاناً</em>}
+          {ctx.offers.length > 1 && <span>{offersCountAr(ctx.offers.length)} — اختر عرضك</span>}
+        </OrderCta>
       )}
       <OrderCta className="lp-cta" data-edit="ctaText">{s.ctaText || 'اطلب الآن'}</OrderCta>
       {/*
@@ -970,10 +1021,81 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
   );
 }
 
+/**
+ * THE THREE REASSURANCES, AND THE ROW DRAWS WHAT IS TRUE.
+ *
+ * The seed used to fill this block with «طلب آمن · بياناتك محفوظة» and
+ * «توصيل سريع · خلال أيام» — two sentences nobody measured, on the block
+ * whose whole job is to be believed. A shopper cannot check «سريع», and a
+ * shop that has never delivered anything said it anyway.
+ *
+ * So an untyped block is no longer an empty one: it renders the facts the
+ * server resolved (`trustRow`) — cash on delivery always, the delivery
+ * window only when this shop's own deliveries have cleared the sample
+ * floor, the returns line only when the seller wrote a guarantee or
+ * published a policy. A seller who types their own items still wins: those
+ * are their words about their shop.
+ */
+function Trust({ section: s, ctx }: { section: Extract<LandingSection, { type: 'trust' }>; ctx: BlockContext }) {
+  const typed = s.items.map((item, at) => ({ item, at })).filter(({ item }) => item.title);
+  const icons = [Wallet, Truck, ShieldCheck];
+
+  if (typed.length) {
+    return (
+      <div className="lp-trust">
+        {typed.map(({ item, at: i }) => {
+          const Icon = icons[i % icons.length];
+          return (
+            <div key={i}>
+              <Icon size={18} />
+              <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+              {item.text && <span data-edit={`items.${i}.text`} {...rich(item.text)} />}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // `trustRow()` with nothing is the one-item row: COD is the only one of
+  // the three that is true of every shop on this system before it has sold
+  // anything. That is also what the builder and the gallery draw.
+  const facts = ctx.trust ?? trustRow();
+  return (
+    <div className="lp-trust" data-facts="">
+      {facts.map((f, i) => {
+        const Icon = f.key === 'cod' ? Wallet : f.key === 'delivery' ? Truck : ShieldCheck;
+        const body = (
+          <>
+            <Icon size={18} />
+            <strong>{f.title}</strong>
+            <span>{f.text}</span>
+          </>
+        );
+        // A policy the shop published is a page to open; the other two are
+        // statements, and a link that goes nowhere is not an improvement.
+        return f.href ? (
+          <a key={i} href={f.href}>{body}</a>
+        ) : (
+          <div key={i}>{body}</div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type: 'urgency' }>; ctx: BlockContext }) {
-  // Only a genuinely low count is worth showing. Inventing scarcity is the
-  // one thing this block deliberately cannot do.
-  const lowStock = s.showRealStock && ctx.stock !== null && ctx.stock > 0 && ctx.stock <= 20 ? ctx.stock : null;
+  /*
+   * Only a genuinely low count is worth showing. Inventing scarcity is the
+   * one thing this block deliberately cannot do.
+   *
+   * The floor and the three silences (unknown · none · plenty) are
+   * `lowStock` in `selling-blocks.ts` — the same twenty this line used to
+   * carry inline. One place, because «how few is few enough to say out
+   * loud» is a decision, and a decision written in two files is two
+   * decisions the first time either is tuned.
+   */
+  const lowCount = s.showRealStock ? lowStock(ctx.stock) : null;
 
   /**
    * «تلقائي» READS THE OFFER'S OWN ENDING, AND THE PAGE SAYS SO BY STOPPING.
@@ -991,7 +1113,7 @@ function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type:
   const until = offerClock ? (ctx.offerEndsAt ?? null) : null;
   const showsClock = offerClock ? Boolean(until) : s.minutes > 0;
 
-  if (!s.text && !showsClock && lowStock === null) return null;
+  if (!s.text && !showsClock && lowCount === null) return null;
 
   return (
     <div className="lp-urgency">
@@ -1004,9 +1126,9 @@ function Urgency({ section: s, ctx }: { section: Extract<LandingSection, { type:
           until={until}
         />
       )}
-      {lowStock !== null && (
+      {lowCount !== null && (
         <p className="lp-stock">
-          بقي <strong>{lowStock}</strong> فقط في المخزون
+          بقي <strong>{lowCount}</strong> فقط في المخزون
         </p>
       )}
     </div>
@@ -1125,17 +1247,29 @@ function Selectable({
             onClick={() => selection.onMove?.(s.id, 1)}
             icon={<ChevronDown className="h-3.5 w-3.5" />}
           />
-          <Handle
-            title={s.enabled ? 'إخفاء' : 'إظهار'}
-            onClick={() => selection.onToggle?.(s.id)}
-            icon={s.enabled ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          />
-          <Handle
-            title="حذف"
-            danger
-            onClick={() => selection.onRemove?.(s.id)}
-            icon={<Trash2 className="h-3.5 w-3.5" />}
-          />
+          {/*
+            A BLOCK THE PAGE IS NEVER WITHOUT HAS NO HIDE AND NO DELETE.
+            The form and the floating button are re-enabled on every public
+            render (`ensureSellingCore`), so these two controls used to do
+            nothing a visitor could see — the seller pressed «إخفاء», the
+            badge said «مخفي», and the shopper got the block anyway. A
+            control that lies about what it did is worse than no control.
+          */}
+          {!LOCKED_SECTIONS.includes(s.type) && (
+            <>
+              <Handle
+                title={s.enabled ? 'إخفاء' : 'إظهار'}
+                onClick={() => selection.onToggle?.(s.id)}
+                icon={s.enabled ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              />
+              <Handle
+                title="حذف"
+                danger
+                onClick={() => selection.onRemove?.(s.id)}
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+              />
+            </>
+          )}
           {selection.toolbar && (
             <>
               <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />
