@@ -89,7 +89,6 @@ const DEBT = new Map<string, number>([
   ['src/components/screens/LandingPageEditorScreen.tsx', 1],
   ['src/components/screens/PerformanceScreen.tsx', 1],
   ['src/components/screens/ProfileScreen.tsx', 1],
-  ['src/components/screens/StoreDesignScreen.tsx', 1],
   // The all-stores screen: everything through apiJson except the
   // context switch, which must stay a bare fetch + full navigation
   // (the selection cookie is read server-side on the next render).

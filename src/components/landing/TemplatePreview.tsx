@@ -62,7 +62,27 @@ export function TemplatePreview({
   return (
     <div
       className={`relative overflow-hidden bg-[#eef2f6] ${className ?? ''}`}
-      style={{ height }}
+      /*
+       * `contain: paint` IS THE FIX FOR THE YELLOW BAR.
+       *
+       * Reported 15/10: a yellow «اطلب الآن» strip floating under the whole
+       * templates screen, below every card, belonging to none of them. It
+       * is `.lp-sticky` — the sticky order button of five of the fifteen
+       * templates — and it is `position: fixed`, so it anchored to the
+       * BROWSER WINDOW and escaped the card it was drawn inside.
+       *
+       * `overflow: hidden` could never catch it: a fixed element is laid
+       * out against its nearest containing block, and overflow does not
+       * make one. Paint containment does, and it clips as well — so the
+       * strip now sits at the bottom of its own preview, which is where it
+       * sits on the real page.
+       *
+       * It is done HERE, on the preview frame, and not in
+       * `blocks/styles.ts`: that sheet is the shop's own, and a rule in it
+       * for the sake of the dashboard's gallery would be the dashboard
+       * reaching into a seller's page. The published page is untouched.
+       */
+      style={{ height, contain: 'paint' }}
       aria-hidden
     >
       <div

@@ -74,8 +74,8 @@ export function StorefrontSettings({ store }: { store: StoreRow; onSaved?: () =>
             'لا نطاق خاص.'
           )}{' '}
           يُضبط من{' '}
-          <a href="/store/domain" className="font-medium text-[var(--sys-primary)] hover:underline">
-            شاشة الدومين
+          <a href="/store?tab=address&amp;sec=domain" className="font-medium text-[var(--sys-primary)] hover:underline">
+            «المتجر ← العنوان»
           </a>{' '}
           — هناك يُفحص الـDNS فعلاً ويُعاد التحقق عند كل تغيير.
         </p>
@@ -104,14 +104,14 @@ export function StorefrontSettings({ store }: { store: StoreRow; onSaved?: () =>
       )}
 
       <a
-        href="/store/themes"
+        href="/store?tab=front&amp;sec=look"
         className="flex items-center justify-between gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2.5 text-xs text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
       >
         <span className="flex items-center gap-1.5">
           <RiPaletteLine className="h-4 w-4" />
           الألوان والخطوط والترويسة والتذييل وشكل الدفع
         </span>
-        <span className="font-semibold">في «واجهة المتجر ← القوالب» ←</span>
+        <span className="font-semibold">في «المتجر ← الواجهة» ←</span>
       </a>
     </div>
   );

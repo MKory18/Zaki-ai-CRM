@@ -225,8 +225,16 @@ describe('every screen names itself', () => {
         const src = readFileSync(f, 'utf8');
         // `<PageHeader>` renders the h1 now. The invariant is unchanged —
         // a screen must name itself — but it no longer writes the tag.
+        //
+        // `<PanelHeader>` is the storefront panels' own header
+        // (src/components/store-admin/PanelHeader.tsx) and renders the
+        // same h1, plus the one line and the ONE primary action those
+        // screens are now held to. Nine screens read it.
         return (
-          !src.includes('<h1') && !src.includes('<ScreenTitle') && !src.includes('<PageHeader')
+          !src.includes('<h1') &&
+          !src.includes('<ScreenTitle') &&
+          !src.includes('<PageHeader') &&
+          !src.includes('<PanelHeader')
         );
       })
       .map((f) => f.split(/[\/]/).pop());
