@@ -162,8 +162,68 @@ describe('the image is built off the server, and proved before it is published',
     expect(proof, 'النشر قبل الإثبات').toBeLessThan(publish);
   });
 
-  it('publishes a tag that names the commit, so a rollback can name one too', () => {
-    expect(workflow()).toMatch(/sha-\$\(echo "\$\{\{ github\.sha \}\}"/);
+  it('publishes exactly the image it proved, and builds only once', () => {
+    /*
+     * The publish step used to call the builder a SECOND time with
+     * `push: true` and a warm cache. Almost always that re-exports the
+     * same layers — but a cache miss, or any input the key does not
+     * cover, and the registry holds an image that never started while the
+     * log above says «healthy». The proof would be about something else.
+     */
+    const wf = workflow();
+    const builds = wf.match(/docker\/build-push-action/g) ?? [];
+    expect(builds, 'أكتر من بناء — فاللي انتشر مش اللي انثبت').toHaveLength(1);
+
+    // Whatever local tag the smoke step started is the tag that is pushed.
+    const runStep = stepWith('docker run -d');
+    const started = /^\s*([a-z0-9][\w./-]*:[\w.-]+)\s*$/m.exec(runStep);
+    expect(started, 'ما لقيت الصورة اللي انشغّلت').not.toBeNull();
+    const pushStep = stepWith('docker push');
+    expect(pushStep, 'ما في خطوة نشر').not.toBe('');
+    expect(pushStep, 'النشر بينشر صورة تانية غير اللي انشغّلت').toContain(started![1]);
+  });
+
+  it('and the tag names the commit, wherever that name is computed', () => {
+    // Not a copy of today's line: what matters is that the tag is DERIVED
+    // from the commit and that the derived value is the one pushed.
+    const wf = workflow();
+    const compute = wf
+      .split(/\r?\n/)
+      .filter((l) => !l.trim().startsWith('#'))
+      .some(
+        (l) =>
+          l.includes('tag=') &&
+          (l.includes('github.sha') || l.includes('GITHUB_SHA'))
+      );
+    expect(compute, 'التاغ مش مشتقّاً من الكومِت').toBe(true);
+    expect(stepWith('docker push'), 'التاغ المحسوب ما بينستعمل بالنشر').toContain(
+      'steps.image.outputs.tag'
+    );
+  });
+
+  it('refuses to publish from anywhere but main, dispatch included', () => {
+    /*
+     * `workflow_dispatch` can be fired on ANY ref. A gate that only asks
+     * «is this a pull request» lets a dispatch from a feature branch
+     * publish that branch's image as `:main` — the tag production
+     * follows. So the gate is the branch.
+     */
+    for (const needle of ['docker push', 'docker/login-action', 'COOLIFY_WEBHOOK_URL']) {
+      const step = stepWith(needle);
+      expect(step, `ما في خطوة فيها ${needle}`).not.toBe('');
+      expect(step, `${needle}: الخطوة بتطلع برّا العامل بلا حارس على الفرع`).toMatch(
+        /if:\s*github\.ref == 'refs\/heads\/main'/
+      );
+    }
+  });
+
+  it('and the proof cannot be made optional', () => {
+    // `continue-on-error: true` on the smoke step would publish an
+    // unproven image while the job stayed green — and every other claim
+    // in this file would still pass.
+    expect(workflow(), 'خطوة فيها continue-on-error — الإثبات بيصير اختيارياً').not.toContain(
+      'continue-on-error'
+    );
   });
 
   it('says nothing to Coolify until both of its secrets exist', () => {
@@ -178,6 +238,14 @@ describe('the image is built off the server, and proved before it is published',
     expect(guard, 'النداء بلا حارس على السرّين').toBeGreaterThan(-1);
     expect(step).toContain('-z "${COOLIFY_TOKEN');
     expect(guard, 'الحارس بعد النداء').toBeLessThan(call);
+
+    // AND THE MISS PATH SUCCEEDS. This is the half that matters: a guard
+    // that notices the secrets are missing and then FAILS the job turns
+    // every merge red on a day nobody has touched the server — which is
+    // the definition-of-done item inverted, with the guard still green.
+    const miss = step.slice(guard, call);
+    expect(miss, 'الحارس بيوقّع الوظيفة بدل ما يسكت').toContain('exit 0');
+    expect(miss, 'الحارس بيوقّع الوظيفة').not.toContain('exit 1');
   });
 
   it('and reads every secret through env, never into the shell line', () => {
@@ -188,10 +256,19 @@ describe('the image is built off the server, and proved before it is published',
      * error, and in any message that quotes the failing line. Through
      * `env:` it is a masked variable instead.
      */
+    // Comment lines stripped — and for the eighth time in this repository a
+    // guard read its own paperwork: the prose above the webhook step
+    // EXPLAINS this rule and quotes `${{ secrets.… }}` while explaining it,
+    // and the comment sits inside the previous step's block. The first
+    // version of this claim failed on the sentence that states it.
     for (const block of workflow().split(/\n {6}- /)) {
       const run = block.indexOf('run: |');
       if (run === -1) continue;
-      const body = block.slice(run);
+      const body = block
+        .slice(run)
+        .split(/\r?\n/)
+        .filter((l) => !l.trim().startsWith('#'))
+        .join('\n');
       expect(body.includes('${{ secrets.'), 'سرّ مكتوب جوّا سطر الصدفة').toBe(false);
     }
   });

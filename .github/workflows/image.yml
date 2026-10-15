@@ -64,7 +64,9 @@ on:
   push:
     branches: [main]
   # So the owner can publish an image again — after a registry change, or to
-  # get a tag back — without pushing an empty commit to main.
+  # get a tag back — without pushing an empty commit. Run it ON main: the
+  # publishing steps are gated on that ref, so a dispatch from any other
+  # branch builds and proves the image and publishes nothing.
   workflow_dispatch:
 
 permissions:
@@ -190,25 +192,46 @@ jobs:
         if: always()
         run: docker rm -f smoke 2>/dev/null || true
 
+      # ── FROM HERE DOWN, NOTHING RUNS EXCEPT ON main ──
+      #
+      # The gate is the BRANCH and not «this is not a pull request».
+      # `workflow_dispatch` can be fired on any ref, so the weaker test
+      # would let a dispatch from a feature branch publish that branch's
+      # image as `:main` — the tag the production server follows.
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── THE IMAGE THAT IS PUBLISHED IS THE IMAGE THAT WAS PROVED ──
+      #
+      # This step used to call the builder a SECOND time with `push: true`
+      # and a warm cache. Almost always that re-exports the same layers —
+      # but «almost» is the whole problem: a cache miss seconds later, or
+      # any input the cache key does not cover, and the registry holds an
+      # image that never started while the log above says «healthy». The
+      # proof would then be about a different image.
+      #
+      # So the local tag that just ran, migrated and reported healthy is
+      # the one that is tagged and pushed. There is exactly ONE build in
+      # this file, and a guard holds that.
+      #
       # Two tags on purpose. `:main` is what a server follows; `sha-xxxxxxx`
       # is what a rollback names, and it cannot move under anybody's feet.
-      - name: Publish both tags
-        if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
-            ${{ steps.image.outputs.name }}:main
-          cache-from: type=gha
+      - name: Publish the proved image, under both tags
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -eu
+          name='${{ steps.image.outputs.name }}'
+          tag='${{ steps.image.outputs.tag }}'
+          docker tag zaki-ai-crm:smoke "$name:$tag"
+          docker tag zaki-ai-crm:smoke "$name:main"
+          docker push "$name:$tag"
+          docker push "$name:main"
+          # The digest, so the tag can be traced back to the bytes that ran.
+          docker inspect --format '{{index .RepoDigests 0}}' "$name:$tag"
 
       # ── AND THE LAST STEP DOES NOTHING UNTIL THE OWNER IS READY ──
       #
@@ -222,7 +245,7 @@ jobs:
       # shell BEFORE the shell runs, so it reaches the log on `set -x`, on a
       # syntax error, and in any error message that quotes the command.
       - name: Tell Coolify to pull it
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         env:
           COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
