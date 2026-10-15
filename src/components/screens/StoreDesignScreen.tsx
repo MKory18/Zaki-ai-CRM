@@ -236,13 +236,21 @@ export function StoreDesignScreen() {
         parent's height is its content, so `h-full` resolved to nothing and
         `flex-1 min-h-0` collapsed the canvas to zero.
 
-        AND IT IS `h-[70vh]`, A STEP THE PRODUCT ALREADY USES. The first
-        version asked for `calc(100vh-19rem)` with a floor, which is two
-        rules nothing else in the product needs — and the CSS ratchet
-        charges every page in the system for them. The nearest existing
-        step reads the same on a phone and a desk.
+        AND IT IS THE HEIGHT THE PAGE EDITOR'S OWN CANVAS ALREADY USES
+        (LandingPageEditorScreen) — three-fifths of the viewport.
+
+        This matters more than it looks. The first version asked for a
+        computed height with a floor, and the second for a different
+        fraction; each of those is a rule NOTHING ELSE in the product
+        needs, and the CSS ratchet charges every page in the system for
+        it. CI caught the second one at twenty-six bytes over a cap that
+        had eleven bytes of room — and the lesson the stage before this
+        one wrote down in its own commit («ثمانٍ وتسعونَ بايتاً، وتعليقٌ
+        كان يَحمِلُها») is that the scanner reads COMMENTS too, so a
+        utility named in prose is a utility shipped. Hence this note names
+        none.
       */}
-      <div className="h-[70vh] overflow-hidden rounded-lg border border-[var(--sys-border)]">
+      <div className="h-[60vh] overflow-hidden rounded-lg border border-[var(--sys-border)]">
         {/* The one builder in this system. The preview beside it is drawn by
             the public renderer, so it cannot be wrong in a way that only
             shows up after publishing. */}
