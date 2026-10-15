@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   ASSISTANTS, AI_SCOPES, SCOPE_LABEL_AR, SCOPE_NOTE_AR, type AiScope,
 } from '@/lib/ai-assistants';
-import { RiShieldCheckLine, RiShieldCrossLine } from '@remixicon/react';
+import { RiAlertLine, RiShieldCheckLine, RiShieldCrossLine, RiToolsLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -110,6 +110,7 @@ export function AssistantsTable({
   fallback,
   routing,
   onRouted,
+  routes,
 }: {
   /** The scopes the owner turned on for business intelligence. */
   enabled: string[];
@@ -121,6 +122,15 @@ export function AssistantsTable({
   /** Per-assistant overrides, keyed by the assistant's prompt job. */
   routing: Record<string, { provider?: string; model?: string }>;
   onRouted: (next: Record<string, { provider?: string; model?: string }>) => void;
+  /**
+   * WHERE EACH ASSISTANT'S CALL WOULD ACTUALLY GO — from the server, not
+   * worked out here. This table used to describe the route by reading the
+   * company default and the row's own override, which is the resolution
+   * written a second time: it knew nothing of the installation default or
+   * of which key exists, so it could say «Anthropic» beside an assistant
+   * whose calls were going to OpenRouter.
+   */
+  routes: Record<string, { provider: string; model: string; keyFrom: string; baseUrl: string | null }>;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -223,6 +233,14 @@ export function AssistantsTable({
                   else next[a.promptJob] = clean;
                   onRouted(next);
                 };
+                const actual = routes[a.promptJob];
+                const vendorLabel = providers.find((p) => p.id === actual?.provider)?.label ?? actual?.provider;
+                // LOCAL needs an address, not a key; everyone else needs a key.
+                const unreachable = actual
+                  ? actual.provider === 'LOCAL'
+                    ? !actual.baseUrl
+                    : actual.keyFrom === 'none'
+                  : false;
                 return (
                   <span className="flex flex-col gap-1">
                     <select
@@ -247,6 +265,44 @@ export function AssistantsTable({
                       onChange={(model) => set({ model })}
                       label={`نموذج ${a.label}`}
                     />
+                    {/*
+                      WHERE IT GOES, SAID BY THE THING THAT DECIDES.
+                      The two controls above are a CHOICE; this line is the
+                      ANSWER, and they are not the same thing — an assistant
+                      that chooses nothing still goes somewhere, and that
+                      somewhere may be the installation default rather than
+                      the company's.
+                    */}
+                    {actual && (
+                      <span className="text-xs text-[var(--sys-muted)]">
+                        بيروح على: {vendorLabel} · {actual.model}
+                        {unreachable ? (
+                          <span className="text-[var(--sys-warning)]">
+                            {' '}— {actual.provider === 'LOCAL' ? 'بلا عنوان' : 'بلا مفتاح'}
+                          </span>
+                        ) : null}
+                      </span>
+                    )}
+                    {/*
+                      AND A WARNING WHERE IT COSTS SOMETHING.
+                      An assistant declared `pii: true` reads a customer. Off
+                      the owner's own server the name and the notes are taken
+                      out before the call — which is correct, and it is also a
+                      worse answer. He should know that is the trade he is
+                      making, beside the control that makes it.
+                    */}
+                    {actual && a.pii && actual.provider !== 'LOCAL' && (
+                      <span className="flex flex-col gap-0.5 text-xs">
+                        <span className="flex items-start gap-1 text-[var(--sys-warning)]">
+                          <RiAlertLine className="mt-px h-4 w-4 shrink-0" />
+                          هالمساعد بيقرا بيانات زبون — الاسم والملاحظات ما بيطلعوا لمزوّد خارجي
+                        </span>
+                        <span className="flex items-start gap-1 text-[var(--sys-heading)]">
+                          <RiToolsLine className="mt-px h-4 w-4 shrink-0 text-[var(--sys-warning)]" />
+                          لنتيجة كاملة: نموذج على خادمك
+                        </span>
+                      </span>
+                    )}
                   </span>
                 );
               } },

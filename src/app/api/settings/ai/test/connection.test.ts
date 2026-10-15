@@ -32,6 +32,13 @@ const {
 vi.mock('@/lib/ai-provider', () => ({
   aiChat: (...a: unknown[]) => aiChat(...a),
   aiSettings: (...a: unknown[]) => aiSettings(...a),
+  /*
+   * The route now labels its answer with the route that ANSWERED rather
+   * than with the company's choice — the two differ exactly when the
+   * installation default or another vendor's key decides, which is when
+   * the label mattered.
+   */
+  describeRoute: async () => ({ provider: 'OPENROUTER', model: 'llama-test', keyFrom: 'system', baseUrl: null }),
   AiNotConfigured,
   AiEndpointMissing,
 }));
@@ -53,7 +60,25 @@ describe('when it works', () => {
   it('repeats what the provider said, so it is not a tick to be trusted blindly', async () => {
     aiChat.mockResolvedValue('  OK  ');
     const body = await run();
-    expect(body).toMatchObject({ ok: true, provider: 'ANTHROPIC', model: 'claude-opus-5', reply: 'OK' });
+    expect(body).toMatchObject({ ok: true, reply: 'OK' });
+  });
+
+  it('and names the route that ANSWERED, not the company’s choice', async () => {
+    /*
+     * These two deliberately disagree: the company's stored choice is
+     * Anthropic (the `aiSettings` mock above), and the resolver says
+     * OpenRouter — which is what happens when the installation default or
+     * another vendor's key decides. The answer used to be labelled with
+     * the company's choice, so the owner read «Anthropic» under a reply
+     * that had come from somewhere else and pressed on.
+     *
+     * `keyFrom` travels with it because «it worked» raises «with whose
+     * key» by itself, and that answer decides who pays.
+     */
+    aiChat.mockResolvedValue('OK');
+    const body = await run();
+    expect(body).toMatchObject({ provider: 'OPENROUTER', model: 'llama-test', keyFrom: 'system' });
+    expect(body.provider, 'لسّا بيسمّي اختيار الشركة بدل الوجهة الفعليّة').not.toBe('ANTHROPIC');
   });
 
   it('asks without the company\'s own prompt — this tests the key, not the wording', async () => {

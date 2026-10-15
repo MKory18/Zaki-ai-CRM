@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { AI_PROVIDERS, aiSettings, saveAiSettings, systemAi } from '@/lib/ai-provider';
+import { AI_PROVIDERS, aiSettings, describeRoute, saveAiSettings, systemAi } from '@/lib/ai-provider';
 import { logAudit } from '@/lib/audit';
 import { zodMessage } from '@/lib/zod-message';
 import { AI_JOBS, MAX_PROMPT } from '@/lib/ai-prompts';
+import { ASSISTANTS } from '@/lib/ai-assistants';
 
 /**
  * GET/PUT /api/settings/ai — which AI, which model, whose key.
@@ -69,6 +70,26 @@ export async function GET() {
   try {
     const { companyId } = await requireContext();
     await requirePermission('settings.view');
+    /**
+     * ── WHERE EACH ASSISTANT'S CALL WOULD ACTUALLY GO ──
+     *
+     * The screen used to answer this itself, from the company's own
+     * provider and model — so an assistant routed by its own override, or
+     * by the installation default, was described as something else. Two
+     * answers to one question, and the wrong one on the screen beside the
+     * control the owner was about to use.
+     *
+     * `describeRoute` is the same resolution `aiChat` performs, with the
+     * key dropped before it leaves this process. `keyFrom` says WHICH
+     * stored key would be used — «من النظام», «من الشركة» — never its
+     * value.
+     *
+     * One entry per assistant plus the default, resolved in parallel:
+     * each is a settings read, and the screen needs them all at once.
+     */
+    const jobs = [...new Set(ASSISTANTS.map((a) => a.promptJob))];
+    const described = await Promise.all(jobs.map((job) => describeRoute(companyId, job)));
+
     return NextResponse.json({
       settings: await aiSettings(companyId),
       providers: AI_PROVIDERS,
@@ -76,6 +97,10 @@ export async function GET() {
       // editor showing an override without what it replaces is an editor
       // nobody dares touch.
       jobs: AI_JOBS,
+      /** The installation's answer when no assistant overrides it. */
+      defaultRoute: await describeRoute(companyId),
+      /** Per assistant job. Key-free by construction. */
+      routes: Object.fromEntries(jobs.map((job, i) => [job, described[i]])),
     });
   } catch (error) {
     return apiErrorResponse(error);

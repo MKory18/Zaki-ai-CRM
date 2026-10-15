@@ -84,6 +84,10 @@ export function AiSettingsScreen() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [jobs, setJobs] = useState<AiJob[]>([]);
+  /** Where each assistant's call would actually go — from the server. */
+  type RouteDesc = { provider: string; model: string; keyFrom: string; baseUrl: string | null };
+  const [routes, setRoutes] = useState<Record<string, RouteDesc>>({});
+  const [defaultRoute, setDefaultRoute] = useState<RouteDesc | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   /** A key box per vendor, so several can be entered without switching first. */
   const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({});
@@ -101,16 +105,38 @@ export function AiSettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
 
+  /**
+   * Would a call find something to use? One question, answered by the
+   * same resolution the call performs — LOCAL needs an address, every
+   * other vendor needs a key.
+   */
+  const canTest = defaultRoute
+    ? defaultRoute.provider === 'LOCAL'
+      ? !!defaultRoute.baseUrl
+      : defaultRoute.keyFrom !== 'none'
+    : false;
+
   async function testConnection() {
     setTesting(true);
     setTest(null);
     try {
       const res = await fetch('/api/settings/ai/test', { method: 'POST', credentials: 'same-origin' });
-      const r = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; reply?: string; model?: string };
+      const r = (await res.json().catch(() => ({}))) as {
+        ok?: boolean; error?: string; reply?: string;
+        provider?: string; model?: string; keyFrom?: string;
+      };
+      /*
+        «رد» on its own left the next question unanswered: from WHERE, and
+        with WHOSE key. Both are in the reply now, because the route that
+        answered is not always the one the dropdown above shows.
+      */
+      const vendor = providers.find((p) => p.id === r.provider)?.label ?? r.provider ?? '';
+      const from = r.keyFrom && r.keyFrom !== 'none' ? ` · المفتاح من ${KEY_SOURCE_AR[r.keyFrom] ?? r.keyFrom}` : '';
+      const where = [vendor, r.model].filter(Boolean).join(' · ');
       setTest(
         r.ok
-          ? { ok: true, text: `المزوّد ردّ${r.reply ? `: «${r.reply}»` : ''} — ${r.model ?? ''}` }
-          : { ok: false, text: r.error ?? 'تعذّر الاتصال' }
+          ? { ok: true, text: `${where}${from} — ردّ${r.reply ? `: «${r.reply}»` : ''}` }
+          : { ok: false, text: `${r.error ?? 'تعذّر الاتصال'}${where ? ` (${where})` : ''}` }
       );
     } catch (e) {
       setTest({ ok: false, text: e instanceof Error ? e.message : 'تعذّر الاتصال' });
@@ -125,6 +151,10 @@ export function AiSettingsScreen() {
     setSettings(json.settings);
     setProviders(json.providers || []);
     setJobs(json.jobs || []);
+    // Where each assistant's call would actually go, answered by the
+    // resolver rather than re-derived here.
+    setRoutes(json.routes ?? {});
+    setDefaultRoute(json.defaultRoute ?? null);
     setDrafts(json.settings?.prompts ?? {});
 
     /**
@@ -328,6 +358,7 @@ export function AiSettingsScreen() {
           fallback={{ provider: settings.provider, model: settings.model }}
           routing={settings.assistants ?? {}}
           onRouted={(assistants) => setSettings({ ...settings, assistants })}
+          routes={routes}
         />
       )}
 
@@ -365,6 +396,26 @@ export function AiSettingsScreen() {
             <span className="mx-1 font-semibold text-[var(--sys-foreground)]" dir="ltr">{settings.model}</span>
             {tier && <>— {tier.tier}: {tier.note}</>}
           </p>
+          {/*
+            AND WHAT THE RESOLVER SAYS, WHICH IS NOT ALWAYS THE LINE ABOVE.
+            The sentence above describes the COMPANY's choice. The answer
+            also depends on the installation default and on which key
+            exists, and when those disagree the owner was reading one and
+            getting the other.
+          */}
+          {defaultRoute && (
+            <p className="mt-1 text-xs text-[var(--sys-muted)]">
+              الجواب الفعليّ:
+              <span className="mx-1 font-semibold text-[var(--sys-foreground)]" dir="ltr">
+                {providers.find((p) => p.id === defaultRoute.provider)?.label ?? defaultRoute.provider} · {defaultRoute.model}
+              </span>
+              {defaultRoute.keyFrom === 'none' && defaultRoute.provider !== 'LOCAL' ? (
+                <span className="text-[var(--sys-warning)]">— بلا مفتاح</span>
+              ) : defaultRoute.keyFrom === 'none' ? null : (
+                <>— المفتاح من {KEY_SOURCE_AR[defaultRoute.keyFrom] ?? defaultRoute.keyFrom}</>
+              )}
+            </p>
+          )}
         </div>
 
         {/*
@@ -507,13 +558,22 @@ export function AiSettingsScreen() {
             onClick={() => void testConnection()}
             /* A local server needs no key, so "has a key" is the wrong gate
                for it — the gate is whether anything is configured at all. */
-            disabled={testing || !(settings.hasKey || system?.providerKeys[system.provider]?.configured || system?.localBaseUrl)}
+            /*
+              ENABLED WHEN THE RESOLVER WOULD FIND SOMETHING TO USE.
+              The old gate asked three separate questions — the company's
+              `hasKey`, the installation's key for the provider the screen
+              happens to show, and the local address — and could say «no
+              key» beside a key the resolver would in fact have used (the
+              installation's, for a provider the dropdown was not showing).
+              `describeRoute` answers it once, the same way the call will.
+            */
+            disabled={testing || !canTest}
             className="inline-flex h-11 md:h-8 items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-semibold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] disabled:opacity-50"
           >
             {testing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اختبار الاتصال
           </button>
-          {!settings.hasKey && !system?.providerKeys[system.provider]?.configured && !system?.localBaseUrl && (
+          {!canTest && (
             <span className="text-xs text-[var(--sys-muted)]">احفظ المفتاح أو عنوان الخادم أولاً.</span>
           )}
           {test && (
@@ -677,6 +737,14 @@ export function AiSettingsScreen() {
     </div>
   );
 }
+
+/** Which stored key answered — never the key. */
+const KEY_SOURCE_AR: Record<string, string> = {
+  system: 'النظام',
+  company: 'الشركة',
+  legacy: 'المفتاح القديم',
+  env: 'متغيّر البيئة',
+};
 
 const INPUT =
   'w-full rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] px-3 py-2 text-sm text-[var(--sys-heading)] outline-none focus:border-[var(--sys-primary)]';
