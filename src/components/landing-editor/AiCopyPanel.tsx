@@ -240,13 +240,22 @@ export function AiCopyPanel({
             <RiMagicLine className="h-4 w-4" /> اقترح النصوص
           </Button>
 
+          {/*
+            COLOURED TEXT ON THE ORDINARY SURFACE, not a tinted box.
+
+            It is how this screen already says the same two things (the
+            message beside «حفظ» in the header), and the CSS ratchet in
+            `quality-gates` counts every new utility a file invents — so a
+            second vocabulary for one meaning costs bytes on every page in
+            the product, not only this panel.
+          */}
           {error && (
-            <p className="rounded-lg border border-[var(--sys-destructive)]/40 bg-[var(--sys-destructive)]/10 p-2 text-xs leading-relaxed text-[var(--sys-destructive)]">
+            <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-destructive)]">
               {error}
             </p>
           )}
           {applied && (
-            <p className="rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success)]/10 p-2 text-xs leading-relaxed text-[var(--sys-success)]">
+            <p className="rounded-lg bg-[var(--sys-surface)] p-2 text-xs leading-relaxed text-[var(--sys-success)]">
               {applied}
             </p>
           )}

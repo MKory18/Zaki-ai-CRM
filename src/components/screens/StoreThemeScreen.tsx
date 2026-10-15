@@ -423,7 +423,10 @@ export function StoreThemeScreen() {
       */}
       <PaneToggle pane={pane} onPane={setPane} />
 
-      <div className="gap-4 lg:grid lg:grid-cols-[1fr_22rem] lg:items-start">
+      {/* The page editor's own column pair, to the pixel: a second width
+          here would be a second grid template in the stylesheet, which the
+          CSS ratchet charges to every page in the product. */}
+      <div className="gap-4 lg:grid lg:grid-cols-[1fr_300px] lg:items-start">
         <div className={`space-y-4 ${editPaneClass(pane)}`}>
 
       {/* ── معرض القوالب ── */}
@@ -1035,7 +1038,7 @@ export function StoreThemeScreen() {
 
         {/* The shop as it is being set, at both widths, from the UNSAVED
             theme — so the seller sees the change before a customer does. */}
-        <div className={`${previewPaneClass(pane)} min-h-0 flex-col lg:sticky lg:top-4`}>
+        <div className={`${previewPaneClass(pane)} min-h-0 flex-col`}>
           <StoreThemePreview
             theme={theme}
             products={shop?.sample ?? []}
