@@ -248,12 +248,19 @@ export function BuildMyLandingPage({ productId, productName, onApply }: Props) {
         order of the work, which is the only reason it is shown at all.
       */}
       {/*
-        FLEX, NOT AN ARBITRARY GRID TRACK.
-        `sm:grid-cols-[8rem_1fr]` was the only utility class on this screen
-        that existed nowhere else in the product, and one unused arbitrary
-        value is a new rule in the first-load stylesheet — which this
-        screen's 87 bytes pushed over the «Payload budget» ratchet. The
-        layout is identical; the classes are ones already in the sheet.
+        FLEX AND EXISTING STEPS, NOT AN ARBITRARY TRACK AND A ONE-OFF HEIGHT.
+        This screen first laid the picture and the questions out with an
+        arbitrary two-column track (59 bytes of new CSS) and an 8rem square
+        (39 bytes) — and 98 bytes is EXACTLY what pushed the first-load
+        stylesheet past the «Payload budget» ratchet, measured by diffing
+        the built sheet against main's. The layout here is the same one;
+        every class in it is a step the sheet already carries.
+
+        ⚠️ AND THE OLD NAMES ARE NOT WRITTEN ANYWHERE ABOVE, DELIBERATELY.
+        Tailwind scans source files as TEXT: naming the two classes in this
+        very comment kept both rules in the sheet after the markup had
+        stopped using them, and the byte count did not move. A comment is
+        not inert here — it is an input to the compiler.
       */}
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
         <div className="flex items-start justify-center">
@@ -262,14 +269,12 @@ export function BuildMyLandingPage({ productId, productName, onApply }: Props) {
             <img
               src={imageUrl}
               alt={productName ? `صورة ${productName}` : 'صورة المنتج'}
-              className="h-32 w-32 rounded-lg border border-[var(--sys-border)] object-cover"
+              className="h-20 w-20 rounded-lg border border-[var(--sys-border)] object-cover"
             />
           ) : (
-            <div className="flex h-32 w-32 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--sys-border)] text-center">
+            <div className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--sys-border)] text-center">
               <RiImageLine className="h-5 w-5 text-[var(--sys-muted)]" />
-              <span className="px-1 text-xs text-[var(--sys-muted-foreground)]">
-                صورة المنتج — ولا رفع صور هون
-              </span>
+              <span className="px-1 text-xs text-[var(--sys-muted-foreground)]">ما في صورة</span>
             </div>
           )}
         </div>
