@@ -93,6 +93,17 @@ const WRITERS = [
   'src/app/api/ops/shipments/route.ts',
   'src/app/api/confirmation/winback/route.ts',
   'src/app/api/public/landing-pages/[slug]/orders/[orderNumber]/add-product/route.ts',
+  /*
+   * «العرض بعد الطلب». It writes `totalAmount` and nothing else of the
+   * four, and it writes it as an INCREMENT of the add-on's own value —
+   * never a recompute, because a recompute here would re-decide the first
+   * order's discount, fee policy and rounding from today's configuration.
+   * The value itself comes from `computeCod`, which is what puts this file
+   * on THIS list rather than the one below: the figure written here and the
+   * figure every later recompute of the order contributes are the same
+   * number by construction.
+   */
+  'src/lib/post-order-offer.ts',
 ];
 
 /**

@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PerformanceSettingsCard } from '@/components/settings/PerformanceSettingsCard';
+import { PostOrderOfferCard } from '@/components/settings/PostOrderOfferCard';
 import { PenaltyRulesCard } from '@/components/settings/PenaltyRulesCard';
 import { RiBuildingLine, RiCheckLine, RiLoader4Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -132,6 +133,13 @@ export function SystemSettingsScreen() {
           and an owner setting a deduction should be looking at the bars
           they judge by on the same screen. */}
       <PenaltyRulesCard />
+
+      {/* «زيد علبة كمان؟» — the window the customer may still add inside.
+          It is here rather than on the product because it is a judgement
+          about this company, not about one bundle: the OFFER itself is set
+          among the product's own offers, where every price in this system
+          lives. */}
+      <PostOrderOfferCard />
 
     </div>
   );

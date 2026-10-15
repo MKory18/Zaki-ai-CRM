@@ -582,6 +582,25 @@ model Offer {
   endsAt           DateTime?
   discount         Float    @default(0.0)
   deliveryIncluded Boolean  @default(true)
+  /// SHOWN ONLY AFTER AN ORDER EXISTS — «زيد علبة كمان؟ 15 بدل 25».
+  ///
+  /// The one fact that separates the offer on the thank-you screen from the
+  /// bundles a visitor chooses between at the door. It is a flag and not a
+  /// table because a second table is a second place a price lives, and this
+  /// product already paid for that lesson once: a landing page carried its
+  /// own copy of the three tiers and went on selling at a price the
+  /// catalogue had raised.
+  ///
+  /// A true here WITHHOLDS the bundle from every door — `liveOfferWhere`
+  /// excludes it, so the landing page, the storefront grid, the product
+  /// page, the cart quote and `createPublicOrder` cannot reach it. That is
+  /// the whole point: an after-order price a visitor can simply pick at the
+  /// door is not an after-order price, it is a price cut.
+  ///
+  /// One per product, kept by `clearOtherPostOrderOffers` and not by a
+  /// partial unique index — see the migration for why the index cannot
+  /// work here.
+  postOrderOffer   Boolean  @default(false)
   // The bundle preselected on the landing page and the quick-order screen.
   isDefault        Boolean  @default(false)
   sortOrder        Int      @default(0)
@@ -1544,6 +1563,18 @@ model OrderAddOn {
   quantity      Int      @default(1)
   price         Float // unit price from DB at add time
   total         Float // quantity * price (server-side)
+  /// THE POST-ORDER OFFER THIS ADDITION CAME FROM, when it came from one.
+  ///
+  /// NULL is every row written before the post-order offer existed, and
+  /// every row the recommendation list still writes — so the column also
+  /// answers «has this order already taken the offer after the order?»,
+  /// which is how «once only» is a fact on the row instead of a hope.
+  ///
+  /// Not a foreign key on purpose, the reason `SystemSetting.updatedById`
+  /// gives: an offer an order was placed on is RETIRED rather than deleted
+  /// (`status: INACTIVE`), and this record of what was sold must survive
+  /// whatever later happens to the configuration it was sold from.
+  offerId       String?
   createdAt     DateTime @default(now())
 
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
