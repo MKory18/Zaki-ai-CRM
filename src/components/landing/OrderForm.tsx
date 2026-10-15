@@ -959,11 +959,18 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 <button
                   type="button"
                   onClick={() => setNotesOpen(true)}
-                  /* `underline` and nothing finer. `decoration-dotted` and
-                     `underline-offset-4` would each have been the product's
-                     ONLY use of that utility, and the first-load stylesheet
-                     has eleven bytes of headroom under its ratchet — a dotted
-                     rule under one link is not worth a step of the budget. */
+                  /* A plain underline and nothing finer.
+                     A dotted decoration style and an offset step were tried
+                     here, and each would have been the product's ONLY use of
+                     that utility — while the first-load stylesheet has eleven
+                     bytes of headroom under its ratchet. A dotted rule under
+                     one link is not worth a step of that budget.
+                     THE TWO NAMES ARE NOT WRITTEN OUT ON PURPOSE: Tailwind's
+                     scanner reads prose as well as markup, so a comment
+                     naming a utility puts that utility back in the sheet.
+                     This exact comment, with the names in it, is what pushed
+                     the build 50 bytes over the cap after they were removed
+                     from the className. */
                   className="text-start text-sm font-semibold text-[var(--store-accent,#b8256e)] underline"
                 >
                   + إضافة ملاحظة (اختياري)
