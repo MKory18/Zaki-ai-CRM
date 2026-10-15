@@ -143,7 +143,8 @@ describe('the image is built off the server, and proved before it is published',
   const workflow = () => repoFile('.github/workflows/image.yml');
 
   /**
-   * The steps, in order, with every comment line removed.
+   * The steps, in order, with the comments taken out — WHOLE LINES AND
+   * TRAILING ONES BOTH.
    *
    * COMMENTS REMOVED BECAUSE THE PROSE IS LOAD-BEARING HERE. The first
    * version of the ordering claim below compared `indexOf('State.Health')`
@@ -151,8 +152,15 @@ describe('the image is built off the server, and proved before it is published',
    * being a `build-push-action`, the only `push: true` left in the file was
    * the SENTENCE explaining why it had been removed. The claim then
    * compared an offset against a comment, so rewording that comment turned
-   * the suite red on a change that altered nothing. Ninth time a guard in
-   * this repository has read its own paperwork.
+   * the suite red on a change that altered nothing.
+   *
+   * Then the fix read only WHOLE comment lines, and a review appended
+   * `  # no docker push from here` to the end of a `tags:` line — a change
+   * that alters nothing — and four of thirteen claims went red, among them
+   * the very one this was written to repair. Same defect, other margin.
+   *
+   * A `#` is taken as a comment only after whitespace and outside quotes,
+   * so a `#` inside a shell string or a URL fragment survives.
    */
   const steps = (): string[] =>
     workflow()
@@ -161,6 +169,20 @@ describe('the image is built off the server, and proved before it is published',
         s
           .split(/\r?\n/)
           .filter((l) => !l.trim().startsWith('#'))
+          .map((l) => {
+            let quote: string | null = null;
+            for (let i = 0; i < l.length; i++) {
+              const c = l[i];
+              if (quote) {
+                if (c === quote) quote = null;
+              } else if (c === '"' || c === "'") {
+                quote = c;
+              } else if (c === '#' && i > 0 && /\s/.test(l[i - 1])) {
+                return l.slice(0, i).replace(/\s+$/, '');
+              }
+            }
+            return l;
+          })
           .join('\n')
       );
 
@@ -199,14 +221,29 @@ describe('the image is built off the server, and proved before it is published',
     // And not a second build smuggled in as a raw command: round 2 showed
     // `docker build -t "$name:main" .` re-entering this very defect while
     // every claim here stayed green.
+    // A review got past the first version of this with `docker image
+    // build`, and past it again with `docker buildx bake` — both rebuild
+    // the tag that `docker tag` then aliases, so every other claim passed
+    // while the registry took a fresh, unproven image. The rule is any
+    // build, however it is spelled.
     expect(body, 'بناء تاني بأمر خامّ — فاللي انتشر مش اللي انثبت').not.toMatch(
-      /\bdocker\s+(build|buildx\s+build)\b/
+      /\bdocker(-compose)?\s+(image\s+|compose\s+|buildx\s+)?(build|bake)\b/
     );
 
-    // Whatever local tag the smoke step started is the tag that is pushed.
-    const started = /^\s*([a-z0-9][\w./-]*:[\w.-]+)\s*$/m.exec(stepWith('docker run -d'));
-    expect(started, 'ما لقيت الصورة اللي انشغّلت').not.toBeNull();
-    const proved = started![1];
+    /*
+     * Whatever local tag the smoke step started is the tag that is pushed.
+     * Read as the shell reads it — continuations joined first — because
+     * the image name is the LAST word of `docker run`, and whether it
+     * happens to sit on a line of its own is a matter of formatting.
+     */
+    const runCmd = stepWith('docker run -d')
+      .replace(/\\\n\s*/g, ' ')
+      .split(/\r?\n/)
+      .find((l) => l.includes('docker run'));
+    expect(runCmd, 'ما لقيت أمر تشغيل الحاوية').toBeTruthy();
+    const words = (runCmd ?? '').trim().split(/\s+/);
+    const proved = words[words.length - 1];
+    expect(proved, 'ما لقيت الصورة اللي انشغّلت').toMatch(/^[a-z0-9][\w./-]*:[\w.-]+$/);
 
     // EVERY pushed name must be an alias OF THAT IMAGE. Containing the
     // proved tag somewhere was not enough: round 2 pushed `$name:latest`
@@ -253,8 +290,10 @@ describe('the image is built off the server, and proved before it is published',
     for (const needle of ['docker push', 'docker/login-action', 'COOLIFY_WEBHOOK_URL']) {
       const step = stepWith(needle);
       expect(step, `ما في خطوة فيها ${needle}`).not.toBe('');
+      // `if: ${{ … }}` and the bare form mean the same thing to GitHub, so
+      // the rule reads the condition, not one way of writing it.
       expect(step, `${needle}: الخطوة بتطلع برّا العامل بلا حارس على الفرع`).toMatch(
-        /if:\s*github\.ref == 'refs\/heads\/main'/
+        /if:[^\n]*github\.ref\s*==\s*'refs\/heads\/main'/
       );
     }
   });
@@ -282,6 +321,23 @@ describe('the image is built off the server, and proved before it is published',
         /\n\s+if:/
       );
     }
+
+    /*
+     * AND THE WAITING MUST END IN A VERDICT.
+     *
+     * Inverting the comparison (`!= "healthy"` → `= "never"`) left all
+     * thirteen claims green while Docker's verdict could no longer fail
+     * the step. It was written off as «a text guard cannot read shell
+     * meaning», and that was wrong: the rule below pins no spelling —
+     * after the wait loop ends, the step must still name `healthy` and
+     * still leave by a non-zero exit. A `case "$status" in healthy)`
+     * rewrite passes it; the inversion, `exit 1` → `exit 0`, and
+     * `if false; then` all fail it.
+     */
+    const wait = stepWith('State.Health');
+    const tail = wait.slice(wait.lastIndexOf('done'));
+    expect(tail, 'الانتظار ما بينتهي بحكم على «healthy»').toContain('healthy');
+    expect(tail, 'الانتظار ما بيطلع بخطأ لمّا الحاوية ما تجهز').toMatch(/exit\s+[1-9]/);
   });
 
   it('says nothing to Coolify until both of its secrets exist', () => {
@@ -331,10 +387,18 @@ describe('the image is built off the server, and proved before it is published',
      */
     for (const block of workflow().split(/\n {6}- /)) {
       const lines = block.split(/\r?\n/);
-      const at = lines.findIndex((l) => /^\s+run: \|/.test(l));
+      // ALL THREE SCALAR FORMS. The first version matched `run: |` alone,
+      // and `run: docker rm -f smoke … || echo ${{ secrets.X }}` — a plain
+      // scalar, and a step that exists in this file — went unread, under a
+      // claim whose name is «every secret».
+      const at = lines.findIndex((l) => /^\s+run:(\s|$)/.test(l));
       if (at === -1) continue;
       const depth = (lines[at].match(/^\s*/) ?? [''])[0].length;
-      const body: string[] = [];
+      const body: string[] = [
+        // Whatever sits on the `run:` line itself, unless it is only the
+        // block indicator (`|`, `>`, with an optional chomp marker).
+        lines[at].replace(/^\s+run:\s*/, '').replace(/^[|>][-+]?\d*$/, ''),
+      ];
       for (const line of lines.slice(at + 1)) {
         if (line.trim() === '') continue;
         if ((line.match(/^\s*/) ?? [''])[0].length <= depth) break;
