@@ -23,8 +23,22 @@ import { join, relative } from 'node:path';
 
 const root = process.cwd();
 
+/*
+ * `requireSystemToken` IS A DOOR, AND IT IS NOT A SESSION.
+ *
+ * O7 added `/api/v1`, which another SYSTEM calls with a bearer token: there
+ * is no cookie, so none of the session guards can appear in those handlers.
+ * The check is `requireSystemToken(req, scope)` in
+ * `src/lib/v1/system-token.ts` — it proves the key against `SystemToken`,
+ * refuses a revoked or expired one, refuses a missing scope, and returns the
+ * `companyId` FROM THE TOKEN so a caller can never name a company.
+ *
+ * It is listed here rather than exempted under `PUBLIC` below, because the
+ * door is not public — it is guarded differently. `verifyCourierToken` is
+ * the precedent: a token at the door is still a door.
+ */
 const GUARD =
-  /require(?:Context|Permission|Auth|CompanyTenant)\s*\(|getCurrentUser\s*\(|guardRoute\s*\(|verifyCourierToken|verifyWebhookSignature|webhookToken/;
+  /require(?:Context|Permission|Auth|CompanyTenant|SystemToken)\s*\(|getCurrentUser\s*\(|guardRoute\s*\(|verifyCourierToken|verifyWebhookSignature|webhookToken/;
 
 /**
  * OPEN TO THE WORLD, DELIBERATELY — each with the reason it is.

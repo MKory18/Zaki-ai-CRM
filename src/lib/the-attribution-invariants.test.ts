@@ -193,26 +193,101 @@ describe('4 · one event is counted once', () => {
 
 /**
  * ─────────────────────────────────────────────────────────────────────────
- * NOT BUILT — pinned, because an absence reads as «probably somewhere».
+ * REPORTED, NOT CAPTURED — and what is still not built at all.
  *
- * · `adset_id` and `ad_id` do not exist. Attribution stops at the CAMPAIGN,
- *   so «which ad creative won» cannot be answered from this system.
- * · The whole CTWA paragraph is unbuilt: the WhatsApp webhook reads no
- *   `referral`, no `source_id`, no `ctwa_clid`. A click-to-WhatsApp sale is
- *   attributed to the WhatsApp channel and no further.
+ * THIS BLOCK USED TO PIN `ad_id` AND `ctwa_clid` AS ABSENT, and O7 moved
+ * them. `/api/v1` lets another system hand this one an order it has already
+ * attributed, so `Order` now carries `adId`, `adSourceType`, `ctwaClidEnc`,
+ * `refCode`, `touchAt`, `pageId`, `psidEnc`, `wabaId`, `conversationRef`
+ * and `externalRef` — REPORTED facts, written once at creation by the
+ * systems door and by nothing else.
+ *
+ * WHAT DID NOT CHANGE IS WHO DOES THE ATTRIBUTING. This system still
+ * captures no click of its own: the WhatsApp webhook reads no `referral`,
+ * no `source_id` and no `ctwa_clid`, so a click-to-WhatsApp sale arriving
+ * through OUR door is still attributed to the WhatsApp channel and no
+ * further. The pinned absence becomes a pinned presence with its boundary
+ * beside it, rather than disappearing — which is how this file has handled
+ * every other half-built thing.
+ *
+ * · `adset_id` still does not exist and nothing reports one. «Which ad SET
+ *   won» cannot be answered from this system.
+ * · The click id and the chat account are ENCRYPTED columns, and no
+ *   endpoint returns either. «Ad tokens reach no model at all» is the
+ *   owner's rule; these do not reach a screen either.
  * ─────────────────────────────────────────────────────────────────────────
  */
-describe('what is not built', () => {
-  it('there is no adset or ad id anywhere', () => {
-    const schema = repoFile('prisma/schema.prisma');
-    expect(schema).not.toMatch(/adsetId|adset_id/i);
-    expect(schema).not.toMatch(/\badId\b|\bad_id\b/i);
+describe('the ad evidence an order can carry, and what is still not built', () => {
+  const schema = () => repoFile('prisma/schema.prisma');
+
+  it('there is no adset id anywhere', () => {
+    expect(schema()).not.toMatch(/adsetId|adset_id/i);
   });
 
-  it('and no CTWA click id is captured', () => {
-    const schema = repoFile('prisma/schema.prisma');
-    expect(schema).not.toMatch(/ctwa/i);
+  it('and the reported fields exist on the order, as nullable columns', () => {
+    const m = schema().slice(schema().indexOf('model Order {'));
+    const order = m.slice(0, m.indexOf('\n}'));
+    for (const column of [
+      'externalRef',
+      'adId',
+      'adSourceType',
+      'refCode',
+      'touchAt',
+      'pageId',
+      'wabaId',
+      'conversationRef',
+    ]) {
+      // Nullable with no default: the migration writes into no existing row.
+      expect(order, column).toMatch(new RegExp(`${column}\\s+(?:String|DateTime)\\?`));
+    }
+  });
+
+  it('and the click id and the chat account are sealed, never plain columns', () => {
+    const s = schema();
+    // The `…Enc` names are the contract with every later reader: a column
+    // called `ctwaClid` holding plaintext would be read as sealed by
+    // everybody who met it afterwards.
+    expect(s).toMatch(/ctwaClidEnc\s+String\?/);
+    expect(s).toMatch(/psidEnc\s+String\?/);
+    expect(s).not.toMatch(/\bctwaClid\s+String/);
+    expect(s).not.toMatch(/\bpsid\s+String/);
+  });
+
+  it('and they are written through encryptSecret, by the systems door alone', () => {
+    const intake = stripComments(repoFile('src/lib/v1/order-intake.ts'));
+    expect(intake).toMatch(/encryptSecret\(/);
+    expect(intake).toMatch(/ctwaClidEnc: sealed\(/);
+    expect(intake).toMatch(/psidEnc: sealed\(/);
+  });
+
+  it('and no endpoint hands either of them back', () => {
+    const sealed = /ctwaClid|psidEnc/;
+    const leaking = routeFiles()
+      .filter((rel) => sealed.test(stripComments(repoFile(rel))))
+      .filter((rel) => rel !== 'src/lib/v1/order-intake.ts');
+    expect(
+      leaking,
+      `بابٌ يُعيد معرِّفَ نقرةٍ أو حسابَ محادثةٍ — وهما مشفَّران بالقصد:\n${leaking.join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and this system still captures no CTWA click of its own', () => {
     const hook = stripComments(repoFile('src/app/api/webhooks/whatsapp/route.ts'));
     expect(hook).not.toMatch(/referral|ctwa|source_id/i);
   });
 });
+
+/** Every `route.ts` under `src/app/api`, found rather than listed. */
+function routeFiles(): string[] {
+  const root = join(process.cwd(), 'src', 'app', 'api');
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (p.endsWith('route.ts')) out.push(p.slice(process.cwd().length + 1).split(sep).join('/'));
+    }
+  };
+  walk(root);
+  return out;
+}

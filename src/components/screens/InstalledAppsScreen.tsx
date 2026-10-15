@@ -7,6 +7,7 @@ import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SystemTokensPanel } from '@/components/apps/SystemTokensPanel';
 
 /**
  * /apps/installed — what is connected, and whether it is hearing us.
@@ -137,6 +138,14 @@ export function InstalledAppsScreen() {
           ))}
         </div>
       )}
+
+      {/*
+        THE OTHER DIRECTION OF THE SAME QUESTION.
+        Above: what WE send out. Here: the keys another system calls US with
+        — «الإعدادات ← التطبيقات ← توكنات الأنظمة», where the contract says
+        it belongs. One screen, so «ما هو موصول بشركتك» has one answer.
+      */}
+      <SystemTokensPanel />
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
