@@ -141,11 +141,20 @@ describe('the rule is kept where it cannot be walked around', () => {
 describe('the screen says it before she presses, not after', () => {
   const screen = () => stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
 
-  it('the three disposals are locked until an attempt exists', () => {
+  it('the four actions are locked until an attempt exists', () => {
     const src = screen();
+    /*
+     * FOUR, NOT THREE — «افتح وعدّل» joined them.
+     *
+     * It used to be the way around the other three: an agent who had rung
+     * nobody could open the order, change the quantity, the price or the
+     * address, and save, while «تأكيد» and «تأجيل» and «ألغِ» were locked
+     * behind this very rule. The owner's words: it opens after a contact
+     * attempt too.
+     */
     // `locked`, not `busy`: a button that looks like it is saving for ever
     // teaches her nothing.
-    expect((src.match(/locked=\{needsContact\(order\)\}/g) ?? []).length, 'ليست الثلاثة').toBe(3);
+    expect((src.match(/locked=\{needsContact\(order\)\}/g) ?? []).length, 'ليست الأربعة').toBe(4);
     expect(src).toMatch(/const needsContact = \(order: \{ _count: \{ contactAttempts: number \} \}\) =>\s*order\._count\.contactAttempts === 0/);
   });
 

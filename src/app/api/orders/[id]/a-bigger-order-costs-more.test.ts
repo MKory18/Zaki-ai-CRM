@@ -50,6 +50,14 @@ vi.mock('@/lib/db', () => {
     'order', 'orderItem', 'orderAddOn', 'customer', 'product', 'productionBatch',
     'inventoryMovement', 'orderStatusLog', 'orderActivity', 'changeRequest',
     'shippingBatch', 'region', 'notification',
+    /*
+     * The route counts the order's contact attempts now: an agent holding
+     * an order may not edit it before she has tried to reach the customer
+     * («افتح وعدّل» joined C1's four). This file's subject is the money on
+     * an edit, which is the same arithmetic whichever door the edit came
+     * through — so the fixture below says she rang.
+     */
+    'orderContactAttempt',
   ];
   const methods = [
     'findFirst', 'findUnique', 'findMany', 'create', 'createMany', 'update',
@@ -164,6 +172,14 @@ function world(order: Row) {
     shippingBatch: { findFirst: async () => null },
     region: { findFirst: async () => null, findUnique: async () => null },
     notification: { create: async () => ({}), createMany: async () => ({ count: 0 }) },
+    /*
+     * SHE RANG. «افتح وعدّل» joined C1's locked actions, so the route now
+     * refuses a HOLDER's edit on an order with no contact attempt — and
+     * this fixture's order is held by the caller. One attempt is the
+     * ordinary state of an order being edited, and it keeps this file
+     * about the arithmetic it is named for.
+     */
+    orderContactAttempt: { count: async () => 1 },
   };
   db.$transaction = (fn: (tx: unknown) => unknown) => fn(db);
   return { db, order, orderWrites };

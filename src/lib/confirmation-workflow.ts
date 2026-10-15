@@ -187,8 +187,35 @@ export const CONTACT_RESULTS = [
    * knows it, with «لا يرد» or «تأكيد» after the call ends.
    */
   'OPENED',
+  /*
+   * A PHONE THAT IS OFF, OR OUT OF COVERAGE.
+   *
+   * There was no word for it. The agent rings, hears the network's own
+   * recording, and has to file it as `NO_ANSWER` — which says the customer
+   * did not pick up, a different fact about a different person. The two
+   * look the same in a counter and read differently to whoever opens the
+   * order next: one is somebody ignoring the phone, the other is a phone
+   * that cannot ring at all, and the second is what a wrong digit looks
+   * like.
+   *
+   * It counts toward the three like the others (`NO_ANSWER_RESULTS`):
+   * three calls that never reached anybody is the same evidence whichever
+   * way the line failed.
+   */
+  'UNREACHABLE',
   'OTHER',
 ] as const;
+
+/**
+ * THE RESULTS THAT MEAN «NOBODY WAS REACHED», AND THEREFORE COUNT.
+ *
+ * Two places read this — the counter in the contact-attempts door and the
+ * close it triggers — and they used to carry a copy each: the counter read
+ * `['NO_ANSWER', 'BUSY']` and the close fired only on `NO_ANSWER`. So a
+ * third BUSY counted to the limit and then closed nothing, and the order
+ * sat at «3/3» for ever with no door out of it.
+ */
+export const NO_ANSWER_RESULTS = ['NO_ANSWER', 'BUSY', 'UNREACHABLE'] as const;
 
 /**
  * Derive follow-up queue bucket from SERVER time (never browser time).

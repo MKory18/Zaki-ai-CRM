@@ -6,7 +6,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { customerRisk } from '@/lib/customer-risk';
 import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
 import { deriveCoreState, type StateSource } from '@/lib/order-state';
-import { NO_ANSWER_LIMIT } from '@/lib/confirmation-workflow';
+import { NO_ANSWER_LIMIT , NO_ANSWER_RESULTS } from '@/lib/confirmation-workflow';
 import { firstActionTimes } from '@/lib/response-clock';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
@@ -29,6 +29,25 @@ const ORDER_SELECT = {
   confirmationStatus: true, shippingStatus: true, totalAmount: true, currency: true,
   postponedUntil: true, postponePreferredTime: true, postponeCount: true,
   nextFollowUpAt: true, followUpReason: true, discountAmount: true,
+  /*
+   * WHERE THE ORDER CAME FROM — four fields, because it takes four.
+   *
+   * The card never said. And «إدخال إشكال» only accepts an order a
+   * MODERATOR entered (`moderatorId`): a store order — a landing page,
+   * Telegram, the POS — is refused with «لا يمكن فتح إشكال إدخال على طلب
+   * من مصدر خارجي», which the agent learns only after pressing it. A
+   * button that exists in order to refuse is a button that teaches nothing
+   * the first four times.
+   *
+   * `source` and `channel` name the door, `moderator` and `createdBy` name
+   * the person — and the screen reads them together, because «يدوي» from a
+   * moderator and «يدوي» from a supervisor are different sentences.
+   */
+  source: true,
+  moderatorId: true,
+  moderator: { select: { id: true, name: true } },
+  createdBy: { select: { id: true, name: true } },
+  channel: { select: { id: true, name: true } },
   customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true, totalOrders: true } },
   items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, lineTotal: true, reservedQty: true } },
   _count: { select: { contactAttempts: true, notes: true } },
@@ -39,7 +58,7 @@ async function noAnswerCounts(orderIds: string[]) {
   if (orderIds.length === 0) return new Map<string, number>();
   const rows = await db.orderContactAttempt.groupBy({
     by: ['orderId'],
-    where: { orderId: { in: orderIds }, result: { in: ['NO_ANSWER', 'BUSY'] } },
+    where: { orderId: { in: orderIds }, result: { in: [...NO_ANSWER_RESULTS] } },
     _count: { _all: true },
   });
   return new Map(rows.map((r) => [r.orderId, r._count._all]));

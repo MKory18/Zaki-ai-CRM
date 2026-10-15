@@ -61,6 +61,19 @@ interface OrderRow {
   postponePreferredTime: string | null;
   postponeCount: number;
   noAnswerCount: number;
+  /**
+   * WHERE IT CAME FROM — four fields, because it takes four.
+   *
+   * `source` and `channel` name the door; `moderator` and `createdBy` name
+   * the person. The card reads them together: «يدوي» entered by a
+   * moderator and «يدوي» entered by a supervisor are different sentences,
+   * and only the first can have an entry issue opened on it.
+   */
+  source: string | null;
+  moderatorId: string | null;
+  moderator: { id: string; name: string } | null;
+  createdBy: { id: string; name: string } | null;
+  channel: { id: string; name: string } | null;
   customer: { id: string; fullName: string; phone: string; rawPhone: string; city: string; address: string };
   items: { id: string; productName: string; quantity: number; freeQuantity: number; lineTotal: number }[];
   _count: { contactAttempts: number; notes: number };
@@ -97,6 +110,37 @@ type DialogState =
  */
 const needsContact = (order: { _count: { contactAttempts: number } }) =>
   order._count.contactAttempts === 0;
+
+/**
+ * WHERE THE ORDER CAME FROM, IN THE WORDS THE AGENT USES.
+ *
+ * The card never said. And it decides what she can do about bad data: an
+ * entry issue goes to the MODERATOR who typed it, so on an order nobody
+ * typed there is nobody to send it to.
+ *
+ * Read in order of how much it tells her: a named moderator first, then a
+ * named person who entered it by hand, then the channel's own name, then
+ * the bare source. `source` values are the door's («LANDING_PAGE»,
+ * «TELEGRAM», «POS»), and the unknown ones are passed through rather than
+ * swallowed — a word she can ask about beats «أخرى».
+ */
+const SOURCE_AR: Record<string, string> = {
+  LANDING_PAGE: 'المتجر',
+  STORE: 'المتجر',
+  STOREFRONT: 'المتجر',
+  TELEGRAM: 'تيليجرام',
+  WHATSAPP: 'واتساب',
+  POS: 'نقطة بيع',
+  MANUAL: 'إدخال يدوي',
+};
+
+function sourceLabel(order: OrderRow): string {
+  if (order.moderator?.name) return `مودريتور: ${order.moderator.name}`;
+  if (order.source === 'MANUAL' && order.createdBy?.name) return `إدخال يدوي: ${order.createdBy.name}`;
+  if (order.channel?.name) return order.channel.name;
+  if (order.source) return SOURCE_AR[order.source] ?? order.source;
+  return 'مصدر غير مسجَّل';
+}
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
@@ -345,6 +389,10 @@ export function ConfirmationMineScreen() {
                 <header className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</span>
                   <OrderStateBadge state={order.state} />
+                  {/* Where it came from — see `sourceLabel`. It decides what
+                      she can do about bad data, so it belongs beside the
+                      number rather than three cards deep. */}
+                  <span className="text-xs text-[var(--sys-muted-foreground)]">{sourceLabel(order)}</span>
                   <CustomerHistoryButton
                     customerId={order.customer.id}
                     orderId={order.id}
@@ -402,7 +450,26 @@ export function ConfirmationMineScreen() {
                       unit — without leaving the queue. The fields she has no
                       authority over are not shown, and are refused by the
                       server even if they were. */}
-                  <Action onClick={() => setOpenOrderId(order.id)} icon={<RiPencilLine className="w-4 h-4" />}>
+                  {/*
+                    AND THIS ONE WAS THE WAY AROUND THE OTHER THREE.
+
+                    «تأكيد» and «تأجيل» and «ألغِ» have been locked until
+                    the order carries a contact attempt since C1 — and
+                    «افتح وعدّل» was not. So an agent who had rung nobody
+                    could open the order, change the quantity, the price or
+                    the address, and save. The rule existed and its widest
+                    door was open.
+
+                    The server refuses it now too (`CONTACT_FIRST`), so
+                    this is not the rule — it is her being told it before
+                    she retypes an address rather than after.
+                  */}
+                  <Action
+                    onClick={() => setOpenOrderId(order.id)}
+                    locked={needsContact(order)}
+                    lockedTitle={CONTACT_FIRST_MESSAGE}
+                    icon={<RiPencilLine className="w-4 h-4" />}
+                  >
                     افتح وعدّل
                   </Action>
 
@@ -420,6 +487,28 @@ export function ConfirmationMineScreen() {
                       {' '}
                       {order.noAnswerCount}/{data.noAnswerLimit}
                     </span>
+                  </Action>
+                  {/*
+                    THE PHONE THAT CANNOT RING AT ALL.
+
+                    She calls, hears the network's own recording, and had
+                    to file it as «لا يرد» — which says the customer did
+                    not pick up, a different fact about a different person.
+                    The two read the same in a counter and differently to
+                    whoever opens the order next: one is somebody ignoring
+                    the phone, the other is what a wrong digit looks like.
+
+                    It counts toward the three like the others, because
+                    three calls that never reached anybody is the same
+                    evidence whichever way the line failed.
+                  */}
+                  <Action
+                    onClick={() => logAttempt(order, 'PHONE', 'UNREACHABLE')}
+                    busy={busyId === order.id}
+                    icon={<RiPhoneLockLine className="w-4 h-4" />}
+                    danger={remaining <= 1}
+                  >
+                    مغلق أو خارج التغطية
                   </Action>
                   <span className="text-xs text-[var(--sys-muted)]">
                     {remaining === 0
@@ -496,9 +585,13 @@ export function ConfirmationMineScreen() {
                     postponed, left her list, kept her claim, and blocked her
                     next pull for ninety business minutes.
 
-                    «افتح وعدّل», «إدخال إشكال» and «مساعدة» stay open: none
-                    of them decides anything about the order, and the last
-                    two are how she gets help when the call is the problem.
+                    «إدخال إشكال» and «مساعدة» stay open: neither decides
+                    anything about the order, and they are how she gets help
+                    when the call itself is the problem.
+
+                    «افتح وعدّل» USED to be in that sentence, and it was the
+                    way around all three — an edit decides plenty. It is
+                    locked with them now, on the card and on the server.
                   */}
                   <Action
                     primary
@@ -538,9 +631,33 @@ export function ConfirmationMineScreen() {
                   {/* «إدخال إشكال», not «إشكال إدخال»: the button is the
                       act she performs, and the old name read as the name of
                       the thing — so it looked like a filter, not a door. */}
+                  {/*
+                    AND ONLY ON AN ORDER A MODERATOR ENTERED.
+
+                    `POST /api/confirmation/issues` accepts `moderatorId`
+                    orders only: a store order — a landing page, Telegram,
+                    the POS — is refused with «لا يمكن فتح إشكال إدخال على
+                    طلب من مصدر خارجي». The button was drawn on every card,
+                    so the agent learned that by pressing it, and pressed it
+                    again on the next one. A button that exists in order to
+                    refuse teaches nothing the first four times.
+
+                    What replaces it on a store order is below: the fact,
+                    and what to do instead.
+                  */}
+                  {order.moderatorId ? (
                   <Action onClick={() => setDialog({ kind: 'issue', order })} busy={busyId === order.id} icon={<RiAlertLine className="w-4 h-4" />}>
                     إدخال إشكال
                   </Action>
+                  ) : (
+                    <span className="w-full text-xs leading-relaxed text-[var(--sys-warning)]">
+                      طلب من المتجر — ما في مودريتور يصلّحه.
+                      <span className="text-[var(--sys-muted-foreground)]">
+                        {' '}
+                        إذا البيانات غلط: سجّل «رقم خطأ» أو ألغِ واكتب السبب.
+                      </span>
+                    </span>
+                  )}
 
                   {/* Reads this order and this customer's history, and says
                       what it would open with. It changes nothing — every
