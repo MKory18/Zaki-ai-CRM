@@ -90,6 +90,17 @@ const WRITERS = [
   'src/app/api/orders/route.ts',
   'src/app/api/orders/[id]/route.ts',
   'src/app/api/orders/ai-intake/route.ts',
+  /*
+   * O7 — THE SYSTEMS DOOR, AND IT PRICES NOTHING ITSELF.
+   *
+   * The replies system sends `unit_price`, `line_total` and a whole
+   * `totals` object, and this file writes NONE of them: it re-prices from
+   * the catalogue through `activeOffersFor` and `computeCod`, exactly as
+   * `public-order.ts` does, and reports `price_adjusted` when the two
+   * disagree. It is on this list so that the day somebody «simplifies» it
+   * by trusting the caller's figure, the guard says so.
+   */
+  'src/lib/v1/order-intake.ts',
   'src/app/api/ops/shipments/route.ts',
   'src/app/api/confirmation/winback/route.ts',
   'src/app/api/public/landing-pages/[slug]/orders/[orderNumber]/add-product/route.ts',
