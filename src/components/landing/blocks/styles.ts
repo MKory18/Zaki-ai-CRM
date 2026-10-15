@@ -92,9 +92,21 @@ export const BLOCK_CSS = `
 .lp-hero[data-hero='productFirst'] .lp-hero-img { order: -1; }
 
 /* Split: the picture beside the words where there is room, stacked
-   where there is not. */
+   where there is not.
+
+   «splitProof» IS THIS SHAPE, and that is why it is a selector here and
+   not a renderer of its own. The names in this slot are the engine's one
+   parts catalogue (layout-slots.ts), shared by the STORE's first screen
+   and a landing page's hero block — see AUDIT-2a-delta.md §2 on the two
+   vocabularies that share these words. «عيادة» adds a first screen that
+   puts the shop's terms beside something priced; on a landing page, which
+   has one product and no shelf to prove anything with, the honest reading
+   of that name is the split. A name with nothing behind it would render
+   the default and tell nobody, which is the failure both lists exist to
+   prevent. */
 @media (min-width: 900px) {
   .lp-hero[data-hero='offerStrip'],
+  .lp-hero[data-hero='splitProof'],
   .lp-hero[data-hero='categoryTiles'] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -103,6 +115,7 @@ export const BLOCK_CSS = `
     text-align: start;
   }
   .lp-hero[data-hero='offerStrip'] .lp-hero-img,
+  .lp-hero[data-hero='splitProof'] .lp-hero-img,
   .lp-hero[data-hero='categoryTiles'] .lp-hero-img {
     grid-row: 1 / span 4;
     grid-column: 2;
@@ -125,8 +138,15 @@ export const BLOCK_CSS = `
 .lp-hero[data-hero='slider']::-webkit-scrollbar { display: none; }
 .lp-hero[data-hero='slider'] > * { scroll-snap-align: center; flex: 0 0 100%; }
 
-.lp-hero[data-hero='editorial'] { position: relative; }
-.lp-hero[data-hero='editorial'] .lp-hero-img { width: 100%; }
+/* «worldFirst» is the editorial shape on a landing page, for the same
+   reason as «splitProof» above: one photograph filling the screen with
+   the words over it is exactly what «علامة» does on a store's first
+   screen — a product in its own world — and a landing page already has
+   the one product that world belongs to. */
+.lp-hero[data-hero='editorial'],
+.lp-hero[data-hero='worldFirst'] { position: relative; }
+.lp-hero[data-hero='editorial'] .lp-hero-img,
+.lp-hero[data-hero='worldFirst'] .lp-hero-img { width: 100%; }
 @media (min-width: 700px) {
   .lp-hero[data-hero='editorial'] .lp-h1,
   .lp-hero[data-hero='editorial'] .lp-hero-sub {

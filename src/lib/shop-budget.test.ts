@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { minifyCss } from './css-minify';
 import { repoFile, stripComments } from './guard-source';
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
-import { STOREFRONT_CSS } from '@/components/storefront/styles';
+import { FAMILY_MINI_CSS, FAMILY_SHEET, STOREFRONT_CSS } from '@/components/storefront/styles';
+import { FAMILY_IDS } from './store-families';
 
 /**
  * «القالب الي ما بيلتزم ما بينطلق — مهما كان جميل.»
@@ -30,6 +31,55 @@ describe('what a shop weighs', () => {
 
   it('ships its whole stylesheet under the budget', () => {
     expect(kb(sheet)).toBeLessThan(CSS_BUDGET_KB);
+  });
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════
+   * AND THE FAMILY IT WEARS IS PART OF WHAT IT SHIPS.
+   *
+   * The four families — «عيادة» · «عطّار» · «ترند» · «علامة» — are not in
+   * the base sheet. MEASURED: together they are 8.6 KB, and appending
+   * them put every shop at 51 KB — over the brief's 50, and over it for
+   * rules the shop would never match. So a shop inlines the base plus the
+   * ONE slice of its own family (`StorefrontShell`), and the budget is
+   * measured in the only unit it was ever about: what one shop sends to
+   * one phone.
+   *
+   * THE RISK THIS GUARD EXISTS FOR is that splitting looks like free
+   * space. It is not: «علامة» is the heaviest family and it has about
+   * half a kilobyte of room. The numbers are printed so whoever adds the
+   * next rule learns that before the build tells them.
+   * ═══════════════════════════════════════════════════════════════════
+   */
+  it.each(FAMILY_IDS)('and a «%s» shop stays under it too, base and family together', (id) => {
+    const whole = kb(sheet + FAMILY_SHEET[id]);
+    console.log(
+      `[shop] ${id}: الأساس ${kb(sheet).toFixed(2)} + العائلة ${kb(FAMILY_SHEET[id]).toFixed(2)} ` +
+        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}`
+    );
+    expect(
+      whole,
+      `متجر «${id}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}. ` +
+        'اقرا الملاحظة فوق FAMILY_CSS: الشريحة تتبع المتجر، والألوان تجي بمتغيّرات مش بقواعد.'
+    ).toBeLessThan(CSS_BUDGET_KB);
+  });
+
+  it('and no shop ships more than one of them', () => {
+    const shell = stripComments(repoFile('src/components/storefront/StorefrontShell.tsx'));
+    // One slice, picked by the family this shop wears.
+    expect(shell).toMatch(/__html: FAMILY_SHEET\[family\]/);
+    // Not all four, and not the gallery's miniature rules either.
+    expect(shell, 'القشرة بتشحن كل العائلات').not.toContain('ALL_FAMILY_CSS');
+    expect(shell, 'القشرة بتشحن أنماط المعاينة').not.toContain('FAMILY_MINI_CSS');
+  });
+
+  it('and the miniature’s rules go out with the gallery, not with a shop', () => {
+    // 0.7 KB of a shopper's render-blocking stylesheet for type sizes on
+    // a screen only a seller opens.
+    const preview = stripComments(repoFile('src/components/store/SkinPreview.tsx'));
+    expect(preview).toContain('FAMILY_MINI_CSS');
+    expect(minifyCss(FAMILY_MINI_CSS).length, 'أنماط المعاينة فرغت').toBeGreaterThan(200);
+    expect(sheet, 'أنماط المعاينة رجعت لورقة المتجر').not.toContain('data-mini] .sf-bw');
   });
 
   it('and the budget is not met by having nothing in it', () => {

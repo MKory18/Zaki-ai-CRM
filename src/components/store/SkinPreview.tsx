@@ -2,7 +2,7 @@
 
 import type { StoreSkin } from '@/lib/store-skin';
 import { StoreHero } from '@/components/storefront/StoreHero';
-import { HERO_CSS } from '@/components/storefront/styles';
+import { ALL_FAMILY_CSS, FAMILY_MINI_CSS, HERO_CSS } from '@/components/storefront/styles';
 
 /**
  * THE HERO'S OWN RULES, AND ONLY THOSE.
@@ -14,7 +14,23 @@ import { HERO_CSS } from '@/components/storefront/styles';
  * is the arrangement the renderer applies.
  */
 function HeroStyles() {
-  return <style dangerouslySetInnerHTML={{ __html: HERO_CSS }} />;
+  /*
+   * ── AND EVERY FAMILY'S SLICE, BECAUSE THE GALLERY SHOWS ALL FOUR ──
+   *
+   * A shop inlines the base sheet plus the ONE family it wears. This
+   * panel draws a miniature of every template on the screen at once, so
+   * it needs all four — «عيادة»'s split first screen and «علامة»'s world
+   * live in their own slices, and a gallery missing them would promise a
+   * first screen it then drew as a plain stack. The same failure
+   * `AUDIT-2a-delta.md` §2 found, one level along.
+   *
+   * `FAMILY_MINI_CSS` is here and in no shop: the miniature's type sizes
+   * are a dashboard concern, measured at 0.7 KB of a shopper's
+   * render-blocking stylesheet for a screen only a seller opens.
+   */
+  return (
+    <style dangerouslySetInnerHTML={{ __html: HERO_CSS + ALL_FAMILY_CSS + FAMILY_MINI_CSS }} />
+  );
 }
 
 /** Stand-ins for `categoryTiles`, which needs ways in rather than goods. */

@@ -876,6 +876,30 @@ export function StoreThemeScreen() {
             />
             أظهر شارة الخصم
           </label>
+          {/*
+            «تغليف خفي» — the owner's §٩ for «علامة», and a setting rather
+            than a sentence: «سطر إعداد بيشغّله المالك، مش ثابت. إذا مطفي
+            ما بيطلع لا بالشريط العلوي ولا بـ(ليش تطلب عنّا)».
+
+            Here and not inside the family's own code, because it is a
+            fact about how this shop packs a parcel, not about how it
+            looks: a template that printed it unconditionally would be
+            making the seller a promise they never made. Off by default,
+            which is the honest default for a claim.
+          */}
+          <label className="mt-3 flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
+            <input
+              type="checkbox"
+              checked={theme.discreetPacking === true}
+              onChange={(e) => set('discreetPacking', e.target.checked || undefined)}
+              className="h-4 w-4 accent-[var(--sys-primary)]"
+            />
+            تغليف خفي
+          </label>
+          <p className={HINT}>
+            شغّلها إذا كنت فعلاً تغلّف بلا اسم ولا وصف على الكرتونة — بتظهر بشريط الترويسة وبقسم «ليش
+            تطلب عنّا». مطفأة افتراضياً.
+          </p>
         </div>
       )}
 

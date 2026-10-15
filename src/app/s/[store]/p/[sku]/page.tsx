@@ -12,8 +12,11 @@ import { LandingPageView } from '@/components/landing/LandingPageView';
 import Link from 'next/link';
 import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
-import { layoutOf } from '@/lib/store-theme';
-import { boughtTogether } from '@/lib/store-facts';
+import { familyOf, layoutOf } from '@/lib/store-theme';
+import { bestSellers, boughtTogether } from '@/lib/store-facts';
+import { BrandProductPage } from '@/components/storefront/BrandProductPage';
+import { brandContent } from '@/lib/store-brand-template';
+import { deliveryWindows, windowFor } from '@/lib/delivery-time';
 import { storeShelf } from '@/lib/storefront';
 import { moneyText } from '@/lib/money';
 import { OfferCards } from '@/components/landing/blocks/OfferCards';
@@ -173,7 +176,11 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
       // — true by default — and wrapped a second shell inside this one, so
       // an open store's product page carried two headers, two footers and
       // the shell stylesheet twice.
-      <StorefrontShell store={store} back={back}>
+      // `thin`: D9 — «صفحة المنتج بتضلّ بهويّتها جوّا المتجر، بإطار متجر
+      // رقيق بس: شعار · كل المنتجات · السلة». The page inside has a look
+      // of its own, and a full header over it is the shop arguing with
+      // the page about what the shopper is looking at.
+      <StorefrontShell store={store} back={back} thin>
         <LandingPageView target={{ frontPageId: shownPage.id, storeId: store.id, campaign, inStore: true }} />
       </StorefrontShell>
     );
@@ -228,6 +235,102 @@ export default async function StorefrontProductPage({ params, searchParams }: Pr
     storeId: store.id,
     countryId: store.countryId,
   });
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * «علامة» DRAWS THIS PAGE FROM THE PRODUCT'S FIELDS.
+   *
+   * The fourth family the owner added on 15/10 is a TEMPLATE: «أي منتج
+   * جديد بيطلع بنفس الشكل من حقوله، بلا مصمّم ولا شغل يدوي». So when the
+   * shop wears it, the product page is `BrandProductPage` — built by
+   * `brandContent` out of the name, the Latin name, the description, the
+   * images and the category's answers, with each section present only if
+   * its field is.
+   *
+   * EVERYTHING THAT DECIDES OR CHARGES MONEY STAYS WHERE IT IS: the
+   * offers are the same `activeOffersFor`, the «was» price is the same
+   * one `price-honesty.ts` proved, the form is the same form, the
+   * endpoint is the same endpoint. The family is a look.
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  if (familyOf(store.theme) === 'brand') {
+    /*
+     * «انطلب ٤٦ مرة» — COUNTED, OR ABSENT.
+     *
+     * `bestSellers` returns a product only above its own floor of
+     * delivered orders, so the line either stands on real sales or does
+     * not appear. Thirty days because this sentence is about now.
+     */
+    const sales = await bestSellers(db, { companyId: store.companyId, storeId: store.id, lookbackDays: 30 });
+
+    /*
+     * THE STRUCK-THROUGH FIGURE, AND ONLY ON ONE BASIS.
+     *
+     * A single-unit offer's own proved «was» price is the only number
+     * comparable with `fromPrice` — a bundle's total is not, and
+     * striking one against the other would be the invented discount
+     * `price-honesty.ts` exists to stop. Nothing is computed here: the
+     * offer carries the figure already.
+     */
+    const single = offerViews.find((o) => o.quantity === 1 && o.freeQuantity === 0);
+    const compareAt = single?.listPrice ?? single?.compareAtPrice ?? null;
+
+    const windows = await deliveryWindows({ companyId: store.companyId, storeId: store.id });
+    const eta = windowFor(windows, null);
+
+    /*
+     * The returns question is only asked when the shop can answer it: a
+     * template must not promise a return policy on a seller's behalf.
+     * Their own footer link is the answer, and its absence is the other
+     * answer.
+     */
+    const returnsLink =
+      (store.menus.FOOTER ?? []).find((l) => /إرجاع|استبدال|استرجاع/.test(l.label)) ?? null;
+
+    const siblings = (await storeShelf(store.companyId, store.id))
+      .filter((p) => p.id !== product.id)
+      .slice(0, 4);
+
+    const content = brandContent({
+      ...product,
+      orderedCount: sales.get(product.id) ?? null,
+      siblings: siblings.length,
+    });
+
+    return (
+      <StorefrontShell store={store} back={back}>
+        <LandingTrackingPixels
+          page="PUBLIC"
+          pixels={pixels}
+          viewContent={{
+            contentIds: [product.id],
+            contentName: product.name,
+            value: product.basePrice,
+            currency: store.currencyCode,
+          }}
+        />
+        <BrandProductPage
+          shop={{
+            slug: store.slug,
+            currency: store.currencyCode,
+            minorUnit,
+            dir: store.dir,
+            supportPhone: store.supportPhone,
+          }}
+          product={product}
+          content={content}
+          offers={offerViews}
+          compareAt={compareAt}
+          regions={regions}
+          phonePlaceholder={ruleFor(store.countryCode)?.example}
+          endpoint={`/api/public/stores/${store.slug}/products/${product.sku}/orders`}
+          series={siblings}
+          deliveryDays={eta ? eta.slowDays : null}
+          returns={returnsLink}
+        />
+      </StorefrontShell>
+    );
+  }
 
   return (
     <StorefrontShell store={store} back={back}>

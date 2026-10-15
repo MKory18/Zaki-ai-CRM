@@ -90,8 +90,25 @@ jobs:
       # never requires building first. The step also prints the measured
       # KB and the room left, so the number can be watched instead of only
       # being tripped over.
+      # THREE FILES, AND THEY MEASURE THREE DIFFERENT THINGS.
+      #
+      # `quality-gates.test.ts` — the DASHBOARD's first-load stylesheet.
+      # Ninety-six kilobytes of Tailwind utilities and four palettes that
+      # no public page loads: a management number, and a ratchet on it.
+      #
+      # `public-first-load.test.ts` — the PUBLIC entries, separately, which
+      # is what D7 is actually about: `/s/[store]` and `/lp/[slug]`, their
+      # JavaScript plus the stylesheet the shop inlines, gzipped, against a
+      # measured ceiling. `AUDIT.md` §7.5 said «the public pages are a
+      # different entry» and left it UNVERIFIED pending this step.
+      #
+      # `what-a-shopper-downloads.test.ts` — the framework floor and what a
+      # customer's page is allowed to import. It has always needed a build
+      # and was never in this step, so in CI it returned early, silently,
+      # on every run: a guard that cannot measure reads exactly like one
+      # that passed.
       - name: Payload budget
-        run: npx vitest run src/lib/quality-gates.test.ts
+        run: npx vitest run src/lib/quality-gates.test.ts src/lib/public-first-load.test.ts src/lib/what-a-shopper-downloads.test.ts
         env:
           NODE_ENV: test
           JWT_SECRET: ci-test-secret-not-used-anywhere

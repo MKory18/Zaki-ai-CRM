@@ -5,6 +5,19 @@ import userEvent from '@testing-library/user-event';
 import { SkinGallery, type SkinCard } from './SkinGallery';
 import { STORE_TEMPLATES } from '@/lib/store-templates';
 import { resolveSkinPalette } from '@/lib/store-skin';
+import { STORE_FAMILIES, familyNoteAr, isGalleryVoice } from '@/lib/store-families';
+
+/**
+ * ── WHAT THIS SCREEN SHOWS SINCE THE FAMILIES LANDED (15/10) ──
+ *
+ * Not «the ten»: `AUDIT.md` §7.3 mapped them onto families and six are
+ * kept as voices, three are MERGED into a kept one and one is RETIRED.
+ * The four hidden ones still ship and still parse — a shop wearing one
+ * keeps its look — so what this gallery offers is the VOICES, and the
+ * assertions below read that list rather than counting to ten.
+ */
+const VOICES = STORE_TEMPLATES.filter((t) => isGalleryVoice(t.id));
+const HIDDEN = STORE_TEMPLATES.filter((t) => !isGalleryVoice(t.id));
 
 /**
  * THE GALLERY A SELLER ACTUALLY LOOKS AT.
@@ -54,18 +67,39 @@ const draw = (over: Partial<Parameters<typeof SkinGallery>[0]> = {}) =>
     />
   );
 
-describe('the ten, in front of a seller', () => {
-  it('shows every one of them', () => {
+describe('the voices, in front of a seller', () => {
+  it('shows every one a seller may choose, under its family', () => {
     draw();
-    for (const t of STORE_TEMPLATES) {
-      expect(screen.getByText(t.name), t.id).toBeTruthy();
-    }
+    for (const t of VOICES) expect(screen.getByText(t.name), t.id).toBeTruthy();
+    // And the family is on the screen without a press: its name and its
+    // one line, which is the choice the owner actually makes.
+    for (const f of STORE_FAMILIES) expect(screen.getByText(`عائلة «${f.name}»`), f.id).toBeTruthy();
+  });
+
+  it('and offers neither the merged nor the retired — without deleting them', () => {
+    draw();
+    // Hidden here…
+    for (const t of HIDDEN) expect(screen.queryByText(t.name), t.id).toBeNull();
+    // …and still shipped, still findable, so a shop wearing one keeps the
+    // look it has. Deleting the name would make that shop's theme fail to
+    // parse — a seller's storefront going blank over a list.
+    expect(HIDDEN.length).toBeGreaterThan(0);
+    for (const t of HIDDEN) expect(STORE_TEMPLATES.some((x) => x.id === t.id)).toBe(true);
+  });
+
+  it('and tells the seller, in Arabic, when their own shop wears one', () => {
+    const merged = HIDDEN[0];
+    draw({ installed: merged.id });
+    // On screen because it is theirs, with the note that says what
+    // happened and that their shop did not change.
+    expect(screen.getByText(merged.name)).toBeTruthy();
+    expect(screen.getByText(familyNoteAr(merged.id)!)).toBeTruthy();
   });
 
   it('says what each one puts forward, in words and not in a key', () => {
     draw();
     // `shopByNeed` is a key. A seller reads «تسوّق حسب الحاجة».
-    expect(screen.getAllByText(/يبرز:/).length).toBe(STORE_TEMPLATES.length);
+    expect(screen.getAllByText(/يبرز:/).length).toBe(VOICES.length);
     expect(screen.queryByText(/shopByNeed/)).toBeNull();
     expect(screen.queryByText(/bestSellersRank/)).toBeNull();
   });
@@ -90,13 +124,13 @@ describe('the filter', () => {
   it('narrows the list to one suggested category', async () => {
     const user = userEvent.setup();
     draw();
-    const category = STORE_TEMPLATES[0].suggestedFor;
-    const only = STORE_TEMPLATES.filter((t) => t.suggestedFor === category);
+    const category = VOICES[0].suggestedFor;
+    const only = VOICES.filter((t) => t.suggestedFor === category);
 
     await user.click(screen.getByRole('button', { name: category }));
 
     for (const t of only) expect(screen.getByText(t.name), t.id).toBeTruthy();
-    for (const t of STORE_TEMPLATES.filter((t) => t.suggestedFor !== category)) {
+    for (const t of VOICES.filter((t) => t.suggestedFor !== category)) {
       expect(screen.queryByText(t.name), t.id).toBeNull();
     }
   });
@@ -104,26 +138,32 @@ describe('the filter', () => {
   it('and gives every one of them back', async () => {
     const user = userEvent.setup();
     draw();
-    await user.click(screen.getByRole('button', { name: STORE_TEMPLATES[0].suggestedFor }));
+    await user.click(screen.getByRole('button', { name: VOICES[0].suggestedFor }));
     await user.click(screen.getByRole('button', { name: 'الكل' }));
-    expect(screen.getAllByRole('button', { name: /ثبّته كمسوّدة/ })).toHaveLength(STORE_TEMPLATES.length);
+    expect(screen.getAllByRole('button', { name: /ثبّته كمسوّدة/ })).toHaveLength(VOICES.length);
   });
 
   it('is for browsing only — it refuses nothing and installs nothing', async () => {
     const user = userEvent.setup();
     const onInstall = vi.fn();
     draw({ onInstall });
-    await user.click(screen.getByRole('button', { name: STORE_TEMPLATES[0].suggestedFor }));
+    await user.click(screen.getByRole('button', { name: VOICES[0].suggestedFor }));
     expect(onInstall).not.toHaveBeenCalled();
   });
 });
 
 describe('which one this shop is wearing', () => {
   it('is marked, and marked FIRST wherever it sits in the list', () => {
-    // «القالب المثبّت معلّم بأعلى الشاشة». The last of the ten, so the
-    // test fails if the card merely keeps its place.
+    /*
+     * «القالب المثبّت معلّم بأعلى الشاشة», and the families made this
+     * harder rather than easier: first WITHIN its family is not first on
+     * a screen of four families. So it is lifted out above them under
+     * «قالبك الحالي» — and the template chosen here is the LAST of the
+     * list, so a card that merely keeps its place fails.
+     */
     const last = STORE_TEMPLATES[STORE_TEMPLATES.length - 1];
     draw({ installed: last.id });
+    expect(screen.getByText('قالبك الحالي')).toBeTruthy();
 
     const buttons = screen.getAllByRole('button', { name: /ثبّته كمسوّدة|أعد تثبيته/ });
     expect(buttons[0].textContent).toContain('أعد تثبيته');
@@ -132,8 +172,8 @@ describe('which one this shop is wearing', () => {
 
   it('stays first under a filter that does not include it', async () => {
     const user = userEvent.setup();
-    const mine = STORE_TEMPLATES[0];
-    const other = STORE_TEMPLATES.find((t) => t.suggestedFor !== mine.suggestedFor)!;
+    const mine = VOICES[0];
+    const other = VOICES.find((t) => t.suggestedFor !== mine.suggestedFor)!;
     draw({ installed: mine.id });
 
     await user.click(screen.getByRole('button', { name: other.suggestedFor }));
@@ -172,7 +212,7 @@ describe('the two widths', () => {
     await user.click(within(screen.getByRole('group', { name: 'عرض المعاينة' })).getByRole('button', { name: /حاسوب/ }));
     const onDesktop = columns();
 
-    expect(onPhone.length).toBe(STORE_TEMPLATES.length);
+    expect(onPhone.length).toBe(VOICES.length);
     expect(new Set(onPhone)).toEqual(new Set(['2']));
     expect(new Set(onDesktop)).toEqual(new Set(['4']));
   });
@@ -186,7 +226,8 @@ describe('installing', () => {
     // NOT the first card. A button wired to `skins[0]` instead of to its
     // own template passes every test that presses the first one — which is
     // how the first version of this test proved nothing.
-    const pick = STORE_TEMPLATES[4];
+    // NOT the first card, and one the gallery actually offers.
+    const pick = VOICES[3];
     const card = screen.getByText(pick.name).closest('div.rounded-lg')!;
     await user.click(within(card as HTMLElement).getByRole('button', { name: /ثبّته كمسوّدة/ }));
     expect(onInstall).toHaveBeenCalledWith(pick.id);

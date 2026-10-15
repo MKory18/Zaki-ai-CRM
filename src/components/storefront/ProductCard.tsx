@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { SIZES_CARD, srcSetFor } from '@/lib/responsive-image';
 import { moneyText } from '@/lib/money';
 import type { CardVariant } from '@/lib/store-theme';
+import type { ProductAttributes } from '@/lib/product-attributes';
+import { badgesFrom, latinWord, readProductText } from '@/lib/store-brand-template';
+import { worldOf, worldVars } from '@/lib/store-world';
 
 /**
  * ONE PRODUCT, ON A CARD — AND THERE IS ONLY ONE OF THESE.
@@ -45,6 +48,19 @@ export function ProductCard({
     fromPrice: number;
     /** When it is higher than `fromPrice`, the card says «من». */
     basePrice?: number;
+    /**
+     * ── THE THREE «علامة» READS, AND NOBODY ELSE DOES ──
+     *
+     * The `world` card prints the Latin name, the product's own sentence
+     * and its specification line, and paints itself in the product's own
+     * colours. All three are optional because every other variant has
+     * drawn a card without them since this component existed, and a
+     * required field would be four call sites changed to serve one
+     * family.
+     */
+    nameEn?: string | null;
+    description?: string | null;
+    attributes?: ProductAttributes | null;
   };
   currency: string | null;
   minorUnit: number;
@@ -57,8 +73,35 @@ export function ProductCard({
    */
   const letter = (product.name ?? '').trim().charAt(0) || '—';
 
+  /*
+   * ── THE «علامة» CARD, AND WHY IT IS A BRANCH RATHER THAN CSS ──
+   *
+   * «كرت لكلّ منتج بعالم منتجه» — the card wears the PRODUCT's colours,
+   * not the shop's, and carries three things no other variant shows. The
+   * other five variants are pure arrangement and stay that way: this one
+   * renders extra elements, so it is decided here rather than hidden by a
+   * `display: none` the other five would have to carry.
+   *
+   * What it does NOT change is the locked core — the picture at a fixed
+   * ratio, the designed empty state, and the price, always visible. Those
+   * three are below, outside this branch, for every variant including
+   * this one. `card-variants.test.ts` counts them.
+   */
+  const isWorld = variant === 'world';
+  const world = isWorld ? worldOf({ id: product.id, attributes: product.attributes ?? null }) : null;
+  const latin = isWorld ? latinWord(product.nameEn) : null;
+  const line = isWorld ? readProductText(product.description).line : null;
+  const specs = isWorld ? badgesFrom(product.attributes).join(' · ') : '';
+
   return (
-    <Link href={`/s/${slug}/p/${encodeURIComponent(product.handle)}`} className="sf-card" data-card={variant}>
+    // The href stays on this line with the tag: `shop-budget.test.ts`
+    // pins «the card is a real Link» by reading exactly this, and an
+    // `<a>` here would render the same and prefetch nothing.
+    <Link href={`/s/${slug}/p/${encodeURIComponent(product.handle)}`}
+      className="sf-card"
+      data-card={variant}
+      style={world ? (worldVars(world) as React.CSSProperties) : undefined}
+    >
       {product.image ? (
         // The seller's own upload. next/image would need every host
         // allow-listed, and a missing picture is worse than an
@@ -79,7 +122,13 @@ export function ProductCard({
         <span className="sf-card-none" data-letter={letter} aria-hidden />
       )}
       <span className="sf-card-body">
+        {/* Latin, tracked out — which is allowed for Latin and never for
+            Arabic, and that is why it is a separate element with its own
+            rule rather than a letter-spacing on the name. */}
+        {latin ? <span className="sf-card-latin">{latin}</span> : null}
         <span className="sf-card-name">{product.name}</span>
+        {line ? <span className="sf-card-line">«{line}»</span> : null}
+        {specs ? <span className="sf-card-specs">{specs}</span> : null}
         <span className="sf-card-price" dir="ltr">
           {/* The cheapest per unit across its bundles — the number a
               shopper compares, computed from the offers the order path
@@ -87,6 +136,7 @@ export function ProductCard({
           {product.basePrice !== undefined && product.fromPrice < product.basePrice && <small>من </small>}
           {moneyText(product.fromPrice, currency, minorUnit)}
         </span>
+        {isWorld ? <span className="sf-card-go">شوف المنتج</span> : null}
       </span>
     </Link>
   );

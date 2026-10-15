@@ -1,5 +1,6 @@
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
 import { minifyCss } from '@/lib/css-minify';
+import { FAMILY_IDS, type FamilyId } from '@/lib/store-families';
 
 /**
  * The storefront's own styles, on top of the landing page's.
@@ -19,6 +20,16 @@ import { minifyCss } from '@/lib/css-minify';
  * which is the other half of «the gallery cannot promise a first screen
  * the shop does not draw».
  */
+/**
+ * HOW MANY WORLDS «علامة»'s FIRST SCREEN STACKS — one list, two readers.
+ *
+ * `StoreHero` slices the shelf to this many stages and this sheet writes
+ * one pair of rules for each. A stage with no rule would be a world a
+ * shopper could choose and never see, which is the whole family of bugs
+ * `layout-slots.ts` exists to prevent, one level down.
+ */
+export const WORLD_STAGES = [0, 1, 2] as const;
+
 export const HERO_CSS = `
 /* ────────────────────────────────────────────────────────────────────
    THE FIVE FIRST SCREENS — one rule each, and that is the point.
@@ -142,6 +153,7 @@ export const HERO_CSS = `
   .sf-hx[data-hero-slot='offerStrip'] { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
   .sf-hx[data-hero-slot='slider'] { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
 }
+
 
 /* The gallery's miniature is the SAME markup at preview scale — which is
    how a hero that does not exist here can no longer be promised there. */
@@ -968,3 +980,326 @@ ${HERO_CSS}
  * parsed by a browser and built the same 251 rules.
  */
 export const SHOP_SHEET = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * ONE SLICE PER FAMILY — AND A SHOP SHIPS EXACTLY ONE OF THEM.
+ *
+ * Everything above is what EVERY shop needs. What follows is what one
+ * family needs, and a «عيادة» shop has no use for the brand world's
+ * ninety rules.
+ *
+ * ── WHY THIS IS SPLIT AND NOT APPENDED ──
+ *
+ * MEASURED. The base sheet is 43.3 KB minified against a 50 KB budget
+ * («CSS أقل من ٥٠ كيلوبايت», held by `shop-budget.test.ts`). The four
+ * families together came to 9.5 KB, so appending them put every shop at
+ * 51 KB — over, and over for rules it would never match. Split, a shop
+ * ships the base plus its own family and the budget is met per shop,
+ * which is the only unit the budget was ever about: nobody downloads
+ * «the stylesheet of the product».
+ *
+ * `shop-budget.test.ts` therefore measures base + EACH family, and
+ * `layout-variants.test.ts` reads base + ALL of them, because a variant's
+ * rule may live in its family's slice and «declared with nothing behind
+ * it» has to stay impossible.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+const CLINIC_CSS = `
+/* ── splitProof — «عيادة»: the claim, and beside it the only proof ──
+   The facts are what this shop DOES — cash at the door, every
+   governorate — never a number about other people that nobody counted. */
+.sf-hx[data-hero-slot='splitProof'] { grid-template-columns: 1fr; align-items: start; }
+.sf-hx[data-hero-slot='splitProof'] .sf-hx-say { display: grid; gap: 10px; }
+.sf-hx[data-hero-slot='splitProof'] strong { font-size: 25px; font-weight: 800; line-height: 1.35; }
+.sf-hx[data-hero-slot='splitProof'] em {
+  font-style: normal; font-size: 16px; line-height: 1.8; color: var(--store-muted);
+}
+.sf-hx-proof {
+  display: grid; gap: 8px; padding: 14px;
+  border: 1px solid var(--store-border); border-radius: var(--store-radius);
+  background: var(--store-card);
+}
+.sf-hx-fact { display: block; font-size: 14.5px; font-weight: 700; padding-inline-start: 18px; position: relative; }
+/* A tick in the shop's own colour: one character, no icon payload. */
+.sf-hx-fact::before {
+  content: '\\2713'; position: absolute; inset-inline-start: 0; color: var(--store-accent); font-weight: 800;
+}
+.sf-hx-proof .sf-hx-feature { margin-block-start: 4px; }
+.sf-hx[data-hero-slot='splitProof'] .sf-hx-go {
+  justify-self: start; background: var(--store-accent); color: var(--store-accent-text);
+  padding: 12px 26px; border-radius: var(--store-radius); font-weight: 800; font-size: 15px;
+  display: inline-flex; align-items: center; min-height: 44px;
+}
+/* The clinic breathes least: a shopper with a complaint is scanning. */
+.sf-root[data-family='clinic'] .sf-grid-wrap, .sf-root[data-family='clinic'] .sf-row { padding-block: 16px; }
+@media (min-width: 720px) { .sf-hx[data-hero-slot='splitProof'] { grid-template-columns: 1.1fr .9fr; } }
+`;
+
+const HERBALIST_CSS = `
+/* «عطّار» breathes most, and its one ornament is a dotted rule under a
+   heading — the cheapest thing on the list and the most recognisable. */
+.sf-root[data-family='herbalist'] .sf-grid-wrap, .sf-root[data-family='herbalist'] .sf-row { padding-block: 26px; }
+.sf-root[data-family='herbalist'] .sf-row h2 {
+  border-block-end: 2px dotted var(--store-border); padding-block-end: 8px;
+}
+.sf-root[data-family='herbalist'] .sf-card { outline: 1px solid var(--store-border); outline-offset: 3px; }
+`;
+
+const TREND_CSS = `
+/* ── tile — «ترند»: the shape a thumb already scrolls all day ──
+   9:13, the words OVER the picture, three to a row. The wash under the
+   name is what makes it legible on an unknown photograph — text on a
+   seller's own image is the one place a palette cannot promise contrast.
+   It sits under the NAME and never under the price: the price keeps its
+   own line, on the card's own surface, which is the owner's ruling of
+   15/10 about what may and may not go behind a figure. */
+.sf-card[data-card='tile'] .sf-card-img,
+.sf-card[data-card='tile'] .sf-card-none { aspect-ratio: 9 / 13; }
+.sf-card[data-card='tile'] { position: relative; }
+.sf-card[data-card='tile'] .sf-card-body { padding: 9px 11px 11px; gap: 4px; }
+.sf-card[data-card='tile'] .sf-card-name {
+  position: absolute; inset-inline: 0; inset-block-end: 38px; padding: 26px 11px 7px;
+  color: #fff; font-size: 13.5px; font-weight: 800;
+  background: linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));
+}
+.sf-card[data-card='tile'] .sf-card-price { font-size: 14px; font-weight: 800; }
+/* It shouts with WEIGHT rather than with colour, and nothing moves. */
+.sf-root[data-family='trend'] .sf-grid-wrap, .sf-root[data-family='trend'] .sf-row { padding-block: 14px; }
+.sf-root[data-family='trend'] .sf-row h2, .sf-root[data-family='trend'] .sf-page h1 { font-weight: 800; }
+`;
+
+/**
+ * «علامة» — AND THE ONE TRICK THAT MAKES IT AFFORDABLE.
+ *
+ * MEASURED: written as its own set of coloured rules this slice came to
+ * 10.1 KB minified, which put a brand shop at 53.4 KB against a 50 KB
+ * budget. Almost all of it was the same four lines of colour repeated on
+ * forty elements.
+ *
+ * So the world is applied by REDEFINING THE SHOP'S OWN VARIABLES on the
+ * page's root instead. Every rule in the base sheet already reads
+ * «--store-page», «--store-text», «--store-accent» — so the landing
+ * blocks, the offer cards, the order form and the FAQ box all wear the
+ * product's world without one extra selector, and this slice only has to
+ * carry what is genuinely NEW: the faint Latin word, the promises ring,
+ * the dark panels, the sticky bar and the world switcher.
+ *
+ * That is also why the page reuses «lp-section», «lp-h2», «lp-sub»,
+ * «lp-cta» and «lp-faq-item» rather than restyling them: a second set of
+ * section paddings would be the same bytes twice and the same decision in
+ * two places.
+ */
+/**
+ * «علامة» — AND THE TWO DECISIONS THAT MADE IT FIT.
+ *
+ * MEASURED: written as its own set of coloured rules this slice came to
+ * 7.8 KB minified, which put a brand shop at 51.1 KB against the brief's
+ * 50 — on a base sheet that already spends 43.3.
+ *
+ * FIRST, THE WORLD IS NOT A SECOND VARIABLE FAMILY. `worldVars` writes
+ * this product's colours onto the element as the shop's OWN names
+ * («--store-page», «--store-text», «--store-accent»…), so every rule in
+ * the base sheet paints itself in the product's world with no selector
+ * here at all. See the note in store-world.ts.
+ *
+ * SECOND, THIS PAGE REUSES THE BLOCKS' OWN SHAPES — «lp-section»,
+ * «lp-h2», «lp-sub», «lp-cta», «lp-faq-item», «lp-offers». A second set
+ * of section paddings and button shapes would be the same bytes twice and
+ * the same decision in two places.
+ *
+ * What is left is what is genuinely NEW: the faint Latin word, the world
+ * switcher, the promises ring, the dark panels and the sticky bar.
+ */
+const BRAND_CSS = `
+/* ── worldFirst — one product, its own world, three stages ──
+   The stages are stacked and a hidden radio says which one shows, so the
+   colour switch costs no JavaScript at all: «:has()» is how the section
+   learns which radio is checked, and the same selector marks the chosen
+   circle. Three stages and not five — a hidden image is still fetched. */
+.sf-hx[data-hero-slot='worldFirst'] { grid-template-columns: 1fr; gap: 0; padding: 0; position: relative; }
+.sf-bw-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* «.sf-hx .sf-bw-stage» AND NOT «.sf-bw-stage» — MEASURED IN A BROWSER.
+   The hero's own base rule is «.sf-hx a, .sf-hx > span { color: inherit }»,
+   and the stage IS a direct span of the hero: (0,1,1) beats (0,1,0), so a
+   bare class selector lost and every word of this family's first screen
+   came out in the SHOP's ink on the PRODUCT's dark world — black on
+   near-black. Found by reading the computed colour of a rendered page, not
+   by reading the file. */
+.sf-hx .sf-bw-stage {
+  grid-area: 1 / 1; display: grid; gap: 14px; padding: 22px 20px 26px; align-content: start;
+  background: var(--store-page); color: var(--store-text);
+  /* Hidden stages leave the flow rather than merely fading: a faded
+     stage still catches a tap. */
+  visibility: hidden; opacity: 0; transition: opacity 220ms ease;
+}
+${WORLD_STAGES.map(
+  (i) => `.sf-hx:has(#sf-w${i}:checked) .sf-bw-stage[data-w='${i}'] { visibility: visible; opacity: 1; }
+.sf-hx:has(#sf-w${i}:checked) .sf-bw-dot[data-w='${i}'] .sf-hx-img { border-color: var(--store-accent); }`
+).join('\n')}
+/* The miniature draws no radios — eleven previews on one dashboard
+   screen would share these ids — so it falls through to here. */
+.sf-hx[data-hero-slot='worldFirst']:not(:has(.sf-bw-radio)) .sf-bw-stage[data-w='0'] { visibility: visible; opacity: 1; }
+.sf-bw-art { position: relative; display: block; }
+/* THE FAINT WORD IS INSIDE THE PICTURE'S BOX — never behind a price or a
+   figure (the owner's ruling, 15/10), which is why it is a child of the
+   art and not of the stage. Latin only, so tracking it out is allowed;
+   no Arabic ever reaches this rule. */
+.sf-bw-ghost {
+  position: absolute; inset-block-start: 5%; inset-inline: 0; text-align: center;
+  font-size: clamp(44px, 17vw, 124px); font-weight: 800; letter-spacing: .08em;
+  color: var(--store-text); opacity: .13; line-height: 1; pointer-events: none;
+  white-space: nowrap; overflow: hidden;
+}
+.sf-bw-art .sf-hx-img { background: transparent; aspect-ratio: 4 / 5; max-height: 52vh; }
+.sf-bw-art .sf-hx-img img, .sf-bw-art > img { object-fit: contain; }
+.sf-bw-say { display: grid; gap: 9px; justify-items: start; }
+.sf-bw-say strong { font-size: 27px; font-weight: 800; line-height: 1.3; }
+.sf-bw-all {
+  border: 1px solid var(--store-border); color: var(--store-text);
+  padding: 12px 22px; border-radius: var(--store-radius); font-weight: 700; font-size: 14.5px;
+  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; text-decoration: none;
+}
+.sf-bw-pick { grid-area: 2 / 1; display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 20px 18px; }
+.sf-bw-dot { display: grid; gap: 5px; justify-items: center; width: 74px; cursor: pointer; }
+.sf-bw-dot .sf-hx-img {
+  width: 56px; height: 56px; aspect-ratio: 1; border-radius: 50%; max-height: none;
+  background: var(--store-page); border: 2px solid transparent;
+}
+.sf-bw-dot .sf-hx-name { font-size: 11.5px; font-weight: 700; text-align: center; }
+
+/* ── world — the card wears its product's own colours ──
+   «كرت لكلّ منتج بعالم منتجه», and the colours arrive on the card itself
+   through the variables, so this is layout only. */
+.sf-card[data-card='world'] { flex-direction: row; align-items: stretch; }
+.sf-card[data-card='world'] .sf-card-img,
+.sf-card[data-card='world'] .sf-card-none {
+  width: 118px; flex: 0 0 118px; aspect-ratio: 4 / 5; object-fit: contain; background: transparent;
+}
+.sf-card[data-card='world'] .sf-card-body { justify-content: center; gap: 5px; }
+.sf-card[data-card='world'] .sf-card-name { font-size: 16.5px; font-weight: 800; }
+/* A SERIES CARD TAKES THE WHOLE ROW ON A PHONE — measured at 375.
+   The shelf is two columns there for every variant, and this card is a
+   horizontal one: 118px of photograph left about fifty for the Latin
+   name, the sentence, the specification line and the price, which is
+   four things stacked in a column too narrow to read any of them. It
+   goes back to two across at the width where two fit. */
+.sf-card[data-card='world'] { grid-column: 1 / -1; }
+/* Latin, tracked out — allowed for Latin, never for Arabic, which is why
+   this is its own element and not a rule on the name. */
+.sf-card-latin { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; color: var(--store-muted); }
+.sf-card-line, .sf-card-specs { display: block; font-size: 12.5px; line-height: 1.7; color: var(--store-muted); }
+.sf-card-go { display: block; font-size: 12.5px; font-weight: 800; color: var(--store-accent-ink); }
+
+/* ── AND THE PRODUCT PAGE, BUILT FROM THE PRODUCT'S FIELDS ──
+   Every section exists only when its field does — the component draws
+   «brandSections» and nothing else — so there is no rule here for an
+   empty state. That is rule 0: «أي حقل فاضي، قسمه بيختفي لحاله والصفحة
+   بتضلّ كاملة». */
+.sf-root[data-family='brand'] .sf-grid-wrap, .sf-root[data-family='brand'] .sf-row { padding-block: 30px; }
+.sf-bp { background: var(--store-page); color: var(--store-text); }
+.sf-bp-hero { display: grid; gap: 16px; padding: 22px 20px; }
+.sf-bp-badges { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.sf-bp-badges span {
+  font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--store-border); color: var(--store-muted);
+}
+.sf-bw-say h1 { font-size: 28px; font-weight: 800; line-height: 1.3; margin: 0; }
+.sf-bp-line { font-size: 15.5px; line-height: 1.8; color: var(--store-muted); margin: 0; font-style: normal; }
+/* THE PRICE HAS NOTHING BEHIND IT — no wash, no faint word, no pattern.
+   The owner's ruling of 15/10, and the one place in this family where it
+   would have been tempting. */
+.sf-bp-price { display: flex; align-items: baseline; gap: 10px; margin: 0; background: none; }
+.sf-bp-price strong { font-size: 30px; font-weight: 800; }
+.sf-bp-price s { font-size: 16px; color: var(--store-muted); }
+.sf-bp-price em { font-style: normal; font-size: 13px; font-weight: 800; color: var(--store-accent-ink); }
+.sf-bp-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+.sf-bp-cta .lp-cta, .sf-bp-sticky .lp-cta { margin: 0; }
+/* The promises ring: the photograph in the middle, the numbers around it,
+   the three lines under — «تلات وعود، ولا وعد زيادة». */
+.sf-bp-ring { position: relative; width: min(240px, 68vw); aspect-ratio: 1; margin: 0 auto 16px; }
+.sf-bp-ring > img {
+  position: absolute; inset: 16%; width: 68%; height: 68%; object-fit: contain;
+  border-radius: 50%; background: var(--store-card);
+}
+.sf-bp-num {
+  position: absolute; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 14px; font-weight: 800;
+  background: var(--store-accent); color: var(--store-accent-text);
+}
+.sf-bp-num[data-n='1'] { inset-block-start: 0; inset-inline-start: calc(50% - 17px); }
+.sf-bp-num[data-n='2'] { inset-block-end: 12%; inset-inline-start: 0; }
+.sf-bp-num[data-n='3'] { inset-block-end: 12%; inset-inline-end: 0; }
+/* One numbered list, two sections: the promises and «كيف بتستعمله» are
+   both «short lines, in order», and a second list rule would be the same
+   decision twice. */
+.sf-bp-vows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: vow; }
+.sf-bp-vows li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 15.5px; line-height: 1.7; }
+.sf-bp-vows li::before { counter-increment: vow; content: counter(vow); color: var(--store-accent-ink); font-weight: 800; }
+/* The dark panels sit INSIDE the world rather than on top of it. */
+.sf-bp-close, .sf-bp-video { background: var(--store-card); }
+.sf-bp-close { display: grid; gap: 14px; }
+/* The video is a POSTER until it is asked for: «ما بيتحمّل إلا لما يوصله
+   السكرول، وقبله بتطلع صورة» — lazy, with its poster, and no autoplay. */
+.sf-bp-close img, .sf-bp-video video {
+  width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--store-radius); display: block;
+}
+.sf-bp-faq summary { font-weight: 700; cursor: pointer; min-height: 32px; padding: 10px 14px; }
+.sf-bp-faq p { margin: 0; padding: 0 14px 12px; }
+/* STICKY, NOT FIXED. A fixed bar inside a preview escapes its box — the
+   bug the owner photographed on the templates screen — and a sticky one
+   cannot leave the article it belongs to. */
+.sf-bp-sticky {
+  position: sticky; inset-block-end: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px; background: var(--store-card);
+  border-block-start: 1px solid var(--store-border);
+}
+@media (min-width: 720px) {
+  .sf-bw-stage { grid-template-columns: 1.1fr .9fr; align-items: center; padding: 30px; }
+  .sf-bp-hero, .sf-bp-close { grid-template-columns: 1fr 1fr; align-items: center; }
+  .sf-card[data-card='world'] { grid-column: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .sf-bw-stage { transition: none; } }
+`;
+
+/**
+ * THE MINIATURE'S RULES — THE GALLERY'S, AND NO SHOP'S.
+ *
+ * `SkinPreview` draws the real `StoreHero` at preview scale, so the two
+ * can never promise different first screens. Its type sizes are a
+ * DASHBOARD concern: a shop renders nothing with `data-mini` on it, and
+ * measured, these were 0.7 KB of every shopper's stylesheet for a screen
+ * only a seller opens. So they ship with the gallery instead.
+ */
+export const FAMILY_MINI_CSS = `
+.sf-hx[data-mini] .sf-hx-proof { padding: 6px; gap: 4px; }
+.sf-hx[data-mini] .sf-hx-fact { font-size: 8px; padding-inline-start: 11px; }
+.sf-hx[data-mini] .sf-bw-stage { padding: 8px; gap: 6px; }
+.sf-hx[data-mini] .sf-bw-title { font-size: 11px; }
+.sf-hx[data-mini] .sf-bw-ghost { font-size: 26px; }
+.sf-hx[data-mini] .sf-bw-all { min-height: 0; padding: 3px 9px; font-size: 8px; }
+.sf-hx[data-mini] .sf-bw-pick { padding: 6px 8px; gap: 6px; }
+.sf-hx[data-mini] .sf-bw-dot { width: 26px; }
+.sf-hx[data-mini] .sf-bw-dot .sf-hx-img { width: 24px; height: 24px; }
+`;
+
+/** Each family's own rules, by the id `familyOf` returns. */
+export const FAMILY_CSS: Readonly<Record<FamilyId, string>> = Object.freeze({
+  clinic: CLINIC_CSS,
+  herbalist: HERBALIST_CSS,
+  trend: TREND_CSS,
+  brand: BRAND_CSS,
+});
+
+/** What a shop inlines beside `SHOP_SHEET` — minified once, at load. */
+export const FAMILY_SHEET: Readonly<Record<FamilyId, string>> = Object.freeze(
+  Object.fromEntries(FAMILY_IDS.map((id) => [id, minifyCss(FAMILY_CSS[id])])) as Record<FamilyId, string>
+);
+
+/**
+ * All four, for the two readers that need every family at once: the
+ * template gallery, which draws a preview of each, and the guard that
+ * checks no declared variant is left with nothing behind it.
+ */
+export const ALL_FAMILY_CSS = FAMILY_IDS.map((id) => FAMILY_CSS[id]).join('\n');

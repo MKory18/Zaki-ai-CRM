@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import { LAYOUT_SLOTS, RETIRED_VARIANTS, isRetired, liveVariants, effectiveVariant, retiredNoteAr, type LayoutSlot } from './layout-slots';
-import { HERO_CSS, SHOP_SHEET } from '@/components/storefront/styles';
+import { ALL_FAMILY_CSS, HERO_CSS, SHOP_SHEET } from '@/components/storefront/styles';
 import { StoreHero } from '@/components/storefront/StoreHero';
 import { repoFile, stripComments } from './guard-source';
 
@@ -52,7 +52,22 @@ const SLOT_ATTR: Partial<Record<LayoutSlot, string>> = {
   productPage: 'data-product',
 };
 
-const sheet = SHOP_SHEET;
+/**
+ * WHAT A SHOP CAN SHIP — the base sheet AND every family's own slice.
+ *
+ * This read `SHOP_SHEET` alone, which was the whole stylesheet until the
+ * four families split it: a shop now inlines the base plus the rules of
+ * the family it wears (see the note over `FAMILY_CSS` for the
+ * measurement that forced it — the four together are 8.6 KB against a
+ * 50 KB budget the base already spends 43.3 of).
+ *
+ * So the guard reads base + ALL of them. A variant whose rule lives in
+ * its family's slice is still drawn; a variant with no rule in any of
+ * them is still the silent-default failure this file exists to make
+ * impossible. `shop-budget.test.ts` is where «and no shop ships more
+ * than one of them» is held.
+ */
+const sheet = SHOP_SHEET + ALL_FAMILY_CSS;
 
 describe('the parts catalogue has no empty names', () => {
   it('and the sweep is reading the real stylesheet', () => {
