@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LAYOUT_SLOTS } from './layout-slots';
 import { richTextSchema } from './rich-text';
+import { COUNTDOWN_SOURCES, countdownRefusal, type CountdownFact } from './countdown';
 import { fontValueSchema } from './landing-theme';
 
 /**
@@ -218,7 +219,28 @@ const offers = z.object({
   title: richTextSchema(120).default('اختر العرض المناسب'),
 });
 
-/** What other buyers said. Plain names, no invented verification badge. */
+/**
+ * WHAT OTHER BUYERS SAID — THE SELLER'S HALF OF IT.
+ *
+ * Owner decision D8: social proof has two sources per product, يدوي and
+ * تلقائي. This block is the MANUAL one, and it stays manual for ever: an
+ * item here is a sentence the seller transcribed out of WhatsApp, a
+ * Facebook comment or a phone call, and however true it is, NOBODY HERE
+ * CAN CHECK IT.
+ *
+ * So each item now records WHERE IT CAME FROM, an optional PRIVATE proof
+ * image, and WHO added it and WHEN. The source is not decoration: the
+ * moderation screen lists manual items beside verified ones, and «واتساب»
+ * is the honest label for what it is. The proof image is never rendered on
+ * a public page — it is somebody's chat, kept so the claim can be checked,
+ * not shown.
+ *
+ * AND AN ITEM HERE CAN NEVER WEAR «مشتري مؤكَّد». That badge is bound to a
+ * `ProductReview` row with an `orderId` (src/lib/product-reviews.ts), and
+ * there is no field in this schema that could carry one — which is the
+ * enforcement, the same way the `comparison` block has nowhere to type a
+ * competitor's name.
+ */
 const reviews = z.object({
   ...base,
   type: z.literal('reviews'),
@@ -227,6 +249,19 @@ const reviews = z.object({
     name: richTextSchema(60).default(''),
     text: richTextSchema(400).default(''),
     stars: z.number().int().min(1).max(5).default(5),
+    /**
+     * واتساب · تعليق فيسبوك · مكالمة · غيره.
+     *
+     * `order` is deliberately NOT one of the options: a verified rating
+     * never arrives through this editor, and offering the word here would
+     * be offering the badge.
+     */
+    source: z.enum(['whatsapp', 'facebook', 'call', 'other']).default('other'),
+    /** A PRIVATE screenshot of the message. Never rendered publicly. */
+    proofImage: z.string().max(2048).default(''),
+    /** Who typed this in, and when — the id and an ISO day, set on save. */
+    addedBy: z.string().max(80).default(''),
+    addedAt: z.string().max(40).default(''),
   })).max(12).default([]),
 });
 
@@ -361,7 +396,26 @@ const urgency = z.object({
   ...base,
   type: z.literal('urgency'),
   text: richTextSchema(140).default(''),
-  /** 0 = no countdown. */
+  /**
+   * WHERE THIS COUNTDOWN'S ENDING COMES FROM — owner decision D8.
+   *
+   * `visitor` is what this block always did: `minutes` counting down from
+   * page load, restarting for the next visitor, and NOTHING HAPPENING at
+   * zero. It stays, and the editor now says so out loud — see
+   * `VISITOR_TIMER_WARNING` in src/lib/countdown.ts.
+   *
+   * `offer` reads `Offer.endsAt`, which is the moment the price itself
+   * stops applying — so the clock and the price are ONE FACT and the offer
+   * really does stop at zero. It is REFUSED at the save door when the
+   * product has no offer with a future ending (`countdownRefusal`): a
+   * countdown wearing the word «تلقائي» with nothing automatic behind it
+   * would be the dishonest widget with a better name on it.
+   *
+   * Defaults to `visitor` so every page saved before this keeps meaning
+   * exactly what it meant.
+   */
+  countdown: z.enum(COUNTDOWN_SOURCES).default('visitor'),
+  /** 0 = no countdown. Read only when `countdown` is `visitor`. */
   minutes: z.number().int().min(0).max(1440).default(0),
   /** Show the real remaining stock when it is genuinely low. */
   showRealStock: z.boolean().default(false),
@@ -541,6 +595,75 @@ export type LandingSection = z.infer<typeof landingSectionSchema>;
 export type SectionType = LandingSection['type'];
 
 export const landingSectionsSchema = z.array(landingSectionSchema).max(40);
+
+/**
+ * WHO ADDED THIS MANUAL REVIEW, AND WHEN — STAMPED BY THE SERVER.
+ *
+ * Owner decision D8 asks a manual item to record «who added it and when».
+ * The editor has the fields, and the editor must NOT be the one that fills
+ * them: a value the browser sends is a value the person at the browser can
+ * choose, and «أضافه المالك» typed by somebody else is worse than no
+ * attribution at all.
+ *
+ * So the two doors that write sections call this, and it stamps only the
+ * items that have no stamp yet. An item already attributed keeps its
+ * author: the seller who tidies a typo in somebody else's transcription is
+ * not its source, and overwriting it would quietly reassign the claim. The
+ * edit itself is in the audit log, which is where «who changed what» has
+ * always lived.
+ *
+ * A DAY, not a timestamp. The hour a seller typed a WhatsApp message in is
+ * a detail about their evening.
+ */
+export function stampManualReviews(
+  sections: LandingSection[],
+  by: { name: string; at?: Date }
+): { sections: LandingSection[]; stamped: number } {
+  const day = (by.at ?? new Date()).toISOString().slice(0, 10);
+  let stamped = 0;
+  const out = sections.map((s) => {
+    if (s.type !== 'reviews') return s;
+    return {
+      ...s,
+      items: s.items.map((item) => {
+        // Only a REAL item: an empty row the editor opened and nobody
+        // filled is not somebody's transcription.
+        if (item.addedBy || !item.text.trim()) return item;
+        stamped++;
+        return { ...item, addedBy: by.name.slice(0, 80), addedAt: day };
+      }),
+    };
+  });
+  return { sections: out, stamped };
+}
+
+/**
+ * WHY A COUNTDOWN IS REFUSED AT THE SAVE DOOR, or null.
+ *
+ * The honesty rule cannot live in the zod schema: the schema sees one
+ * block and the question is about the PRODUCT'S OFFERS, which are rows in
+ * another table. So it is checked where the sections are written — the two
+ * doors that write them, `/api/landing-pages/[id]/content` and
+ * `/api/store/design` — against the offers read there.
+ *
+ * REFUSED AND NOT CORRECTED. Quietly rewriting `countdown: 'offer'` back
+ * to `'visitor'` would leave the seller looking at a screen that says
+ * «تلقائي» over the per-visitor timer, which is the exact confusion this
+ * item exists to end. The save fails and the sentence says what to do.
+ */
+export function countdownRefusalIn(
+  sections: readonly LandingSection[],
+  fact: CountdownFact
+): string | null {
+  for (const s of sections) {
+    if (s.type !== 'urgency') continue;
+    // A disabled block is not on the page and not a promise to anybody.
+    if (!s.enabled) continue;
+    const refusal = countdownRefusal(s.countdown, fact);
+    if (refusal) return refusal;
+  }
+  return null;
+}
 
 // ─────────────────────────────────────────────────────
 // Names, for the editor

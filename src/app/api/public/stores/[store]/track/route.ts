@@ -116,6 +116,11 @@ export async function POST(req: Request, ctx: Ctx) {
         customer: { phone: normalized },
       },
       select: {
+        // The id is read for ONE purpose: to sign the rating link
+        // (src/lib/review-link.ts). It never leaves this process — what
+        // goes out is an HMAC, and `TRACKING_FIELDS` is checked against
+        // the payload in both directions so it cannot start to.
+        id: true,
         orderNumber: true,
         createdAt: true,
         shippingStatus: true,
@@ -135,7 +140,9 @@ export async function POST(req: Request, ctx: Ctx) {
       window = windows.get(order.regionId) ?? null;
     }
 
-    return NextResponse.json(trackingView(order, window), {
+    // The shop's own address, so the rating link stays on the host the
+    // customer is already on — see `PublicTracking.ratingPath`.
+    return NextResponse.json(trackingView({ ...order, storeSlug: store.slug }, window), {
       headers: { ...CORS, 'Cache-Control': 'no-store' },
     });
   } catch (e) {

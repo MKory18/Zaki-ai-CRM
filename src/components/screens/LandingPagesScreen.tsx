@@ -4,6 +4,7 @@ import { TemplateGallery } from '@/components/ui/TemplateGallery';
 import { StructureGallery } from '@/components/store/StructureGallery';
 import { SlotFields, type SlotCopy } from '@/components/store/SlotFields';
 import { TemplatePreview } from '@/components/landing/TemplatePreview';
+import { BuildMyLandingPage, type BuiltProposal } from '@/components/landing-editor/BuildMyLandingPage';
 import { LANDING_STRUCTURES } from '@/lib/landing-structures';
 import { DIALECTS, DIALECT_LABEL, structureToSections, type Dialect } from '@/lib/landing-structure';
 import { newSection } from '@/lib/landing-sections';
@@ -94,6 +95,16 @@ export function LandingPagesScreen() {
    * خانة. اكتب بنفسك: الدليل، الضمان.» is a list of work, and a message
    * that disappears after four seconds is a list nobody keeps.
    */
+  /**
+   * THE WORLD'S COLOUR «ابنيلي صفحة الهبوط» DERIVED, IF THE OWNER KEPT IT.
+   *
+   * Held here rather than inside the panel because it is sent with the
+   * page: the panel PROPOSES and this screen's own «إنشاء» is the only
+   * thing that creates anything — «ولا إشي بينشر لحاله».
+   */
+  const [accent, setAccent] = useState<string>('');
+  /** What the proposal filled in, for the line that says so above the fields. */
+  const [builtNote, setBuiltNote] = useState<string | null>(null);
   const [wroteNote, setWroteNote] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -180,6 +191,42 @@ export function LandingPagesScreen() {
       return next;
     });
     setWroteNote(data.note ?? null);
+  };
+
+  /**
+   * «ابنيلي صفحة الهبوط» CAME BACK — AND NOTHING IS SAVED BY IT.
+   *
+   * The proposal lands in the SAME form state a seller fills by hand: the
+   * structure it chose becomes the selected structure, the colour it derived
+   * from the photograph becomes the page's accent, and the fields it read
+   * off the box become the headline and the strapline of the structure's
+   * own first two slots — the only two slots every one of the ten declares.
+   *
+   * The rest of the words stay the seller's: «اكتب النصوص بالذكاء
+   * الاصطناعي» fills the remaining slots of whatever structure is now
+   * selected, which is the existing door and the existing press. Writing
+   * all of them from a page-builder answer would be the second landing
+   * system `landing-copy-brief.ts` refuses to build.
+   */
+  const applyProposal = (proposal: BuiltProposal) => {
+    setForm((prev) => ({ ...prev, structure: proposal.structure }));
+    setAccent(proposal.accent);
+    const chosen = LANDING_STRUCTURES.find((x) => x.id === proposal.structure);
+    const headline = chosen?.slots[0]?.key;
+    const second = chosen?.slots[1]?.key;
+    const name = proposal.fields.nameAr?.trim();
+    const tagline = proposal.fields.tagline?.trim();
+    setCopy((prev) => {
+      const next = { ...prev };
+      if (headline && name) next[headline] = { ...next[headline], [form.dialect]: name };
+      if (second && tagline) next[second] = { ...next[second], [form.dialect]: tagline };
+      return next;
+    });
+    setBuiltNote(
+      `اخترنا «${chosen?.name ?? proposal.structure}»، و${
+        proposal.accent ? 'لون العالم من الصورة' : 'ألوان المكتبة'
+      }، و${proposal.promises.length} وعد داخل الصفحة. كلّه بينغيّر تحت.`
+    );
   };
 
   /** What the template previews should be selling: the product just picked. */
@@ -364,7 +411,15 @@ export function LandingPagesScreen() {
        */
       const start =
         source === 'structure'
-          ? { structure: form.structure, skin: form.skin || undefined, copy, dialect: form.dialect }
+          ? {
+              structure: form.structure,
+              skin: form.skin || undefined,
+              copy,
+              dialect: form.dialect,
+              // The photograph's own colour, over the skin's look. Empty
+              // when nothing derived one or the owner switched it off.
+              ...(accent ? { accent } : {}),
+            }
           : { template: form.template };
       const data = await crmApi('/api/landing-pages', {
         method: 'POST',
@@ -626,6 +681,30 @@ export function LandingPagesScreen() {
             </div>
           ) : (
             <>
+              {/*
+                THE ONE PRESS, ABOVE THE THREE STEPS — AND IT NEEDS THE
+                PRODUCT, because the page is built out of that product's own
+                written specs and photograph. Disabled with its reason
+                beside it rather than hidden: a control that vanishes
+                teaches nobody what to pick first.
+              */}
+              {form.productId ? (
+                <BuildMyLandingPage
+                  productId={form.productId}
+                  productName={chosenProduct?.name}
+                  onApply={applyProposal}
+                />
+              ) : (
+                <p className="rounded-lg border border-dashed border-[var(--sys-border)] p-3 text-xs text-[var(--sys-muted-foreground)]">
+                  «ابنيلي صفحة الهبوط» — اختر المنتج أوّلاً، وبتنبني الصفحة من مواصفاته وصورته.
+                </p>
+              )}
+              {builtNote && (
+                <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 text-xs text-[var(--sys-muted-foreground)]">
+                  {builtNote}
+                </p>
+              )}
+
               <div>
                 <label className="text-xs font-semibold text-[var(--sys-foreground)]">1 · البنية — ترتيب القصّة</label>
                 <p className="mb-2 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
