@@ -27,6 +27,7 @@ import {
   RiWallet3Fill, RiWallet3Line,
   RiEBike2Fill, RiEBike2Line, RiSearchFill, RiSearchLine, RiFileTextFill, RiFileTextLine, RiGlobalFill, RiGlobalLine, RiLayoutFill, RiLayoutLine, RiPaletteFill, RiPaletteLine, RiShieldKeyholeFill, RiShieldKeyholeLine, RiSignpostFill, RiSignpostLine, RiTreeFill, RiTreeLine,
   RiShutDownFill, RiShutDownLine, RiSideBarFill, RiSideBarLine,
+  RiStarFill, RiStarLine,
   type RemixiconComponentType,
 } from '@remixicon/react';
 
@@ -121,6 +122,9 @@ export const ICONS: Record<string, Pair> = {
   Search: pair(RiSearchLine, RiSearchFill),
   Signpost: pair(RiSignpostLine, RiSignpostFill),
   Radio: pair(RiBroadcastLine, RiBroadcastFill),
+  // «الآراء». A star, because a rating is stars everywhere a shopper has
+  // ever seen one, and a menu item is not the place to be original.
+  Star: pair(RiStarLine, RiStarFill),
 };
 
 /**

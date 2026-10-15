@@ -773,6 +773,25 @@ async function vendorError(res: Response, model: string): Promise<Error> {
   return new Error(`AI_HTTP_${res.status}|${model}|${scrubbed.replace(/\s+/g, ' ').trim()}`);
 }
 
+/**
+ * A PICTURE THAT GOES WITH THE WORDS — base64, never a URL.
+ *
+ * A URL would mean the vendor fetching it, which means the image must be
+ * public, which means a seller's product photograph behind a signed media
+ * route either fails or has to be opened to the world. The bytes go in the
+ * request instead, so nothing about the shop has to be reachable from
+ * outside to make this work.
+ *
+ * Only the three types this product stores (`storage.ts`:
+ * `ALLOWED_MIME_TYPES`) — a type list that is wider than what can be
+ * uploaded is a list that invites somebody to pass a PDF.
+ */
+export interface AiImage {
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp';
+  /** The raw bytes, base64, with no `data:` prefix. */
+  base64: string;
+}
+
 export interface ChatRequest {
   companyId: string;
   /**
@@ -785,6 +804,24 @@ export interface ChatRequest {
   /** A key from AI_JOBS. Its prompt is resolved per company. */
   job?: string;
   user: string;
+  /**
+   * PICTURES THE MODEL IS MEANT TO READ — and the caller has already asked
+   * whether it can.
+   *
+   * The landing-page builder is the first caller: the owner presses
+   * «ابنيلي صفحة الهبوط» and the model reads the box in the product's own
+   * photograph. `ai-vision.ts` decides whether the chosen model reads
+   * images at all, and a caller that skips that check will have its image
+   * ignored by a text model — or, worse, answered with an invented box.
+   *
+   * ⚠️ A PRODUCT PHOTOGRAPH IS NOT CUSTOMER DATA, which is why this is
+   * allowed to leave the building at all: the owner's rule names «اسم ·
+   * رقم · عنوان», and S3's own text settles it — «صور المنتج مش بيانات
+   * زباين، فبتمشي حسب توجيه إعدادات الذكاء». A caller that ever wants to
+   * send a picture WITH a person in it passes `localOnly` as well, and
+   * this field changes nothing about that check.
+   */
+  images?: readonly AiImage[];
   /** Ask for a JSON object back. Only OpenRouter and OpenAI honour it. */
   json?: boolean;
   timeoutMs?: number;
@@ -846,6 +883,38 @@ export class AiNotLocal extends Error {
   constructor(readonly provider: AiProvider) {
     super('AI_NOT_LOCAL');
   }
+}
+
+/**
+ * THE USER TURN, WITH OR WITHOUT PICTURES.
+ *
+ * One function for both vendor shapes, so the decision «a call with no
+ * images sends exactly what it always sent» is made once. That decision is
+ * the reason it returns a plain string in the common case: every assertion
+ * in this repository about an outgoing payload — and `ai-provider.test.ts`
+ * has several — was written against `content: req.user`, and a wrapper
+ * applied unconditionally would have rewritten all of them to buy nothing.
+ */
+function imageContent(req: ChatRequest, shape: 'anthropic' | 'openai'): unknown {
+  const images = (req.images ?? []).filter((i) => i && i.base64);
+  if (images.length === 0) return req.user;
+
+  if (shape === 'anthropic') {
+    return [
+      ...images.map((i) => ({
+        type: 'image',
+        source: { type: 'base64', media_type: i.mediaType, data: i.base64 },
+      })),
+      { type: 'text', text: req.user },
+    ];
+  }
+  return [
+    ...images.map((i) => ({
+      type: 'image_url',
+      image_url: { url: `data:${i.mediaType};base64,${i.base64}` },
+    })),
+    { type: 'text', text: req.user },
+  ];
 }
 
 /**
@@ -962,7 +1031,27 @@ export async function aiChat(req: ChatRequest): Promise<string> {
           model: route.model,
           max_tokens: 2000,
           system,
-          messages: [{ role: 'user', content: req.user }],
+          messages: [
+            {
+              role: 'user',
+              /*
+               * ── THE PICTURE BEFORE THE WORDS, AND ANTHROPIC'S OWN SHAPE ──
+               *
+               * Anthropic takes `{ type: 'image', source: { type: 'base64',
+               * media_type, data } }` and OpenAI takes an `image_url` with a
+               * data URI; they are different enough that one adapter would
+               * have to lie to one of them. The image goes FIRST because
+               * both vendors document that order for «read this, then do
+               * what I say», and a model handed instructions before the
+               * picture answers about the instructions.
+               *
+               * With no images the content stays a plain STRING — the shape
+               * every call in this product has always sent, so nothing that
+               * does not pass a picture changes at all.
+               */
+              content: imageContent(req, 'anthropic'),
+            },
+          ],
         }),
       });
       if (!res.ok) throw await vendorError(res, route.model);
@@ -1001,7 +1090,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
         model: route.model,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: req.user },
+          { role: 'user', content: imageContent(req, 'openai') },
         ],
         ...(req.json ? { response_format: { type: 'json_object' } } : {}),
       }),

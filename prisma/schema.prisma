@@ -63,6 +63,7 @@ model Company {
   penaltyRules          PenaltyRule[]
   payslips              Payslip[]
   penalties             Penalty[]
+  productReviews        ProductReview[]
 
   @@map("companies")
 }
@@ -73,13 +74,13 @@ model Company {
 // platform: META | TIKTOK | SNAPCHAT ; scope: GLOBAL | PUBLIC | LANDING_PAGES
 // Loading/tracking code is 100% hard-coded in the app — never user-controlled.
 model TrackingPixel {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   companyId String
   platform  String // META | TIKTOK | SNAPCHAT | GOOGLE (allowlisted server-side)
   name      String
   pixelId   String // validated per-platform (digits / alphanumeric / uuid)
-  enabled   Boolean  @default(true)
-  scope     String   @default("GLOBAL") // GLOBAL | PUBLIC | LANDING_PAGES
+  enabled   Boolean @default(true)
+  scope     String  @default("GLOBAL") // GLOBAL | PUBLIC | LANDING_PAGES
 
   /// WHICH SHOP'S VISITORS THIS PIXEL IS TOLD ABOUT — «فصل البيكسل لكل متجر
   /// وبلد حتى لو ح اولد بلد او متجر جديد».
@@ -337,6 +338,8 @@ model User {
   notifications                 Notification[]
   customerBlocks                CustomerBlock[]         @relation("CustomerBlockedBy")
   customerBlockReleases         CustomerBlock[]         @relation("CustomerBlockReleasedBy")
+  reviewsAdded                  ProductReview[]         @relation("ReviewAuthor")
+  reviewsHidden                 ProductReview[]         @relation("ReviewHider")
 
   @@index([companyId])
   @@index([role])
@@ -384,6 +387,25 @@ model Product {
   /// every old link without being told what it was for.
   previousSlugs String?  @db.Text
   categoryId    String?
+  /// WHERE THIS PRODUCT'S SOCIAL PROOF COMES FROM — owner decision D8.
+  ///
+  /// `manual` · `auto` · `both`, and NULL, which READS AS `manual` in
+  /// src/lib/product-reviews.ts. Nullable with no default deliberately:
+  /// the migration writes into no existing row, and a product with no
+  /// delivered orders has nothing automatic to show, so «manual» is the
+  /// only honest fallback.
+  ///
+  /// It is per PRODUCT and not per store because the choice is about one
+  /// article's evidence. A shop may sell one thing with forty delivered
+  /// orders and launch another this morning; a store-wide switch would
+  /// make the new one borrow the old one's credibility.
+  ///
+  /// At five published VERIFIED reviews the system moves a product here to
+  /// `auto` by itself and tells the owner, who can move it back — the
+  /// floor is `AUTO_SWITCH_FLOOR`, and it is the same 5 as
+  /// `delivery-time.ts`'s `MIN_DELIVERIES` on purpose: one number a reader
+  /// has already learned.
+  reviewMode    String?  @map("review_mode")
   /// THIS PRODUCT'S ANSWERS to its category's questions, as JSON.
   ///
   /// Read against the category's schema and kept only where they still fit
@@ -405,6 +427,7 @@ model Product {
   recommendations    LandingPageRecommendation[]
   addOns             OrderAddOn[]
   images             ProductImage[]
+  reviews            ProductReview[]
 
   @@unique([companyId, storeId, sku])
   @@index([companyId, storeId])
@@ -433,6 +456,101 @@ model ProductImage {
 
   @@index([companyId, productId])
   @@map("product_images")
+}
+
+/// WHAT A BUYER SAID — and whether anybody can check that they bought it.
+///
+/// Owner decision D8, design docs/storefront/AUDIT.md §7.6. It lives in the
+/// CORE and not in an app: publishing or hiding a review WRITES AN AUDIT
+/// ROW, and `stages.md:200` forbids an app from editing the audit log.
+///
+/// ── ALSO HELD BY THE DATABASE: `product_reviews_order_key` ──
+///
+/// `CREATE UNIQUE INDEX product_reviews_order_key ON product_reviews
+/// (order_id) WHERE order_id IS NOT NULL` — in
+/// 20261015240000_reviews_and_the_counter. Prisma cannot express a partial
+/// unique index, so there is nothing on this model to find it by, which is
+/// what `a-rule-the-schema-hides.test.ts` exists to stop; this paragraph is
+/// the fix.
+///
+/// It does TWO jobs that are really one. `orderId` is what tells a verified
+/// review from a manual one, so an `@@unique([orderId])` here would cover
+/// every manual row as well — and Postgres counts each NULL as distinct, so
+/// it would appear to constrain them while constraining nothing. And it is
+/// the whole of «a rating link works ONCE»: the link stores no token, it is
+/// an HMAC over the order id (src/lib/review-link.ts), and a second
+/// submission on a perfectly valid link lands on this index. The refusal is
+/// loud instead of being a second opinion from one buyer.
+model ProductReview {
+  id        String  @id @default(uuid())
+  companyId String
+  storeId   String? @map("store_id")
+  productId String  @map("product_id")
+  /// THE DELIVERED ORDER THIS RATING CAME FROM, or null for a manual item.
+  ///
+  /// It is the badge. «مشتري مؤكَّد» is rendered off the presence of this
+  /// column and nothing else — never off `source`, never off a flag a
+  /// seller could set — so a transcribed WhatsApp message cannot wear it,
+  /// because there is no order to put here.
+  orderId   String? @map("order_id")
+  /// One to five. The database holds the range too:
+  /// CHECK (rating >= 1 AND rating <= 5), in the same migration.
+  rating    Int
+  /// THE CUSTOMER'S OWN WORDS, AS TEXT AND ONLY EVER AS TEXT.
+  ///
+  /// Not rich text: every other free field on a page is the SELLER's and
+  /// goes through src/lib/rich-text.ts's allowlist. This is what a stranger
+  /// typed into a public form, rendered as a React text child so there is
+  /// no markup question to get wrong. It is DATA — not to a renderer and
+  /// not to a model: any AI reading it goes through
+  /// `aiChat({ localOnly: true })`.
+  text      String? @db.Text
+  /// A first name and a city, and there is nowhere here for anything else.
+  /// The privacy promise is kept by the ABSENCE of a phone column, an
+  /// address column and a full-name column, not by a filter in a renderer
+  /// somebody can widen.
+  firstName String? @map("first_name")
+  city      String?
+  /// order | whatsapp | facebook | call | other — see REVIEW_SOURCES.
+  source    String
+  /// PENDING | PUBLISHED | HIDDEN
+  status    String  @default("PENDING")
+  /// The tick on the rating page.
+  ///
+  /// Kept apart from `status` on purpose: a moderator may publish, and may
+  /// not consent on somebody else's behalf. A row with `consent: false` is
+  /// never shown however its status reads.
+  consent   Boolean @default(false)
+
+  publishedAt  DateTime? @map("published_at")
+  /// Hiding is for abuse, personal data or off topic — and it carries the
+  /// reason. «Hidden» with no reason is a seller deleting a three-star and
+  /// calling it moderation, so the service refuses an empty one.
+  hiddenReason String?   @map("hidden_reason")
+  hiddenById   String?   @map("hidden_by_id")
+  hiddenAt     DateTime? @map("hidden_at")
+  /// An optional PRIVATE proof image for a manual item — the screenshot of
+  /// the message the seller is transcribing. Never rendered publicly: it is
+  /// somebody's chat, and it is here so the claim can be checked, not shown.
+  proofImage   String?   @map("proof_image")
+  createdById  String?   @map("created_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  store     Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// SetNull and not Cascade: an order leaving the system does not retract
+  /// the rating its customer gave. The row loses its badge, because the
+  /// badge IS this column, and stays a review somebody wrote.
+  order     Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdBy User?   @relation("ReviewAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  hiddenBy  User?   @relation("ReviewHider", fields: [hiddenById], references: [id], onDelete: SetNull)
+
+  @@index([productId, status])
+  @@index([companyId, status])
+  @@index([storeId])
+  @@map("product_reviews")
 }
 
 model ProductionBatch {
@@ -559,13 +677,13 @@ model InventoryMovement {
 }
 
 model Offer {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   companyId        String
   productId        String
   name             String
-  quantity         Int      @default(1)
+  quantity         Int       @default(1)
   // Units given free on top of `quantity` — "3 قطع + 1 مجاناً".
-  freeQuantity     Int      @default(0)
+  freeQuantity     Int       @default(0)
   sellingPrice     Float
   /// The CEILING on a struck-through "was" price. Display only: it never
   /// enters computeCod, and it is shown only as far as real delivered orders
@@ -580,8 +698,8 @@ model Offer {
   /// while the offer carries on, and the customer learns the number is
   /// decoration. `liveOfferWhere` is the only reader of both.
   endsAt           DateTime?
-  discount         Float    @default(0.0)
-  deliveryIncluded Boolean  @default(true)
+  discount         Float     @default(0.0)
+  deliveryIncluded Boolean   @default(true)
   /// SHOWN ONLY AFTER AN ORDER EXISTS — «زيد علبة كمان؟ 15 بدل 25».
   ///
   /// The one fact that separates the offer on the thank-you screen from the
@@ -600,13 +718,13 @@ model Offer {
   /// One per product, kept by `clearOtherPostOrderOffers` and not by a
   /// partial unique index — see the migration for why the index cannot
   /// work here.
-  postOrderOffer   Boolean  @default(false)
+  postOrderOffer   Boolean   @default(false)
   // The bundle preselected on the landing page and the quick-order screen.
-  isDefault        Boolean  @default(false)
-  sortOrder        Int      @default(0)
-  status           String   @default("ACTIVE") // ACTIVE, INACTIVE
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isDefault        Boolean   @default(false)
+  sortOrder        Int       @default(0)
+  status           String    @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -656,14 +774,14 @@ model Customer {
 }
 
 model Order {
-  id                        String    @id @default(uuid())
-  companyId                 String
-  orderNumber               String
-  customerId                String
+  id             String  @id @default(uuid())
+  companyId      String
+  orderNumber    String
+  customerId     String
   /// The channel this order came through. The free-text `source` below is
   /// kept as it was written, so an order never loses where it said it came
   /// from when a channel is renamed or retired.
-  channelId                 String?
+  channelId      String?
   /// The paid campaign that brought this order, when one did.
   ///
   /// Separate from `channelId`: a channel is the door (Facebook, WhatsApp,
@@ -672,19 +790,19 @@ model Order {
   /// and telling them apart is the entire point of the screen.
   // No @map: this table is camelCase throughout, and matching the table
   // beats matching the newer convention.
-  campaignId                String?
+  campaignId     String?
   /// mobile | tablet | desktop — for an order placed on a public page, the
   /// kind of device it came from. A class, never the raw user agent: a
   /// landing page promises no personal data. Null for every other door.
-  deviceClass               String?
-  productId                 String
-  offerId                   String?
-  quantity                  Int       @default(1)
-  sellingPrice              Float
-  shippingCost              Float     @default(0.0)
-  discountAmount            Float     @default(0.0)
-  totalAmount               Float
-  currency                  String    @default("USD")
+  deviceClass    String?
+  productId      String
+  offerId        String?
+  quantity       Int     @default(1)
+  sellingPrice   Float
+  shippingCost   Float   @default(0.0)
+  discountAmount Float   @default(0.0)
+  totalAmount    Float
+  currency       String  @default("USD")
   // Ownership model (Decision 1)
   // createdById = the staff account that ENTERED this order, whatever its
   // role. `moderatorId` only ever recorded a MODERATOR, so an order typed
@@ -692,7 +810,7 @@ model Order {
   // fact survived only in activity rows. Nullable and never backfilled:
   // a public storefront order has no staff creator, and an order from
   // before this column exists has none to invent.
-  createdById               String?
+  createdById    String?
 
   // moderatorId = original MODERATOR who created/entered the order (semantic preserved)
   moderatorId               String?
@@ -890,6 +1008,15 @@ model Order {
   statusLogs            OrderStatusLog[]
   contactAttempts       OrderContactAttempt[]
   telegramMessages      TelegramMessage[]
+  /// AT MOST ONE, AND A LIST ANYWAY.
+  ///
+  /// `ProductReview?` would be a one-to-one, and Prisma then demands
+  /// `@unique` on `orderId` — a FULL unique index, which also constrains
+  /// the manual rows that have no order and whose NULLs Postgres counts as
+  /// distinct. The real rule is PARTIAL
+  /// (`product_reviews_order_key`, named on ProductReview), so the schema
+  /// says «many» and the database says «one». `oneRatingPerOrder` reads it.
+  reviews               ProductReview[]
 
   @@unique([companyId, orderNumber])
   @@unique([companyId, merchantRef])
@@ -1066,10 +1193,10 @@ model AiDailySummary {
 // ──────────────────────────────────────────────────────────────────────
 
 model Role {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   companyId String? // null = system-wide role template
   name      String
-  isSystem  Boolean  @default(false)
+  isSystem  Boolean @default(false)
 
   /// THE LOOK A NEW PERSON IN THIS ROLE OPENS ON — and nothing more.
   ///
@@ -1079,9 +1206,9 @@ model Role {
   /// `nav_arrangements`: a BASE for the role, overridden per person.
   ///
   /// Null = the product's default, which is what every role has today.
-  systemTheme String? @map("system_theme")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  systemTheme String?  @map("system_theme")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   company     Company?                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
@@ -1134,11 +1261,6 @@ model NavArrangement {
   role    Role?   @relation(fields: [roleId], references: [id], onDelete: Cascade)
   user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([companyId, roleId])
-  @@index([companyId, userId])
-  @@index([companyId, surface])
-  @@map("nav_arrangements")
-
   /// ── TWO PARTIAL UNIQUE INDEXES THE SCHEMA CANNOT EXPRESS ──
   ///
   /// `nav_arrangements_role_surface_key`
@@ -1162,6 +1284,11 @@ model NavArrangement {
   /// here because `pg_indexes` and not this file is the answer to «what
   /// does the database actually enforce» — which is a thing worth being
   /// able to read in one place.
+
+  @@index([companyId, roleId])
+  @@index([companyId, userId])
+  @@index([companyId, surface])
+  @@map("nav_arrangements")
 }
 
 model RolePermission {
@@ -1219,14 +1346,14 @@ model UserPermission {
 }
 
 model Category {
-  id        String   @id @default(uuid())
-  companyId String
-  name      String
-  nameEn    String?
+  id              String   @id @default(uuid())
+  companyId       String
+  name            String
+  nameEn          String?
   /// A readable address for this kind of thing. Unique per company,
   /// because the category table is company-wide — see the note in
   /// `storefrontCatalog` on why there is no per-store copy of it.
-  slug      String?
+  slug            String?
   /// THE QUESTIONS THIS KIND OF THING IS DESCRIBED BY, as JSON.
   ///
   /// «مناسب لـ» and «المكوّنات» are right for a remedy and wrong for a
@@ -1236,9 +1363,9 @@ model Category {
   ///
   /// See src/lib/product-attributes.ts, including why this is JSON and not
   /// two more tables.
-  attributeSchema String? @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  attributeSchema String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products Product[]
@@ -1453,19 +1580,19 @@ model FinancialTransaction {
 // Public marketing pages that generate real CRM orders.
 // slug is unique per company; htmlContent is stored server-side (never client-trusted).
 model LandingPage {
-  id               String    @id @default(uuid())
-  companyId        String
-  name             String
-  slug             String
-  htmlContent      String?   @db.Text
-  cssContent       String?   @db.Text // custom CSS from the visual editor (sanitized server-side)
-  pageSettings     String? // JSON: { width, maxWidth, background, direction, fontFamily } — additive base styles
+  id                 String    @id @default(uuid())
+  companyId          String
+  name               String
+  slug               String
+  htmlContent        String?   @db.Text
+  cssContent         String?   @db.Text // custom CSS from the visual editor (sanitized server-side)
+  pageSettings       String? // JSON: { width, maxWidth, background, direction, fontFamily } — additive base styles
   // How this page is authored. 'BLOCKS' = themed section builder (default for
   // new pages); 'HTML' = the raw upload, kept as an alternative. NULL reads
   // as 'HTML', which is what every page predating the builder is.
-  builderMode      String? // 'BLOCKS' | 'HTML'
-  theme            String? // JSON: { accent, mood, font, corners } — one colour, palette derived
-  sections         String?   @db.Text // JSON: ordered LandingSection[]
+  builderMode        String? // 'BLOCKS' | 'HTML'
+  theme              String? // JSON: { accent, mood, font, corners } — one colour, palette derived
+  sections           String?   @db.Text // JSON: ordered LandingSection[]
   /// THE PAGE AS THE SELLER IS EDITING IT — one blob, not six columns.
   ///
   /// Everything above is what a VISITOR reads. Until this column existed the
@@ -1483,9 +1610,9 @@ model LandingPage {
   /// ago, in one press; a version list is a different feature.
   contentPrevious    String?   @db.Text
   contentPublishedAt DateTime?
-  metaPixelId      String? // Meta/Facebook Pixel ID (digits only, validated server-side)
-  metaPixelEnabled Boolean   @default(false) // false/empty → no Pixel script is ever loaded
-  productId        String?
+  metaPixelId        String? // Meta/Facebook Pixel ID (digits only, validated server-side)
+  metaPixelEnabled   Boolean   @default(false) // false/empty → no Pixel script is ever loaded
+  productId          String?
   // A hostname of the seller's own, pointed at this app in DNS. Lowercase,
   // and unique across every company: a hostname belongs to whoever proved
   // it, and two claims on one would make the proxy's answer depend on which
@@ -1493,21 +1620,21 @@ model LandingPage {
   /// UNIQUE across every company, held by `landing_pages_domain_key` —
   /// partial (WHERE domain IS NOT NULL), written in the migration. A hostname
   /// belongs to whoever proved it.
-  domain           String?
-  domainVerifiedAt DateTime?
-  isPublished      Boolean   @default(false)
+  domain             String?
+  domainVerifiedAt   DateTime?
+  isPublished        Boolean   @default(false)
   /// Listed in the store's own front by a `catalog` block. Belonging to a
   /// store is not the same as being shown in it: a campaign page is meant to
   /// be reachable by its link and nowhere else, and listing every page a
   /// store owns would put the half-finished ones in the shop window.
-  showInStore      Boolean   @default(false)
-  viewsCount       Int       @default(0) // view = one successful public page render (no PII)
-  ordersCount      Int       @default(0)
-  upsellAddsCount  Int       @default(0) // recommendation add-ons accepted after order
-  upsellRevenue    Float     @default(0) // revenue of accepted add-ons (server-side computed)
-  createdById      String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  showInStore        Boolean   @default(false)
+  viewsCount         Int       @default(0) // view = one successful public page render (no PII)
+  ordersCount        Int       @default(0)
+  upsellAddsCount    Int       @default(0) // recommendation add-ons accepted after order
+  upsellRevenue      Float     @default(0) // revenue of accepted add-ons (server-side computed)
+  createdById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   company         Company                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   product         Product?                    @relation(fields: [productId], references: [id], onDelete: SetNull)
@@ -1764,14 +1891,14 @@ model Country {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   trackingPixels TrackingPixel[]
-  regions      Region[]
-  stores       Store[]
-  deliveryFees DeliveryFee[]
-  wallets      Wallet[]
-  orders       Order[]
-  access       UserCountryAccess[]
+  regions        Region[]
+  stores         Store[]
+  deliveryFees   DeliveryFee[]
+  wallets        Wallet[]
+  orders         Order[]
+  access         UserCountryAccess[]
 
   @@unique([companyId, code])
   @@index([companyId, isActive])
@@ -1953,6 +2080,7 @@ model Store {
   pages             StorePage[]
   menus             StoreMenu[]
   redirects         StoreRedirect[]
+  productReviews    ProductReview[]
 
   @@unique([companyId, slug])
   @@unique([domain])
@@ -2550,18 +2678,18 @@ model StatementReceipt {
   ///
   /// The storage key. Built from the RECEIPT id, never from the uploaded
   /// filename, so a name that came from outside never reaches a path.
-  proofKey   String?
+  proofKey  String?
   /// What the owner called it, or the file's own name if they called it
   /// nothing. This is what a download is named — never what it is stored as.
-  proofName  String?
+  proofName String?
   /// Sniffed from the first bytes, never taken from the extension or from
   /// what the browser claimed. One of four: jpeg, png, webp, pdf.
-  proofMime  String?
-  proofSize  Int?
+  proofMime String?
+  proofSize Int?
   /// SHA-256 of the bytes as stored, the same way `CourierStatement.fileHash`
   /// remembers the statement file: a proof replaced on disk — by a mistake,
   /// a restore, or a hand — stops matching the row that points at it.
-  proofHash  String?
+  proofHash String?
 
   statement CourierStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
   wallet    Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
@@ -2951,10 +3079,6 @@ model JobRun {
   companyId  String?
   countryId  String?
 
-  @@index([jobName, startedAt])
-  @@index([status, startedAt])
-  @@map("job_runs")
-
   /// ── ONE PARTIAL UNIQUE INDEX THE SCHEMA CANNOT EXPRESS ──
   ///
   /// `job_runs_one_running` — UNIQUE (jobName) WHERE status = 'RUNNING'
@@ -2970,6 +3094,10 @@ model JobRun {
   /// `@@unique([jobName])` cannot say it: a job has many finished runs and
   /// only ever one live one. In
   /// `20261015210000_one_worker_one_job/migration.sql`.
+
+  @@index([jobName, startedAt])
+  @@index([status, startedAt])
+  @@map("job_runs")
 }
 
 // Blocking a customer.
@@ -3406,10 +3534,10 @@ model PasskeyChallenge {
 /// row for the whole installation — not structure.
 model SystemSetting {
   /// The setting's name, e.g. «ai». One row per subject.
-  key   String @id
+  key         String   @id
   /// A JSON document. Secrets inside it are encrypted individually by the
   /// code that writes them, never by virtue of sitting in this column.
-  value String
+  value       String
   /// Who last changed it, for the same reason courier credentials record it:
   /// «who configured this» must have an answer. Not a foreign key — a
   /// deleted user must not take the installation's settings with them.
