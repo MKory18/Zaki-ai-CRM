@@ -160,7 +160,7 @@ export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved,
             calling code rather than from a local number that opens an
             empty chat, and one line in the contact log per press.
           */}
-          <div className="sm:col-span-2 flex items-center gap-2 pt-0.5">
+          <div className="sm:col-span-2 flex items-center gap-2">
             <span className="text-xs text-[var(--sys-muted)]">تواصل</span>
             <ContactButtons
               phone={order.customer.rawPhone || order.customer.phone}
