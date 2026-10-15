@@ -27,6 +27,7 @@ import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
+import { cardTone, noAnswerWords } from '@/lib/no-answer-tone';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -81,6 +82,17 @@ interface OrderRow {
   changeRequests?: { id: string }[];
 }
 
+/** «أكّدتها» — a day, a search, a page, and the size of what is behind them. */
+interface ConfirmedPage {
+  day: string;
+  q: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+  rows: OrderRow[];
+}
+
 interface MineResponse {
   leadDays: number;
   /** Postponed to a later day — off her desk, not gone. */
@@ -88,8 +100,13 @@ interface MineResponse {
   noAnswerLimit: number;
   /** The server's clock, so a wrong clock on her machine changes nothing. */
   serverNow: string;
-  inConfirmation: OrderRow[];
-  confirmed: OrderRow[];
+  /** Nobody has failed to reach this customer yet — these are calls. */
+  work: OrderRow[];
+  /** One or two no-answers — these are decisions. */
+  noAnswer: OrderRow[];
+  /** The third no-answer closed it today. Read-only, and shown so it is not a surprise. */
+  closedToday: OrderRow[];
+  confirmed: ConfirmedPage;
 }
 
 const RISK_LABEL: Record<string, { text: string; cls: string }> = {
@@ -168,15 +185,44 @@ export function ConfirmationMineScreen() {
   // Searching her own desk, not the whole store: she has a customer on the
   // phone reading out a number, and scrolling for it is the slow way.
   const [findOpen, setFindOpen] = useState('');
-  const [findDone, setFindDone] = useState('');
+  /**
+   * ── «أكّدتها» SEARCHES THE DATABASE, NOT THE PAGE ──
+   *
+   * The old box filtered the hundred rows the server had already cut, so
+   * an agent searching for Tuesday's order found nothing and the screen
+   * said «لا شيء يطابق» about a list it had never looked in. Three
+   * controls now, and all three go to the server: `doneDay`, `doneQuery`
+   * and `donePage`.
+   *
+   * `doneTyped` is what she is typing; `doneQuery` is what has been asked.
+   * Keeping them apart is what lets the box hold a half-typed phone number
+   * without firing a request per keystroke, and what makes the submit an
+   * act she performs rather than a thing that happens to her.
+   */
+  const [doneDay, setDoneDay] = useState('');
+  const [doneTyped, setDoneTyped] = useState('');
+  const [doneQuery, setDoneQuery] = useState('');
+  const [donePage, setDonePage] = useState(1);
+  /**
+   * WHICH OF THE THREE SHE IS LOOKING AT.
+   *
+   * «للشغل» first, because that is what the morning is: an order nobody
+   * has reached yet is a call, and a call is the job.
+   */
+  const [tab, setTab] = useState<'work' | 'noAnswer' | 'done'>('work');
 
   const load = useCallback(async () => {
     try {
-      setData(await apiJson<MineResponse>('/api/confirmation/mine'));
+      const qs = new URLSearchParams();
+      if (doneDay) qs.set('day', doneDay);
+      if (doneQuery) qs.set('q', doneQuery);
+      if (donePage > 1) qs.set('page', String(donePage));
+      const suffix = qs.toString();
+      setData(await apiJson<MineResponse>(`/api/confirmation/mine${suffix ? `?${suffix}` : ''}`));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
     }
-  }, []);
+  }, [doneDay, doneQuery, donePage]);
 
   useEffect(() => {
     void load();
@@ -329,8 +375,33 @@ export function ConfirmationMineScreen() {
       order.customer.fullName.toLowerCase().includes(text)
     );
   };
-  const inConfirmation = data.inConfirmation.filter((o) => matches(o, findOpen));
-  const confirmed = data.confirmed.filter((o) => matches(o, findDone));
+  /*
+   * ── THE TWO WORKING TABS SEARCH THEIR OWN ROWS ──
+   *
+   * Unlike «أكّدتها», these two hold everything she has: the server sent
+   * all of it, so filtering here searches the whole of each tab and not a
+   * cut of it. The customer is on the line reading out a number.
+   */
+  const work = data.work.filter((o) => matches(o, findOpen));
+  const noAnswer = data.noAnswer.filter((o) => matches(o, findOpen));
+  const closedToday = data.closedToday.filter((o) => matches(o, findOpen));
+  const confirmed = data.confirmed;
+
+  /*
+   * ONE CARD, THREE PLACES.
+   *
+   * «لا يرد» shows the same card «للشغل» does — same buttons, same rules,
+   * same source line — because it is the same order and the agent must not
+   * have to learn a second card. What changes is the tone and, for the
+   * ones the third no-answer closed, that there is no footer at all: they
+   * are read-only, and a disabled row of buttons reads as «try again».
+   */
+  const rows: { order: OrderRow; closed?: boolean }[] =
+    tab === 'work'
+      ? work.map((order) => ({ order }))
+      : tab === 'noAnswer'
+        ? [...noAnswer.map((order) => ({ order })), ...closedToday.map((order) => ({ order, closed: true }))]
+        : [];
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -342,17 +413,57 @@ export function ConfirmationMineScreen() {
         <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-3">{notice}</p>
       )}
 
+      {/*
+        ── THREE TABS, AND THE COUNT IS ON THE TAB ──
+
+        One list held all three kinds: an order nobody had rung, an order
+        rung twice with nothing, and a hundred she had already confirmed.
+        The second kind was invisible — its only mark was «2/3» inside a
+        button — and the third was a feed she could not search.
+
+        The counts are on the tabs rather than inside them, because the
+        decision «which of these do I do now» is made before she opens
+        either list, and a count she has to click to see cannot inform it.
+      */}
+      <div role="tablist" aria-label="طلباتي" className="flex flex-wrap items-center gap-2 border-b border-[var(--sys-border)]">
+        <TabButton
+          active={tab === 'work'}
+          onClick={() => setTab('work')}
+          label="للشغل"
+          count={data.work.length}
+          note="ما حدا اتّصل فيهم بعد"
+        />
+        <TabButton
+          active={tab === 'noAnswer'}
+          onClick={() => setTab('noAnswer')}
+          label="لا يرد"
+          count={data.noAnswer.length}
+          tone={data.noAnswer.length > 0 ? 'warning' : undefined}
+          note={`محاولة أو محاولتين — التالية تُغلق${data.closedToday.length > 0 ? ` · و${data.closedToday.length} أُغلقت اليوم` : ''}`}
+        />
+        <TabButton
+          active={tab === 'done'}
+          onClick={() => setTab('done')}
+          label="أكّدتها"
+          count={confirmed.total}
+          note={confirmed.q ? `بحث «${confirmed.q}»` : 'يوم واحد في كلّ مرّة'}
+        />
+      </div>
+
+      {tab !== 'done' && (
       <section>
         <SectionHead
-          title="قيد التأكيد"
-          count={inConfirmation.length}
-          total={data.inConfirmation.length}
+          title={tab === 'work' ? 'للشغل' : 'لا يرد'}
+          count={rows.length}
+          total={tab === 'work' ? data.work.length : data.noAnswer.length + data.closedToday.length}
           value={findOpen}
           onChange={setFindOpen}
           note={
-            data.waitingLater > 0
+            tab === 'work' && data.waitingLater > 0
               ? `و${data.waitingLater} مؤجّلة ليوم لاحق — تعود إلى هنا في موعدها`
-              : undefined
+              : tab === 'noAnswer'
+                ? 'الملوَّنة بالأصفر محاولة، وبالبرتقالي محاولتان — والمغلقة للقراءة فقط'
+                : undefined
           }
         />
         <div className="space-y-3">
@@ -366,13 +477,18 @@ export function ConfirmationMineScreen() {
             count in the heading says «0 من 11» at the same moment, so the
             screen contradicted itself.
           */}
-          {inConfirmation.length === 0 && (
+          {rows.length === 0 && (
             <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg">
               {findOpen.trim() ? (
                 <EmptyState
-                  title="لا طلبَ بيدك يطابق هذا البحث"
-                  why={`لا شيءَ من الـ${data.inConfirmation.length} التي بيدك يطابق «${findOpen.trim()}» — البحث يمرّ على رقم الطلب والاسم والهاتف.`}
+                  title="لا طلبَ في هذا التبويب يطابق هذا البحث"
+                  why={`لا شيءَ من الـ${tab === 'work' ? data.work.length : data.noAnswer.length + data.closedToday.length} في «${tab === 'work' ? 'للشغل' : 'لا يرد'}» يطابق «${findOpen.trim()}» — البحث يمرّ على رقم الطلب والاسم والهاتف.`}
                   action={{ label: 'امسح البحث', onClick: () => setFindOpen('') }}
+                />
+              ) : tab === 'noAnswer' ? (
+                <EmptyState
+                  title="ما في طلب ما ردّ عليه حدا"
+                  why="هذا التبويب يجمع الطلبات التي جرت محاولة أو محاولتان معها بلا رد — ويخلو عندما تُجاب كلّها أو تُغلَق."
                 />
               ) : (
                 <EmptyState
@@ -382,10 +498,10 @@ export function ConfirmationMineScreen() {
               )}
             </div>
           )}
-          {inConfirmation.map((order) => {
+          {rows.map(({ order, closed }) => {
             const remaining = Math.max(0, data.noAnswerLimit - order.noAnswerCount);
             return (
-              <article key={order.id} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3">
+              <article key={order.id} className={`border rounded-lg p-4 space-y-3 ${cardTone(order.noAnswerCount, data.noAnswerLimit, closed)}`}>
                 <header className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{order.orderNumber}</span>
                   <OrderStateBadge state={order.state} />
@@ -393,6 +509,19 @@ export function ConfirmationMineScreen() {
                       she can do about bad data, so it belongs beside the
                       number rather than three cards deep. */}
                   <span className="text-xs text-[var(--sys-muted-foreground)]">{sourceLabel(order)}</span>
+                  {/* ⚠️ The count in words, because the card's colour must
+                      never be the only place it is said. */}
+                  {order.noAnswerCount > 0 && !closed && (
+                    <span className="text-xs font-medium text-[var(--sys-warning)]">
+                      {noAnswerWords(order.noAnswerCount)}
+                      <span className="tabular-nums" dir="ltr"> ({order.noAnswerCount}/{data.noAnswerLimit})</span>
+                    </span>
+                  )}
+                  {closed && (
+                    <span className="text-xs font-medium text-[var(--sys-destructive)]">
+                      أُغلق اليوم تلقائيّاً — {noAnswerWords(order.noAnswerCount)}
+                    </span>
+                  )}
                   <CustomerHistoryButton
                     customerId={order.customer.id}
                     orderId={order.id}
@@ -443,6 +572,20 @@ export function ConfirmationMineScreen() {
                   </p>
                 )}
 
+                {/*
+                  ── AND NO FOOTER AT ALL ON A CLOSED ONE ──
+
+                  A row of greyed buttons reads as «try again in a minute».
+                  The order is cancelled: the only thing left to do about it
+                  is in «مركز التأكيد», by somebody who can reopen it. It is
+                  shown here, today only, so the agent who made the third
+                  call sees what it did rather than watching the card vanish.
+                */}
+                {closed ? (
+                  <p className="text-xs leading-relaxed text-[var(--sys-destructive)] pt-1 border-t border-[var(--sys-destructive-border)]">
+                    للقراءة فقط — أُغلق بعد {data.noAnswerLimit} محاولات بلا رد. إعادةُ فتحِه من مركز التأكيد، بيد مَن يملك ذلك.
+                  </p>
+                ) : (
                 <footer className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--sys-border)]">
                   {/* The order she is working on, opened in the same screen
                       everyone else sees it in. She fixes what the customer
@@ -666,23 +809,93 @@ export function ConfirmationMineScreen() {
                     مساعدة
                   </Action>
                 </footer>
+                )}
               </article>
             );
           })}
         </div>
       </section>
+      )}
 
-      <section>
-        <SectionHead
-          title="مؤكدة"
-          count={confirmed.length}
-          total={data.confirmed.length}
-          value={findDone}
-          onChange={setFindDone}
-        />
+      {tab === 'done' && (
+      <section className="space-y-3">
+        {/*
+          ── A DAY, A SEARCH AND A PAGE — ALL THREE REAL CONTROLS ──
+
+          This list was `take: 100` by `confirmedAt desc`: the last hundred
+          she ever confirmed. An agent who has confirmed a thousand orders
+          cannot reach Tuesday's from here, and the search box on top of it
+          searched only those hundred — so it answered «لا شيء يطابق» about
+          a list it had never looked in.
+
+          «اليوم» is the question she actually asks of this list, so today
+          is where it opens. The date, the text and the page all go to the
+          server, and the heading says how many are behind them.
+        */}
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setDoneQuery(doneTyped.trim());
+            setDonePage(1);
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-[var(--sys-muted-foreground)]">
+            اليوم
+            <input
+              type="date"
+              value={doneDay || confirmed.day}
+              onChange={(e) => {
+                setDoneDay(e.target.value);
+                setDonePage(1);
+              }}
+              className="h-11 md:h-8 px-2.5 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] tabular-nums focus:outline-none focus:border-[var(--sys-primary)]"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--sys-muted-foreground)]">
+            رقم الطلب أو الاسم أو الهاتف
+            <input
+              value={doneTyped}
+              onChange={(e) => setDoneTyped(e.target.value)}
+              placeholder="ابحث في هذا اليوم"
+              className="h-11 md:h-8 w-56 px-2.5 rounded-lg border border-[var(--sys-border-input)] bg-[var(--sys-card)] text-xs text-[var(--sys-foreground)] focus:outline-none focus:border-[var(--sys-primary)]"
+            />
+          </label>
+          <button
+            type="submit"
+            className="h-11 md:h-8 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] border border-[var(--sys-primary)]"
+          >
+            <RiSearchLine className="w-4 h-4" /> ابحث
+          </button>
+          {(doneQuery || doneDay) && (
+            <button
+              type="button"
+              onClick={() => {
+                setDoneTyped('');
+                setDoneQuery('');
+                setDoneDay('');
+                setDonePage(1);
+              }}
+              className="h-11 md:h-8 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs border border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-foreground)]"
+            >
+              <RiCloseLine className="w-4 h-4" /> رجّعني لليوم
+            </button>
+          )}
+        </form>
+        <h2 className="text-sm font-bold text-[var(--sys-heading)]">
+          أكّدتها{' '}
+          <span className="tabular-nums font-normal text-[var(--sys-muted-foreground)]" dir="ltr">
+            {confirmed.total}
+          </span>
+          <span className="font-normal text-[var(--sys-muted-foreground)]">
+            {' '}· <span dir="ltr" className="tabular-nums">{confirmed.day}</span>
+            {confirmed.q && ` · «${confirmed.q}»`}
+            {confirmed.pages > 1 && ` · صفحة ${confirmed.page} من ${confirmed.pages}`}
+          </span>
+        </h2>
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
                     <Rows
-            rows={confirmed}
+            rows={confirmed.rows}
             keyOf={(order) => order.id}
             columns={[
               { key: 'c0', label: "الطلب", primary: true,
@@ -714,16 +927,16 @@ export function ConfirmationMineScreen() {
                advice about the other list, and it said it while a search
                was hiding rows too. */
             empty={
-              findDone.trim() ? (
+              confirmed.q ? (
                 <EmptyState
-                  title="لا طلبَ مؤكَّداً يطابق هذا البحث"
-                  why={`لا شيءَ من الـ${data.confirmed.length} التي أكّدتَها يطابق «${findDone.trim()}» — البحث يمرّ على رقم الطلب والاسم والهاتف.`}
-                  action={{ label: 'امسح البحث', onClick: () => setFindDone('') }}
+                  title="لا طلبَ مؤكَّداً في هذا اليوم يطابق هذا البحث"
+                  why={`البحث «${confirmed.q}» جرى على يوم ${confirmed.day} وحده — على رقم الطلب والاسم والهاتف. جرّبه على يومٍ آخر.`}
+                  action={{ label: 'امسح البحث', onClick: () => { setDoneTyped(''); setDoneQuery(''); setDonePage(1); } }}
                 />
               ) : (
                 <EmptyState
-                  title="لم تؤكّد طلباً بعد"
-                  why="ما تؤكّده يظهر هنا للقراءة — وتعديلُه بعدها يمرّ بطلبِ تعديل، لا بتحريرٍ مباشر."
+                  title={`لم تؤكّد طلباً في ${confirmed.day}`}
+                  why="ما تؤكّده يظهر هنا للقراءة — وتعديلُه بعدها يمرّ بطلبِ تعديل، لا بتحريرٍ مباشر. غيِّر اليومَ أعلاه لترى يوماً آخر."
                 />
               )
             }
@@ -742,7 +955,40 @@ export function ConfirmationMineScreen() {
             )}
           />
         </div>
+        {/*
+          PAGES, AND THE NUMBER OF THEM.
+
+          «السابق/التالي» with no total is a corridor: she cannot tell
+          whether she is near the end or three hundred rows from it. The
+          count and the page number are both said above, and the two
+          buttons shut at the ends rather than asking for a page that is
+          not there.
+        */}
+        {confirmed.pages > 1 && (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={confirmed.page <= 1}
+              onClick={() => setDonePage((p) => Math.max(1, p - 1))}
+              className="h-11 md:h-8 px-3 rounded-lg text-xs border border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-foreground)] disabled:opacity-50"
+            >
+              الأحدث
+            </button>
+            <span className="text-xs text-[var(--sys-muted-foreground)] tabular-nums" dir="ltr">
+              {confirmed.page} / {confirmed.pages}
+            </span>
+            <button
+              type="button"
+              disabled={confirmed.page >= confirmed.pages}
+              onClick={() => setDonePage((p) => p + 1)}
+              className="h-11 md:h-8 px-3 rounded-lg text-xs border border-[var(--sys-border)] bg-[var(--sys-card)] text-[var(--sys-foreground)] disabled:opacity-50"
+            >
+              الأقدم
+            </button>
+          </div>
+        )}
       </section>
+      )}
 
       {dialog?.kind === 'postpone' && (
         <PostponeDialog
@@ -845,6 +1091,62 @@ function ResponseClock({
     >
       بانتظار أول اتصال منذ {humanMinutes(waiting)}
     </span>
+  );
+}
+
+/**
+ * ONE OF THE THREE, WITH ITS COUNT AND WHAT IT HOLDS.
+ *
+ * The count and the note are on the tab and not inside it, because «which
+ * of these do I do now» is decided before either list is open.
+ *
+ * `role="tab"` and `aria-selected` and not three styled buttons: the strip
+ * announces itself as one choice of three to a screen reader, and arrow
+ * keys move through it. A coloured underline alone would say nothing.
+ */
+function TabButton({
+  active,
+  onClick,
+  label,
+  count,
+  note,
+  tone,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  note?: string;
+  tone?: 'warning';
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      title={note}
+      className={`min-h-11 md:min-h-0 px-3 py-2 -mb-px border-b-2 text-start ${
+        active
+          ? 'border-[var(--sys-primary)] text-[var(--sys-heading)]'
+          : 'border-transparent text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
+      }`}
+    >
+      <span className="flex items-center gap-1.5 text-sm font-bold">
+        {label}
+        <span
+          className={`text-xs px-1.5 py-0.5 rounded-md border tabular-nums font-normal ${
+            tone === 'warning'
+              ? 'bg-[var(--sys-warning-soft)] text-[var(--sys-warning)] border-[var(--sys-warning)]/40'
+              : 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]'
+          }`}
+          dir="ltr"
+        >
+          {count}
+        </span>
+      </span>
+      {note && <span className="block text-xs font-normal text-[var(--sys-muted)]">{note}</span>}
+    </button>
   );
 }
 

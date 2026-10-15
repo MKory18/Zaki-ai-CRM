@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CONTACT_RESULTS, NO_ANSWER_LIMIT, NO_ANSWER_RESULTS } from './confirmation-workflow';
 import { CONTACT_FIRST_ACTIONS, needsContactFirst } from './confirmation-queue';
 import { repoFile, stripComments } from './guard-source';
+import { cardTone, noAnswerWords } from './no-answer-tone';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -150,5 +151,149 @@ describe('and the card says where the order came from', () => {
     for (const field of ['source:', 'moderatorId:', 'createdBy:', 'channel:']) {
       expect(src, `«طلباتي» ما بتبعت ${field}`).toContain(field);
     }
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AND THE ONE LIST HELD THREE DIFFERENT JOBS.
+ *
+ * «طلباتي» was two sections: everything workable in one, and the last
+ * hundred she ever confirmed under it. Both halves mixed things she must
+ * act on with things she must not.
+ *
+ * An order nobody has reached is a CALL. An order rung twice with nothing
+ * is a DECISION — one more and it closes itself. An order the third call
+ * closed is neither; it is a fact she needs to see once. And the
+ * confirmed list was `take: 100` by date: the agent who has confirmed a
+ * thousand orders cannot reach Tuesday's from there, and the search box
+ * on top of it searched only those hundred — so it answered «لا شيء
+ * يطابق» about a list it had never looked in.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+
+describe('«طلباتي» in three tabs', () => {
+  const route = () => stripComments(repoFile('src/app/api/confirmation/mine/route.ts'));
+
+  it('and the server decides which tab an order is in, not the browser', () => {
+    /*
+     * Two places that each decide this eventually disagree, and then the
+     * count on the tab differs from the list under it. The split is one
+     * pass over the rows, by the count the row already carries.
+     */
+    const src = route();
+    expect(src, 'ما في تبويب «للشغل» بالباب').toMatch(/work:\s*held\.filter/);
+    expect(src, 'ما في تبويب «لا يرد» بالباب').toMatch(/noAnswer:\s*held\.filter/);
+    expect(src).toContain('closedToday:');
+  });
+
+  it('and «لا يرد» is one or two — never the third', () => {
+    // The third is not work. It is a cancelled order, and it is below.
+    const src = route();
+    const at = src.indexOf('noAnswer: held.filter');
+    expect(src.slice(at, at + 160)).toMatch(/noAnswerCount > 0 && o\.noAnswerCount < NO_ANSWER_LIMIT/);
+  });
+
+  it('and the third’s closure is found by its log entry, not by updatedAt', () => {
+    /*
+     * `updatedAt` moves with any later write, so a note added tomorrow
+     * would make a Tuesday closure look like it happened today.
+     */
+    const src = route();
+    expect(src).toContain('AUTO_CLOSE_NO_ANSWER_3_ATTEMPTS');
+    expect(src).toContain("rejectionReason: 'NO_ANSWER_3_ATTEMPTS'");
+  });
+
+  it('and «أكّدتها» is a day, a search and a page — all three on the server', () => {
+    const src = route();
+    expect(src, 'ما في يوم').toContain("params.get('day')");
+    expect(src, 'ما في بحث').toContain("params.get('q')");
+    /*
+     * Through the SHARED reader, not `Number(params.get('page'))`: that
+     * is how `?page=abc` becomes NaN and `?page=1e400` puts a value past
+     * Int into `skip`. `a-page-number-is-not-a-crash.test.ts` holds the
+     * rule for every paged door; this names it for this one.
+     */
+    expect(src, 'ما في صفحة').toContain('readPage(params)');
+    expect(src, 'الصفحة بتنقص بالمتصفّح لا بالباب').toMatch(/skip:\s*\(page - 1\) \* CONFIRMED_PAGE_SIZE/);
+    expect(src).toMatch(/take:\s*CONFIRMED_PAGE_SIZE/);
+    expect(src, 'العدد الكلّي ما بينرجع — فالصفحات بتصير ممرّاً بلا آخر').toContain('confirmedTotal');
+  });
+
+  it('and a mistyped day falls back to today rather than to nothing', () => {
+    // The one thing this list must never do is come back empty because a
+    // query string was mistyped.
+    expect(route()).toMatch(/const day = dayStart && dayEnd \? dayAsked : localDayKey\(now\)/);
+  });
+
+  it('and «اليوم» means the same thing here as it does on the dashboard', () => {
+    /*
+     * `startOfLocalDay` and `endOfLocalDay` were private to analytics.ts.
+     * A second copy of a date boundary is how two screens come to
+     * disagree about when a day begins — three hours of every Amman
+     * evening, in which an order belongs to yesterday on one and today on
+     * the other.
+     */
+    expect(route()).toContain("from '@/lib/local-day'");
+    expect(stripComments(repoFile('src/lib/analytics.ts')), 'التحليلات لسّا عندها نسختها').toContain(
+      "from './local-day'"
+    );
+  });
+
+  it('and the search runs on the three things a customer reads out', () => {
+    const src = route();
+    const at = src.indexOf('const search =');
+    const block = src.slice(at, at + 700);
+    expect(block).toContain('orderNumber');
+    expect(block).toContain('fullName');
+    expect(block, 'الهاتف بينتبحث بشكله لا بأرقامه').toContain('rawPhone');
+    expect(block).toContain('digits');
+  });
+});
+
+describe('and the card says the count, not only the colour', () => {
+  it('— one and two have words of their own', () => {
+    expect(noAnswerWords(1)).toBe('ما ردّ مرّة واحدة');
+    expect(noAnswerWords(2)).toBe('ما ردّ مرّتين');
+  });
+
+  it('and the tone moves with the count, calm at zero', () => {
+    expect(cardTone(0, 3)).toContain('--sys-card');
+    expect(cardTone(1, 3), 'المحاولة الأولى بلا لون').toContain('--sys-warning');
+    expect(cardTone(2, 3), 'المحاولتان بنفس قوّة الواحدة').not.toBe(cardTone(1, 3));
+  });
+
+  it('and a closed one is the red that means «money lost», not amber', () => {
+    expect(cardTone(3, 3, true)).toContain('--sys-destructive');
+  });
+
+  it('and no theme invents a hue for this — the meanings are fixed', () => {
+    /*
+     * A theme moves SURFACES, never MEANINGS: amber is «needs attention»
+     * and red is «late or money lost», product-wide. «لا يرد» uses amber
+     * at two strengths rather than a third colour, so a theme that
+     * recolours the product cannot make two no-answers read as green.
+     */
+    for (const tone of [cardTone(1, 3), cardTone(2, 3), cardTone(3, 3, true)]) {
+      expect(tone, 'لون مكتوب بالإيد جوّا الكرت').toMatch(/^(bg|border)-\[var\(--sys-/);
+      expect(tone).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+    }
+  });
+
+  it('and the screen draws three tabs, each with its count', () => {
+    const screen = stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
+    expect(screen).toContain('role="tablist"');
+    for (const label of ['للشغل', 'لا يرد', 'أكّدتها']) {
+      expect(screen, `ما في تبويب «${label}»`).toContain(`label="${label}"`);
+    }
+    expect(screen, 'التبويب بلا عدد — والقرار بينعمل قبل ما تفتحه').toMatch(/count=\{data\.work\.length\}/);
+  });
+
+  it('and a closed card carries no footer of greyed buttons', () => {
+    // A row of disabled buttons reads as «try again in a minute». The
+    // order is cancelled; what is left to do about it is somewhere else.
+    const screen = stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
+    expect(screen).toMatch(/\{closed \? \(/);
+    expect(screen).toContain('للقراءة فقط');
   });
 });

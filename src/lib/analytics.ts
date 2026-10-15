@@ -5,6 +5,7 @@ import { db } from './db';
 import { calculateRealProfit } from './financial';
 import { commissionByUserForOrders, commissionCostForOrders } from './commission';
 import { AiBusinessContext } from './ai';
+import { endOfLocalDay, startOfLocalDay } from './local-day';
 
 export interface DateFilter {
   period?: 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'last_month' | 'all';
@@ -42,18 +43,6 @@ function windowStart(): Date {
   min.setHours(0, 0, 0, 0);
   min.setDate(min.getDate() - MAX_WINDOW_DAYS);
   return min;
-}
-
-/** "yyyy-MM-dd" → that day's first instant locally. Null for anything else. */
-function startOfLocalDay(value: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
-}
-
-/** "yyyy-MM-dd" → that day's last instant locally. Null for anything else. */
-function endOfLocalDay(value: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999) : null;
 }
 
 /** An explicit start, pulled forward if it reaches past the safety window. */
