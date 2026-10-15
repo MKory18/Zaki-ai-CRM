@@ -2,7 +2,7 @@
 
 import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
@@ -137,6 +137,12 @@ export function AiSettingsScreen() {
     if (sys.ok) {
       const sysJson = await sys.json();
       setSystem(sysJson.system);
+      // What the SERVER holds, so a save can tell a changed dropdown from
+      // an untouched one. See `saveSystem`.
+      savedDefault.current = {
+        provider: sysJson.system?.provider ?? null,
+        model: sysJson.system?.model ?? null,
+      };
       setLocalUrl(sysJson.system?.localBaseUrl ?? '');
       setSystemAllowed(true);
       if (sysJson.providers) setProviders(sysJson.providers);
@@ -197,6 +203,9 @@ export function AiSettingsScreen() {
    * one action rather than three round trips through a dropdown. The boxes
    * are cleared on success: nothing typed into them is ever read back.
    */
+  /** What the server last gave us, so a save can tell changed from untouched. */
+  const savedDefault = useRef<{ provider: string | null; model: string | null }>({ provider: null, model: null });
+
   async function saveSystem() {
     if (!system) return;
     setSystemBusy(true);
@@ -210,9 +219,23 @@ export function AiSettingsScreen() {
       const res = await fetch('/api/settings/ai/system', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        /*
+         * ── A KEY SAVE IS NOT A CHANGE OF DEFAULT ──
+         *
+         * This body used to carry `provider` and `model` unconditionally —
+         * whatever the dropdown happened to be showing — so pasting an
+         * Anthropic key stamped the installation default with it. With
+         * nothing stored that default is OpenRouter and a free Llama, and
+         * from then on «المزوّد» could not move it: the next key save put
+         * it back. The dropdown looked broken because it was being
+         * overwritten by its own form.
+         *
+         * They are sent only when they differ from what the server last
+         * gave us, and the route now treats absent as «leave it alone».
+         */
         body: JSON.stringify({
-          provider: system.provider,
-          model: system.model,
+          ...(system.provider !== savedDefault.current.provider ? { provider: system.provider } : {}),
+          ...(system.model !== savedDefault.current.model ? { model: system.model } : {}),
           ...(Object.keys(providerKeys).length > 0 ? { providerKeys } : {}),
           localBaseUrl: localUrl.trim() || null,
         }),

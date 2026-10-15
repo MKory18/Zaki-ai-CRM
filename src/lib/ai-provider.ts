@@ -350,8 +350,10 @@ export async function systemAi(): Promise<SystemAiSettings> {
 }
 
 export interface SaveSystemAiInput {
-  provider: AiProvider;
-  model: string;
+  /** Absent leaves the stored default alone — see the route's schema. */
+  provider?: AiProvider;
+  /** Absent leaves the stored default alone. */
+  model?: string;
   /** A key per vendor: a value sets it, null clears it, absent leaves it. */
   providerKeys?: Record<string, string | null>;
   /** The local server's address, already checked by `parseLocalEndpoint`. */
@@ -373,8 +375,18 @@ export async function saveSystemAi(input: SaveSystemAiInput, actorId?: string | 
     SYSTEM_AI,
     (current) => {
       const next: SystemAi = { ...(current ?? {}) };
-      next.provider = AI_PROVIDERS.find((p) => p.id === input.provider)?.id ?? next.provider;
-      next.model = input.model.trim() || providerInfo(input.provider).defaultModel;
+      /*
+       * Absent means «leave it». A key save used to carry whatever the
+       * screen was holding and overwrite the installation default with
+       * it, which is why the dropdown appeared not to work.
+       */
+      if (input.provider !== undefined) {
+        next.provider = AI_PROVIDERS.find((p) => p.id === input.provider)?.id ?? next.provider;
+      }
+      if (input.model !== undefined) {
+        const chosen = input.model.trim();
+        next.model = chosen || providerInfo(next.provider ?? 'OPENROUTER').defaultModel;
+      }
 
       if (input.providerKeys) {
         const keys = { ...(next.keys ?? {}) };
