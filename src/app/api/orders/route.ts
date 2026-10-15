@@ -11,7 +11,7 @@ import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { productCosts } from '@/lib/product-cost';
 import { normalizePhoneNumber } from '@/lib/phone';
-import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
+import { isValidPhoneFor, phoneErrorFor, ruleFor } from '@/lib/phone-rules';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { applyQueueFilter } from '@/lib/rbac';
@@ -121,6 +121,17 @@ export async function GET(req: Request) {
       // The store's own currency. The list used to print a hard-coded $ on
       // every row, which read as dollars on a Jordanian store.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },
+      /*
+       * AND THE COUNTRY'S CALLING CODE, FOR THE SAME REASON.
+       *
+       * The rows carry a local number (`079…`), and `wa.me` takes nothing
+       * but full international digits — so a WhatsApp link built in the
+       * browser from a local number opens a chat with a number that does
+       * not exist. The country is known HERE, from the request context,
+       * and nowhere in the browser. The tracking screen already receives
+       * it this way; the orders list had no contact buttons at all.
+       */
+      dialCode: ruleFor(country.code)?.dialCode ?? null,
       pagination: {
         total,
         page,

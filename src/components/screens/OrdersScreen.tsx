@@ -20,6 +20,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { ProductPicker } from '@/components/ui/ProductPicker';
 import { OrderStateBadge } from '@/components/orders/OrderStateBadge';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { AiOrderModal } from '@/components/orders/AiOrderModal';
@@ -89,6 +90,13 @@ export function OrdersScreen() {
   const [couriers, setCouriers] = useState<any[]>([]);
   // The store's own currency, sent with the list — never assumed.
   const [currency, setCurrency] = useState({ code: '', minorUnit: 2 });
+  /*
+   * The country's calling code, sent with the list for the same reason.
+   * The rows carry a local number and `wa.me` takes full international
+   * digits only — a link built in the browser from `079…` opens a chat
+   * with a number that does not exist. The country is known on the server.
+   */
+  const [dialCode, setDialCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // ref mirror of pagination for polling without re-subscribing the interval
   const paginationRef = useRef({ page: 1 });
@@ -164,6 +172,7 @@ export function OrdersScreen() {
         // A tick on a row that is no longer listed means nothing.
         setSelected(new Set());
         if (data.currency) setCurrency(data.currency);
+        setDialCode(data.dialCode ?? null);
         setPagination(data.pagination || { total: 0, page: 1, limit: 25, totalPages: 1 });
       } else {
         // Show a visible error instead of silently keeping stale data
@@ -821,6 +830,40 @@ export function OrdersScreen() {
                               <RiPrinterLine className="w-4 h-4" />
                             </button>
                           )}
+                          {/*
+                            CALL, SMS, WHATSAPP — FROM THE ROW.
+
+                            This screen showed the customer's number as
+                            plain text and offered no way to use it. The
+                            number was right there and the agent read it
+                            off the screen and typed it into a phone, with
+                            the transposed digit that goes with that, and
+                            nothing in the contact log said a call had been
+                            made at all.
+
+                            It is the shared strip, so it carries the
+                            company's own ready-made messages filled with
+                            THIS order's words, it builds `wa.me` from the
+                            country's calling code rather than from a local
+                            number that opens an empty chat, and — given
+                            the order id — it writes one line in the
+                            contact log per press.
+                          */}
+                          <ContactButtons
+                            compact
+                            phone={order.customer?.rawPhone || order.customer?.phone}
+                            orderId={order.id}
+                            countryCode={dialCode}
+                            context={{
+                              orderNumber: order.orderNumber,
+                              customerName: order.customer?.fullName,
+                              amount: order.totalAmount,
+                              currency: currency.code || undefined,
+                              region: order.region?.name ?? order.customer?.city,
+                              courier: order.deliveryProvider?.name ?? null,
+                              barcode: order.trackingNumber,
+                            }}
+                          />
                           <CustomerHistoryButton
                             customerId={order.customer?.id}
                             orderId={order.id}

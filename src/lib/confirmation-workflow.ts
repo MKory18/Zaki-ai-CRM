@@ -165,6 +165,28 @@ export const CONTACT_RESULTS = [
   // that counter reads NO_ANSWER and BUSY, and closing an order because
   // three messages were sent would punish the agent for trying twice more.
   'MESSAGE_SENT',
+  /*
+   * A BUTTON WAS PRESSED. NOTHING MORE IS CLAIMED.
+   *
+   * Pressing «اتصال» used to be filed as `ANSWERED` — the strongest
+   * outcome in this list — because the screen had nothing weaker to say.
+   * So the answer rate, the number that decides whether the problem is
+   * the script or the hour of the day, counted every DIALLED call as a
+   * conversation. The same comment two lines up says exactly why that is
+   * wrong, about messages.
+   *
+   * What the browser actually knows is that the dialler (or WhatsApp)
+   * was opened on this number, by this employee, at this moment. That is
+   * worth recording — it is the contact log, and without it a call made
+   * from the orders list leaves no trace at all — and it is worth
+   * recording as NOTHING MORE.
+   *
+   * So it is not counted: not toward the answer rate (that reads
+   * ANSWERED), and not toward the 1/2/3 no-answer close (that reads
+   * NO_ANSWER and BUSY). The outcome is still recorded by the person who
+   * knows it, with «لا يرد» or «تأكيد» after the call ends.
+   */
+  'OPENED',
   'OTHER',
 ] as const;
 

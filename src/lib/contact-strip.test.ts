@@ -42,10 +42,35 @@ describe('the contact strip', () => {
    * decides whether the problem is the script or the hour of the day — with
    * messages nobody has replied to. So it has its own result.
    */
-  it('records a sent message as sent, never as answered', () => {
+  it('records a press as a press, never as an answer', () => {
+    /*
+     * AND A DIALLED CALL IS NOT AN ANSWER EITHER.
+     *
+     * This screen used to file one as `ANSWERED` — the strongest outcome
+     * there is — because it had nothing weaker to say, so the answer rate
+     * counted every dial as a conversation. That is the same inflation the
+     * note above warns about for messages, and it was two lines below it.
+     *
+     * `OPENED` says what the browser actually knows: the dialler was
+     * opened on this number, by this employee, now. Counted toward
+     * neither the answer rate nor the three-strike close.
+     *
+     * Where the press is RECORDED is no longer this screen's business —
+     * `ContactButtons` does it for every screen, and
+     * `a-press-leaves-a-line.test.tsx` presses the buttons and reads what
+     * was sent. What is held here is that no screen files a press as an
+     * outcome.
+     */
     expect(CONTACT_RESULTS).toContain('MESSAGE_SENT');
-    const screen = stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
-    expect(screen).toMatch(/method === 'PHONE' \? 'ANSWERED' : 'MESSAGE_SENT'/);
+    expect(CONTACT_RESULTS, 'ما في نتيجة للكبسة نفسها').toContain('OPENED');
+
+    for (const { rel, src } of dashboardFiles()) {
+      const body = stripComments(src);
+      if (!body.includes('ContactButtons')) continue;
+      expect(body, `${rel}: الكبسة بتنسجّل نتيجةَ اتصال`).not.toMatch(
+        /onContacted[\s\S]{0,200}'ANSWERED'/
+      );
+    }
   });
 
   /**
@@ -61,12 +86,86 @@ describe('the contact strip', () => {
     expect(counted![1], 'الرسالة المُرسَلة تُحسب محاولةً بلا ردّ').not.toContain('MESSAGE_SENT');
   });
 
-  /** The strip reports what left, so a counter somewhere can hear it. */
-  it('tells the caller what actually left', () => {
+  /**
+   * THE STRIP RECORDS ITS OWN PRESSES, SO NO SCREEN HAS TO REMEMBER.
+   *
+   * It used to report to its caller and leave the recording to them, and
+   * exactly one of the four screens that show a customer's number passed
+   * anything. Three doors — the dial, the template send, the empty
+   * WhatsApp — now go through one function that writes the line.
+   */
+  it('records its own presses, through one door', () => {
     const src = stripComments(repoFile('src/components/orders/ContactButtons.tsx'));
-    expect(src).toContain("onContacted?: (method: 'PHONE' | 'SMS' | 'WHATSAPP') => void");
-    // On all three doors: the dial, the template send, and the empty WhatsApp.
-    expect((src.match(/onContacted\?\.\(/g) ?? []).length).toBe(3);
+    expect(src, 'الشريط ما بيسجّل لحاله').toContain('contact-attempts');
+    expect((src.match(/noteContact\(/g) ?? []).length, 'في باب ما بيمرّ على المسجّل').toBe(3);
+  });
+
+  /**
+   * AND EVERY SCREEN THAT SHOWS A CUSTOMER'S NUMBER OFFERS IT.
+   *
+   * The orders list printed the number as plain text with nothing to press,
+   * the order window the same, and the customers screen had a bare `tel:`
+   * and no WhatsApp at all. So the agent read the digits off the screen and
+   * typed them into a phone, with the transposed digit that goes with that.
+   */
+  it('and is on every screen that shows a customer’s number', () => {
+    for (const rel of [
+      'src/components/screens/OrdersScreen.tsx',
+      'src/components/screens/CustomersScreen.tsx',
+      'src/components/screens/ConfirmationMineScreen.tsx',
+      'src/components/screens/TrackingScreen.tsx',
+      'src/components/orders/CustomerCard.tsx',
+    ]) {
+      expect(stripComments(repoFile(rel)), `${rel}: الرقم معروض بلا شي تكبسه`).toContain(
+        'ContactButtons'
+      );
+    }
+  });
+
+  /**
+   * AND THE ORDER ONES PASS THE ORDER, OR THE LINE IS NEVER WRITTEN.
+   *
+   * `orderId` is what the strip files the press against; without it the
+   * press opens the dialler and records nothing. The customers screen is
+   * the deliberate exception — a row there is a person, not a parcel.
+   */
+  it('and the screens that have an order pass it', () => {
+    for (const rel of [
+      'src/components/screens/OrdersScreen.tsx',
+      'src/components/screens/ConfirmationMineScreen.tsx',
+      'src/components/orders/CustomerCard.tsx',
+    ]) {
+      const body = stripComments(repoFile(rel));
+      // The whole element, not a fixed window: one of these call sites
+      // carries a paragraph of its own explaining why the press is not an
+      // outcome, and a window wide enough for it would reach the next
+      // component on another screen.
+      const from = body.indexOf('<ContactButtons');
+      const call = body.slice(from, body.indexOf('/>', from));
+      expect(call, `${rel}: الشريط بلا رقم طلب — فالكبسة ما بتنسجّل`).toContain('orderId');
+    }
+  });
+
+  /**
+   * AND THE NUMBER TRAVELS IN FULL INTERNATIONAL FORM.
+   *
+   * `wa.me` takes digits with the country code and nothing else. A link
+   * built from a local `079…` opens a chat with a number that does not
+   * exist, which to the person pressing looks like WhatsApp being broken.
+   * The country is known on the server and nowhere in the browser, so each
+   * list sends its dial code.
+   */
+  it('and every list sends the country’s calling code', () => {
+    for (const rel of [
+      'src/app/api/orders/route.ts',
+      'src/app/api/orders/[id]/route.ts',
+      'src/app/api/customers/route.ts',
+      'src/app/api/ops/tracking/route.ts',
+    ]) {
+      expect(stripComments(repoFile(rel)), `${rel}: القائمة بلا رمز اتّصال`).toMatch(
+        /dialCode:\s*ruleFor\(/
+      );
+    }
   });
 
   /**

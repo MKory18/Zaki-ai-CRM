@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
+import { ruleFor } from '@/lib/phone-rules';
 import { findCustomer, findOrCreateCustomer } from '@/lib/customer-identity';
 import { can, getPermissionScope, requirePermission } from '@/lib/authorization';
 import { normalizePhoneNumber } from '@/lib/phone';
@@ -63,7 +64,7 @@ const BASIC_CUSTOMER_SELECT = {
 
 export async function GET(req: Request) {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
 
     // Permission-tiered PII: full data for customers.view, limited
     // call-relevant fields for customers.view_basic, 403 for everyone else.
@@ -149,7 +150,18 @@ export async function GET(req: Request) {
      */
     await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة العملاء', rows: customers });
 
-    return NextResponse.json({ customers, limited: !canViewFull, facts });
+    /*
+     * The country's calling code travels with the list. The rows carry a
+     * local number and `wa.me` takes full international digits only, so a
+     * link built in the browser from `079…` opens a chat with a number
+     * that does not exist. The country is known here, not there.
+     */
+    return NextResponse.json({
+      customers,
+      limited: !canViewFull,
+      facts,
+      dialCode: ruleFor(country.code)?.dialCode ?? null,
+    });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

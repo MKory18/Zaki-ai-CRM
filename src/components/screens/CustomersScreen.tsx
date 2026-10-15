@@ -9,9 +9,10 @@ import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiMapPinLine, RiPhoneLine, RiSearchLine } from '@remixicon/react';
+import { RiAddCircleLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { HealthChip } from '@/components/ui/HealthChip';
+import { ContactButtons } from '@/components/orders/ContactButtons';
 import type { CustomerFacts } from '@/lib/customer-insights';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -31,6 +32,8 @@ export function CustomersScreen() {
   const [customers, setCustomers] = useState<any[]>([]);
   /** The whole book's figures, from the server — not a count of this page. */
   const [facts, setFacts] = useState<CustomerFacts | null>(null);
+  /** The country's calling code, for the contact strip's `wa.me`. */
+  const [dialCode, setDialCode] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +63,7 @@ export function CustomersScreen() {
         const data = await res.json();
         setCustomers(data.customers || []);
         setFacts(data.facts ?? null);
+        setDialCode(data.dialCode ?? null);
       }
     } catch (e) {
       console.error(e);
@@ -215,14 +219,37 @@ export function CustomersScreen() {
                 label: 'الهاتف',
                 primary: true,
                 render: ({ customer: c }) => (
-                  <a
-                    href={`tel:${c.phone}`}
+                  /*
+                   * THE NUMBER, AND THE THREE WAYS TO USE IT.
+                   *
+                   * This was a bare `tel:` link and nothing else: no
+                   * WhatsApp on the screen whose whole subject is the
+                   * customer, and no ready-made message anywhere near it.
+                   * A `wa.me` link written here would also have been built
+                   * from a local number, which opens a chat with a number
+                   * that does not exist — the strip builds it from the
+                   * country's calling code.
+                   *
+                   * No `orderId`: this row is a person, not a parcel.
+                   * There is no order to file an attempt against, so
+                   * nothing is written to any contact log from here —
+                   * which is the honest answer, not a missing feature.
+                   */
+                  <span
                     onClick={(e) => e.stopPropagation()}
-                    className="tap-safe inline-flex items-center gap-1 font-mono text-[var(--sys-heading)] hover:text-[var(--sys-primary)]"
+                    className="inline-flex items-center gap-2"
                   >
-                    <RiPhoneLine className="h-4 w-4 text-[var(--sys-muted)]" />
-                    <span dir="ltr">{c.rawPhone || c.phone}</span>
-                  </a>
+                    <span className="font-mono text-[var(--sys-heading)]" dir="ltr">
+                      {c.rawPhone || c.phone}
+                    </span>
+                    <ContactButtons
+                      compact
+                      plain
+                      phone={c.rawPhone || c.phone}
+                      countryCode={dialCode}
+                      context={{ customerName: c.fullName, region: c.city }}
+                    />
+                  </span>
                 ),
               },
               {

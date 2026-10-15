@@ -13,7 +13,7 @@ import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, applyQueue
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { ordersWhere } from '@/lib/order-filters';
-import { isValidPhoneFor, phoneErrorFor } from '@/lib/phone-rules';
+import { isValidPhoneFor, phoneErrorFor, ruleFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
@@ -420,6 +420,13 @@ export async function GET(
       // The store's own currency, so the detail screen shows the same money
       // the list does instead of a hard-coded dollar sign.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },
+      /*
+       * The country's calling code. The window shows the customer's number
+       * in its local form, and `wa.me` takes full international digits
+       * only — a link built in the browser from `079…` opens a chat with a
+       * number that does not exist. The country is known here, not there.
+       */
+      dialCode: ruleFor(country.code)?.dialCode ?? null,
       cod: { ...cod, includesDelivery: order.priceIncludesDelivery === true },
       previousOrderId,
       nextOrderId,
