@@ -307,24 +307,28 @@ export function FinanceProfitScreen() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             title="إيراد الموصَّل"
+            rule="مجموع المحصَّل فعلاً للطلبات اللي انحصّلت، زائد إجمالي الموصَّلة اللي ما انسجّل إلها تحصيل. الموصَّل وحده، بالمدّة المختارة."
             value={<Money value={summary.totalRevenue} currency={data?.currency} />}
             subtitle="الطلبات المسلَّمة فعلاً، لا المؤكدة"
             icon={RiArrowUpCircleLine}
           />
           <KpiCard
             title="صافي الربح"
+            rule="إيراد الموصَّل ناقص كلفة البضاعة ناقص أجور التوصيل ناقص العمولات ناقص المصاريف التشغيليّة. ولا ضريبة ولا رسوم — ما في خانة إلهم بهالنظام."
             value={<Money value={summary.netProfit} currency={data?.currency} />}
             subtitle={`هامش ${summary.profitMargin}%`}
             icon={RiMoneyDollarCircleLine}
           />
           <KpiCard
             title="كلفة البضاعة"
+            rule="مجموع كلفة القطع المبيعة بالطلبات الموصَّلة، بالكلفة المخزَّنة وقت البيع — مش بالكلفة الحاليّة، حتى ما يتغيّر ربح الشهر الماضي لمّا تتغيّر كلفة اليوم."
             value={<Money value={summary.totalCOGS} currency={data?.currency} />}
             subtitle="من كلفة التشغيلات — تُدخَل من شاشة التصنيع"
             icon={RiFileList3Line}
           />
           <KpiCard
             title="المصاريف التشغيلية"
+            rule="مجموع المصاريف المسجَّلة بالمدّة المختارة. إذا الجدول فاضي الرقم صفر — وطرح صفر وتسميته «صافي» هو نفس السكوت بخانة تانية، فالكرت بيسمّي الفراغ."
             value={<Money value={summary.totalOperationalExpenses} currency={data?.currency} />}
             subtitle="إعلانات وشحن ورواتب وما إليها"
             icon={RiArrowRightDownLine}
