@@ -151,10 +151,17 @@ export async function POST(req: Request) {
       );
     }
     if (error instanceof Error && error.message.startsWith('AI_HTTP_')) {
+      /*
+       * The thrown message is now `AI_HTTP_<status>|<model>|<what the
+       * vendor said>`, so only the status is read out. Pasting the whole
+       * thing into an Arabic sentence would put a vendor's JSON — or its
+       * HTML error page — in front of the person asking a question.
+       */
+      const status = error.message.match(/^AI_HTTP_(\d+)/)?.[1] ?? '';
       return NextResponse.json(
         {
-          error: `رفض المزوّد الطلب (${error.message.replace('AI_HTTP_', '')}) — تحقّق من المفتاح واسم النموذج.`,
-          code: error.message,
+          error: `رفض المزوّد الطلب (${status}) — تحقّق من المفتاح واسم النموذج.`,
+          code: `AI_HTTP_${status}`,
         },
         { status: 502 }
       );

@@ -28,8 +28,21 @@ import { zodMessage } from '@/lib/zod-message';
  */
 
 const schema = z.object({
-  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'LOCAL']),
-  model: z.string().trim().max(120),
+  /**
+   * OPTIONAL, AND THAT IS THE FIX.
+   *
+   * The keys card sent `provider` and `model` with EVERY key save — the
+   * values it happened to be holding — so pasting an Anthropic key
+   * stamped whatever the dropdown showed into the installation default.
+   * With nothing stored, that is OpenRouter and a free Llama, and from
+   * then on the «المزوّد» dropdown could not move it: the next key save
+   * put it back.
+   *
+   * Absent now means «leave it alone». «المزوّد» is the one place that
+   * sets the default, and saving an account is saving an account.
+   */
+  provider: z.enum(['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'LOCAL']).optional(),
+  model: z.string().trim().max(120).optional(),
   /** A key per vendor: a value sets it, null clears it, absent leaves it. */
   providerKeys: z.record(z.string(), z.string().trim().min(8).max(400).nullable()).optional(),
   /**

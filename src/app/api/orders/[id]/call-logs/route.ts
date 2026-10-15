@@ -35,6 +35,30 @@ export async function POST(
     }
     const order = access.order;
 
+    /**
+     * ── THE THIRD DOOR THAT RECORDS A CALL ──
+     *
+     * The independent review found this one: `orders.contact_log` was put
+     * on the contact-attempts route and on the `contact_result` action,
+     * and this route writes a `CallLog` with the same `CONTACT_RESULTS`
+     * values and moves `confirmationStatus` from them. So a role the owner
+     * had just untickedled «تسجيل نتيجة الاتصال» for could still record call
+     * outcomes here by hand — and the permission he had been told to
+     * untick would be a promise the system does not keep.
+     *
+     * It is outside the two doors the task names, and it is gated anyway:
+     * a guard with a sibling door around it is not a guard. Nobody loses
+     * anything on deploy — the migration grants `orders.contact_log` to
+     * every role holding `orders.edit`, which is exactly who could reach
+     * this route before.
+     */
+    if (!can(user, 'orders.contact_log')) {
+      return NextResponse.json(
+        { error: 'لا تملك صلاحية تسجيل نتيجة الاتصال.', code: 'CONTACT_LOG_NOT_ALLOWED' },
+        { status: 403 }
+      );
+    }
+
     // Permission: callers must have order-edit authority (scope-evaluated)
     const editAuth = authorize(user, 'orders.edit', order);
     if (!editAuth.allowed) {

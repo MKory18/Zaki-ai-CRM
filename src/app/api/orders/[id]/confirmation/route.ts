@@ -144,6 +144,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break;
       }
       case 'contact_result': {
+        /*
+         * The same permission the contact-attempts door now asks for, and
+         * for the same reason: this action records what happened on a
+         * call. It rode on `orders.confirm` — «may change the confirmation
+         * status» — which is a different act with a different risk, and
+         * the owner could not separate them from «الصلاحيات».
+         */
+        if (!can(user, 'orders.contact_log')) {
+          return NextResponse.json(
+            { error: 'لا تملك صلاحية تسجيل نتيجة الاتصال.', code: 'CONTACT_LOG_NOT_ALLOWED' },
+            { status: 403 }
+          );
+        }
         // Records result on the attempt just logged; updates workflow state
         if (!result || !['ANSWERED', 'NO_ANSWER', 'BUSY', 'WRONG_NUMBER', 'CALLBACK_REQUESTED', 'OTHER'].includes(result)) {
           return NextResponse.json({ error: 'نتيجة الاتصال غير صالحة' }, { status: 400 });

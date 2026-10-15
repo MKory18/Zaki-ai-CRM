@@ -1,4 +1,4 @@
-import { sanitizeScopes, type AiScope } from './ai-assistants';
+import { ASSISTANTS, sanitizeScopes, type AiScope } from './ai-assistants';
 import { db } from './db';
 import { sanitizePromptOverrides, resolvePrompt, recordVersions, HOUSE_JOB, type PromptHistory } from './ai-prompts';
 import { decryptSecret, encryptSecret, encryptionAvailable } from './secrets';
@@ -76,9 +76,19 @@ export const AI_PROVIDERS: ProviderInfo[] = [
   {
     id: 'ANTHROPIC',
     label: 'Anthropic',
-    defaultModel: 'claude-sonnet-5',
+    /*
+     * `claude-sonnet-5-5` and `claude-haiku-5-5` are the current ids and
+     * neither was offered — so the owner could not pick the model that is
+     * both newer and cheaper than the one the box defaulted to. The older
+     * names stay listed rather than deleted: a company already answering
+     * on one of them keeps answering, and a list that removes what people
+     * chose is a list that breaks them to look tidy.
+     */
+    defaultModel: 'claude-sonnet-5-5',
     models: [
       'claude-opus-5-5',
+      'claude-sonnet-5-5',
+      'claude-haiku-5-5',
       'claude-sonnet-5',
       'claude-fable-5-1',
       'claude-haiku-4-5-20251001',
@@ -340,8 +350,10 @@ export async function systemAi(): Promise<SystemAiSettings> {
 }
 
 export interface SaveSystemAiInput {
-  provider: AiProvider;
-  model: string;
+  /** Absent leaves the stored default alone — see the route's schema. */
+  provider?: AiProvider;
+  /** Absent leaves the stored default alone. */
+  model?: string;
   /** A key per vendor: a value sets it, null clears it, absent leaves it. */
   providerKeys?: Record<string, string | null>;
   /** The local server's address, already checked by `parseLocalEndpoint`. */
@@ -363,8 +375,18 @@ export async function saveSystemAi(input: SaveSystemAiInput, actorId?: string | 
     SYSTEM_AI,
     (current) => {
       const next: SystemAi = { ...(current ?? {}) };
-      next.provider = AI_PROVIDERS.find((p) => p.id === input.provider)?.id ?? next.provider;
-      next.model = input.model.trim() || providerInfo(input.provider).defaultModel;
+      /*
+       * Absent means «leave it». A key save used to carry whatever the
+       * screen was holding and overwrite the installation default with
+       * it, which is why the dropdown appeared not to work.
+       */
+      if (input.provider !== undefined) {
+        next.provider = AI_PROVIDERS.find((p) => p.id === input.provider)?.id ?? next.provider;
+      }
+      if (input.model !== undefined) {
+        const chosen = input.model.trim();
+        next.model = chosen || providerInfo(next.provider ?? 'OPENROUTER').defaultModel;
+      }
 
       if (input.providerKeys) {
         const keys = { ...(next.keys ?? {}) };
@@ -438,8 +460,13 @@ export async function aiSettings(companyId: string): Promise<AiSettings> {
 export async function saveAiSettings(
   companyId: string,
   input: {
-    provider: AiProvider;
-    model: string;
+    /**
+     * ABSENT MEANS «LEAVE IT», for the same reason as the installation
+     * settings: the screen echoes the COMPUTED value, so a required field
+     * turns «I edited a prompt» into «I chose OpenRouter».
+     */
+    provider?: AiProvider;
+    model?: string;
     prompts?: Record<string, string>;
     intelligenceScopes?: string[];
     apiKey?: string | null;
@@ -464,8 +491,25 @@ export async function saveAiSettings(
       input.prompts !== undefined ? sanitizePromptOverrides(input.prompts) : current.prompts;
 
     const next: StoredAi = {
-      provider: input.provider,
-      model: input.model.trim() || providerInfo(input.provider).defaultModel,
+      /*
+       * ── EDITING A PROMPT IS NOT CHOOSING A VENDOR ──
+       *
+       * `aiSettings()` COMPUTES `provider` and `model` when the company
+       * never chose, so the screen echoing them back is a write, not an
+       * echo. Saving a sentence, or ticking an intelligence scope, used
+       * to store `provider: 'OPENROUTER'` — and since the company's
+       * choice now outranks the installation default, that stamp would
+       * override a deliberate installation LOCAL or Anthropic.
+       *
+       * The same defect the key card had, on the other card. Absent
+       * leaves what is stored, and «never chose» stays expressible.
+       */
+      provider: input.provider ?? current.provider,
+      model:
+        input.model === undefined
+          ? current.model
+          : input.model.trim() ||
+            providerInfo((input.provider ?? current.provider ?? 'OPENROUTER') as AiProvider).defaultModel,
       // Sanitised on the way in: unknown jobs are dropped, and an override
       // equal to the default is not stored at all.
       prompts: nextPrompts,
@@ -560,6 +604,12 @@ export interface AiRoute {
   provider: AiProvider;
   model: string;
   key: string | null;
+  /**
+   * WHICH stored key this is — never its value. The screen and the test
+   * button both need to say «المفتاح من النظام» or «من الشركة», and the
+   * only honest source for that is the resolution that picked it.
+   */
+  keyFrom: KeySource;
   /** Only for LOCAL: the server the owner runs. Null for a vendor. */
   baseUrl?: string | null;
 }
@@ -567,13 +617,30 @@ export interface AiRoute {
 async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
   const company = await db.company.findUnique({ where: { id: companyId }, select: { settings: true } });
   const ai = readStored(company?.settings ?? null);
-  // The installation's own accounts come first; a company's stored settings
-  // are the fallback, so a deployment configured before «احفظو للـ System»
-  // existed keeps answering without anybody re-entering anything.
   const sys = (await readSystemSetting<SystemAi>(SYSTEM_AI)) ?? {};
 
-  const fallback = (AI_PROVIDERS.find((p) => p.id === sys.provider)?.id ??
-    AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ??
+  /**
+   * ── NARROWEST FIRST, AND A COMPANY'S CHOICE IS NARROWER THAN A
+   *    DEFAULT ──
+   *
+   * This read the installation's provider BEFORE the company's, with the
+   * reasoning that «a deployment configured before the system card
+   * existed keeps answering without anybody re-entering anything». That
+   * holds only for a company that never chose — and it is why «المزوّد»
+   * appeared to do nothing: on `main` every key save stamped
+   * `SYSTEM_AI.provider`, so every installation that ever saved a key had
+   * one, and it beat whatever the company picked. «حطّيت المفتاح وما
+   * اشتغل», exactly.
+   *
+   * The order is the one the task names: the assistant's own choice, then
+   * the COMPANY's when it made one, then the installation default, then
+   * OpenRouter. `readStored` hands back the raw stored object, so an
+   * absent `ai.provider` is genuinely «never chose» and not a default
+   * standing in for one — which is what makes «when it chose one»
+   * expressible at all.
+   */
+  const fallback = (AI_PROVIDERS.find((p) => p.id === ai.provider)?.id ??
+    AI_PROVIDERS.find((p) => p.id === sys.provider)?.id ??
     'OPENROUTER') as AiProvider;
   const override = job ? ai.assistants?.[job] : undefined;
   const chosen = AI_PROVIDERS.find((p) => p.id === override?.provider)?.id as AiProvider | undefined;
@@ -588,15 +655,21 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
     override?.model?.trim() ||
       (chosen && chosen !== fallback
         ? providerInfo(provider).defaultModel
-        : sys.model || ai.model || providerInfo(provider).defaultModel)
+        // The same order as the vendor above: the company's own model
+        // first, because it is the narrower statement.
+        : ai.model || sys.model || providerInfo(provider).defaultModel)
   );
 
   let key: string | null = null;
+  let keyFrom: KeySource = 'none';
   // The installation's key for THIS vendor, then the company's own.
-  const stored = sys.keys?.[provider]?.enc ?? ai.keys?.[provider]?.enc;
+  const fromSystem = sys.keys?.[provider]?.enc;
+  const fromCompany = ai.keys?.[provider]?.enc;
+  const stored = fromSystem ?? fromCompany;
   if (stored) {
     try {
       key = decryptSecret(stored);
+      keyFrom = fromSystem ? 'system' : 'company';
     } catch {
       key = null;
     }
@@ -605,13 +678,99 @@ async function routeFor(companyId: string, job?: string): Promise<AiRoute> {
     // when it was entered — never handed to a vendor it was not issued by.
     try {
       key = decryptSecret(ai.apiKeyEncrypted);
+      keyFrom = 'legacy';
     } catch {
       key = null;
     }
   }
-  if (!key && provider === 'OPENROUTER') key = process.env.OPENROUTER_API_KEY ?? null;
+  if (!key && provider === 'OPENROUTER') {
+    key = process.env.OPENROUTER_API_KEY ?? null;
+    if (key) keyFrom = 'env';
+  }
+  if (!key) keyFrom = 'none';
 
-  return { provider, model, key, baseUrl: provider === 'LOCAL' ? sys.localBaseUrl ?? null : null };
+  return {
+    provider,
+    model,
+    key,
+    keyFrom,
+    baseUrl: provider === 'LOCAL' ? sys.localBaseUrl ?? null : null,
+  };
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * WHERE A CALL WOULD GO, WITHOUT CARRYING THE KEY THERE.
+ *
+ * The settings screen needs to say «بيروح على: Anthropic · claude-sonnet-5-5
+ * — المفتاح من النظام» beside each assistant, and the test button needs to
+ * report the same thing. Both of those used to re-derive it: the screen
+ * read the company's own provider and model, and the test labelled its
+ * answer with those — so a call routed by an assistant override, or by the
+ * installation default, was described as something else entirely. Two
+ * answers to one question, and the wrong one on the screen.
+ *
+ * This is the same resolution `aiChat` uses, with the key dropped before
+ * it leaves. `keyFrom` says WHICH stored key would be used, never its
+ * value — that is the whole reason this exists rather than a `route.key`
+ * the screen could read.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export type KeySource = 'system' | 'company' | 'legacy' | 'env' | 'none';
+
+export interface RouteDescription {
+  provider: AiProvider;
+  model: string;
+  keyFrom: KeySource;
+  /** The local server's address, when the route is LOCAL. Never a secret. */
+  baseUrl: string | null;
+}
+
+export async function describeRoute(companyId: string, job?: string): Promise<RouteDescription> {
+  const { provider, model, keyFrom, baseUrl } = await routeFor(companyId, job);
+  return { provider, model, keyFrom, baseUrl: baseUrl ?? null };
+}
+
+/**
+ * ── WHAT THE VENDOR ACTUALLY SAID, CARRIED WITH THE STATUS ──
+ *
+ * The thrown error used to be the status and nothing else, so every 400
+ * from Anthropic arrived at the owner as «المزوّد ردّ بخطأ 400» — including
+ * the one that means «your credit balance is too low», which is not a
+ * programming error at all and has a four-word answer he can act on.
+ *
+ * The body is the VENDOR's words about the request. It carries no key: the
+ * key goes up in a header and nothing sends it back. Trimmed to 300
+ * characters so a vendor's HTML error page cannot become the message.
+ */
+async function vendorError(res: Response, model: string): Promise<Error> {
+  let said = '';
+  try {
+    said = (await res.text()).slice(0, 300);
+  } catch {
+    said = '';
+  }
+  /*
+   * ── AND NOTHING KEY-SHAPED SURVIVES THE TRIP ──
+   *
+   * The body is the vendor's words about OUR request, and some vendors
+   * quote the request back. OpenAI's 401 reads «Incorrect API key
+   * provided: sk-proj-…», and a proxy in front of a local model can echo
+   * the whole `Authorization` header.
+   *
+   * This message is thrown, and three callers log the error — the daily
+   * summary, the assistant and the order intake all `console.warn` it. So
+   * without this line a rotated key would put its own prefix in the
+   * server log, in a repository that deliberately refuses to show even
+   * the last four characters on the settings screen.
+   *
+   * The body is kept for CLASSIFICATION — «credit balance» and nothing
+   * else is read out of it — so redacting it costs nothing.
+   */
+  const scrubbed = said
+    .replace(/(sk|sk-ant|sk-or|sk-proj|ghp|gho|xox[baprs])[-_][A-Za-z0-9_-]{6,}/gi, '«مفتاح»')
+    .replace(/(Bearer|x-api-key|api[-_]?key)\s*[:=]?\s*[A-Za-z0-9_\-.]{12,}/gi, '$1 «مفتاح»');
+  return new Error(`AI_HTTP_${res.status}|${model}|${scrubbed.replace(/\s+/g, ' ').trim()}`);
 }
 
 export interface ChatRequest {
@@ -644,6 +803,21 @@ export interface ChatRequest {
    * The check happens before the first byte leaves: see `aiChat`.
    */
   localOnly?: boolean;
+  /**
+   * «THE PERSON IS ALREADY OUT OF THIS PAYLOAD.»
+   *
+   * Set by a caller for an assistant declared `pii: true` that has
+   * redacted the customer before building the prompt — the confirmation
+   * assistant replaces the name with a placeholder the screen fills in
+   * from the order it is already showing, and sends `hasNotes` instead of
+   * the notes.
+   *
+   * It is the opposite of `localOnly`: that one says «refuse unless the
+   * model is ours», this one says «it is safe anywhere, and here is why».
+   * The order extractor never passes it — a pasted WhatsApp message IS
+   * the customer, and there is nothing to take out of it.
+   */
+  piiSafe?: true;
 }
 
 export class AiNotConfigured extends Error {
@@ -699,6 +873,33 @@ export async function aiChat(req: ChatRequest): Promise<string> {
     throw new AiNotLocal(route.provider);
   }
 
+  /**
+   * ── AND THE ASSISTANT'S OWN DECLARATION, WHICH NOBODY WAS READING ──
+   *
+   * `ai-assistants.ts` marks three assistants `pii: true` — «whether a
+   * customer's phone or address may be in its payload». The order intake
+   * backs that up with `localOnly`. The confirmation assistant did not:
+   * it declared `pii: true` and sent the customer's name and the seller's
+   * free-text notes to whatever vendor the route resolved to.
+   *
+   * A declaration nothing enforces is a comment. So the declaration is
+   * read here, at the same line `localOnly` is read, and the call is
+   * refused unless the caller says it has already taken the person out —
+   * `piiSafe`. The caller says it because only the caller knows what it
+   * put in the payload; this function cannot look at a JSON blob and tell
+   * a customer's name from a product's.
+   *
+   * ⚠️ Which means `piiSafe` is a PROMISE, and a caller that passes it
+   * while still carrying a name breaks the owner's rule with the guard
+   * switched on. 🔧 Every caller that passes it does its redaction in one
+   * place, with a test that reads the payload — see the confirmation
+   * route.
+   */
+  if (!req.piiSafe && route.provider !== 'LOCAL' && req.job) {
+    const assistant = ASSISTANTS.find((a) => a.promptJob === req.job);
+    if (assistant?.pii) throw new AiNotLocal(route.provider);
+  }
+
   const key = route.key;
   /**
    * A LOCAL SERVER IS CONFIGURED BY ITS ADDRESS, NOT BY A KEY.
@@ -718,8 +919,32 @@ export async function aiChat(req: ChatRequest): Promise<string> {
   const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? 30_000);
 
   try {
+    /**
+     * ── THE JOB'S OWN WORDING, AND NEVER THE WORD «undefined» ──
+     *
+     * `ChatRequest` says it plainly ten lines up: «Pass a `job` instead to
+     * use the company's own wording». Three callers do exactly that and
+     * pass no `system` — picking, the confirmation assistant and the
+     * landing copywriter — and this line never looked the job up. So the
+     * template literal stringified `undefined`, and what reached the model
+     * was the house prompt, two newlines, and the literal word
+     * «undefined» as its instructions. With no house prompt it was
+     * `undefined` alone.
+     *
+     * Three assistants have been running that way. They answered — models
+     * answer almost anything — which is why nobody saw it: a worse answer
+     * looks like a worse model.
+     *
+     * `resolvePrompt` is the function the settings screen edits through,
+     * so this is the line that makes «عدّلت النصّ» mean something for
+     * those three.
+     */
+    const job = req.system ?? (req.job ? resolvePrompt(req.job, settings.prompts) : '');
     const house = settings.prompt.trim();
-    const system = house ? `${house}\n\n${req.system}` : req.system;
+    const body = job.trim();
+    // Neither half is sent empty: an empty system prompt is a different
+    // request from no system prompt, and «\n\n» on its own is noise.
+    const system = house && body ? `${house}\n\n${body}` : house || body;
 
     if (route.provider === 'ANTHROPIC') {
       // Proved by the guard above; re-stated because the compiler cannot
@@ -740,7 +965,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
           messages: [{ role: 'user', content: req.user }],
         }),
       });
-      if (!res.ok) throw new Error(`AI_HTTP_${res.status}`);
+      if (!res.ok) throw await vendorError(res, route.model);
       const data = await res.json();
       return data?.content?.[0]?.text ?? '';
     }
@@ -781,7 +1006,7 @@ export async function aiChat(req: ChatRequest): Promise<string> {
         ...(req.json ? { response_format: { type: 'json_object' } } : {}),
       }),
     });
-    if (!res.ok) throw new Error(`AI_HTTP_${res.status}`);
+    if (!res.ok) throw await vendorError(res, route.model);
     const data = await res.json();
     return data?.choices?.[0]?.message?.content ?? '';
   } finally {

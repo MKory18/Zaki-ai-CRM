@@ -296,6 +296,23 @@ export function OrdersScreen() {
   const [printing, setPrinting] = useState(false);
   const canPrint = userCan(currentUser, 'ops.labels');
   /**
+   * ── EVERY BUTTON HERE ASKS WHAT ITS OWN DOOR ASKS ──
+   *
+   * Printing has been gated by `ops.labels` for a while; the other four
+   * were drawn for anybody who could open the screen, and only the server
+   * refused — so an agent saw «تصدير CSV» and «استيراد طلبات», pressed
+   * them, and got an error in a language that is not hers. A control that
+   * is visible and refuses is worse than one that is not there: it reads
+   * as a broken system rather than as a boundary.
+   *
+   * These are UX only. The doors themselves still decide — `reports.export`
+   * on the export route, `orders.create` and the new `orders.import` on
+   * `POST /api/orders` — and that is the order of trust, not this file.
+   */
+  const canExport = userCan(currentUser, 'reports.export');
+  const canCreate = userCan(currentUser, 'orders.create');
+  const canImport = userCan(currentUser, 'orders.import');
+  /**
    * Only confirmed orders with a courier get a waybill — printing seals an
    * order. The ones that were ticked and cannot be printed are named, not
    * silently left out of the stack of paper.
@@ -359,6 +376,7 @@ export function OrdersScreen() {
             description="كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء"
             actions={
               <><div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
+            {canExport && (
             <Button
               variant="outline"
               size="sm"
@@ -368,9 +386,11 @@ export function OrdersScreen() {
               <RiDownload2Line className="w-4 h-4" />
               <span>{t.export}</span>
             </Button>
+            )}
 
             {/* Beside the export, because they are the same door in two
                 directions and somebody looking for one looks here. */}
+            {canImport && (
             <Button
               variant="outline"
               size="sm"
@@ -380,6 +400,7 @@ export function OrdersScreen() {
               <RiUploadCloud2Line className="w-4 h-4" />
               <span>استيراد طلبات</span>
             </Button>
+            )}
 
             <Button
               variant="outline"
@@ -391,6 +412,7 @@ export function OrdersScreen() {
               <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
 
+            {canCreate && (
             <Button
               size="sm"
               variant="outline"
@@ -400,7 +422,9 @@ export function OrdersScreen() {
               <RiMagicLine className="w-4 h-4" />
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
+            )}
 
+            {canCreate && (
             <Button
               size="sm"
               onClick={() => setCreateModalOpen(true)}
@@ -409,6 +433,7 @@ export function OrdersScreen() {
               <RiAddCircleLine className="w-4 h-4" />
               <span>{t.quickCreateOrder}</span>
             </Button>
+            )}
           </div></>
             }
           />
@@ -582,10 +607,12 @@ export function OrdersScreen() {
                 </Button>
               </>
             )}
+            {canExport && (
             <Button size="sm" variant="outline" onClick={handleExportSelected}>
               <RiDownload2Line className="w-4 h-4" />
               تصدير المحدَّد
             </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
               إلغاء التحديد
             </Button>

@@ -9,7 +9,7 @@ import { computeCod } from '@/lib/money';
 import { hasEverShipped, hasLeftWarehouse, assertCancellable, deriveCoreState, getZone, type StateSource } from '@/lib/order-state';
 import { releaseOrderLines } from '@/lib/reservation';
 import { consumeOrderStock } from '@/lib/stock-consumption';
-import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, orderVisibilityWhere } from '@/lib/rbac';
+import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, applyQueueFilter } from '@/lib/rbac';
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { ordersWhere } from '@/lib/order-filters';
@@ -155,16 +155,29 @@ async function buildNavigationWhere(order: { createdAt: Date; companyId: string 
   const { user, companyId, storeId } = await requireContext();
   const where: any = { companyId, storeId };
 
-  // RBAC: self-scoped roles navigate within their own visibility envelope
-  // (same orderVisibilityWhere used by the list API's queue filtering)
-  const SELF_SCOPED = ['MODERATOR', 'CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT'];
-  if (SELF_SCOPED.includes(user.role)) {
-    const visibility = orderVisibilityWhere(user);
-    if (Object.keys(visibility).length > 0) {
-      return { AND: [where, visibility] };
-    }
-  }
-
+  /**
+   * ── THE ARROWS WALK THE LIST, AND THE LIST IS NOT THE READ ENVELOPE ──
+   *
+   * Two things were wrong here, and they compounded.
+   *
+   * The first is the role NAME list that used to stand where this comment
+   * is: MODERATOR · CONFIRMATION_AGENT · FOLLOW_UP_AGENT. A guard that is
+   * a list is incomplete the day it is written — a custom role with the
+   * same scope under another name fell through it and walked every order
+   * in the store. The scope engine already answers this question, so ask
+   * it instead of asking what the role is called.
+   *
+   * The second is worse. It used `orderVisibilityWhere`, which is the READ
+   * envelope — and the read envelope deliberately carries the unclaimed
+   * queue, because an agent must be able to OPEN the order she is about to
+   * pull. So an agent opened one order and arrowed through the whole pool,
+   * with customer names and phones: exactly the queue C2 had just taken
+   * out of her list, handed back by a button beside it.
+   *
+   * `orderListWhere` + `applyQueueFilter` is what the list itself uses.
+   * The arrows now mirror what is on screen behind the dialog, which is
+   * what «navigation matches the list context» said all along.
+   */
   /*
    * THE SAME BUILDER THE LIST USES — this is what «matches the exact list
    * context» above finally means.
@@ -185,7 +198,30 @@ async function buildNavigationWhere(order: { createdAt: Date; companyId: string 
   // the dialog still opens, and the arrows simply span the unfiltered list.
   if (built.ok) Object.assign(where, built.where);
 
-  return where;
+  /*
+   * And the envelope goes on LAST, exactly as `GET /api/orders` does it
+   * (`applyQueueFilter(user, whereClause, queue)`): the filters build the
+   * where, and the role's envelope is ANDed over the top of it. Merged by
+   * the same function, in the same order, so the two cannot drift apart
+   * again — which is how the arrows came to span a different set from the
+   * list in the first place.
+   */
+  /*
+   * ONE QUEUE IS NOT PASSED THROUGH, AND IT IS THE ONE THAT WIDENS.
+   *
+   * The others — `my_orders`, `assigned_to_me`, `processing` — narrow, so
+   * honouring them keeps the arrows inside what is on screen. `available`
+   * is the claimable pool, and it is the only value that ADDS orders the
+   * role's own envelope excludes. Letting it through would hand back by
+   * query string exactly what this function was rewritten to close: one
+   * order opened with `?queue=available` on the URL and the arrows walk
+   * the whole queue again.
+   *
+   * No screen asks for it on this route. A hand-written request can, and
+   * that is the point.
+   */
+  const queue = searchParams.get('queue');
+  return applyQueueFilter(user, where, queue === 'available' ? null : queue);
 }
 
 export async function GET(
@@ -269,7 +305,15 @@ export async function GET(
     // "next" = newer (comes first in a DESC list), "previous" = older.
     let previousOrderId: string | null = null;
     let nextOrderId: string | null = null;
-    try {
+    /*
+     * AND THE ARROWS THEMSELVES ARE A PERMISSION.
+     *
+     * Without `orders.navigate` no neighbour id leaves this route, so the
+     * buttons have nothing to render and no hand-written request can walk
+     * the list either — the ids were the whole mechanism.
+     */
+    if (can(user, 'orders.navigate')) {
+      try {
       const ctxWhere = await buildNavigationWhere(order, searchParams);
       const tieBreaker = { id: 'desc' as const };
       const [newer, older] = await Promise.all([
@@ -308,8 +352,9 @@ export async function GET(
       ]);
       nextOrderId = newer?.id ?? null;
       previousOrderId = older?.id ?? null;
-    } catch {
-      // Navigation is best-effort; never fail the order fetch because of it
+      } catch {
+        // Navigation is best-effort; never fail the order fetch because of it
+      }
     }
 
     // The SAME derived state every other screen shows. The stored `status`

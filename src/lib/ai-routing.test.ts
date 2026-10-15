@@ -35,8 +35,25 @@ describe('routing a call', () => {
     // The legacy single key is only offered to the provider it was entered
     // under — never handed to a vendor that did not issue it.
     expect(src).toMatch(/provider === fallback && ai\.apiKeyEncrypted/);
-    // And the environment key is OpenRouter's, by its own name.
-    expect(src).toMatch(/provider === 'OPENROUTER'\) key = process\.env\.OPENROUTER_API_KEY/);
+    /*
+     * And the environment key is OpenRouter's, by its own name.
+     *
+     * Asked as a RULE and not as a line: this used to pin the one-liner
+     * `if (!key && provider === 'OPENROUTER') key = process.env…`, and it
+     * broke the day that statement became a block — without the property
+     * changing at all. What matters is that `OPENROUTER_API_KEY` is read
+     * nowhere except under a check that the resolved provider is
+     * OPENROUTER and that nothing was found before it.
+     */
+    // The ASSIGNMENT, not every mention: `aiSettings` also reads the
+    // variable to decide whether the screen says a key exists, and that
+    // is a different question from which key a call carries.
+    const envReads = [...src.matchAll(/key = process\.env\.OPENROUTER_API_KEY/g)];
+    expect(envReads, 'ما عاد يأخذ مفتاح البيئة').toHaveLength(1);
+    const before = src.slice(0, envReads[0].index);
+    const guard = before.slice(before.lastIndexOf('if ('));
+    expect(guard, 'مفتاح البيئة بينقرا بلا ما يتأكّد من المزوّد').toContain("provider === 'OPENROUTER'");
+    expect(guard, 'مفتاح البيئة بيغلب مفتاحاً مخزَّناً').toContain('!key');
   });
 
   /**

@@ -415,7 +415,7 @@
     "columns": 5,
     "cards": 0,
     "modals": 0,
-    "icons": 2,
+    "icons": 4,
     "links": 0,
     "tabs": 0
   },
@@ -885,7 +885,7 @@
     "columns": 0,
     "cards": 3,
     "modals": 3,
-    "icons": 15,
+    "icons": 17,
     "links": 0,
     "tabs": 0
   },
@@ -941,7 +941,7 @@
   },
   "src/components/screens/ShipmentsNewScreen.tsx": {
     "buttons": 5,
-    "inputs": 5,
+    "inputs": 6,
     "columns": 5,
     "cards": 0,
     "modals": 0,

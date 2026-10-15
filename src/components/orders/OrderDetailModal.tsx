@@ -336,7 +336,22 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
       subtitle={`أُنشئ في ${arDateTime(order.createdAt)} • قناة الطلب: ${order.source.split(' → ')[0]}${order.source.includes(' → ') ? ` • المصدر: ${order.source.split(' → ')[1]}` : ''}${order.source === 'Landing Page' && order.landingPage?.name ? ` • صفحة الهبوط: ${order.landingPage.name}` : ''}${order.offer?.name ? ` • العرض: ${order.offer.name}` : ''}${(order.source === 'Telegram' || order.source.startsWith('Telegram → ')) && (order as any).telegramMessages?.[0] ? ` • تيليجرام: رسالة #${(order as any).telegramMessages[0].messageId}${(order as any).telegramMessages[0].threadId ? ` • موضوع: ${(order as any).telegramMessages[0].threadName || (order as any).telegramMessages[0].threadId}` : ''}` : ''}`}
       maxWidth="4xl"
     >
-      {/* ─── Prev/Next order navigation (below the header, inside the modal) ─── */}
+      {/* ─── Prev/Next order navigation (below the header, inside the modal) ───
+        *
+        * DRAWN ONLY WHEN THERE IS SOMEWHERE TO GO.
+        *
+        * The server stopped returning neighbour ids to anybody without
+        * `orders.navigate`, and the two buttons went on rendering —
+        * permanently grey, on every order, indistinguishable from the end
+        * of a list. That is the same thing this change set out to stop on
+        * «الطلبات»: a control that is visible and refuses reads as a broken
+        * system rather than as a boundary.
+        *
+        * Keyed on the ids rather than on the permission, because the ids
+        * are what the buttons DO. A person at the end of their list has
+        * nothing to go to either, and the row has nothing to say to them.
+        */}
+      {(navIds.previousOrderId || navIds.nextOrderId) && (
       <div
         className={`flex items-center justify-between gap-2 mb-4 -mt-1 ${isRtl ? 'flex-row-reverse' : ''}`}
         dir={isRtl ? 'rtl' : 'ltr'}
@@ -375,6 +390,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
           <span className="hidden sm:inline">{ar ? 'الطلب السابق' : 'Previous Order'}</span>
         </Button>
       </div>
+      )}
       {/* Action feedback (status update / call log) */}
       {actionFeedback && (
         <div
