@@ -110,7 +110,10 @@ const PATTERNS = [
   {
     name: 'Unquoted secret assignment',
     scope: 'env',
-    re: /^\s*(?:-\s*)?[A-Za-z_][A-Za-z0-9_]*(?:PASSWORD|PASSWD|SECRET|API_?KEY|TOKEN)\s*[:=]\s*(?!['"`$<#\s])[^\s#]{6,}\s*$/i,
+    // `[A-Za-z0-9_]*` and not `[A-Za-z_][A-Za-z0-9_]*`: the second demands a
+    // character BEFORE the keyword, so `API_KEY=…` and a bare `PASSWORD=…`
+    // — the likeliest shape of this very accident — walked straight past.
+    re: /^\s*(?:-\s*)?[A-Za-z0-9_]*(?:PASSWORD|PASSWD|SECRET|API_?KEY|TOKEN)\s*[:=]\s*(?!['"`$<#\s])[^\s#]{6,}\s*$/i,
   },
   { name: 'Meta App Secret', scope: 'src', re: /[0-9a-f]{32}(?![0-9a-f])/ },
   /**

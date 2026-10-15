@@ -108,6 +108,20 @@ describe('the scanner finds what this repository actually leaked', () => {
     expect(out).toContain('Unquoted secret assignment');
   });
 
+  it('and a key whose name is nothing but the word', () => {
+    /*
+     * `API_KEY=` and a bare `PASSWORD=` are the likeliest shape of this
+     * accident, and the first version of the rule missed every one of
+     * them: its name anchor demanded a character BEFORE the keyword, so
+     * `SEED_DEMO_PASSWORD` matched and `PASSWORD` did not. The two tests
+     * around this one both used prefixed names, so neither could notice.
+     */
+    for (const name of ['API_KEY', 'PASSWORD', 'SECRET', 'TOKEN', 'APIKEY']) {
+      const { code, out } = scan(plant('.env.example', `${name}=Mubarak2026\n`));
+      expect(code, `${name}: ${out}`).toBe(1);
+    }
+  });
+
   it('and the same thing inlined into a compose file', () => {
     const yaml = 'services:\n  db:\n    environment:\n      POSTGRES_PASSWORD: Mubarak2026\n';
     const { code, out } = scan(plant('docker-compose.yml', yaml));
