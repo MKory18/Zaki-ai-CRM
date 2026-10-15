@@ -191,6 +191,31 @@ describe('the previous/next ids', () => {
     expect(matches(where, { ...ORDER, claimedById: 'a1' }), 'الأسهم ما عادت توصل لطلباتها').toBe(true);
   });
 
+  it('and a custom role on the same scope is treated exactly like the named ones', async () => {
+    /*
+     * THE OTHER HALF OF THE OLD DEFECT.
+     *
+     * The envelope used to be chosen from a list of role NAMES —
+     * MODERATOR · CONFIRMATION_AGENT · FOLLOW_UP_AGENT. A role the company
+     * made itself, on the same scope under another name, fell past the
+     * list and walked every order in the store. A guard that is a list is
+     * incomplete the day it is written.
+     */
+    requireContext.mockResolvedValue({
+      user: { id: 'a1', name: 'سارة', role: 'موظّف تأكيد — مسائي', permissions: [] },
+      companyId: 'c1',
+      storeId: 's1',
+      country: { id: 'co', code: 'JO', currencyCode: 'JOD', minorUnit: 3, timezone: 'Asia/Amman' },
+    });
+    holding('orders.view', 'orders.navigate');
+
+    await open();
+
+    const where = db.order.findFirst.mock.calls[0]?.[0]?.where;
+    expect(where, 'ما سأل عن الجيران').toBeTruthy();
+    expect(matches(where, POOL), 'دور مخصّص لسّا بيمشي بالطابور').toBe(false);
+  });
+
   it('and the order itself opens either way — this gates the arrows, not the door', async () => {
     holding('orders.view');
 
