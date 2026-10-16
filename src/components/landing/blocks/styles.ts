@@ -1038,6 +1038,29 @@ export const BLOCK_CSS = `
 [data-family='trend'] .lp-faq-item { border-radius: 14px; }
 [data-family='trend'] .lp-urgency { font-weight: 800; }
 
+/* ── علامة — the product's own world. The fourth family arrived with the
+      storefront template of the same name, where a product carries its own
+      colours and the page is built from its fields.
+
+      A landing page in it is QUIET: the heading loosens rather than
+      thickens, the surfaces lose their corners almost entirely, and the
+      reassurance row is a hairline instead of a box — the opposite of
+      «ترند», which is the point. A shop wearing «علامة» and selling
+      through a landing page should not be shouted at by the page.
+
+      ⚠ـ Nothing here moves an order and nothing sits behind a figure: the
+      two rulings every family in this file is held to, and the two things
+      the guard beside it reads off this stylesheet. ── */
+[data-family='brand'] .lp-h2 { font-weight: 700; letter-spacing: .01em; }
+[data-family='brand'] .lp-sub { line-height: 1.95; }
+[data-family='brand'] .lp-objection,
+[data-family='brand'] .lp-faq-item { border-radius: 2px; }
+[data-family='brand'] .lp-trust > a {
+  border-radius: 2px;
+  border: 1px solid var(--store-border);
+  background: none;
+}
+
 @media (min-width: 640px) {
   .lp-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }

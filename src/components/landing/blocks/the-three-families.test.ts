@@ -31,7 +31,14 @@ const css = () => stripComments(BLOCK_CSS);
  * list, which now also carries the owner's fourth family. See the test
  * below for what an undrawn family is allowed to be.
  */
-const DRAWN: SellingFamily[] = ['clinic', 'herbal', 'trend'];
+/*
+ * FOUR NOW. «علامة» arrived with the storefront template of the same name
+ * on 15/10, and a template that reaches a family is a shop that can be
+ * WEARING it — so the bargain this file struck («an id without a look must
+ * be an id `familyOf` can never return») is settled the other way round:
+ * the look exists, and the strong rule applies to all four.
+ */
+const DRAWN: SellingFamily[] = ['clinic', 'herbal', 'trend', 'brand'];
 
 /**
  * Every rule whose selector mentions a family, as `[selector, body]`.
@@ -77,13 +84,28 @@ describe('the three families', () => {
    * `layout-slots.ts` strikes with a retired variant — never silent, and
    * never a name a shop can be wearing with nothing behind it.
    */
-  it('and a family this stage has not drawn is one it cannot select', () => {
+  it('and every family a template can reach has been drawn', () => {
+    /*
+     * THE BARGAIN, SETTLED THE OTHER WAY ROUND.
+     *
+     * This read «an id without a look must be an id `familyOf` can never
+     * return», because «علامة» was named and not yet drawn. It is drawn
+     * now, and a template reaches it — so the weaker rule would pass while
+     * proving nothing about the family a shop is actually wearing. The
+     * claim is the strong one it was waiting for: a shop can be wearing
+     * any of these, and none of them may be a name with nothing behind it.
+     */
     const undrawn = SELLING_FAMILIES.filter((f) => !DRAWN.includes(f));
-    expect(undrawn, 'عائلةٌ بلا مظهرٍ وبلا سببٍ مكتوب').toEqual(['brand']);
-    for (const family of undrawn) {
-      const reachable = Object.values(FAMILY_OF_TEMPLATE).includes(family);
-      expect(reachable, `قالبٌ بيوصل لعائلة «${family}» وما إلها مظهر`).toBe(false);
+    expect(undrawn, 'عائلةٌ بلا مظهرٍ وبلا سببٍ مكتوب').toEqual([]);
+    for (const family of SELLING_FAMILIES) {
+      const drawn = familyRules().some((r) => r.selector.includes(`[data-family='${family}']`));
+      expect(drawn, `عائلة «${family}» بلا ولا قاعدة في الورقة`).toBe(true);
     }
+    // And every drawn family is reachable, so none of them is a dead name.
+    const reachable = new Set<string>(Object.values(FAMILY_OF_TEMPLATE));
+    reachable.add(DEFAULT_FAMILY);
+    const orphans = SELLING_FAMILIES.filter((f) => !reachable.has(f));
+    expect(orphans, 'عائلةٌ مرسومةٌ ما بيوصلها قالب').toEqual([]);
   });
 
   /**

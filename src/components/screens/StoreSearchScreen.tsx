@@ -3,12 +3,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { apiJson } from '@/lib/api-client';
-import { routeLabel } from '@/lib/route-registry';
 import type { Synonym } from '@/lib/store-search';
 import { FIELD_KINDS, type AttributeField, type FieldKind } from '@/lib/product-attributes';
-import { RiAddLine, RiDeleteBinLine, RiInformationLine, RiLoader4Line } from '@remixicon/react';
+import { RiAddLine, RiDeleteBinLine, RiLoader4Line } from '@remixicon/react';
 
 /**
  * HOW A SHOPPER FINDS THE THING THEY CAME FOR.
@@ -115,40 +114,51 @@ export function StoreSearchScreen() {
   }
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title={routeLabel('/store/search')}
-        actions={
-          <Button onClick={save} disabled={busy}>
-            {busy ? 'جارٍ الحفظ…' : 'حفظ'}
+    <div className="space-y-5 pt-4" dir="rtl">
+      <PanelHeader
+        title="البحث والفلاتر"
+        line="كلمات متجرك المترادفة، وخصائص كل فئة التي يفلتر بها الزبون."
+        note={
+          msg && (
+            <span
+              className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}
+              role="status"
+            >
+              {msg.text}
+            </span>
+          )
+        }
+        primary={
+          <Button size="sm" onClick={save} disabled={busy}>
+            {busy ? 'جارٍ الحفظ…' : 'احفظ البحث'}
           </Button>
+        }
+        help={
+          <>
+            <p>
+              كلمتان يعاملهما متجرك على أنهما الشيء نفسه — مثل «طنين» و«صفير الأذن». يعمل الاتجاهان
+              معاً، فمن يكتب أيّاً منهما يجد الآخر.
+            </p>
+            <p>
+              <b className="text-[var(--sys-foreground)]">لا تحتاج كتابة اختلافات الإملاء:</b> «اذن»
+              تجد «الأُذُن» أصلاً، والهمزات والتشكيل والتاء المربوطة كلّها موحّدة قبل البحث.
+            </p>
+            <p>
+              الخصائص تُعرض للفئات التي يحملها هذا المتجر فقط — الجدول على مستوى الشركة، وعرضه كلّه
+              يدعوك لوصف رفوف متجر آخر.
+            </p>
+            <p>
+              «مناسب لـ» و«المكوّنات» لدواء، و«المقاس» و«الخامة» لقميص.{' '}
+              <b className="text-[var(--sys-foreground)]">والفلتر يعرض الخيارات التي تحملها منتجاتك فعلاً</b>،
+              لا كل ما كُتب هنا: خيارٌ لا منتجَ يحمله طريقٌ مسدود.
+            </p>
+          </>
         }
       />
 
-      {msg && (
-        <p
-          className={`text-sm font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-danger)]'}`}
-          role="status"
-        >
-          {msg.text}
-        </p>
-      )}
-
       {/* ── The shop's own words ── */}
       <section className={`${CARD} space-y-4`}>
-        <div>
-          <h2 className="text-sm font-bold text-[var(--sys-heading)]">كلمات المتجر</h2>
-          <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            <RiInformationLine className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              كلمتان يعاملهما متجرك على أنهما الشيء نفسه — مثل «طنين» و«صفير الأذن». يعمل
-              الاتجاهان معاً، فمن يكتب أيّاً منهما يجد الآخر.
-              <br />
-              <b>لا تحتاج كتابة اختلافات الإملاء:</b> «اذن» تجد «الأُذُن» أصلاً، والهمزات
-              والتشكيل والتاء المربوطة كلّها موحّدة قبل البحث.
-            </span>
-          </p>
-        </div>
+        <h2 className="text-sm font-bold text-[var(--sys-heading)]">كلمات المتجر</h2>
 
         <div className="space-y-2">
           {synonyms.map((s, i) => (
@@ -195,17 +205,13 @@ export function StoreSearchScreen() {
 
       {/* ── The questions each kind of thing is described by ── */}
       <section className={`${CARD} space-y-4`}>
+        {/* Two lines, as the rule for a card asks. The rest — what a
+            field is for, and why an option nobody's product carries is a
+            dead end — is behind the panel's ⓘ. */}
         <div>
           <h2 className="text-sm font-bold text-[var(--sys-heading)]">خصائص كل فئة</h2>
-          <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            <RiInformationLine className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              الأسئلة التي يُوصَف بها كل صنف — «مناسب لـ» و«المكوّنات» لدواء، و«المقاس»
-              و«الخامة» لقميص. تُجاب على صفحة المنتج، وتصير فلاتر في المتجر.
-              <br />
-              <b>الفلتر يعرض الخيارات التي تحملها منتجاتك فعلاً</b>، لا كل ما كُتب هنا: خيارٌ
-              لا منتجَ يحمله طريقٌ مسدود.
-            </span>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+            الأسئلة التي يُوصَف بها كل صنف — تُجاب على صفحة المنتج، وتصير فلاتر في المتجر.
           </p>
         </div>
 

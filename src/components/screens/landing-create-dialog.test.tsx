@@ -74,14 +74,41 @@ const sentBody = () => {
   return call ? JSON.parse((call[1] as RequestInit).body as string) : null;
 };
 
-/** Open the dialog and fill the two fields every page needs. */
-const openAndName = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+/**
+ * THE DIALOG IS FOUR STEPS NOW — product → shape → words → name.
+ *
+ * The owner, 15/10 01:33: «the إنشاء صفحة هبوط dialog is cluttered — make
+ * it steps». Every claim in this file is unchanged; what changed is that
+ * reaching a control means walking to its step, so the walk is written
+ * once here. Each helper leaves the dialog standing ON the step it names.
+ */
+type User = ReturnType<typeof userEvent.setup>;
+
+const nextButton = () => screen.getByRole('button', { name: /^التالي$/ });
+const createButton = () => screen.getByRole('button', { name: /^إنشاء$/ });
+
+const openDialog = async (user: User) =>
+  user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+
+/** Step 2 — the two starting points, the ten structures, the ten skins. */
+const toShape = async (user: User) => {
+  await openDialog(user);
+  await user.click(nextButton());
+};
+
+/** Step 3 — the dialect row and the chosen structure's text slots. */
+const toWords = async (user: User, structure: { name: string }) => {
+  await toShape(user);
+  await user.click(screen.getByText(structure.name));
+  await user.click(nextButton());
+};
+
+/** Step 4 — the name and the address, and the «إنشاء» button. */
+const toNaming = async (user: User) => {
+  await user.click(nextButton());
   await user.type(screen.getByPlaceholderText('مثال: صفحة Tremella'), 'صفحة الحزام');
   await user.type(screen.getByPlaceholderText('tremella'), 'belt');
 };
-
-const createButton = () => screen.getByRole('button', { name: /^إنشاء$/ });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -100,10 +127,11 @@ describe('the two starting points', () => {
   it('are both named without opening a menu', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    await toShape(user);
 
     // A seller who cannot see that the ten structures exist goes on using
-    // the fifteen forever, so neither is behind a click.
+    // the fifteen forever, so neither is behind a click: they are side by
+    // side on the shape step, not one of them under a dropdown.
     expect(screen.getByText('بنية إقناع × مظهر')).toBeTruthy();
     expect(screen.getByText('شكل جاهز')).toBeTruthy();
   });
@@ -111,7 +139,7 @@ describe('the two starting points', () => {
   it('open on the structures, and the ten are listed', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    await toShape(user);
 
     for (const s of LANDING_STRUCTURES) {
       expect(screen.getAllByText(s.name).length).toBeGreaterThan(0);
@@ -121,11 +149,23 @@ describe('the two starting points', () => {
   it('and the ready-made shapes are still there, one labelled tab away', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    await toShape(user);
     expect(screen.queryByText('شكل الصفحة')).toBeNull();
 
     await user.click(screen.getByText('شكل جاهز'));
     expect(screen.getByText('شكل الصفحة')).toBeTruthy();
+  });
+
+  it('and the product is asked for FIRST, because every preview after it sells it', async () => {
+    const user = userEvent.setup();
+    render(<LandingPagesScreen />);
+    await openDialog(user);
+
+    // Step one is the product and nothing else: asked afterwards, as it
+    // was before the four steps, all fifteen previews advertise «منتجك».
+    expect(screen.getByRole('button', { name: /اختر منتجًا/ })).toBeTruthy();
+    expect(screen.queryByText('بنية إقناع × مظهر')).toBeNull();
+    expect(screen.queryByPlaceholderText('مثال: صفحة Tremella')).toBeNull();
   });
 });
 
@@ -133,15 +173,18 @@ describe('the story step', () => {
   it('draws the seller’s own product in the first beat once a product is chosen', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    const dialog = () => within(screen.getByRole('dialog'));
 
     // Nothing chosen yet: the first beat is the library's own word. Scoped
     // to the dialog — the list behind it names the product of every row.
-    const dialog = () => within(screen.getByRole('dialog'));
+    await toShape(user);
     expect(dialog().queryAllByText(PRODUCT.name)).toHaveLength(0);
 
+    // Back one step, choose the product, forward again.
+    await user.click(screen.getByRole('button', { name: /^السابق$/ }));
     await user.click(screen.getByRole('button', { name: /اختر منتجًا/ }));
     await user.click(await dialog().findByText(new RegExp(`^${PRODUCT.name}`)));
+    await user.click(nextButton());
 
     // Once per structure card — the question «هل يناسب هذا منتجي؟» answered
     // by reading rather than by imagining.
@@ -151,13 +194,25 @@ describe('the story step', () => {
   it('will not let a page be created with no story chosen', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
+    await toShape(user);
 
-    // Named, addressed — and still refused, because there is no default
-    // story and a silent fallback would contradict the advert.
-    expect(createButton()).toHaveProperty('disabled', true);
+    /*
+     * THE SAME REFUSAL, ONE STEP EARLIER.
+     *
+     * There is no default story, and a silent fallback would hand
+     * somebody a first screen that contradicts the advert pointing at it.
+     * On one long scroll that refusal could only be the «إنشاء» button at
+     * the bottom; in four steps the shape step will not let you leave it
+     * empty, which says the same thing sooner.
+     */
+    expect(nextButton()).toHaveProperty('disabled', true);
 
     await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    expect(nextButton()).toHaveProperty('disabled', false);
+
+    // And with a story, a name and an address, the last step lets go.
+    await user.click(nextButton());
+    await toNaming(user);
     expect(createButton()).toHaveProperty('disabled', false);
   });
 });
@@ -166,7 +221,7 @@ describe('the skin step', () => {
   it('says what it is waiting for instead of previewing nothing', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    await toShape(user);
 
     expect(screen.getByText(/يظهر بعد اختيار البنية/)).toBeTruthy();
     expect(preview).not.toHaveBeenCalled();
@@ -175,7 +230,7 @@ describe('the skin step', () => {
   it('draws the chosen structure in every skin — one story, ten looks', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    await toShape(user);
     await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
 
     expect(preview.mock.calls).toHaveLength(STORE_TEMPLATES.length);
@@ -201,8 +256,7 @@ describe('the words step', () => {
   it('shows every slot of the chosen structure with its guide', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
 
     for (const slot of STRUCTURE_PROBLEM_SOLUTION.slots) {
       const field = screen.getByLabelText(new RegExp(slot.label));
@@ -215,8 +269,7 @@ describe('the words step', () => {
   it('puts what is typed into the preview as it is typed', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
 
     const hero = STRUCTURE_PROBLEM_SOLUTION.slots.find((s) => s.key === 'heroTitle')!;
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'وجع');
@@ -230,12 +283,14 @@ describe('what leaves the dialog', () => {
   it('sends the structure, the skin, the dialect and the words — and no shape', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
+    await toShape(user);
     await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await user.click(screen.getByText(STORE_TEMPLATES[0].name));
+    await user.click(nextButton());
 
     const hero = STRUCTURE_PROBLEM_SOLUTION.slots.find((s) => s.key === 'heroTitle')!;
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'وجع');
-    await user.click(screen.getByText(STORE_TEMPLATES[0].name));
+    await toNaming(user);
     await user.click(createButton());
 
     const body = sentBody();
@@ -251,8 +306,10 @@ describe('what leaves the dialog', () => {
   it('sends the shape alone from the other tab, with no copy to refuse', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
+    await toShape(user);
     await user.click(screen.getByText('شكل جاهز'));
+    await user.click(nextButton());
+    await toNaming(user);
     await user.click(createButton());
 
     const body = sentBody();
@@ -264,12 +321,12 @@ describe('what leaves the dialog', () => {
   it('keeps every slot, not only the last one typed', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
 
     const [first, second] = STRUCTURE_PROBLEM_SOLUTION.slots;
     await user.type(screen.getByLabelText(new RegExp(first.label)), 'أوّل');
     await user.type(screen.getByLabelText(new RegExp(second.label)), 'ثانٍ');
+    await toNaming(user);
     await user.click(createButton());
 
     const body = sentBody();
@@ -280,8 +337,7 @@ describe('what leaves the dialog', () => {
   it('keeps both dialects of one slot, so a second pass is not a replacement', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
 
     const hero = STRUCTURE_PROBLEM_SOLUTION.slots.find((s) => s.key === 'heroTitle')!;
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'بالفصحى');
@@ -290,6 +346,7 @@ describe('what leaves the dialog', () => {
     // writing over it must not take the formal one away.
     await user.clear(screen.getByLabelText(new RegExp(hero.label)));
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'بالشامي');
+    await toNaming(user);
     await user.click(createButton());
 
     const body = sentBody();
@@ -300,12 +357,12 @@ describe('what leaves the dialog', () => {
   it('carries the dialect the seller switched to', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await openAndName(user);
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
     await user.click(screen.getByRole('button', { name: 'شامية' }));
 
     const hero = STRUCTURE_PROBLEM_SOLUTION.slots.find((s) => s.key === 'heroTitle')!;
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'وجع');
+    await toNaming(user);
     await user.click(createButton());
 
     const body = sentBody();
@@ -373,14 +430,16 @@ describe('the dialog forgets the last page', () => {
   it('reopens with nothing chosen', async () => {
     const user = userEvent.setup();
     render(<LandingPagesScreen />);
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
-    await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await toWords(user, STRUCTURE_PROBLEM_SOLUTION);
 
     const hero = STRUCTURE_PROBLEM_SOLUTION.slots.find((s) => s.key === 'heroTitle')!;
     await user.type(screen.getByLabelText(new RegExp(hero.label)), 'وجع');
     await user.click(screen.getByRole('button', { name: /^إلغاء$/ }));
 
-    await user.click(screen.getByRole('button', { name: /صفحة جديدة/ }));
+    // AND IT REOPENS ON STEP ONE, not on the step it was abandoned on.
+    await openDialog(user);
+    expect(screen.getByRole('button', { name: /اختر منتجًا/ })).toBeTruthy();
+    await user.click(nextButton());
     // Not «the previous page's words in a new page's fields».
     expect(screen.getByText(/يظهر بعد اختيار البنية/)).toBeTruthy();
 
@@ -390,6 +449,7 @@ describe('the dialog forgets the last page', () => {
     // and `queryByDisplayValue` was asking about markup that did not
     // exist. A forgotten `setCopy({})` went unnoticed exactly there.
     await user.click(screen.getByText(STRUCTURE_PROBLEM_SOLUTION.name));
+    await user.click(nextButton());
     expect((screen.getByLabelText(new RegExp(hero.label)) as HTMLTextAreaElement).value).toBe('');
     expect(within(screen.getByRole('dialog')).queryByDisplayValue('وجع')).toBeNull();
   });

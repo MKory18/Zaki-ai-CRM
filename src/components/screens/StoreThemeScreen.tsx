@@ -13,10 +13,11 @@ import {
   CHECKOUT_FIELDS, DEFAULT_STORE_THEME, MANDATORY_CHECKOUT_FIELDS,
   checkoutOrder, type CheckoutField, type StoreTheme,
 } from '@/lib/store-theme';
-import { RiArrowGoBackLine, RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { RiArrowGoBackLine, RiBankCardLine, RiCheckLine, RiDownload2Line, RiExternalLinkLine, RiImageLine, RiLayoutBottomLine, RiLayoutGridLine, RiLayoutTopLine, RiLoader4Line, RiPaletteLine, RiShoppingBagLine, RiTreeLine, RiUpload2Line } from '@remixicon/react';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { TemplateGallery } from '@/components/ui/TemplateGallery';
-import { routeLabel } from '@/lib/route-registry';
+import { useStoreCurrency } from '@/context/StoreCurrency';
+import { uploadStoreImages } from '@/lib/store-image-upload';
 import { Advanced } from '@/components/landing-editor/Advanced';
 import { PaneToggle, editPaneClass, previewPaneClass, type EditorPane } from '@/components/landing-editor/EditorPanes';
 import { StoreThemePreview } from '@/components/landing-editor/StoreThemePreview';
@@ -24,7 +25,7 @@ import { UndoBar } from '@/components/landing-editor/UndoBar';
 import { useHistory, useUndoKeys } from '@/lib/use-history';
 
 /**
- * THE STORE'S TEMPLATE — one screen, six tabs.
+ * THE STORE'S TEMPLATE — one panel of «الواجهة», beside the home page.
  *
  * Everything about how the shop LOOKS lives here, and nothing about how the
  * system runs. Two things are deliberately absent:
@@ -37,6 +38,10 @@ import { useHistory, useUndoKeys } from '@/lib/use-history';
  *  - The CART BAR tab, on a Single Product store. Not greyed out — absent.
  *    There is no cart, so there is no setting, and a disabled tab would be
  *    telling the seller about something that does not exist in their shop.
+ *  - The HOME PAGE's ARRANGEMENT. The owner, 15/10 01:33: «التصميم» and
+ *    «القوالب» both edited it. The tab that did so here is «صورة الغلاف»
+ *    now — the one home-page value that is part of the LOOK — and the
+ *    blocks are ordered in «الصفحة الرئيسية», the panel beside this one.
  *
  * No colour is written into a component. The eight named colours are CSS
  * custom properties (storeThemeVars); one left unset is derived from the
@@ -67,7 +72,7 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
   { key: 'product', label: 'إعدادات المنتج', icon: RiShoppingBagLine },
   { key: 'checkout', label: 'الدفع', icon: RiBankCardLine },
   { key: 'cart', label: 'شريط السلة السفلي', icon: RiLayoutBottomLine },
-  { key: 'home', label: 'الصفحة الرئيسية', icon: RiLayoutLine },
+  { key: 'home', label: 'صورة الغلاف', icon: RiImageLine },
 ];
 
 const COLOR_FIELDS: { key: keyof NonNullable<StoreTheme['colors']>; label: string; hint: string }[] = [
@@ -170,6 +175,9 @@ export function StoreThemeScreen() {
   const [canRevert, setCanRevert] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  // The shell already knows it; the theme endpoint does not return one.
+  const currency = useStoreCurrency();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -216,6 +224,19 @@ export function StoreThemeScreen() {
 
   const dirty = useMemo(() => JSON.stringify(theme) !== JSON.stringify(saved), [theme, saved]);
 
+  /**
+   * The product the fifteen cards are drawn selling, and its currency.
+   *
+   * `null` when the shop really has none: the cards then draw labelled
+   * placeholder frames and `SkinGallery` says why in one line, which is
+   * the honest answer and not the same thing as showing «؟» to a shop
+   * that has twelve products.
+   */
+  const previewProduct = useMemo(() => {
+    const first = shop?.sample?.[0];
+    return first ? { name: first.name, price: first.price, currency: currency?.code ?? '' } : null;
+  }, [shop, currency]);
+
   const set = <K extends keyof StoreTheme>(key: K, value: StoreTheme[K]) =>
     setTheme((t) => ({ ...t, [key]: value }));
 
@@ -252,6 +273,32 @@ export function StoreThemeScreen() {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر التثبيت' });
     } finally {
       setInstalling(null);
+    }
+  }
+
+  /**
+   * THE COVER IMAGE'S UPLOAD — the home page's own door, reused.
+   *
+   * It lands as an UNSAVED change, like every other value on this panel:
+   * the seller sees it in the preview beside the controls, then presses
+   * «احفظ المسوّدة». Writing it straight through would make the picker the
+   * one control here that changes the shop without being saved.
+   */
+  async function uploadCover(file: File) {
+    setUploadingCover(true);
+    setMsg(null);
+    try {
+      const [url] = await uploadStoreImages([file]);
+      if (!url) {
+        setMsg({ ok: false, text: 'تعذّر رفع الصورة' });
+        return;
+      }
+      setPart('home', { coverImage: url });
+      setMsg({ ok: true, text: 'رُفعت الصورة — اضغط «احفظ المسوّدة» لتثبيتها' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذّر رفع الصورة' });
+    } finally {
+      setUploadingCover(false);
     }
   }
 
@@ -335,47 +382,70 @@ export function StoreThemeScreen() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title={routeLabel('/store/themes')}
-          description={`شكل «${store?.name}» ومحتواه. إعدادات تشغيل النظام مكانها «الإعدادات».`}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          {msg && (
+    <div className="space-y-4 pt-4" dir="rtl">
+      <PanelHeader
+        title="القالب والألوان"
+        line={`شكل «${store?.name}»: القالب والألوان والخطوط والترويسة وشكل الدفع.`}
+        note={
+          msg && (
             <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
               {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
               {msg.text}
             </span>
-          )}
-          {/* One step back. The button after it is the reset, and the two
-              are no longer both called «تراجع». */}
-          <UndoBar
-            undo={history.undo}
-            redo={history.redo}
-            canUndo={history.canUndo}
-            canRedo={history.canRedo}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!dirty || saving}
-            onClick={() => history.reset(saved)}
-          >
-            أرجِع للمحفوظة
-          </Button>
-          <Button size="sm" variant="secondary" disabled={!dirty || saving} onClick={() => void save()}>
-            {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} احفظ المسوّدة
-          </Button>
+          )
+        }
+        /* THE ONE ACT A CUSTOMER FEELS. Saving, stepping back and going
+           back a version are all beside it, never above it. */
+        primary={
           <Button size="sm" disabled={dirty || !unpublished || publishing} onClick={() => void publish()}>
             {publishing && <RiLoader4Line className="h-4 w-4 animate-spin" />} انشر
           </Button>
-          {canRevert && (
-            <Button size="sm" variant="secondary" disabled={publishing} onClick={() => void revert()}>
-              <RiArrowGoBackLine className="h-4 w-4 icon-mirror" /> النسخة السابقة
+        }
+        secondary={
+          <>
+            {/* One step back. The button after it is the reset, and the two
+                are no longer both called «تراجع». */}
+            <UndoBar
+              undo={history.undo}
+              redo={history.redo}
+              canUndo={history.canUndo}
+              canRedo={history.canRedo}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!dirty || saving}
+              onClick={() => history.reset(saved)}
+            >
+              أرجِع للمحفوظة
             </Button>
-          )}
-        </div>
-      </header>
+            <Button size="sm" variant="secondary" disabled={!dirty || saving} onClick={() => void save()}>
+              {saving && <RiLoader4Line className="h-4 w-4 animate-spin" />} احفظ المسوّدة
+            </Button>
+            {canRevert && (
+              <Button size="sm" variant="secondary" disabled={publishing} onClick={() => void revert()}>
+                <RiArrowGoBackLine className="h-4 w-4 icon-mirror" /> النسخة السابقة
+              </Button>
+            )}
+          </>
+        }
+        help={
+          <>
+            <p>
+              الحفظ ليس نشراً: «احفظ المسوّدة» لا يغيّر شيئاً عند الزبون، و«انشر» وحده ينقل المتجر إلى
+              هذا الشكل. و«تراجع» خطوةٌ واحدة، و«أرجِع للمحفوظة» يرمي كلّ ما لم يُحفظ.
+            </p>
+            <p>
+              تثبيت قالب يكتب المسوّدة فقط، وألوانه تظهر هنا غير محفوظة — فلا قالبٌ تجرّبه يُعيد دهن
+              متجرٍ زبونٌ واقف فيه.
+            </p>
+            <p>
+              القالب ينقل الشكل والأقسام ونصوصها. لا ينقل الصور — كل صورة تخصّ المتجر الذي رُفعت فيه —
+              ولا الأسعار ولا البكسلات ولا النطاق. وإعدادات تشغيل النظام مكانها «الإعدادات».
+            </p>
+          </>
+        }
+      />
 
       {/*
         WHERE THE SHOP STANDS, ABOVE EVERYTHING ELSE.
@@ -461,10 +531,6 @@ export function StoreThemeScreen() {
                 </label>
               </div>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted)]">
-              القالب ينقل الشكل والأقسام ونصوصها. لا ينقل الصور — كل صورة تخصّ المتجر الذي رُفعت فيه
-              ولا تُعرض من متجر آخر — ولا الأسعار ولا البكسلات ولا النطاق.
-            </p>
           </div>
 
           {/*
@@ -481,8 +547,7 @@ export function StoreThemeScreen() {
             <div className={CARD}>
               <p className="text-sm font-bold text-[var(--sys-heading)]">قوالب المتجر</p>
               <p className="mb-3 mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-                كل قالب يغيّر الألوان والخط وترتيب الترويسة والبطل والبطاقة وصفحة المنتج — ولا يمسّ
-                منتجاً ولا طلباً ولا سعراً ولا رابطاً.
+                كل قالب يغيّر الشكل وحده — لا منتجاً ولا طلباً ولا سعراً ولا رابطاً.
               </p>
               <SkinGallery
                 skins={shop.skins}
@@ -505,6 +570,17 @@ export function StoreThemeScreen() {
           <TemplateGallery
             value={picked}
             onChange={setPicked}
+            /*
+              THE SHOP'S OWN PRODUCT, AS THE LANDING-PAGE GALLERY ALREADY
+              DOES IT.
+
+              This call passed no product, so all fifteen cards advertised
+              «منتجك» at a price of nothing, and the shop templates beside
+              them drew «؟» — the owner's report of 15/10. `shop.sample` is
+              the seller's four real products and has been on the wire from
+              `/api/store/templates` the whole time; nothing read it here.
+            */
+            product={previewProduct}
             action={(key) => (
               <Button
                 size="sm"
@@ -518,8 +594,7 @@ export function StoreThemeScreen() {
             )}
           />
           <p className="text-xs leading-relaxed text-[var(--sys-muted)]">
-            التثبيت يكتب المسوّدة فقط: تعاينها في «التصميم» وتنشرها حين ترضى عنها. لا شيء يتغيّر عند
-            الزبون قبل النشر.
+            التثبيت يكتب المسوّدة فقط — تعاينها في «الصفحة الرئيسية» وتنشرها حين ترضى عنها.
           </p>
         </div>
       )}
@@ -1036,24 +1111,77 @@ export function StoreThemeScreen() {
       )}
 
       {/* ── و. الصفحة الرئيسية ── */}
+      {/*
+        A PICTURE IS PICKED, NOT TYPED.
+
+        The owner, 15/10 01:33: «the cover image is a text field holding a
+        path». It was — `/api/public/media/…`, three hundred characters, and
+        the only way to fill it correctly was to upload the image somewhere
+        else, find its address and paste it. So it stayed empty, and the
+        cover never appeared on any shop.
+
+        It uploads through the SAME door the home page's blocks upload
+        through (`/api/store/design/image`): one storage pipeline, one MIME
+        allowlist, one tenant namespace, one permission. No new route.
+
+        The path is still shown, in small type: a seller who pasted one
+        already must be able to see it and clear it.
+      */}
       {tab === 'home' && (
         <div className={CARD}>
-          <label className="block max-w-lg">
-            <span className={LABEL}>صورة الغلاف</span>
-            <Input
-              dir="ltr"
-              maxLength={300}
-              placeholder="/api/public/media/…"
-              value={theme.home?.coverImage ?? ''}
-              onChange={(e) => setPart('home', { coverImage: e.target.value })}
-            />
-            <span className={HINT}>
-              مسار من رفعك أنت. رابط خارجي مرفوض: صورة من موقع لا نتحكم به تسرّب كل زائر إليه.
-            </span>
-          </label>
-          <p className="mt-4 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            ترتيب أقسام الرئيسية يُسحب ويُرتَّب في «التصميم» — نفس بانية الأقسام المستعملة في صفحات الهبوط،
-            لا بانية ثانية.
+          <p className={LABEL}>صورة الغلاف</p>
+          <div className="flex flex-wrap items-start gap-3">
+            {theme.home?.coverImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={theme.home.coverImage}
+                alt=""
+                className="h-24 w-40 rounded-lg border border-[var(--sys-border)] object-cover"
+              />
+            ) : (
+              <span className="flex h-24 w-40 items-center justify-center rounded-lg border border-dashed border-[var(--sys-border-strong)] text-[var(--sys-muted)]">
+                <RiImageLine className="h-5 w-5" />
+              </span>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="tap-safe inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-3 text-xs font-bold text-[var(--sys-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)] md:min-h-0">
+                {uploadingCover ? (
+                  <RiLoader4Line className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RiUpload2Line className="h-4 w-4" />
+                )}
+                {theme.home?.coverImage ? 'استبدل الصورة' : 'ارفع صورة'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingCover}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file) void uploadCover(file);
+                  }}
+                />
+              </label>
+              {theme.home?.coverImage && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={uploadingCover}
+                  onClick={() => setPart('home', { coverImage: undefined })}
+                >
+                  أزلها
+                </Button>
+              )}
+            </div>
+          </div>
+          {theme.home?.coverImage && (
+            <p className="mt-2 truncate font-mono text-xs text-[var(--sys-muted)]" dir="ltr">
+              {theme.home.coverImage}
+            </p>
+          )}
+          <p className={HINT}>
+            من رفعك أنت. رابط خارجي مرفوض: صورة من موقع لا نتحكم به تسرّب كل زائر إليه.
           </p>
         </div>
       )}

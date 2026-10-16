@@ -4,9 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import type { StoreLanguage } from '@/lib/store-languages';
-import { RiCheckLine, RiInformationLine, RiLoader4Line } from '@remixicon/react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { routeLabel } from '@/lib/route-registry';
+import { RiCheckLine, RiLoader4Line } from '@remixicon/react';
+import { PanelHeader } from '@/components/store-admin/PanelHeader';
 
 /**
  * WHAT THE SHOP SPEAKS, AND WHICH WAY IT READS.
@@ -80,18 +79,51 @@ export function StoreLanguagesScreen() {
   const chosen = available.find((l) => l.code === language);
 
   return (
-    <div className="space-y-4 p-4 sm:p-6" dir="rtl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title={routeLabel('/store/languages')}
-          description="اللغة التي تُكتب بها صفحات متجرك، والاتجاه الذي تُقرأ به."
-        />
-        {msg && (
-          <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
-            {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
-            {msg.text}
-          </span>
-        )}
-      </header>
+    <div className="space-y-4 pt-4" dir="rtl">
+      <PanelHeader
+        title="اللغة"
+        line="اللغة التي تُكتب بها صفحات متجرك، والاتجاه الذي تُقرأ به."
+        note={
+          msg && (
+            <span className={`text-xs ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>
+              {msg.ok && <RiCheckLine className="mb-0.5 ml-1 inline h-4 w-4" />}
+              {msg.text}
+            </span>
+          )
+        }
+        primary={
+          <Button size="sm" disabled={busy || language === saved} onClick={() => void save()}>
+            {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ اللغة
+          </Button>
+        }
+        secondary={
+          language !== saved ? (
+            <Button variant="secondary" size="sm" onClick={() => setLanguage(saved)}>تراجع</Button>
+          ) : null
+        }
+        /*
+         * THE TWO PARAGRAPHS THAT USED TO BE A CARD AT THE BOTTOM.
+         *
+         * They are the honest answer to «أضف English» and they are read
+         * once. Standing open they were 120 words between the seller and
+         * the one button on the screen, and the rule for this task is one
+         * line above the fold.
+         */
+        help={
+          <>
+            <p className="font-bold text-[var(--sys-foreground)]">لغات إضافية — غير متاحة بعد، وهذا ما تحتاجه</p>
+            <p>
+              لغة ثانية ليست خانة تُضاف: تعني نسخة ثانية من كل نصّ يراه الزبون — اسم كل منتج ووصفه،
+              كلمات كل قسم في الصفحات، الصفحات الثابتة الخمس، ونصوص الدفع والتأكيد. تحتاج مخزن ترجمة
+              لكل حقل، ومحرّراً بجانب كل حقل، وقاعدة لما تفعله الصفحة حين تنقص ترجمة.
+            </p>
+            <p>
+              لم نضع لك زرّاً يضيف «English» بينما يبقى المتجر يجيب بالعربية — كنت ستكتشف ذلك من زبون.
+              حين تقرّر أنّك تحتاجها فعلاً، هي مشروع مستقل وليست حقلاً في هذه الشاشة.
+            </p>
+          </>
+        }
+      />
 
       <div className={CARD}>
         <p className="mb-3 text-sm font-bold text-[var(--sys-heading)]">اللغة الافتراضية</p>
@@ -123,34 +155,8 @@ export function StoreLanguagesScreen() {
           لا يُضبط منفصلاً حتى لا يتناقض الاثنان.
         </p>
 
-        <div className="mt-3 flex items-center gap-2">
-          <Button size="sm" disabled={busy || language === saved} onClick={() => void save()}>
-            {busy && <RiLoader4Line className="h-4 w-4 animate-spin" />} حفظ
-          </Button>
-          {language !== saved && (
-            <Button variant="secondary" size="sm" onClick={() => setLanguage(saved)}>تراجع</Button>
-          )}
-          <span className="text-xs text-[var(--sys-muted)]">
-            المحفوظ حالياً: {available.find((l) => l.code === saved)?.label} ({dir === 'rtl' ? 'RTL' : 'LTR'})
-          </span>
-        </div>
-      </div>
-
-      {/* Said plainly, rather than shown as a disabled control nobody can
-          make work. */}
-      <div className={`${CARD} border-[var(--sys-border)]`}>
-        <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--sys-heading)]">
-          <RiInformationLine className="h-4 w-4 text-[var(--sys-muted-foreground)]" />
-          لغات إضافية — غير متاحة بعد، وهذا ما تحتاجه
-        </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          لغة ثانية ليست خانة تُضاف: تعني نسخة ثانية من كل نصّ يراه الزبون — اسم كل منتج ووصفه،
-          كلمات كل قسم في الصفحات، الصفحات الثابتة الخمس، ونصوص الدفع والتأكيد. تحتاج مخزن ترجمة
-          لكل حقل، ومحرّراً بجانب كل حقل، وقاعدة لما تفعله الصفحة حين تنقص ترجمة.
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-          لم نضع لك زرّاً يضيف «English» بينما يبقى المتجر يجيب بالعربية — كنت ستكتشف ذلك من زبون.
-          حين تقرّر أنّك تحتاجها فعلاً، هي مشروع مستقل وليست حقلاً في هذه الشاشة.
+        <p className="mt-3 text-xs text-[var(--sys-muted)]">
+          المحفوظ حالياً: {available.find((l) => l.code === saved)?.label} ({dir === 'rtl' ? 'RTL' : 'LTR'})
         </p>
       </div>
     </div>

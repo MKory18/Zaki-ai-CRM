@@ -9,6 +9,7 @@ import {
   FAMILY_HERO_SHEET,
   FAMILY_MINI_CSS,
   FAMILY_SHEET,
+  SHOP_SHEET,
   STOREFRONT_CSS,
 } from '@/components/storefront/styles';
 import { FAMILY_IDS } from './store-families';
@@ -33,7 +34,19 @@ const CSS_BUDGET_KB = 50;
 const kb = (s: string) => Buffer.byteLength(s, 'utf8') / 1024;
 
 describe('what a shop weighs', () => {
-  const sheet = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+  /*
+   * ── THE SHEET THE SHOP INLINES, NOT A SECOND BUILD OF IT ──
+   *
+   * This read `minifyCss(BLOCK_CSS + STOREFRONT_CSS)` — the composition
+   * written out a second time. It measured truthfully only while the two
+   * expressions agreed, and the day the shop stopped shipping the whole
+   * block stylesheet the budget went on charging every page for it: the
+   * base read 46.71 KB when the page downloaded 29.64.
+   *
+   * A budget that builds its own copy of the thing it is budgeting is a
+   * budget for a page nobody serves. It reads `SHOP_SHEET` now.
+   */
+  const sheet = SHOP_SHEET;
 
   it('ships its whole stylesheet under the budget', () => {
     expect(kb(sheet)).toBeLessThan(CSS_BUDGET_KB);
@@ -132,7 +145,7 @@ describe('what a shop weighs', () => {
     // places: the skeleton needs the same sheet the shell inlines, and two
     // copies of that expression is how they come to differ.
     const owner = stripComments(repoFile('src/components/storefront/styles.ts'));
-    expect(owner).toMatch(/export const SHOP_SHEET = minifyCss\(BLOCK_CSS \+ STOREFRONT_CSS\)/);
+    expect(owner).toMatch(/export const SHOP_SHEET = minifyCss\(shopBlockSlice\(BLOCK_CSS\) \+ STOREFRONT_CSS\)/);
 
     for (const rel of [
       'src/components/storefront/StorefrontShell.tsx',
@@ -176,7 +189,19 @@ describe('what a shop weighs', () => {
  * machine.
  */
 describe('the shape shown before the page arrives', () => {
-  const sheet = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+  /*
+   * ── THE SHEET THE SHOP INLINES, NOT A SECOND BUILD OF IT ──
+   *
+   * This read `minifyCss(BLOCK_CSS + STOREFRONT_CSS)` — the composition
+   * written out a second time. It measured truthfully only while the two
+   * expressions agreed, and the day the shop stopped shipping the whole
+   * block stylesheet the budget went on charging every page for it: the
+   * base read 46.71 KB when the page downloaded 29.64.
+   *
+   * A budget that builds its own copy of the thing it is budgeting is a
+   * budget for a page nobody serves. It reads `SHOP_SHEET` now.
+   */
+  const sheet = SHOP_SHEET;
   const skeleton = repoFile('src/components/storefront/ShopSkeleton.tsx');
 
   /** Every class the skeleton puts on an element. */

@@ -1,4 +1,5 @@
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
+import { shopBlockSlice } from './shop-block-slice';
 import { minifyCss } from '@/lib/css-minify';
 import { FAMILY_IDS, type FamilyId } from '@/lib/store-families';
 
@@ -979,7 +980,21 @@ ${HERO_CSS}
  * belong in the file and not on a shopper's connection. Both forms were
  * parsed by a browser and built the same 251 rules.
  */
-export const SHOP_SHEET = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+/*
+ * ── AND ONLY THE BLOCKS A SHOP CAN DRAW ──
+ *
+ * `BLOCK_CSS` whole was 23,947 bytes of this sheet's 47,831 — almost
+ * exactly half — for the THIRTEEN landing classes a storefront page
+ * actually renders. The rest dressed sections a shop has no way to show,
+ * on a phone, before the first photograph.
+ *
+ * This is the rule stated above `FAMILY_CSS` applied to the one layer
+ * that was still shipping whole: the slice follows the page that draws
+ * it. See `shop-block-slice.ts`, and the sweep in
+ * `a-shop-does-not-wear-the-whole-wardrobe.test.ts` that fails the day a
+ * shop component uses a landing class the slice does not carry.
+ */
+export const SHOP_SHEET = minifyCss(shopBlockSlice(BLOCK_CSS) + STOREFRONT_CSS);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════

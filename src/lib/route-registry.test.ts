@@ -25,7 +25,7 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 62 unique routes', () => {
+  it('lists 54 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
@@ -44,9 +44,19 @@ describe('navigation contract', () => {
     // A screen is registered when it is real — the
     // store section's remaining screens join this count as they ship, and
     // nothing here renders "قيد الإنشاء".
+    //
+    // 54 when the storefront group went from eleven entries to two. NINE
+    // screens stopped being MENU ENTRIES and became the three tabs of
+    // `/store` (src/lib/store-admin.ts) — the eight that dressed the shop,
+    // and «الآراء», which arrived as a third entry while that was being
+    // built and whose own comment here said it belongs with the shop's
+    // CONTENT. Not one of them was deleted, and each old address redirects
+    // to its panel permanently. A registry entry is a place in the menu,
+    // and nine places in the menu for one shop is what the owner called
+    // «معجّق … بتضيع».
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(63);
-    expect(new Set(paths).size).toBe(63);
+    expect(paths).toHaveLength(54);
+    expect(new Set(paths).size).toBe(54);
   });
 
   it('the store section is its own group, and reads as one', () => {

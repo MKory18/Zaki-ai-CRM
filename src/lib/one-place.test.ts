@@ -119,7 +119,12 @@ describe('the store domain is written in one place', () => {
   it('and the settings form points at the real editor instead of editing', () => {
     const form = read('src/components/settings/StorefrontSettings.tsx');
     expect(form).not.toContain('form.domain');
-    expect(form).toContain('/store/domain');
+    // The editor is the `address/domain` panel of `/store` now — the same
+    // screen, reached through the one menu entry instead of the ninth of
+    // ten. What this guard holds is unchanged: the settings panel LINKS,
+    // and does not grow a second field that writes the column.
+    expect(form).toContain('/store?tab=address');
+    expect(form).toContain('sec=domain');
   });
 });
 
