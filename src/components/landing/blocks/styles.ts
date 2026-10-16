@@ -92,9 +92,21 @@ export const BLOCK_CSS = `
 .lp-hero[data-hero='productFirst'] .lp-hero-img { order: -1; }
 
 /* Split: the picture beside the words where there is room, stacked
-   where there is not. */
+   where there is not.
+
+   «splitProof» IS THIS SHAPE, and that is why it is a selector here and
+   not a renderer of its own. The names in this slot are the engine's one
+   parts catalogue (layout-slots.ts), shared by the STORE's first screen
+   and a landing page's hero block — see AUDIT-2a-delta.md §2 on the two
+   vocabularies that share these words. «عيادة» adds a first screen that
+   puts the shop's terms beside something priced; on a landing page, which
+   has one product and no shelf to prove anything with, the honest reading
+   of that name is the split. A name with nothing behind it would render
+   the default and tell nobody, which is the failure both lists exist to
+   prevent. */
 @media (min-width: 900px) {
   .lp-hero[data-hero='offerStrip'],
+  .lp-hero[data-hero='splitProof'],
   .lp-hero[data-hero='categoryTiles'] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -103,6 +115,7 @@ export const BLOCK_CSS = `
     text-align: start;
   }
   .lp-hero[data-hero='offerStrip'] .lp-hero-img,
+  .lp-hero[data-hero='splitProof'] .lp-hero-img,
   .lp-hero[data-hero='categoryTiles'] .lp-hero-img {
     grid-row: 1 / span 4;
     grid-column: 2;
@@ -125,8 +138,15 @@ export const BLOCK_CSS = `
 .lp-hero[data-hero='slider']::-webkit-scrollbar { display: none; }
 .lp-hero[data-hero='slider'] > * { scroll-snap-align: center; flex: 0 0 100%; }
 
-.lp-hero[data-hero='editorial'] { position: relative; }
-.lp-hero[data-hero='editorial'] .lp-hero-img { width: 100%; }
+/* «worldFirst» is the editorial shape on a landing page, for the same
+   reason as «splitProof» above: one photograph filling the screen with
+   the words over it is exactly what «علامة» does on a store's first
+   screen — a product in its own world — and a landing page already has
+   the one product that world belongs to. */
+.lp-hero[data-hero='editorial'],
+.lp-hero[data-hero='worldFirst'] { position: relative; }
+.lp-hero[data-hero='editorial'] .lp-hero-img,
+.lp-hero[data-hero='worldFirst'] .lp-hero-img { width: 100%; }
 @media (min-width: 700px) {
   .lp-hero[data-hero='editorial'] .lp-h1,
   .lp-hero[data-hero='editorial'] .lp-hero-sub {
@@ -1017,6 +1037,46 @@ export const BLOCK_CSS = `
 [data-family='trend'] .lp-objection,
 [data-family='trend'] .lp-faq-item { border-radius: 14px; }
 [data-family='trend'] .lp-urgency { font-weight: 800; }
+
+/* ── علامة — the fourth family, and the one whose colours are not the
+      shop's. A product carries its own world (store-world.ts), so a
+      landing page in this family is drawn on that world: the page's
+      surfaces are the deep panel, the reassurances sit on it rather than
+      in boxes of their own, and the heading is the heaviest of the four
+      because it is set against a photograph.
+
+      THE OWNER'S TWO RULINGS HOLD HERE TOO. Nothing below moves anything
+      — no «order», no reverse, no «direction» — and no figure gets
+      anything behind it: the price, the saving, the remaining count and
+      the clock are untouched. The one ornament is a hairline UNDER A
+      HEADING, which is one of the four places ornament may sit.
+
+      WHY IT IS HERE AT ALL. «selling-blocks.ts» says «علامة» is not in
+      its table «deliberately… a family this stage has not drawn must be
+      one this stage cannot select», and the guard in
+      «the-three-families.test.ts» enforces exactly that. This branch is
+      the one that drew it: «alama» is a shipped template now, it maps to
+      «brand», and so «brand» has to have a look here or the guard —
+      correctly — refuses the pair. ── */
+[data-family='brand'] .lp-h2 { font-weight: 800; }
+[data-family='brand'] .lp-h2::after {
+  /* ON THE HEADING. A hairline in the product's own accent, not a frame
+     around anything that carries a number. */
+  content: '';
+  display: block;
+  width: 44px;
+  margin: 12px auto 0;
+  border-top: 1px solid var(--store-accent);
+}
+[data-family='brand'] .lp-trust > div,
+[data-family='brand'] .lp-trust > a {
+  background: var(--store-surface);
+  border-color: var(--store-border);
+  border-radius: 2px;
+}
+[data-family='brand'] .lp-objection,
+[data-family='brand'] .lp-faq-item { border-radius: 2px; background: var(--store-surface); }
+[data-family='brand'] .lp-section { padding-block: 38px; }
 
 @media (min-width: 640px) {
   .lp-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }

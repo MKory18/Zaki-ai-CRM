@@ -35,9 +35,37 @@ export const LAYOUT_SLOTS = Object.freeze({
    * كحد أقصى» and by hand — nothing that moves on its own, which is
    * the motion rule the contract already enforces.
    */
-  hero: ['productFirst', 'offerStrip', 'categoryTiles', 'editorial', 'slider'],
+  /*
+   * ── THE TWO THE FAMILIES ADDED ──
+   *
+   * `splitProof` is «عيادة»'s: the copy on one side and, beside it, the
+   * only proof this system will ever print — the shop's own terms, cash
+   * at the door and the governorates it reaches, with something to buy
+   * priced next to them. A clinic sells on evidence, and the evidence a
+   * shop may show is what it does, never a number about other people
+   * that nobody counted.
+   *
+   * `worldFirst` is «علامة»'s, and it was called `brandWorld` for an
+   * hour — which `hero-and-product-page.test.ts` refused, correctly: no
+   * name in this slot may contain `name`, `title`, `brand` or `logo`,
+   * because the one thing a first screen may not lead with is the shop's
+   * own name. What this leads with is the PRODUCT's world, so that is
+   * what it is called. One product wearing its own colours, its
+   * Latin name set huge and faint BEHIND the photograph, and the row of
+   * circles that moves the whole first screen to another product. It is
+   * the only hero that changes colour, because the colour belongs to the
+   * product rather than to the shop — see `store-world.ts`.
+   */
+  hero: ['productFirst', 'offerStrip', 'categoryTiles', 'editorial', 'slider', 'splitProof', 'worldFirst'],
   categoryNav: ['chips', 'tiles', 'sidebar', 'dropdown'],
-  productCard: ['portrait', 'square', 'wide', 'compact'],
+  /*
+   * `tile` is «ترند»'s: a tall 9:13 cell with the name over the picture,
+   * three to a row, the shape a shopper already scrolls all day.
+   * `world` is «علامة»'s: the card wears its product's own colours and
+   * carries the Latin name, the sentence and the specification line, so a
+   * series reads as a series and not as a grid of thumbnails.
+   */
+  productCard: ['portrait', 'square', 'wide', 'compact', 'tile', 'world'],
   categoryPage: ['grid2', 'grid3', 'list', 'mixed'],
   productPage: ['gallerySide', 'galleryTop', 'sticky'],
   cart: ['drawer', 'page'],

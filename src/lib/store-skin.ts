@@ -9,6 +9,7 @@ import {
 } from './landing-theme';
 import { landingSectionSchema, newSection, type LandingSection, type SectionType } from './landing-sections';
 import { LAYOUT_SLOTS } from './layout-slots';
+import { DEFAULT_FAMILY, familyOfSkin, type FamilyId } from './store-families';
 export { LAYOUT_SLOTS, type LayoutSlot } from './layout-slots';
 
 /**
@@ -675,6 +676,7 @@ export function skinToStoreTheme(skin: StoreSkin): {
   fonts: { heading: ThemeFont; menu: ThemeFont };
   colors: Record<string, string>;
   layout: StoreSkin['layout'];
+  family: FamilyId;
 } {
   const colors: Record<string, string> = {};
   for (const role of SKIN_ROLES) {
@@ -692,6 +694,16 @@ export function skinToStoreTheme(skin: StoreSkin): {
     // The seven slots, whole. Dropping them was what made a template
     // installable and invisible.
     layout: skin.layout,
+    /**
+     * AND THE FAMILY IT IS A VOICE OF.
+     *
+     * Written on install so the shop does not have to be asked a second
+     * question: choosing «نبض» is choosing «ترند», and the family is what
+     * decides the typography and the rhythm the slots do not carry. The
+     * install route spreads this object into the theme, so one line here
+     * is the whole of it — see `familyOf` in store-theme.ts.
+     */
+    family: familyOfSkin(skin.id) ?? DEFAULT_FAMILY,
   };
 }
 

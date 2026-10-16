@@ -1,10 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Storefront } from '@/lib/storefront';
-import { cartBarApplies, layoutOf, storeThemeVars } from '@/lib/store-theme';
+import { cartBarApplies, familyOf, layoutOf, storeThemeVars } from '@/lib/store-theme';
 import { telHref, whatsappHref } from '@/lib/store-contact';
 import { fontHref } from '@/components/landing/blocks/styles';
-import { SHOP_SHEET } from './styles';
+import { FAMILY_SHEET, SHOP_SHEET } from './styles';
 // Six drawings from this shop's own file, not the package they came
 // from: a named import there still shipped 245 icons to a shopper.
 // See the note at the top of ./icons.
@@ -25,6 +25,7 @@ export function StorefrontShell({
   children,
   back,
   footer: showFooter = true,
+  thin = false,
 }: {
   store: Storefront;
   children: React.ReactNode;
@@ -36,11 +37,43 @@ export function StorefrontShell({
    * the duplication the store section exists to avoid.
    */
   footer?: boolean;
+  /**
+   * ── D9: THE THIN FRAME, FOR A PAGE THAT KEEPS ITS OWN IDENTITY ──
+   *
+   * The owner's D9: «a product page keeps its OWN identity — its family —
+   * inside the store too, inside a THIN store frame only: logo · «كل
+   * المنتجات» · cart. Standalone /lp/<slug> keeps its own identity with
+   * no frame.»
+   *
+   * So this is not a seller's setting and not a template's: it is the one
+   * case where the page inside has a look of its own and the shop's job
+   * is to be a way back out of it, not to dress it. A full header over a
+   * landing page is the shop arguing with the page about what the shopper
+   * is looking at — and the search, the menu and the assurance line all
+   * belong to screens the shop itself drew.
+   *
+   * THE LOCKED CORE IS NOT BEING SUBTRACTED. «أي تخصيص بيخرب عنصر منهم
+   * بينرفض مع السبب» is about a seller's customisation of the shop's own
+   * pages, and every one of those still carries the search, the basket
+   * and the WhatsApp button — `header-core.test.tsx` holds that. This
+   * frame is a different surface, asked for by name, and the basket (the
+   * one thing a shopper mid-purchase needs) stays.
+   */
+  thin?: boolean;
 }) {
   // Every variable the shop paints itself with, in one call: the palette
   // derived from the accent, plus the eight the seller may name and the
   // header's own height and colour. No component writes a hex.
   const vars = storeThemeVars(store.theme);
+  /*
+   * WHICH FAMILY, AND THE SLICE THAT GOES WITH IT.
+   *
+   * A shop ships the base sheet plus ITS family's rules and nobody
+   * else's: measured, the four families together are 8.6 KB and a
+   * «عيادة» shop matches none of the brand world's. See the note over
+   * `FAMILY_CSS`.
+   */
+  const family = familyOf(store.theme);
   const href = fontHref(store.theme.font);
   const home = `/s/${store.slug}`;
   const header = store.theme.header;
@@ -57,7 +90,22 @@ export function StorefrontShell({
   return (
     // The shop's own language and direction. This was written as rtl, so a
     // shop selling in English had its heading, price and arrows mirrored.
-    <div dir={store.dir} lang={store.language} className="lp-root sf-root" style={vars as React.CSSProperties}>
+    /*
+      THE FAMILY, NAMED ON THE ROOT — and it changes the LOOK only.
+      The owner's ruling of 15/10: «a theme/template changes the LOOK. It
+      never changes the ARRANGEMENT of anything a person arranged.» So
+      this attribute reaches typography, air and ornament, and there is
+      not one rule behind it that reorders a published home page's
+      blocks, a menu or a checkout field — `store-family-arrangement.test.ts`.
+    */
+    <div
+      dir={store.dir}
+      lang={store.language}
+      className="lp-root sf-root"
+      data-family={family}
+      data-frame={thin ? 'thin' : undefined}
+      style={vars as React.CSSProperties}
+    >
       {/*
         THE HANDSHAKE, BEFORE THE FONT IS ASKED FOR.
 
@@ -81,6 +129,7 @@ export function StorefrontShell({
         </>
       )}
       <style dangerouslySetInnerHTML={{ __html: SHOP_SHEET }} />
+      <style dangerouslySetInnerHTML={{ __html: FAMILY_SHEET[family] }} />
 
       {/*
         THE VARIANT IS AN ARRANGEMENT, NEVER A SUBTRACTION.
@@ -113,7 +162,7 @@ export function StorefrontShell({
             </span>
           </Link>
 
-          {headerMenu.length > 0 && (
+          {!thin && headerMenu.length > 0 && (
             <nav className="sf-header-menu">
               {headerMenu.map((link, i) => (
                 <a key={i} href={link.href}>{link.label}</a>
@@ -126,6 +175,7 @@ export function StorefrontShell({
             script runs, which on a mid-range Android is the difference
             between a search box and a dead field.
           */}
+          {!thin && (
           <form className="sf-search" action={`/s/${store.slug}/shop`} method="get" role="search">
             <label className="sr-only" htmlFor="sf-q">
               ابحث في المتجر
@@ -135,12 +185,13 @@ export function StorefrontShell({
               <RiSearchLine size={18} aria-hidden />
             </button>
           </form>
+          )}
 
           {/* A shop with one product has no basket — `cartBarApplies` is
               the one place that is decided. */}
           {cartBarApplies(store.type) && <CartLink slug={store.slug} />}
 
-          {contact.whatsapp && (
+          {!thin && contact.whatsapp && (
             <>
               {/*
                 A BUTTON, NOT A LINE OF TEXT. «رقم الهاتف نص، مش زر تواصل»
@@ -174,7 +225,19 @@ export function StorefrontShell({
           these are the two facts that answer that — so they are in the
           header rather than somewhere they have to scroll to.
         */}
-        <p className="sf-assure">الدفع عند الاستلام · توصيل لكل المحافظات</p>
+        {/*
+          «تغليف خفي» — THE OWNER'S §٩, AND A SETTING RATHER THAN A LINE.
+          «سطر إعداد بيشغّله المالك، مش ثابت. إذا مطفي ما بيطلع لا بالشريط
+          العلوي ولا بـ(ليش تطلب عنّا)». Discreet packaging is something a
+          shop does or does not do; printed unconditionally it would be a
+          promise the template made on the seller's behalf.
+        */}
+        {!thin && (
+          <p className="sf-assure">
+            الدفع عند الاستلام · توصيل لكل المحافظات
+            {store.theme.discreetPacking ? ' · تغليف خفي' : ''}
+          </p>
+        )}
       </header>
 
       {/*

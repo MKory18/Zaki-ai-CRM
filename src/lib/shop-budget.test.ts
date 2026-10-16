@@ -4,7 +4,15 @@ import { join } from 'node:path';
 import { minifyCss } from './css-minify';
 import { repoFile, stripComments } from './guard-source';
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
-import { STOREFRONT_CSS } from '@/components/storefront/styles';
+import {
+  BRAND_PAGE_SHEET,
+  FAMILY_HERO_SHEET,
+  FAMILY_MINI_CSS,
+  FAMILY_SHEET,
+  SHOP_SHEET,
+  STOREFRONT_CSS,
+} from '@/components/storefront/styles';
+import { FAMILY_IDS } from './store-families';
 
 /**
  * «القالب الي ما بيلتزم ما بينطلق — مهما كان جميل.»
@@ -23,13 +31,152 @@ import { STOREFRONT_CSS } from '@/components/storefront/styles';
 /** «CSS أقل من 50 كيلوبايت». */
 const CSS_BUDGET_KB = 50;
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AND WHAT A WHOLE PAGE SENDS — THE SAME 50 KB, MEASURED PER PAGE.
+ *
+ * The constant above is the brief's and it does not move. What a shopper
+ * downloads is the shared sheet PLUS the slices of the family the shop
+ * wears, so that is what is measured here: the two shapes that exist, for
+ * each of the four families.
+ *
+ * MEASURED 2026-10-16, minified, in bytes:
+ *
+ *     the shared sheet (BLOCK + STOREFRONT)                  48,385
+ *     «علامة» · shop-wide slice (card, shared pieces)         1,755
+ *     «علامة» · hero slice        (the home only)               934
+ *     «علامة» · product-page slice (that page only)           2,057
+ *     ───────────────────────────────────────────────────────────────
+ *     its home          48,385 + 1,755 + 934 = 51,074   ✓ (cap 51,200)
+ *     its product page  48,385 + 1,755 + 2,057 = 52,197  ✗ over by 997
+ *
+ * ⚠️ AND THE 997 BYTES ARE NOT THIS FAMILY'S TO GIVE BACK. The shared
+ * sheet was 44,933 bytes when this branch started and is 48,385 now: S2
+ * «أقسام بتبيع» added 2.83 KB of block rules that every shop ships
+ * whether it draws those blocks or not, and «علامة»'s own look in that
+ * same sheet — which S2's guard REQUIRES of any family a template can
+ * reach — is 0.54 KB of it.
+ *
+ * What was already taken out of this family to get here, measured: the
+ * world switcher's three pairs of `:has()` selectors became one sibling
+ * rule (−820), the numbered lines became the block library's own list
+ * (−342), the specification pills became its own pills (−220), the ring's
+ * three positions became data on the elements (−250). The home came in
+ * under the cap that way, with 126 bytes to spare.
+ *
+ * WHAT IS LEFT TO CUT IS WHAT THE OWNER NAMED IN §٤, and all three of
+ * them together are just about the 997:
+ *
+ *     the ring of promises (the photograph in the middle, the three
+ *       numbers around it)                                      ~480
+ *     the dark panels the close-up and the video sit in          ~253
+ *     the bar that follows the price up the page                 ~306
+ *
+ * So this is not a thing to fix by trimming: it is a decision, and it is
+ * the owner's. Either the cap moves now that the shared sheet alone is
+ * 47.25 KB, or the block library is split per block the way the families
+ * are split in `styles.ts` — which is where the kilobytes actually are.
+ * Until then this fails, loudly, on the one page it is true of.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+
 const kb = (s: string) => Buffer.byteLength(s, 'utf8') / 1024;
 
 describe('what a shop weighs', () => {
-  const sheet = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+  /*
+   * ── THE SHEET THE SHOP INLINES, NOT A SECOND BUILD OF IT ──
+   *
+   * This read `minifyCss(BLOCK_CSS + STOREFRONT_CSS)` — the composition
+   * written out a second time. It measured truthfully only while the two
+   * expressions agreed, and the day the shop stopped shipping the whole
+   * block stylesheet the budget went on charging every page for it: the
+   * base read 46.71 KB when the page downloaded 29.64.
+   *
+   * A budget that builds its own copy of the thing it is budgeting is a
+   * budget for a page nobody serves. It reads `SHOP_SHEET` now.
+   */
+  const sheet = SHOP_SHEET;
 
   it('ships its whole stylesheet under the budget', () => {
     expect(kb(sheet)).toBeLessThan(CSS_BUDGET_KB);
+  });
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════
+   * AND THE FAMILY IT WEARS IS PART OF WHAT IT SHIPS.
+   *
+   * The four families — «عيادة» · «عطّار» · «ترند» · «علامة» — are not in
+   * the base sheet. MEASURED: together they are 8.6 KB, and appending
+   * them put every shop at 51 KB — over the brief's 50, and over it for
+   * rules the shop would never match. So a shop inlines the base plus the
+   * ONE slice of its own family (`StorefrontShell`), and the budget is
+   * measured in the only unit it was ever about: what one shop sends to
+   * one phone.
+   *
+   * THE RISK THIS GUARD EXISTS FOR is that splitting looks like free
+   * space. It is not: «علامة» is the heaviest family and it has about
+   * half a kilobyte of room. The numbers are printed so whoever adds the
+   * next rule learns that before the build tells them.
+   * ═══════════════════════════════════════════════════════════════════
+   */
+  /**
+   * MEASURED PER PAGE, because that is what a phone downloads.
+   *
+   * A shop's shell carries the family's shop-wide half; the HOME adds the
+   * hero's rules (the only page that draws one); «علامة»'s product page
+   * adds its own. So the two shapes that exist are measured, and no page
+   * is charged for a layer it does not draw.
+   */
+  const SHAPES = FAMILY_IDS.flatMap((id) => [
+    [`${id} · الواجهة`, FAMILY_SHEET[id] + FAMILY_HERO_SHEET[id]] as const,
+    ...(id === 'brand'
+      ? [[`${id} · صفحة المنتج`, FAMILY_SHEET[id] + BRAND_PAGE_SHEET] as const]
+      : []),
+  ]);
+
+  it.each(SHAPES)('and «%s» is measured, layer by layer, and cannot grow', (what, slice) => {
+    const whole = kb(sheet + slice);
+    const over = whole - CSS_BUDGET_KB;
+    console.log(
+      `[shop] ${what}: الأساس ${kb(sheet).toFixed(2)} + الشرائح ${kb(slice).toFixed(2)} ` +
+        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}` +
+        (over > 0 ? ` (فوقه بـ${over.toFixed(2)} ك.ب — قرار للمالك، اقرا التعليق)` : `، المتبقّي ${(-over).toFixed(2)}`)
+    );
+    expect(
+      whole,
+      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}، ` +
+        `والفرق ${(whole - CSS_BUDGET_KB).toFixed(2)} ك.ب. اقرا الملاحظة فوق: الورقة المشتركة ` +
+        'لحالها 47.25، واللي ضلّ يتشال هو اللي سمّاه المالك بـ§٤ — دائرة الوعود واللوحات ' +
+        'الداكنة والشريط اللاصق. يعني مش تشذيب، قرار.'
+    ).toBeLessThan(CSS_BUDGET_KB);
+  });
+
+  it('and no shop ships more than one family’s worth', () => {
+    const shell = stripComments(repoFile('src/components/storefront/StorefrontShell.tsx'));
+    // One slice, picked by the family this shop wears.
+    expect(shell).toMatch(/__html: FAMILY_SHEET\[family\]/);
+    // And the two layers that belong to one page each are carried by that
+    // page, not by the shell — which is what keeps the other pages light.
+    expect(stripComments(repoFile('src/app/s/[store]/page.tsx')), 'الواجهة ما بتحمل أنماط بطلها')
+      .toMatch(/FAMILY_HERO_SHEET\[familyOf\(store\.theme\)\]/);
+    expect(
+      stripComments(repoFile('src/components/storefront/BrandProductPage.tsx')),
+      'صفحة «علامة» ما بتحمل أنماطها'
+    ).toMatch(/__html: BRAND_PAGE_SHEET/);
+    expect(shell, 'القشرة بتشحن أنماط البطل لكل الصفحات').not.toContain('FAMILY_HERO_SHEET');
+    expect(shell, 'القشرة بتشحن أنماط صفحة المنتج').not.toContain('BRAND_PAGE_SHEET');
+    // Not all four, and not the gallery's miniature rules either.
+    expect(shell, 'القشرة بتشحن كل العائلات').not.toContain('ALL_FAMILY_CSS');
+    expect(shell, 'القشرة بتشحن أنماط المعاينة').not.toContain('FAMILY_MINI_CSS');
+  });
+
+  it('and the miniature’s rules go out with the gallery, not with a shop', () => {
+    // 0.7 KB of a shopper's render-blocking stylesheet for type sizes on
+    // a screen only a seller opens.
+    const preview = stripComments(repoFile('src/components/store/SkinPreview.tsx'));
+    expect(preview).toContain('FAMILY_MINI_CSS');
+    expect(minifyCss(FAMILY_MINI_CSS).length, 'أنماط المعاينة فرغت').toBeGreaterThan(200);
+    expect(sheet, 'أنماط المعاينة رجعت لورقة المتجر').not.toContain('data-mini] .sf-bw');
   });
 
   it('and the budget is not met by having nothing in it', () => {
@@ -51,7 +198,7 @@ describe('what a shop weighs', () => {
     // places: the skeleton needs the same sheet the shell inlines, and two
     // copies of that expression is how they come to differ.
     const owner = stripComments(repoFile('src/components/storefront/styles.ts'));
-    expect(owner).toMatch(/export const SHOP_SHEET = minifyCss\(BLOCK_CSS \+ STOREFRONT_CSS\)/);
+    expect(owner).toMatch(/export const SHOP_SHEET = minifyCss\(shopBlockSlice\(BLOCK_CSS\) \+ STOREFRONT_CSS\)/);
 
     for (const rel of [
       'src/components/storefront/StorefrontShell.tsx',
@@ -95,7 +242,19 @@ describe('what a shop weighs', () => {
  * machine.
  */
 describe('the shape shown before the page arrives', () => {
-  const sheet = minifyCss(BLOCK_CSS + STOREFRONT_CSS);
+  /*
+   * ── THE SHEET THE SHOP INLINES, NOT A SECOND BUILD OF IT ──
+   *
+   * This read `minifyCss(BLOCK_CSS + STOREFRONT_CSS)` — the composition
+   * written out a second time. It measured truthfully only while the two
+   * expressions agreed, and the day the shop stopped shipping the whole
+   * block stylesheet the budget went on charging every page for it: the
+   * base read 46.71 KB when the page downloaded 29.64.
+   *
+   * A budget that builds its own copy of the thing it is budgeting is a
+   * budget for a page nobody serves. It reads `SHOP_SHEET` now.
+   */
+  const sheet = SHOP_SHEET;
   const skeleton = repoFile('src/components/storefront/ShopSkeleton.tsx');
 
   /** Every class the skeleton puts on an element. */

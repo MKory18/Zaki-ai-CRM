@@ -63,7 +63,14 @@ describe('«تبديل القالب ما بيغيّر أي سعر ولا سلة 
       // Not a price, not a stock, not a slug, not a pixel.
       for (const key of written) {
         expect(
-          ['accent', 'mood', 'font', 'corners', 'fonts', 'colors', 'layout'].includes(key),
+          /*
+           * `family` joined the list on 15/10 and it belongs in it: it is
+           * which of the four looks this shop wears — «عيادة» · «عطّار» ·
+           * «ترند» · «علامة» — written on install so a seller who chose a
+           * voice has chosen its family without being asked twice. Still
+           * not a price, not a stock, not a slug, not a pixel.
+           */
+          ['accent', 'mood', 'font', 'corners', 'fonts', 'colors', 'layout', 'family'].includes(key),
           `${skin.id} writes ${key}`
         ).toBe(true);
       }
@@ -72,11 +79,20 @@ describe('«تبديل القالب ما بيغيّر أي سعر ولا سلة 
 });
 
 describe('«أول شاشة بالرئيسية فيها منتج أو عرض أو فئة، بكل قالب»', () => {
-  it('every one of the ten leads with one of those three', () => {
+  it('every one of them leads with one of those three', () => {
     // The vocabulary carries the rule — there is no variant that means
     // «the shop's name, alone» — but a template could still be written to
     // open on a block that shows none of them.
-    const LEADS_WITH_SOMETHING = ['productFirst', 'offerStrip', 'categoryTiles', 'slider', 'editorial'];
+    /*
+     * The two the families added, and each one still obeys the rule:
+     * `splitProof` leads with the shop's own terms AND a priced product
+     * beside them, `worldFirst` leads with one product, large, in its own
+     * colours. Neither can be the shop's name alone, which is what this
+     * list is for.
+     */
+    const LEADS_WITH_SOMETHING = [
+      'productFirst', 'offerStrip', 'categoryTiles', 'slider', 'editorial', 'splitProof', 'worldFirst',
+    ];
     for (const skin of STORE_TEMPLATES) {
       expect(LEADS_WITH_SOMETHING, skin.id).toContain(skin.layout.hero);
     }

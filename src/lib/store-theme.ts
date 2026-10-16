@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LAYOUT_SLOTS, effectiveVariant } from './layout-slots';
+import { DEFAULT_FAMILY, FAMILY_IDS, familyById, familyOfSkin, type FamilyId } from './store-families';
 import {
   DEFAULT_THEME,
   STATE_COLORS,
@@ -367,6 +368,29 @@ export const storeThemeSchema = landingThemeSchema.extend({
    * it is the answer.
    */
   template: z.string().trim().min(1).max(40).optional(),
+  /**
+   * WHICH FAMILY THIS SHOP WEARS — «عيادة» · «عطّار» · «ترند» · «علامة».
+   *
+   * Optional, and read THROUGH `familyOf` below, which falls back to the
+   * family of the template the shop installed. So a shop that has chosen
+   * a voice has chosen a family without being asked a second question,
+   * and a shop that wants the family's shape with its own colours can
+   * say so in this one field.
+   *
+   * No migration: this column has always been JSON, and a key that is not
+   * there reads as «the one my template belongs to».
+   */
+  family: z.enum(FAMILY_IDS).optional(),
+  /**
+   * «تغليف خفي» — THE OWNER'S §٩, AND A SETTING RATHER THAN A SENTENCE.
+   *
+   * «سطر إعداد بيشغّله المالك، مش ثابت. إذا مطفي ما بيطلع لا بالشريط
+   * العلوي ولا بـ(ليش تطلب عنّا)». Printed unconditionally it would be a
+   * promise the shop has not made — discreet packaging is something a
+   * seller does or does not do, and a template must not claim it for
+   * them. Default off, which is the honest default for a claim.
+   */
+  discreetPacking: z.boolean().optional(),
 });
 
 /**
@@ -559,8 +583,47 @@ export function layoutOf<K extends keyof typeof DEFAULT_LAYOUT>(
   theme: StoreTheme,
   slot: K
 ): (typeof DEFAULT_LAYOUT)[K] {
-  const stored = (theme.layout?.[slot] as (typeof DEFAULT_LAYOUT)[K] | undefined) ?? DEFAULT_LAYOUT[slot];
+  const stored =
+    (theme.layout?.[slot] as (typeof DEFAULT_LAYOUT)[K] | undefined) ??
+    /*
+     * ── THE FAMILY ANSWERS BEFORE THE HOUSE DEFAULT, AND ONLY IF ASKED ──
+     *
+     * A shop that has NAMED a family has said «dress me as this», so the
+     * family's own variant is what an unset slot means — that is the
+     * whole of what a family is in the engine.
+     *
+     * A shop that has not named one keeps `DEFAULT_LAYOUT`, exactly as
+     * before. Reading the default family here instead would have
+     * repainted every shop that never chose anything — the header, the
+     * first screen and the card all at once, on live shops, as a side
+     * effect of adding a word to a type. «A store wearing one keeps its
+     * look until the owner changes it» cuts both ways.
+     */
+    (theme.family ? familyLayoutOf(theme.family, slot) : undefined) ??
+    DEFAULT_LAYOUT[slot];
   return effectiveVariant(slot, stored) as (typeof DEFAULT_LAYOUT)[K];
+}
+
+/** One slot of one family's look, typed as the slot's own union. */
+function familyLayoutOf<K extends keyof typeof DEFAULT_LAYOUT>(
+  family: FamilyId,
+  slot: K
+): (typeof DEFAULT_LAYOUT)[K] | undefined {
+  const look = familyById(family);
+  if (!look) return undefined;
+  return (look.layout as Record<string, string>)[slot] as (typeof DEFAULT_LAYOUT)[K] | undefined;
+}
+
+/**
+ * WHICH FAMILY THIS SHOP WEARS — asked in one place.
+ *
+ * In order: what the shop named, then the family of the template it
+ * installed, then the default. The middle step is what makes the gallery
+ * a family picker without a second question: a seller choosing «نبض»
+ * has chosen «ترند», and nobody has to tell them that.
+ */
+export function familyOf(theme: StoreTheme): FamilyId {
+  return theme.family ?? familyOfSkin(theme.template) ?? DEFAULT_FAMILY;
 }
 
 /** What the theme has stored, retirement and all — for the seller's own screen. */

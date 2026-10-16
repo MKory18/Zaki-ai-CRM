@@ -235,7 +235,7 @@ describe('the door that sells one thing is untouched', () => {
  * each time, and compares what was stored. A byte-identical order under
  * ten different looks is the claim the brief actually makes.
  */
-describe('a basket priced under each of the ten templates', () => {
+describe('a basket priced under every one of the templates', () => {
   const twoProducts = { items: [{ productId: 'p-big', quantity: 1 }, { productId: 'p-small', quantity: 2 }] };
 
   /** The same surface, wearing one template. */
@@ -267,7 +267,10 @@ describe('a basket priced under each of the ten templates', () => {
       await createPublicOrder(wearing(skin.id) as never, body(twoProducts));
       results.push(JSON.stringify(decided()));
     }
-    expect(results).toHaveLength(10);
+    // Eleven since «علامة» joined them. Read off the list rather than
+    // written out: what this test is about is that they all agree, and a
+    // number here would make adding a template look like a failure.
+    expect(results).toHaveLength(STORE_TEMPLATES.length);
     // Every one identical to the first — the comparison the brief asks for.
     for (let i = 1; i < results.length; i++) {
       expect(results[i], STORE_TEMPLATES[i].id).toBe(results[0]);

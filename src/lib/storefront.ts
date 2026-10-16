@@ -48,6 +48,16 @@ export interface StorefrontProduct {
    */
   handle: string;
   name: string;
+  /**
+   * THE LATIN NAME, FOR THE ONE FAMILY THAT SETS IT HUGE AND FAINT.
+   *
+   * `Product.nameEn` is a real column and has been since before the
+   * storefront existed; it simply never reached a shopper. «علامة» draws
+   * it behind the photograph — and draws nothing when it is empty, which
+   * is the whole of the owner's rule 0. Carried on the shelf as well as
+   * on the product page, because the series card prints it too.
+   */
+  nameEn: string | null;
   description: string | null;
   image: string | null;
   basePrice: number;
@@ -227,7 +237,7 @@ export async function storefrontProducts(
     orderBy: { createdAt: 'desc' },
     take: onlyIds ? onlyIds.length : limit,
     select: {
-      id: true, sku: true, name: true, description: true, image: true, basePrice: true, attributes: true,
+      id: true, sku: true, name: true, nameEn: true, description: true, image: true, basePrice: true, attributes: true,
       slug: true, previousSlugs: true,
       category: { select: { id: true, name: true, attributeSchema: true } },
       offers: {
@@ -258,6 +268,7 @@ export async function storefrontProducts(
       id: p.id,
       sku: p.sku,
       name: p.name,
+      nameEn: p.nameEn,
       description: p.description,
       image: p.images[0]?.url ?? p.image,
       basePrice: p.basePrice,
@@ -371,7 +382,7 @@ export const storefrontProduct = cache(async function storefrontProduct(
       ],
     },
     select: {
-      id: true, sku: true, name: true, description: true, image: true, basePrice: true, attributes: true,
+      id: true, sku: true, name: true, nameEn: true, description: true, image: true, basePrice: true, attributes: true,
       slug: true, previousSlugs: true,
       category: { select: { id: true, name: true, attributeSchema: true } },
       offers: {
@@ -402,6 +413,7 @@ export const storefrontProduct = cache(async function storefrontProduct(
     id: p.id,
     sku: p.sku,
     name: p.name,
+    nameEn: p.nameEn,
     description: p.description,
     image: gallery[0] ?? publicizeMedia(p.image),
     basePrice: p.basePrice,

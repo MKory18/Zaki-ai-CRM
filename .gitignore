@@ -92,3 +92,6 @@ packages/zaki-ui/dist/
 # in there is tracked), which is the worst shape for a false alarm: it fires
 # only on the machine somebody is working on.
 /.claude/worktrees/
+
+# تقرير التسليم — محلّي، لا يُرفع (الريبو عامّ)
+HANDOVER-*.md

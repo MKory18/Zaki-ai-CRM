@@ -90,7 +90,7 @@ const lab = shipped({
 });
 
 /**
- * ٢. أعشاب — the herbalist's shop.
+ * ٢. أعشاب — the herbal's shop.
  *
  * Warm cream and olive, ink brown for the words. The distinctive thing
  * is the INGREDIENT: somebody buying herbs is buying what is in them,
@@ -112,7 +112,7 @@ const herbs = shipped({
     border: '#e6ddcd',
     price: '#3a2f25',
   },
-  // Naskh for the name, a plain face for everything else: a herbalist's
+  // Naskh for the name, a plain face for everything else: a herbal's
   // shop reads as one, and a display face on body text is a shop nobody
   // can read a paragraph of.
   type: { heading: 'naskh', body: 'tajawal' },
@@ -538,7 +538,85 @@ const souq = shipped({
 });
 
 /**
- * The ten, in the order a seller meets them.
+ * ١١. علامة — THE ONE THAT IS A TEMPLATE RATHER THAN A PAGE.
+ *
+ * The owner added it on 15/10, after the three families were specified
+ * and before they were reviewed, and rule 0 of his note is the reason it
+ * exists: «علامة قالب، مش صفحات بتنعمل بالإيد. أي منتج جديد بيطلع بنفس
+ * الشكل من حقوله». So every section of its product page is read off a
+ * product field in `store-brand-template.ts`, and an empty field takes
+ * its section with it.
+ *
+ * ── WHY ITS PALETTE IS ALMOST NOT USED ──
+ *
+ * This is the shop's chrome: the header, the footer, the screens that
+ * belong to the shop rather than to a product. The PRODUCTS wear their
+ * own worlds — a background and an accent per product, computed in
+ * `store-world.ts` and measured to AA before they are returned. A
+ * charcoal shop with a bronze accent is what sits behind and between
+ * them, and it is deliberately quiet: a brand's chrome that competes
+ * with the product's own colour is a brand with two accents.
+ *
+ * The bronze is deep enough to carry its own button text, which the
+ * contract checks — the same argument «عنبر» lost its first gold on.
+ *
+ * ── AND WHAT IT PUTS FORWARD ──
+ *
+ * «الأكثر مبيعاً» from delivered orders, because the only number this
+ * family prints about other people is the one the engine can count —
+ * `bestSellers`, above its floor, or nothing at all.
+ */
+const alama = shipped({
+  id: 'alama',
+  name: 'علامة',
+  suggestedFor: 'العلامات التجارية ذات السلسلة — عناية وعطور ومكمّلات',
+  version: 1,
+  mood: 'bold',
+  palette: {
+    accent: '#9a6b2f',
+    surface0: '#171311',
+    surface1: '#1f1a17',
+    surface2: '#271f1b',
+    textPrimary: '#f4ece2',
+    textSecondary: '#bdada0',
+    border: '#332a25',
+    price: '#f4ece2',
+    priceCompare: '#bdada0',
+  },
+  /*
+   * ONE FACE, TWO WEIGHTS — and the owner's §٨ asked for three faces.
+   *
+   * El Messiri for the headings and Cinzel for the Latin names are not in
+   * this repository, and a font file is not an agent's to download. IBM
+   * Plex Sans Arabic is here, with its OFL licence, and it carries both
+   * scripts in one family — so the Latin name and the Arabic title sit on
+   * the same baseline, which is the one thing the big faint word has to
+   * get right. See `store-families.ts` and FAMILIES.md for the swap.
+   */
+  type: { heading: 'ibm', body: 'ibm' },
+  shape: { corners: 'soft', borders: 'hairline', shadow: 'none' },
+  layout: {
+    header: 'split',
+    hero: 'worldFirst',
+    categoryNav: 'dropdown',
+    productCard: 'world',
+    categoryPage: 'grid2',
+    productPage: 'galleryTop',
+    cart: 'page',
+  },
+  home: ['hero', 'catalog', 'trust', 'faq'],
+  imagery: {
+    lighting: 'moody',
+    background: 'colour',
+    ratio: '4:5',
+    forbid: ['خلفيات بيضاء', 'إضاءة مسطّحة', 'نصّ محروق على الصورة'],
+  },
+  motion: { entrance: 'fade', ms: 220, repeat: false },
+  feature: 'bestSellersRank',
+});
+
+/**
+ * The eleven, in the order a seller meets them.
  *
  * Three were built first and looked at before the rest — the brief's own
  * sequencing, and it earned its keep: «عنبر» was the first dark shop and
@@ -556,10 +634,21 @@ export const STORE_TEMPLATES: StoreSkin[] = [
   pulse,
   tender,
   souq,
+  alama,
 ];
 
-/** How many were planned. Kept beside the list so a short one is visible. */
-export const TEMPLATES_PLANNED = 10;
+/**
+ * How many were planned. Kept beside the list so a short one is visible.
+ *
+ * TEN BECAME ELEVEN ON 15/10, and the number moved for a reason rather
+ * than drifting: the owner added a fourth FAMILY, «علامة», and a family
+ * with no voice would be a heading in the gallery over nothing. The ten
+ * were the brief's; the eleventh is his note of 15/10
+ * (`S1-FAMILY-4-ALAMA.md`), and `store-families.test.ts` holds the rule
+ * that makes this count meaningful — every family has at least one voice
+ * a seller can actually choose.
+ */
+export const TEMPLATES_PLANNED = 11;
 
 export function templateById(id: string): StoreSkin | null {
   return STORE_TEMPLATES.find((t) => t.id === id) ?? null;

@@ -31,7 +31,17 @@ describe('every shipped template is a real one', () => {
   it('there are some, and the plan says how many there will be', () => {
     expect(STORE_TEMPLATES.length).toBeGreaterThan(0);
     expect(STORE_TEMPLATES.length).toBeLessThanOrEqual(TEMPLATES_PLANNED);
-    expect(TEMPLATES_PLANNED).toBe(10);
+    /*
+     * ELEVEN SINCE 15/10, and the assertion is pinned rather than
+     * relaxed: it exists so nobody reads a short list as a finished one,
+     * and a `toBeGreaterThan` would stop doing that job.
+     *
+     * The eleventh is «علامة», the voice of the fourth family the owner
+     * added in `S1-FAMILY-4-ALAMA.md` — a family with no voice is a
+     * heading in the gallery over nothing, which `store-families.test.ts`
+     * refuses.
+     */
+    expect(TEMPLATES_PLANNED).toBe(11);
   });
 
   /**

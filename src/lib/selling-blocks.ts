@@ -75,12 +75,19 @@ export const DEFAULT_FAMILY: SellingFamily = 'clinic';
  * it reads as the default rather than as nothing, the same rule
  * `effectiveVariant` applies to a retired layout slot.
  *
- * AND «علامة» IS NOT HERE, DELIBERATELY. It is the owner's fourth family,
- * added on 15/10, and it is not one of the ten skins: it is built from a
- * product's own fields — the Latin name, the promises, the close-up — and
- * its brief is the storefront stage's. No template maps to it, so nothing
+ * AND «علامة» IS HERE NOW — IT WAS NOT, AND THE REASON IT IS WORTH
+ * READING. This table shipped with a note saying the owner's fourth
+ * family was deliberately absent: «No template maps to it, so nothing
  * here can derive it, and `the-three-families.test.ts` holds that: a
- * family this stage has not drawn must be one this stage cannot select.
+ * family this stage has not drawn must be one this stage cannot select.»
+ *
+ * The storefront branch then drew it. «علامة» is a shipped template now
+ * (`alama`, in `store-templates.ts`), its product page is built from the
+ * product's own fields (`store-brand-template.ts`), and `brand` has a
+ * look in this stage's own stylesheet beside the other three. So the
+ * bargain is kept from the other side: the id is reachable BECAUSE it is
+ * drawn, and the guard still fails the day somebody maps a template to a
+ * family nobody drew.
  */
 export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Object.freeze({
   lab: 'clinic',
@@ -92,6 +99,31 @@ export const FAMILY_OF_TEMPLATE: Readonly<Record<string, SellingFamily>> = Objec
   pulse: 'trend',
   souq: 'trend',
   tender: 'trend',
+  /*
+   * THE FOURTH FAMILY, ADDED BY ITS OWN BRANCH.
+   *
+   * `alama` is the «علامة» template — a skin built entirely from product
+   * fields, so an empty field makes its section disappear rather than
+   * leaving a hole. Its family id is `brand`, which is what
+   * `LANDING_FAMILIES` calls «علامة»; the template key is the Arabic word
+   * transliterated, and the two are deliberately not the same string —
+   * the key is what a seller's theme RECORDED, the id is what this
+   * product calls the look.
+   *
+   * It is mapped here and not left to `DEFAULT_FAMILY` because the
+   * fallback is «عيادة»: a brand skin silently wearing the clinic
+   * family's trust row is the failure this map exists to prevent, and the
+   * claim below would have passed on it.
+   *
+   * AND A LANDING PAGE IN THIS FAMILY IS STILL A LANDING PAGE. The
+   * «علامة» PRODUCT page is built from the product's own fields and
+   * draws none of these blocks — but a seller on this template may
+   * still build a page in the block builder, and that page is drawn
+   * by this stage. Which is why `brand` has a look in the block
+   * stylesheet beside the other three: the guard below refuses a
+   * family a template can reach and nobody drew.
+   */
+  alama: 'brand',
 });
 
 /**

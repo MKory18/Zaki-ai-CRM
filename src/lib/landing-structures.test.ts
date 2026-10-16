@@ -76,7 +76,16 @@ describe('«ما في بنية بتحمل ألوان»', () => {
     // The architecture rule is only worth anything if the multiplication
     // is real: nothing in a structure can refuse a skin, because nothing
     // in a structure knows one exists.
-    expect(LANDING_STRUCTURES.length * STORE_TEMPLATES.length).toBe(100);
+    /*
+     * A HUNDRED AND TEN SINCE 15/10 — ten structures, eleven templates.
+     *
+     * The number is written out rather than computed from the two lengths
+     * on both sides, which would be a tautology. It moved when the owner
+     * added the fourth family «علامة» and its voice; what the assertion
+     * is about has not moved: the multiplication is REAL, because nothing
+     * in a structure knows a skin exists.
+     */
+    expect(LANDING_STRUCTURES.length * STORE_TEMPLATES.length).toBe(110);
     const src = stripComments(repoFile('src/lib/landing-structures.ts'));
     expect(src).not.toContain('STORE_TEMPLATES');
     expect(src).not.toContain('skin');
