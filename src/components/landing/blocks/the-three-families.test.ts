@@ -27,16 +27,14 @@ import { BLOCK_CSS } from './styles';
 const css = () => stripComments(BLOCK_CSS);
 
 /**
- * The three this stage redesigned — `AUDIT.md` §7.2 — and not the whole
- * list, which now also carries the owner's fourth family. See the test
- * below for what an undrawn family is allowed to be.
- */
-/*
- * FOUR NOW. «علامة» arrived with the storefront template of the same name
- * on 15/10, and a template that reaches a family is a shop that can be
- * WEARING it — so the bargain this file struck («an id without a look must
- * be an id `familyOf` can never return») is settled the other way round:
- * the look exists, and the strong rule applies to all four.
+ * THE FOUR, SINCE «علامة» WAS DRAWN.
+ *
+ * This was the three of `AUDIT.md` §7.2, with the note that the owner's
+ * fourth family was «not the whole list» and the test below holding that
+ * an undrawn id must be an unreachable one. The storefront branch then
+ * shipped `alama` as a template and gave `brand` a look in this
+ * stylesheet, so the list is four and the bargain is kept the other way
+ * round: every id a template can reach is an id with a look.
  */
 const DRAWN: SellingFamily[] = ['clinic', 'herbal', 'trend', 'brand'];
 
@@ -74,15 +72,20 @@ describe('the three families', () => {
   });
 
   /**
-   * AND THE ONE THIS STAGE DID NOT DRAW CANNOT BE SELECTED BY IT.
+   * AND A FAMILY THIS STAGE HAS NOT DRAWN IS ONE IT CANNOT SELECT.
    *
-   * «علامة» is the owner's fourth family, added on 15/10 — a product with a
-   * world of its own, built from its own fields. Its brief belongs to the
-   * storefront stage and nothing here implements it. So the rule is not
-   * «every id in the list has a look»: it is that an id WITHOUT a look must
-   * be an id `familyOf` can never return, which is the same bargain
-   * `layout-slots.ts` strikes with a retired variant — never silent, and
-   * never a name a shop can be wearing with nothing behind it.
+   * The rule, unchanged, and now satisfied from the other side: an id
+   * WITHOUT a look must be an id `familyOf` can never return — the same
+   * bargain `layout-slots.ts` strikes with a retired variant: never
+   * silent, and never a name a shop can be wearing with nothing behind
+   * it.
+   *
+   * When this was written «علامة» was the undrawn one and no template
+   * reached it. The storefront branch drew it and mapped `alama` to it,
+   * so today there is no undrawn family at all — and the assertion is
+   * kept rather than deleted, because it is the one that fails the day
+   * somebody adds a fifth id to `LANDING_FAMILIES` and a template that
+   * reaches it.
    */
   it('and every family a template can reach has been drawn', () => {
     /*

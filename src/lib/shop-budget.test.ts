@@ -31,6 +31,55 @@ import { FAMILY_IDS } from './store-families';
 /** «CSS أقل من 50 كيلوبايت». */
 const CSS_BUDGET_KB = 50;
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AND WHAT A WHOLE PAGE SENDS — THE SAME 50 KB, MEASURED PER PAGE.
+ *
+ * The constant above is the brief's and it does not move. What a shopper
+ * downloads is the shared sheet PLUS the slices of the family the shop
+ * wears, so that is what is measured here: the two shapes that exist, for
+ * each of the four families.
+ *
+ * MEASURED 2026-10-16, minified, in bytes:
+ *
+ *     the shared sheet (BLOCK + STOREFRONT)                  48,385
+ *     «علامة» · shop-wide slice (card, shared pieces)         1,755
+ *     «علامة» · hero slice        (the home only)               934
+ *     «علامة» · product-page slice (that page only)           2,057
+ *     ───────────────────────────────────────────────────────────────
+ *     its home          48,385 + 1,755 + 934 = 51,074   ✓ (cap 51,200)
+ *     its product page  48,385 + 1,755 + 2,057 = 52,197  ✗ over by 997
+ *
+ * ⚠️ AND THE 997 BYTES ARE NOT THIS FAMILY'S TO GIVE BACK. The shared
+ * sheet was 44,933 bytes when this branch started and is 48,385 now: S2
+ * «أقسام بتبيع» added 2.83 KB of block rules that every shop ships
+ * whether it draws those blocks or not, and «علامة»'s own look in that
+ * same sheet — which S2's guard REQUIRES of any family a template can
+ * reach — is 0.54 KB of it.
+ *
+ * What was already taken out of this family to get here, measured: the
+ * world switcher's three pairs of `:has()` selectors became one sibling
+ * rule (−820), the numbered lines became the block library's own list
+ * (−342), the specification pills became its own pills (−220), the ring's
+ * three positions became data on the elements (−250). The home came in
+ * under the cap that way, with 126 bytes to spare.
+ *
+ * WHAT IS LEFT TO CUT IS WHAT THE OWNER NAMED IN §٤, and all three of
+ * them together are just about the 997:
+ *
+ *     the ring of promises (the photograph in the middle, the three
+ *       numbers around it)                                      ~480
+ *     the dark panels the close-up and the video sit in          ~253
+ *     the bar that follows the price up the page                 ~306
+ *
+ * So this is not a thing to fix by trimming: it is a decision, and it is
+ * the owner's. Either the cap moves now that the shared sheet alone is
+ * 47.25 KB, or the block library is split per block the way the families
+ * are split in `styles.ts` — which is where the kilobytes actually are.
+ * Until then this fails, loudly, on the one page it is true of.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+
 const kb = (s: string) => Buffer.byteLength(s, 'utf8') / 1024;
 
 describe('what a shop weighs', () => {
@@ -85,16 +134,20 @@ describe('what a shop weighs', () => {
       : []),
   ]);
 
-  it.each(SHAPES)('and «%s» stays under it too, every layer that page ships', (what, slice) => {
+  it.each(SHAPES)('and «%s» is measured, layer by layer, and cannot grow', (what, slice) => {
     const whole = kb(sheet + slice);
+    const over = whole - CSS_BUDGET_KB;
     console.log(
       `[shop] ${what}: الأساس ${kb(sheet).toFixed(2)} + الشرائح ${kb(slice).toFixed(2)} ` +
-        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}، المتبقّي ${(CSS_BUDGET_KB - whole).toFixed(2)}`
+        `= ${whole.toFixed(2)} ك.ب — السقف ${CSS_BUDGET_KB}` +
+        (over > 0 ? ` (فوقه بـ${over.toFixed(2)} ك.ب — قرار للمالك، اقرا التعليق)` : `، المتبقّي ${(-over).toFixed(2)}`)
     );
     expect(
       whole,
-      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}. ` +
-        'اقرا الملاحظة فوق FAMILY_CSS: الشريحة تتبع الصفحة اللي بترسمها، والألوان تجي بمتغيّرات مش بقواعد.'
+      `«${what}» بيحمّل ${whole.toFixed(2)} ك.ب من الأنماط — السقف ${CSS_BUDGET_KB}، ` +
+        `والفرق ${(whole - CSS_BUDGET_KB).toFixed(2)} ك.ب. اقرا الملاحظة فوق: الورقة المشتركة ` +
+        'لحالها 47.25، واللي ضلّ يتشال هو اللي سمّاه المالك بـ§٤ — دائرة الوعود واللوحات ' +
+        'الداكنة والشريط اللاصق. يعني مش تشذيب، قرار.'
     ).toBeLessThan(CSS_BUDGET_KB);
   });
 

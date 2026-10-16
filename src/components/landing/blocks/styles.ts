@@ -1038,28 +1038,45 @@ export const BLOCK_CSS = `
 [data-family='trend'] .lp-faq-item { border-radius: 14px; }
 [data-family='trend'] .lp-urgency { font-weight: 800; }
 
-/* ── علامة — the product's own world. The fourth family arrived with the
-      storefront template of the same name, where a product carries its own
-      colours and the page is built from its fields.
+/* ── علامة — the fourth family, and the one whose colours are not the
+      shop's. A product carries its own world (store-world.ts), so a
+      landing page in this family is drawn on that world: the page's
+      surfaces are the deep panel, the reassurances sit on it rather than
+      in boxes of their own, and the heading is the heaviest of the four
+      because it is set against a photograph.
 
-      A landing page in it is QUIET: the heading loosens rather than
-      thickens, the surfaces lose their corners almost entirely, and the
-      reassurance row is a hairline instead of a box — the opposite of
-      «ترند», which is the point. A shop wearing «علامة» and selling
-      through a landing page should not be shouted at by the page.
+      THE OWNER'S TWO RULINGS HOLD HERE TOO. Nothing below moves anything
+      — no «order», no reverse, no «direction» — and no figure gets
+      anything behind it: the price, the saving, the remaining count and
+      the clock are untouched. The one ornament is a hairline UNDER A
+      HEADING, which is one of the four places ornament may sit.
 
-      ⚠ـ Nothing here moves an order and nothing sits behind a figure: the
-      two rulings every family in this file is held to, and the two things
-      the guard beside it reads off this stylesheet. ── */
-[data-family='brand'] .lp-h2 { font-weight: 700; letter-spacing: .01em; }
-[data-family='brand'] .lp-sub { line-height: 1.95; }
-[data-family='brand'] .lp-objection,
-[data-family='brand'] .lp-faq-item { border-radius: 2px; }
-[data-family='brand'] .lp-trust > a {
-  border-radius: 2px;
-  border: 1px solid var(--store-border);
-  background: none;
+      WHY IT IS HERE AT ALL. «selling-blocks.ts» says «علامة» is not in
+      its table «deliberately… a family this stage has not drawn must be
+      one this stage cannot select», and the guard in
+      «the-three-families.test.ts» enforces exactly that. This branch is
+      the one that drew it: «alama» is a shipped template now, it maps to
+      «brand», and so «brand» has to have a look here or the guard —
+      correctly — refuses the pair. ── */
+[data-family='brand'] .lp-h2 { font-weight: 800; }
+[data-family='brand'] .lp-h2::after {
+  /* ON THE HEADING. A hairline in the product's own accent, not a frame
+     around anything that carries a number. */
+  content: '';
+  display: block;
+  width: 44px;
+  margin: 12px auto 0;
+  border-top: 1px solid var(--store-accent);
 }
+[data-family='brand'] .lp-trust > div,
+[data-family='brand'] .lp-trust > a {
+  background: var(--store-surface);
+  border-color: var(--store-border);
+  border-radius: 2px;
+}
+[data-family='brand'] .lp-objection,
+[data-family='brand'] .lp-faq-item { border-radius: 2px; background: var(--store-surface); }
+[data-family='brand'] .lp-section { padding-block: 38px; }
 
 @media (min-width: 640px) {
   .lp-benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); }

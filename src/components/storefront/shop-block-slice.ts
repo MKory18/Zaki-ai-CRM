@@ -7,11 +7,12 @@
  * `BLOCK_CSS`**: the rules for the landing-page BLOCKS, the thirty-odd
  * sections a seller assembles in the page editor.
  *
- * A storefront page draws thirteen of those classes. Thirteen:
+ * A storefront page draws eighteen of those classes. Eighteen:
  *
  *     lp-root · lp-section · lp-hero · lp-h2 · lp-sub · lp-cta ·
  *     lp-trust · lp-catalog · lp-catalog-cats · lp-faq-item ·
- *     lp-form-section · lp-footer · lp-footer-phone
+ *     lp-form-section · lp-footer · lp-footer-phone ·
+ *     lp-quiz-options · lp-quiz-option · lp-timeline · lp-timeline-what · lp-timeline-when
  *
  * Everything else in those 24 KB is a block a SHOP page has no way to
  * render — and every shopper on every product page was paying for all of
@@ -47,6 +48,8 @@
  * ═══════════════════════════════════════════════════════════════════════
  */
 
+import { minifyCss } from '@/lib/css-minify';
+
 /** The landing-page classes a storefront page can actually draw. */
 export const SHOP_BLOCK_CLASSES = [
   'lp-root',
@@ -62,6 +65,21 @@ export const SHOP_BLOCK_CLASSES = [
   'lp-form-section',
   'lp-footer',
   'lp-footer-phone',
+  /*
+   * ── AND THE FOUR THE SWEEP CAUGHT, WHICH IS THE POINT OF IT ──
+   *
+   * «علامة»'s storefront sections draw the quiz and the timeline — blocks
+   * written for the landing editor and reused by a shop page. Nobody
+   * remembered to add them; the sweep in
+   * `a-shop-does-not-wear-the-whole-wardrobe.test.ts` named all four
+   * before a shopper could find them unstyled. That is why the list is
+   * safe to write down: it is checked, not trusted.
+   */
+  'lp-quiz-options',
+  'lp-quiz-option',
+  'lp-timeline',
+  'lp-timeline-what',
+  'lp-timeline-when',
 ] as const;
 
 /** Does this selector name a landing class the shop cannot draw? */
@@ -81,24 +99,46 @@ function selectorIsForeign(selector: string, keep: readonly string[]): boolean {
  * empty `@media { }` never reaches the page.
  */
 export function shopBlockSlice(css: string, keep: readonly string[] = SHOP_BLOCK_CLASSES): string {
+  /*
+   * ⚠️ COMMENTS COME OUT FIRST, AND BY THE PROJECT'S OWN MINIFIER.
+   *
+   * This is not a precaution; it is two bugs, found one after the other.
+   *
+   * The walk counts braces, and a comment in this stylesheet explains its
+   * rules in prose — prose that contains braces. So every block after such
+   * a comment was read at the wrong depth and whole runs of rules vanished
+   * from the slice in silence.
+   *
+   * The obvious fix — a `/\*[\s\S]*?\*\/` of my own — was the second bug.
+   * It left the tail of one comment behind and took the selector after it
+   * with the rest: `.lp-quiz` became `e quiz -- three questions`, and the
+   * quiz reached a shop page with no styling at all, five hundred lines
+   * below the comment that caused it.
+   *
+   * `minifyCss` is this repository's one minifier, it already runs over
+   * this very stylesheet on every page, and it gets this file right. Two
+   * readers of the same CSS is how one of them is wrong about it — so
+   * there is one. Running it twice costs nothing and is idempotent.
+   */
+  const source = minifyCss(css);
   const out: string[] = [];
   let i = 0;
 
-  while (i < css.length) {
-    const open = css.indexOf('{', i);
+  while (i < source.length) {
+    const open = source.indexOf('{', i);
     if (open === -1) break;
 
-    const head = css.slice(i, open).trim();
+    const head = source.slice(i, open).trim();
 
     // Find this block's matching close, counting nested braces.
     let depth = 1;
     let j = open + 1;
-    while (j < css.length && depth > 0) {
-      if (css[j] === '{') depth++;
-      else if (css[j] === '}') depth--;
+    while (j < source.length && depth > 0) {
+      if (source[j] === '{') depth++;
+      else if (source[j] === '}') depth--;
       j++;
     }
-    const body = css.slice(open + 1, j - 1);
+    const body = source.slice(open + 1, j - 1);
     i = j;
 
     if (head.startsWith('@')) {

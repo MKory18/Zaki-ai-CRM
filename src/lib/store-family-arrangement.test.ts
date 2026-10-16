@@ -17,7 +17,7 @@ import { BRAND_PAGE_CSS, FAMILY_CSS, FAMILY_HERO_CSS } from '@/components/storef
  * and «علامة»'s product page, which carries its own. A sweep that read
  * one layer would pass on the two it could not see.
  */
-const LAYERS = (id: 'clinic' | 'herbalist' | 'trend' | 'brand') =>
+const LAYERS = (id: 'clinic' | 'herbal' | 'trend' | 'brand') =>
   FAMILY_CSS[id] + FAMILY_HERO_CSS[id] + (id === 'brand' ? BRAND_PAGE_CSS : '');
 import { repoFile, stripComments } from './guard-source';
 

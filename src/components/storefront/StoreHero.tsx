@@ -1,3 +1,4 @@
+import React from 'react';
 import Link from 'next/link';
 import type { HeroVariant } from '@/lib/layout-slots';
 import { moneyText } from '@/lib/money';
@@ -302,32 +303,36 @@ export function StoreHero({
         return (
           <>
             {/*
-              The radios first, as siblings of everything they control:
-              `:has()` looks inside the section, so the checked one is
-              readable from the section root whatever the order. Not
-              rendered in the miniature at all — the gallery draws eleven
-              previews on one screen and eleven groups of radios with the
-              same ids would fight each other.
-            */}
-            {!mini &&
-              worlds.map((p, i) => (
-                <input
-                  key={`r${p.id}`}
-                  type="radio"
-                  name="sf-world"
-                  id={`sf-w${i}`}
-                  defaultChecked={i === 0}
-                  className="sf-bw-radio"
-                  aria-label={p.name}
-                />
-              ))}
+              EACH RADIO IMMEDIATELY BEFORE THE STAGE IT SHOWS.
 
+              Not all three first. The order is what lets the stylesheet
+              say it ONCE — «.sf-bw-radio:checked + .sf-bw-stage» — instead
+              of a rule per world: measured, three pairs of «:has()»
+              selectors were 620 bytes of a family that has about a quarter
+              of a kilobyte of budget left. A sibling combinator is also
+              the oldest, widest-supported thing in this file.
+
+              The miniature renders no radios at all — the gallery draws
+              eleven previews on one screen and eleven groups with the same
+              ids would fight each other — so it falls through to the rule
+              that shows the first stage.
+            */}
             {worlds.map((p, i) => {
               const world = worldOf({ id: p.id, attributes: p.attributes ?? null });
               const latin = latinWord(p.nameEn);
               return (
+                <React.Fragment key={p.id}>
+                {!mini && (
+                  <input
+                    type="radio"
+                    name="sf-world"
+                    id={`sf-w${i}`}
+                    defaultChecked={i === 0}
+                    className="sf-bw-radio"
+                    aria-label={p.name}
+                  />
+                )}
                 <span
-                  key={p.id}
                   className="sf-bw-stage"
                   data-w={i}
                   style={worldVars(world) as React.CSSProperties}
@@ -357,6 +362,7 @@ export function StoreHero({
                     </Wrap>
                   </span>
                 </span>
+                </React.Fragment>
               );
             })}
 

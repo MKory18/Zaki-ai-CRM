@@ -13,7 +13,7 @@ import { stripComments } from './guard-source';
  * `SHOP_SHEET` was `BLOCK_CSS + STOREFRONT_CSS`, and measured on a built
  * page that was **47,831 bytes, of which 23,947 was `BLOCK_CSS`** — the
  * rules for the thirty-odd landing-page blocks a seller assembles in the
- * editor. A storefront page draws thirteen of those classes. The rest
+ * editor. A storefront page draws eighteen of those classes. The rest
  * dressed sections a shop has no way to render, and every shopper on
  * every product page paid for all of it, on a phone, before the first
  * photograph.
@@ -25,7 +25,7 @@ import { stripComments } from './guard-source';
  *
  * ── WHAT THIS FILE HOLDS ──
  *
- * The LIST of thirteen is a list, and «a guard that is a list is
+ * The LIST is a list, and «a guard that is a list is
  * incomplete the day it is written» is a lesson this repository has paid
  * for four times. So the list is not the guard. The SWEEP is: it reads
  * every storefront source, finds every `lp-` class a shop can render, and
