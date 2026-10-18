@@ -24,6 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
+import { resolveWipeTarget, evaluateVerify } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -127,13 +128,27 @@ async function stepBackup(ctx) {
   log(`backup ok (${(size / 1e6).toFixed(1)} MB)`);
 }
 
-/** Step: wipe-demo — remove the demo company (cascade), keep superadmins + global roles. */
+/** Step: wipe-demo — remove ONE explicitly named demo company, keep superadmins + global roles.
+ * The target is never guessed: --wipe-company-id must name it (see lib/safety-rules.mjs). */
 async function stepWipeDemo(ctx) {
-  const demo = await prisma.company.findFirst({
-    where: { name: { not: COMPANY_NAME } },
+  const companies = await prisma.company.findMany({
     include: { _count: { select: { users: true, products: true, orders: true, customers: true, stores: true, categories: true, countries: true } } },
   });
-  if (!demo) { log('no demo company found — nothing to wipe'); return; }
+  if (companies.length === 0) { log('no companies in the database — nothing to wipe'); return; }
+  const target = resolveWipeTarget(process.argv, companies, COMPANY_NAME);
+  if (!target.ok) {
+    log('WIPE REFUSED:', target.reason);
+    for (const c of target.candidates) {
+      const n = c.counts || {};
+      log(`  candidate: ${c.id}  "${c.name}"  (users=${n.users ?? '?'} products=${n.products ?? '?'} orders=${n.orders ?? '?'} customers=${n.customers ?? '?'})`);
+    }
+    if (!DRY_RUN) throw new Error(`wipe refused: ${target.reason} — pass --wipe-company-id <uuid of the demo company>`);
+    log('[dry] with --wipe-company-id <uuid of the demo company above> the wipe would proceed');
+    return;
+  }
+  const demo = target.company;
+  log(`wipe target VERIFIED: "${demo.name}" id=${demo.id}`);
+  log(`  → users=${demo._count.users} products=${demo._count.products} orders=${demo._count.orders} customers=${demo._count.customers} stores=${demo._count.stores}`);
   log(`demo company: "${demo.name}" → users=${demo._count.users} products=${demo._count.products} orders=${demo._count.orders} customers=${demo._count.customers} stores=${demo._count.stores}`);
   const superAdmins = await prisma.user.count({ where: { role: 'SUPER_ADMIN', companyId: null } });
   log(`protected: ${superAdmins} superadmins (companyId=null), global roles, RolePermissionDefaults, SystemSettings`);
@@ -732,6 +747,23 @@ async function stepVerify(ctx, dump) {
   stats.checks = Object.fromEntries(checks.map(([n, a, b]) => [n, { legacy: a, migrated: b }]));
   stats.moneySumLegacy = legacyTotalSum; stats.moneySumMigrated = Number(newTotalSum);
   stats.moneyOk = moneyOk;
+
+  // THE GATE: the tool may not exit green while money or references disagree.
+  const verdict = evaluateVerify({
+    legacySum: legacyTotalSum,
+    migratedSum: Number(newTotalSum),
+    countChecks: Object.fromEntries(checks.filter(([n]) => n !== 'customers' && n !== 'commissions' && n !== 'staff').map(([n, a, b]) => [n, [a, b]])),
+    orphanCounts: { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
+  });
+  stats.verifyFailures = verdict.failures;
+  if (!verdict.ok) {
+    for (const f of verdict.failures) log('  ❌', f);
+    stats.verifyFailed = true;
+    if (!DRY_RUN) throw new Error(`verification FAILED — the migration must not be reported as a success (${verdict.failures.length} failure(s))`);
+    log('[dry] verification would FAIL — see failures above');
+  } else {
+    log('✅ verification passed: money, counts and references all agree');
+  }
 }
 
 // ─────────────────────────── runner ───────────────────────────
