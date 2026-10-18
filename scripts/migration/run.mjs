@@ -751,7 +751,8 @@ async function stepPages(ctx, dump) {
 /** Step: verify — counts + integrity checks vs legacy dump. */
 async function stepVerify(ctx, dump) {
   log('=== VERIFY ===');
-  const c = await getSalahContext();
+  // --orders-only targets an explicitly-named company: never re-resolve by name.
+  const c = ctx.company ? { company: ctx.company } : await getSalahContext();
   if (!c.company) { log('company missing — nothing to verify'); return; }
   const cid = c.company.id;
   const legacyOrders = rows(dump, 'orders').length;
@@ -826,7 +827,70 @@ async function stepVerify(ctx, dump) {
 
 // ─────────────────────────── runner ───────────────────────────
 
-const STEPS = [
+/** --orders-only: import orders into an EXISTING store — no wipe, no new
+ * company/store, nothing deleted. The store id is required and explicit. */
+function argVal(name) {
+  const i = process.argv.indexOf(name);
+  return i !== -1 ? process.argv[i + 1] : null;
+}
+
+/** Step: target — verify the explicit store and derive company/country/
+ * regions/providers from it. Creation here is strictly additive (missing
+ * regions only); no rename, no move, no delete. */
+async function stepTarget(ctx, dump) {
+  const storeId = argVal('--store-id');
+  if (!storeId) throw new Error('--orders-only requires --store-id <uuid of the existing Syria store>');
+  const store = await prisma.store.findUnique({ where: { id: storeId }, include: { country: true } });
+  if (!store) throw new Error(`no store with id ${storeId} — refusing to import into a guess`);
+  const company = await prisma.company.findUnique({ where: { id: store.companyId } });
+  const country = store.country;
+  ctx.company = company;
+  ctx.store = store;
+  ctx.country = country;
+  log(`target store VERIFIED: "${store.name}" (${store.id})`);
+  log(`  company ${company.id} "${company.name}" · country ${country?.code ?? 'n/a'} (${country?.id ?? 'n/a'})`);
+
+  // regions under the store's country: reuse by name, create only what's missing
+  ctx.regionMap = new Map();
+  if (country) {
+    const existing = await prisma.region.findMany({ where: { countryId: country.id } });
+    const byName = new Map(existing.map((r) => [r.name, r]));
+    for (const lr of rows(dump, 'regions')) {
+      let reg = byName.get(lr.name);
+      if (!reg && !DRY_RUN) reg = await prisma.region.create({ data: { countryId: country.id, name: lr.name } });
+      if (reg) { ctx.regionMap.set(lr.id, reg.id); byName.set(lr.name, reg); }
+    }
+    log(`regions: ${ctx.regionMap.size}/${rows(dump, 'regions').length} mapped under the store's country`);
+  }
+
+  // delivery providers: match BY NAME only — orders-only never creates providers
+  const providers = await prisma.deliveryProvider.findMany({ where: { companyId: company.id } });
+  const byName = new Map(providers.map((p) => [p.name, p]));
+  ctx.providerMap = new Map();
+  for (const s of rows(dump, 'shippings')) {
+    const p = byName.get(s.name);
+    if (p) ctx.providerMap.set(s.id, p.id);
+  }
+  log(`providers matched by name: ${ctx.providerMap.size}/${rows(dump, 'shippings').length} (unmatched stay null on orders)`);
+
+  // channel: reuse if present, never created here
+  ctx.channel = await prisma.orderChannel.findFirst({ where: { companyId: company.id, name: 'الموقع القديم' } });
+  // categories: link by name only (categoryId is nullable on Product)
+  const cats = await prisma.category.findMany({ where: { companyId: company.id } });
+  const catByName = new Map(cats.map((c) => [c.name, c]));
+  ctx.categoryMap = new Map();
+  for (const c of rows(dump, 'categories')) {
+    const cat = catByName.get(c.name);
+    if (cat) ctx.categoryMap.set(c.id, cat.id);
+  }
+  log(`categories matched by name: ${ctx.categoryMap.size}/${rows(dump, 'categories').length}`);
+}
+
+
+
+const ORDERS_ONLY = process.argv.includes('--orders-only');
+
+const FULL_STEPS = [
   ['backup', stepBackup],
   ['wipe-demo', stepWipeDemo],
   ['infra', stepInfra],
@@ -840,6 +904,19 @@ const STEPS = [
   ['pages', stepPages],
   ['verify', stepVerify],
 ];
+
+// --orders-only: straight import into an existing store. No wipe, no staff,
+// no offers/commissions/activity/pages — customers and products are created
+// only as far as the orders need them.
+const STEPS = ORDERS_ONLY
+  ? [
+      ['target', stepTarget],
+      ['customers', stepCustomers],
+      ['products', stepProducts],
+      ['orders', stepOrders],
+      ['verify', stepVerify],
+    ]
+  : FULL_STEPS;
 
 async function main() {
   if (process.argv.includes('--list')) { log(STEPS.map((s) => s[0]).join('\n')); return; }
