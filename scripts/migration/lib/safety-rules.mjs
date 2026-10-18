@@ -102,6 +102,26 @@ export function resolveStoreTarget(argv, stores, dest) {
 }
 
 /**
+ * The Prisma Client delegate name for a model: `WhatsAppMessage` lives at
+ * `prisma.whatsAppMessage` — camelCase, not lowercase. A wrong name reads as
+ * `undefined` and a wipe would silently skip a whole table.
+ */
+export function delegateName(model) {
+  return model.charAt(0).toLowerCase() + model.slice(1);
+}
+
+/**
+ * Which wipe models have no delegate in THIS generated Prisma Client.
+ * Empty list = every model can be cleared; anything listed must stop the
+ * run instead of being skipped silently.
+ * @param {string[]} models  camelCase delegate names
+ * @param {object} client    the PrismaClient instance (or any stand-in for tests)
+ */
+export function missingDelegates(models, client) {
+  return models.filter((m) => !client[m] || typeof client[m].deleteMany !== 'function');
+}
+
+/**
  * The verify gate. Returns every FAILURE; an empty list means the migration
  * may claim success. Called with legacy vs migrated aggregates.
  *

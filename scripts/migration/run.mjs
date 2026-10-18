@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
-import { resolveWipeTarget, resolveStoreTarget, evaluateVerify } from './lib/safety-rules.mjs';
+import { resolveWipeTarget, resolveStoreTarget, evaluateVerify, delegateName, missingDelegates } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -162,6 +162,32 @@ async function stepWipeDemo(ctx) {
   // children first. No company-wide wildcard deletes: scope = demo.id only.
   // audit_logs is deliberately ABSENT: it is append-only by trigger (no
   // UPDATE, no DELETE) and its history must survive the wipe.
+  // Delegate names must match THIS Prisma Client exactly (WhatsAppMessage →
+  // whatsAppMessage, NOT whatsappMessage) — an undefined delegate used to
+  // skip a whole table silently. Anything missing here is a hard stop.
+  const WIPE_MODELS = [
+    'orderItem', 'orderActivity', 'orderNote', 'orderStatusLog',
+    'orderContactAttempt', 'orderClaimHistory', 'orderChangeRequest',
+    'orderIssue', 'orderAddOn', 'deliveryAttempt',
+    'returnReceipt', 'callLog', 'financialTransaction',
+    'commissionEntry', 'settlementMatch', 'conversionDelivery',
+    'walletMovement', 'walletTransfer', 'dailyClosing',
+    'walletOpeningCount', 'wallet',
+    'statementLine', 'statementReceipt', 'courierStatement',
+    'penalty', 'payslip', 'commissionPayout',
+    'commissionPeriod', 'commissionRule', 'penaltyRule',
+    'attendanceMark', 'aiDailySummary', 'notification',
+    'productReview', 'productImage',
+    'landingPageView', 'landingPageRecommendation',
+    'customConversion', 'trackingPixel', 'adAccount', 'campaign',
+    'storeFont', 'storePage', 'storeMenu', 'storeRedirect',
+    'telegramMessage', 'telegramSource',
+    'whatsAppMessage', 'whatsAppConversation', 'whatsAppConnection',
+    'appDelivery', 'appInstall', 'app',
+    'idempotencyRecord', 'systemToken',
+  ];
+  const missing = missingDelegates(WIPE_MODELS, prisma);
+  if (missing.length) throw new Error(`Prisma Client is missing delegates for: ${missing.join(', ')} — the wipe cannot proceed partially blind`);
   const D = async (model, relWhere = null) => {
     try {
       await prisma[model].deleteMany({ where: relWhere || { companyId: demo.id } });
@@ -173,27 +199,7 @@ async function stepWipeDemo(ctx) {
       throw new Error(`wipe: ${model} could not be cleared — refusing to continue silently (${e.message.split('\n')[0].slice(0, 160)})`);
     }
   };
-  await D('orderItem');
-  await D('orderActivity'); await D('orderNote'); await D('orderStatusLog');
-  await D('orderContactAttempt'); await D('orderClaimHistory'); await D('orderChangeRequest');
-  await D('orderIssue'); await D('orderAddOn'); await D('deliveryAttempt');
-  await D('returnReceipt'); await D('callLog'); await D('financialTransaction');
-  await D('commissionEntry'); await D('settlementMatch');
-  await D('conversionDelivery');
-  await D('walletMovement'); await D('walletTransfer'); await D('dailyClosing');
-  await D('walletOpeningCount'); await D('wallet');
-  await D('statementLine'); await D('statementReceipt'); await D('courierStatement');
-  await D('penalty'); await D('payslip'); await D('commissionPayout');
-  await D('commissionPeriod'); await D('commissionRule'); await D('penaltyRule');
-  await D('attendanceMark'); await D('aiDailySummary'); await D('notification');
-  await D('productReview'); await D('productImage');
-  await D('landingPageView'); await D('landingPageRecommendation');
-  await D('customConversion'); await D('trackingPixel'); await D('adAccount'); await D('campaign');
-  await D('storeFont'); await D('storePage'); await D('storeMenu'); await D('storeRedirect');
-  await D('telegramMessage'); await D('telegramSource');
-  await D('whatsappMessage'); await D('whatsappConversation'); await D('whatsappConnection');
-  await D('appDelivery'); await D('appInstall'); await D('app');
-  await D('idempotencyRecord'); await D('systemToken');
+  for (const m of WIPE_MODELS) await D(m);
   await prisma.userStoreAccess.deleteMany({ where: { store: { companyId: demo.id } } });
   await prisma.userCountryAccess.deleteMany({ where: { country: { companyId: demo.id } } });
   await D('inventoryMovement'); await D('productionBatchCost'); await D('productionBatch');

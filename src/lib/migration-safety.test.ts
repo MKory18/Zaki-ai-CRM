@@ -2,7 +2,28 @@ import { describe, expect, it } from 'vitest';
 // The migration tool's safety rules live in a pure module so these rules can
 // be held by the same suite that gates every merge — not only by the person
 // who happens to run the tool.
-import { evaluateVerify, resolveStoreTarget, resolveWipeTarget } from '../../scripts/migration/lib/safety-rules.mjs';
+import { delegateName, evaluateVerify, missingDelegates, resolveStoreTarget, resolveWipeTarget } from '../../scripts/migration/lib/safety-rules.mjs';
+
+describe('wipe model names must match the Prisma Client exactly', () => {
+  const fakeClient = {
+    whatsAppMessage: { deleteMany: () => {} },
+    telegramMessage: { deleteMany: () => {} },
+  };
+
+  it('maps WhatsAppMessage to whatsAppMessage — not whatsappMessage', () => {
+    expect(delegateName('WhatsAppMessage')).toBe('whatsAppMessage');
+    expect(delegateName('WhatsAppConnection')).toBe('whatsAppConnection');
+    expect(delegateName('OrderItem')).toBe('orderItem');
+  });
+
+  it('flags a wrongly-cased delegate as missing instead of skipping the table', () => {
+    // the bug that shipped: 'whatsappMessage' resolves to undefined and the
+    // wipe silently left WhatsApp data behind
+    expect(missingDelegates(['whatsappMessage'], fakeClient)).toEqual(['whatsappMessage']);
+    expect(missingDelegates(['whatsAppMessage', 'telegramMessage'], fakeClient)).toEqual([]);
+    expect(missingDelegates(['doesNotExist'], fakeClient)).toEqual(['doesNotExist']);
+  });
+});
 
 describe('the migration never guesses which company to wipe', () => {
   const companies = [
