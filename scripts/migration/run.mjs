@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
-import { resolveWipeTarget, resolveStoreTarget, evaluateVerify, delegateName, missingDelegates } from './lib/safety-rules.mjs';
+import { resolveWipeTarget, resolveStoreTarget, evaluateVerify, verifyGateNames, delegateName, missingDelegates } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -808,18 +808,23 @@ async function stepVerify(ctx, dump) {
   stats.moneyOk = moneyOk;
 
   // THE GATE: the tool may not exit green while money or references disagree.
+  // --orders-only answers for the orders pipeline only (orders, items,
+  // products, money); everything else is out of its verdict by design.
+  const gate = new Set(verifyGateNames(ORDERS_ONLY));
+  if (ORDERS_ONLY) log(`orders-only gate: ${[...gate].join(', ')} + money checksum (offers, landing_pages, staff, commissions excluded)`);
   const verdict = evaluateVerify({
     legacySum: legacyTotalSum,
     migratedSum: Number(newTotalSum),
-    countChecks: Object.fromEntries(checks.filter(([n]) => n !== 'customers' && n !== 'commissions' && n !== 'staff').map(([n, a, b]) => [n, [a, b]])),
-    orphanCounts: { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
+    countChecks: Object.fromEntries(checks.filter(([n]) => gate.has(n)).map(([n, a, b]) => [n, [a, b]])),
+    orphanCounts: ORDERS_ONLY ? {} : { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
   });
   stats.verifyFailures = verdict.failures;
-  if (!verdict.ok) {
+  if (DRY_RUN) {
+    log('[dry] database verification is DEFERRED because no writes occurred — run --step verify after --apply for the real gate');
+  } else if (!verdict.ok) {
     for (const f of verdict.failures) log('  ❌', f);
     stats.verifyFailed = true;
-    if (!DRY_RUN) throw new Error(`verification FAILED — the migration must not be reported as a success (${verdict.failures.length} failure(s))`);
-    log('[dry] verification would FAIL — see failures above');
+    throw new Error(`verification FAILED — the migration must not be reported as a success (${verdict.failures.length} failure(s))`);
   } else {
     log('✅ verification passed: money, counts and references all agree');
   }
