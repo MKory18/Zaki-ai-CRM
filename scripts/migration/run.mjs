@@ -155,11 +155,13 @@ async function stepWipeDemo(ctx) {
   log(`demo company: "${demo.name}" → users=${demo._count.users} products=${demo._count.products} orders=${demo._count.orders} customers=${demo._count.customers} stores=${demo._count.stores}`);
   const superAdmins = await prisma.user.count({ where: { role: 'SUPER_ADMIN', companyId: null } });
   log(`protected: ${superAdmins} superadmins (companyId=null), global roles, RolePermissionDefaults, SystemSettings`);
-  if (DRY_RUN) { log('[dry] would delete this ONE company row (explicit ordered deletes below)'); return; }
+  if (DRY_RUN) { log(`[dry] would clear ALL business data of "${demo.name}" and DISABLE its ${demo._count.users} users (accounts + audit history stay); nothing is deleted without --apply`); return; }
   // Explicit ordered cleanup — Postgres cascade order is unspecified and
   // Restrict edges (OrderItem→Product, Region→Country, …) can fire before
   // their parents' rows are gone. Delete every demo-scoped row explicitly,
   // children first. No company-wide wildcard deletes: scope = demo.id only.
+  // audit_logs is deliberately ABSENT: it is append-only by trigger (no
+  // UPDATE, no DELETE) and its history must survive the wipe.
   const D = async (model, relWhere = null) => {
     try {
       await prisma[model].deleteMany({ where: relWhere || { companyId: demo.id } });
@@ -168,7 +170,7 @@ async function stepWipeDemo(ctx) {
       // model has no companyId column — retry through its parent relation
       const rel = { statementLine: 'statement', statementReceipt: 'statement', landingPageRecommendation: 'landingPage', landingPageView: 'landingPage' }[model];
       if (rel) return D(model, { [rel]: { companyId: demo.id } });
-      warn(`wipe: ${model} skipped (${e.message.split('\n')[0].slice(0, 120)})`);
+      throw new Error(`wipe: ${model} could not be cleared — refusing to continue silently (${e.message.split('\n')[0].slice(0, 160)})`);
     }
   };
   await D('orderItem');
@@ -183,7 +185,7 @@ async function stepWipeDemo(ctx) {
   await D('statementLine'); await D('statementReceipt'); await D('courierStatement');
   await D('penalty'); await D('payslip'); await D('commissionPayout');
   await D('commissionPeriod'); await D('commissionRule'); await D('penaltyRule');
-  await D('attendanceMark'); await D('aiDailySummary'); await D('notification'); await D('auditLog');
+  await D('attendanceMark'); await D('aiDailySummary'); await D('notification');
   await D('productReview'); await D('productImage');
   await D('landingPageView'); await D('landingPageRecommendation');
   await D('customConversion'); await D('trackingPixel'); await D('adAccount'); await D('campaign');
@@ -201,11 +203,31 @@ async function stepWipeDemo(ctx) {
   await D('deliveryProvider'); await D('shippingBatch');
   await D('country'); await D('store'); await D('category'); await D('orderChannel');
   await D('product'); await D('customer'); await D('expense');
-  await prisma.user.deleteMany({ where: { companyId: demo.id } });
-  await prisma.company.delete({ where: { id: demo.id } });
-  bump('demo_company_deleted');
-  const left = await prisma.user.findMany({ where: { companyId: null }, select: { email: true } });
-  log('users kept (companyId=null):', left.map((u) => u.email).join(', '));
+  // The company ROW and its users STAY. audit_logs is append-only and may
+  // still reference them (rows written from other scopes too), and the owner
+  // wants the old staff accounts disabled, not erased. Everything above —
+  // orders, products, customers, stock, finance — is already gone.
+  const disabled = await prisma.user.updateMany({
+    where: { companyId: demo.id, status: { not: 'DISABLED' } },
+    data: { status: 'DISABLED', tokenVersion: { increment: 1 } },
+  });
+  bump('legacy_users_disabled', disabled.count);
+  log(`legacy users disabled: ${disabled.count} (login blocked, sessions killed, audit history untouched)`);
+  // Optional, explicit: keep exactly ONE active platform owner.
+  const keepIdx = process.argv.indexOf('--disable-superadmins-except');
+  const keepEmail = keepIdx !== -1 ? process.argv[keepIdx + 1] : null;
+  if (keepEmail) {
+    const others = await prisma.user.updateMany({
+      where: { role: 'SUPER_ADMIN', companyId: null, email: { not: keepEmail }, status: { not: 'DISABLED' } },
+      data: { status: 'DISABLED', tokenVersion: { increment: 1 } },
+    });
+    bump('superadmins_disabled', others.count);
+    log(`other superadmins disabled: ${others.count} — the one active platform owner is ${keepEmail}`);
+  } else {
+    const supers = await prisma.user.findMany({ where: { role: 'SUPER_ADMIN', companyId: null, status: { not: 'DISABLED' } }, select: { email: true } });
+    log(`active superadmins left untouched (${supers.length}): ${supers.map((s) => s.email).join(', ')} — pass --disable-superadmins-except <email> to keep only one`);
+  }
+  log('company shell kept (audit history references it) — its business data is fully cleared');
 }
 
 /** Step: infra — company, country, regions, store, providers, fees, categories, channel. */
