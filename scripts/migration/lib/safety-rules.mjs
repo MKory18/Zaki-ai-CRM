@@ -122,6 +122,18 @@ export function missingDelegates(models, client) {
 }
 
 /**
+ * Which count checks belong in the verify gate. A full migration checks
+ * every imported table; --orders-only answers for the orders pipeline only —
+ * offers, landing pages, staff and commissions are not its output and must
+ * not fail its verdict.
+ */
+export function verifyGateNames(ordersOnly) {
+  return ordersOnly
+    ? ['orders', 'order_items', 'products']
+    : ['orders', 'order_items', 'products', 'offers', 'landing_pages'];
+}
+
+/**
  * The verify gate. Returns every FAILURE; an empty list means the migration
  * may claim success. Called with legacy vs migrated aggregates.
  *

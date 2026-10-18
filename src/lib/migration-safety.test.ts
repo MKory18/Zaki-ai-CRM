@@ -2,7 +2,18 @@ import { describe, expect, it } from 'vitest';
 // The migration tool's safety rules live in a pure module so these rules can
 // be held by the same suite that gates every merge — not only by the person
 // who happens to run the tool.
-import { delegateName, evaluateVerify, missingDelegates, resolveStoreTarget, resolveWipeTarget } from '../../scripts/migration/lib/safety-rules.mjs';
+import { delegateName, evaluateVerify, missingDelegates, resolveStoreTarget, resolveWipeTarget, verifyGateNames } from '../../scripts/migration/lib/safety-rules.mjs';
+
+describe('the orders-only gate answers for the orders pipeline only', () => {
+  it('checks orders, order items, products and nothing else', () => {
+    expect(verifyGateNames(true)).toEqual(['orders', 'order_items', 'products']);
+  });
+
+  it('a full migration still checks offers and landing pages too', () => {
+    const full = verifyGateNames(false);
+    expect(full).toEqual(['orders', 'order_items', 'products', 'offers', 'landing_pages']);
+  });
+});
 
 describe('wipe model names must match the Prisma Client exactly', () => {
   const fakeClient = {
