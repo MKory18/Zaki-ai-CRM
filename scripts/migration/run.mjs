@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
-import { resolveWipeTarget, evaluateVerify } from './lib/safety-rules.mjs';
+import { resolveWipeTarget, resolveStoreTarget, evaluateVerify } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -45,7 +45,10 @@ if (!LEGACY_DUMP) {
   console.error('LEGACY_DUMP env var is required (path to the legacy MariaDB SQL dump).');
   process.exit(1);
 }
-const PG_DUMP_BIN = process.env.PG_DUMP_BIN || 'F:/ddddddddddddddddd/New folder/PostgreSQL/bin/pg_dump.exe';
+// pg_dump must come from the environment on the server (Coolify/Linux);
+// the Windows default below is only for this development machine.
+const PG_DUMP_BIN = process.env.PG_DUMP_BIN
+  || (process.platform === 'win32' ? 'F:/ddddddddddddddddd/New folder/PostgreSQL/bin/pg_dump.exe' : 'pg_dump');
 
 const COMPANY_NAME = 'صحة بلس';
 const STORE_SLUG = 'salah-plus';
@@ -208,6 +211,12 @@ async function stepWipeDemo(ctx) {
 /** Step: infra — company, country, regions, store, providers, fees, categories, channel. */
 async function stepInfra(ctx, dump) {
   let { company } = await getSalahContext();
+  // Ambiguity guard: two companies with the destination's name make every
+  // later findFirst meaningless — stop instead of guessing.
+  if (!DRY_RUN) {
+    const sameName = await prisma.company.findMany({ where: { name: COMPANY_NAME }, select: { id: true } });
+    if (sameName.length > 1) throw new Error(`${sameName.length} companies are named "${COMPANY_NAME}" (${sameName.map((c) => c.id).join(', ')}) — resolve the duplication before migrating`);
+  }
   if (!company) {
     log('creating company', COMPANY_NAME, `(currency ${CURRENCY})`);
     if (!DRY_RUN) company = await prisma.company.create({ data: { name: COMPANY_NAME, currency: CURRENCY, country: 'سوريا', settings: JSON.stringify({ legacyMigration: true, migratedAt: now().toISOString() }) } });
@@ -236,9 +245,22 @@ async function stepInfra(ctx, dump) {
   }
   log(`regions: ${ctx.regionMap.size}/${legacyRegions.length} mapped`);
 
-  let store = DRY_RUN ? null : await prisma.store.findFirst({ where: { companyId: company.id, slug: STORE_SLUG } });
-  if (!store && !DRY_RUN) {
+  // The store is REUSED, never duplicated: explicit --store-id first, then the
+  // destination company's own salah-plus slug, then creation — with company
+  // and country ownership verified (see lib/safety-rules.mjs).
+  const allStores = await prisma.store.findMany({ select: { id: true, slug: true, companyId: true, countryId: true, name: true } });
+  const storeTarget = resolveStoreTarget(process.argv, allStores, { companyId: company.id, countryId: country?.id ?? null });
+  log(`store: ${storeTarget.reason}`);
+  if (!storeTarget.ok) {
+    for (const c of storeTarget.candidates) log(`  existing store: ${c.id}  slug="${c.slug}"  company=${c.companyId}  country=${c.countryId}`);
+    if (!DRY_RUN) throw new Error(`store resolution failed: ${storeTarget.reason}`);
+    log('[dry] store step would ABORT — resolve the store ownership/country first');
+    return;
+  }
+  let store = storeTarget.store || null;
+  if (storeTarget.action === 'create' && !DRY_RUN) {
     store = await prisma.store.create({ data: { companyId: company.id, countryId: country.id, name: COMPANY_NAME, slug: STORE_SLUG, status: 'ACTIVE', type: 'MULTI_PRODUCT', language: 'ar', priceIncludesDelivery: false } });
+    log(`store created: ${store.id}`);
   }
   ctx.store = store;
 
@@ -706,20 +728,28 @@ async function stepVerify(ctx, dump) {
   const cid = c.company.id;
   const legacyOrders = rows(dump, 'orders').length;
   const legacyItems = rows(dump, 'order_items').length;
-  const newOrders = await prisma.order.count({ where: { companyId: cid } });
-  const newItems = await prisma.orderItem.count({ where: { companyId: cid } });
   const newCustomers = await prisma.customer.count({ where: { companyId: cid } });
-  const newProducts = await prisma.product.count({ where: { companyId: cid } });
-  const newOffers = await prisma.offer.count({ where: { companyId: cid } });
   const newStaff = await prisma.user.count({ where: { companyId: cid } });
   const newCommissions = await prisma.commissionEntry.count({ where: { companyId: cid } });
   const newActivities = await prisma.orderActivity.count({ where: { companyId: cid } });
-  const newPages = await prisma.landingPage.count({ where: { companyId: cid } });
 
   // money checksums
   const legacyTotalSum = rows(dump, 'orders').reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-  const agg = await prisma.order.aggregate({ where: { companyId: cid }, _sum: { totalAmount: true } });
-  const newTotalSum = agg._sum.totalAmount || 0;
+  // On production the destination company may already hold its own data, so
+  // hard counts compare THE MIGRATION'S OWN ROWS (marked at import), never the
+  // company's grand totals. A pre-existing storefront survives untouched and
+  // the gate stays honest in both directions.
+  const LEGACY_MARK = 'Legacy import';
+  const legacyOrdersMigrated = await prisma.order.count({ where: { companyId: cid, source: LEGACY_MARK } });
+  const legacyItemsMigrated = await prisma.orderItem.count({ where: { companyId: cid, order: { source: LEGACY_MARK } } });
+  const legacyProductsMigrated = await prisma.product.count({ where: { companyId: cid, sku: { startsWith: 'LEG-' } } });
+  const legacyOffersMigrated = await prisma.offer.count({ where: { companyId: cid, product: { sku: { startsWith: 'LEG-' } } } });
+  const legacyPagesMigrated = await prisma.landingPage.count({ where: { companyId: cid, pageSettings: { contains: 'legacyBuilderContent' } } });
+  const aggLegacyOnly = await prisma.order.aggregate({ where: { companyId: cid, source: LEGACY_MARK }, _sum: { totalAmount: true } });
+  const newTotalSum = aggLegacyOnly._sum.totalAmount || 0;
+  const aggAll = await prisma.order.aggregate({ where: { companyId: cid }, _sum: { totalAmount: true } });
+  const grandTotalSum = Number(aggAll._sum.totalAmount || 0);
+  log(`order totals: legacy-marked ${Number(newTotalSum).toFixed(2)} | company grand total ${grandTotalSum.toFixed(2)} (pre-existing data kept as-is)`);
 
   // orphan checks — customerId/productId are required relations, so orphans are
   // structurally impossible; verify FK integrity via cross-counts instead.
@@ -729,14 +759,14 @@ async function stepVerify(ctx, dump) {
   });
 
   const checks = [
-    ['orders', legacyOrders, newOrders],
-    ['order_items', legacyItems, newItems],
-    ['products', rows(dump, 'products').length, newProducts],
-    ['offers', rows(dump, 'bundle_quantity').length, newOffers],
+    ['orders', legacyOrders, legacyOrdersMigrated],
+    ['order_items', legacyItems, legacyItemsMigrated],
+    ['products', rows(dump, 'products').length, legacyProductsMigrated],
+    ['offers', rows(dump, 'bundle_quantity').length, legacyOffersMigrated],
     ['staff', 23, newStaff],
     ['customers', '≤ users+addresses distinct', newCustomers],
     ['commissions', rows(dump, 'wallet_transactions').filter((w) => w.reference_table === 'orders').length, newCommissions],
-    ['landing_pages', rows(dump, 'landing_pages').length, newPages],
+    ['landing_pages', rows(dump, 'landing_pages').length, legacyPagesMigrated],
   ];
   log('table                legacy      migrated');
   for (const [n, a, b] of checks) log(`${n.padEnd(20)} ${String(a).padStart(10)} ${String(b).padStart(10)}`);
