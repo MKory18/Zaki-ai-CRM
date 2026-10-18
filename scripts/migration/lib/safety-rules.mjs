@@ -44,6 +44,64 @@ export function resolveWipeTarget(argv, companies, destinationName) {
 }
 
 /**
+ * Resolve which store the migration writes into — reusing an existing one
+ * instead of creating a second shop inside the same company.
+ *
+ * Precedence: an explicit --store-id flag, then the destination company's
+ * own `salah-plus` slug, then creation. A store found by flag must belong to
+ * the destination company AND to the migration's Syria country — a store is
+ * not moved across companies here; that is a business decision with its own
+ * migration, never a side effect of this one.
+ *
+ * @param {string[]} argv
+ * @param {Array<{id:string,slug:string,companyId:string,countryId:string|null,name?:string}>} stores  every store in the DB
+ * @param {{companyId:string, countryId:string|null}} dest  destination company + Syria country ids
+ * @returns {{ok:boolean, action:'reuse'|'create', reason:string, store?:{id:string,slug:string,companyId:string,countryId:string|null,name?:string}, candidates:Array<{id:string,slug:string,companyId:string,countryId:string|null,name?:string}>}}
+ */
+export function resolveStoreTarget(argv, stores, dest) {
+  const flagIndex = argv.indexOf('--store-id');
+  const storeId = flagIndex !== -1 ? argv[flagIndex + 1] : undefined;
+  const slim = (s) => ({ id: s.id, slug: s.slug, companyId: s.companyId, countryId: s.countryId, name: s.name });
+  const candidates = stores.map(slim);
+
+  if (storeId && !storeId.startsWith('--')) {
+    const store = stores.find((s) => s.id === storeId);
+    if (!store) return { ok: false, action: 'reuse', reason: `no store with id ${storeId} — refusing to guess`, candidates };
+    if (store.companyId !== dest.companyId) {
+      return {
+        ok: false,
+        action: 'reuse',
+        reason: `store "${store.slug || store.id}" belongs to company ${store.companyId}, not the destination ${dest.companyId} — moving a store across companies is a separate migration, not this tool's job`,
+        candidates,
+      };
+    }
+    if (store.countryId && dest.countryId && store.countryId !== dest.countryId) {
+      return {
+        ok: false,
+        action: 'reuse',
+        reason: `store "${store.slug}" is bound to country ${store.countryId}, but the migration writes Syria (${dest.countryId}) — settle the store's country first`,
+        candidates,
+      };
+    }
+    return { ok: true, action: 'reuse', reason: `reusing store "${store.slug}" (${store.id}) in the destination company`, store };
+  }
+
+  const bySlug = stores.find((s) => s.slug === 'salah-plus' && s.companyId === dest.companyId);
+  if (bySlug) {
+    if (bySlug.countryId && dest.countryId && bySlug.countryId !== dest.countryId) {
+      return {
+        ok: false,
+        action: 'reuse',
+        reason: `existing store "${bySlug.slug}" (${bySlug.id}) is bound to country ${bySlug.countryId}, but the migration writes Syria (${dest.countryId}) — settle the store's country first`,
+        candidates,
+      };
+    }
+    return { ok: true, action: 'reuse', reason: `found the destination company's own "salah-plus" store (${bySlug.id})`, store: bySlug };
+  }
+  return { ok: true, action: 'create', reason: `no existing store to reuse — "salah-plus" will be created inside the destination company`, candidates };
+}
+
+/**
  * The verify gate. Returns every FAILURE; an empty list means the migration
  * may claim success. Called with legacy vs migrated aggregates.
  *

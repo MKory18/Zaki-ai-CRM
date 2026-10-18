@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
-import { resolveWipeTarget, evaluateVerify } from './lib/safety-rules.mjs';
+import { resolveWipeTarget, resolveStoreTarget, evaluateVerify } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -245,9 +245,22 @@ async function stepInfra(ctx, dump) {
   }
   log(`regions: ${ctx.regionMap.size}/${legacyRegions.length} mapped`);
 
-  let store = DRY_RUN ? null : await prisma.store.findFirst({ where: { companyId: company.id, slug: STORE_SLUG } });
-  if (!store && !DRY_RUN) {
+  // The store is REUSED, never duplicated: explicit --store-id first, then the
+  // destination company's own salah-plus slug, then creation — with company
+  // and country ownership verified (see lib/safety-rules.mjs).
+  const allStores = await prisma.store.findMany({ select: { id: true, slug: true, companyId: true, countryId: true, name: true } });
+  const storeTarget = resolveStoreTarget(process.argv, allStores, { companyId: company.id, countryId: country?.id ?? null });
+  log(`store: ${storeTarget.reason}`);
+  if (!storeTarget.ok) {
+    for (const c of storeTarget.candidates) log(`  existing store: ${c.id}  slug="${c.slug}"  company=${c.companyId}  country=${c.countryId}`);
+    if (!DRY_RUN) throw new Error(`store resolution failed: ${storeTarget.reason}`);
+    log('[dry] store step would ABORT — resolve the store ownership/country first');
+    return;
+  }
+  let store = storeTarget.store || null;
+  if (storeTarget.action === 'create' && !DRY_RUN) {
     store = await prisma.store.create({ data: { companyId: company.id, countryId: country.id, name: COMPANY_NAME, slug: STORE_SLUG, status: 'ACTIVE', type: 'MULTI_PRODUCT', language: 'ar', priceIncludesDelivery: false } });
+    log(`store created: ${store.id}`);
   }
   ctx.store = store;
 
