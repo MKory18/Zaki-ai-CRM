@@ -362,6 +362,61 @@ export async function POST(req: Request) {
     const offer = offerId ? await db.offer.findFirst({ where: { id: offerId, companyId } }) : null;
     const priceIncludesDelivery = await priceIncludesDeliveryFor(storeId, offer?.deliveryIncluded);
 
+    /*
+     * THE OFFER'S FREE PIECES LAND ON THE LINE — THE PART THE REVIEWER READS.
+     *
+     * A bundle promise («قطعتين والثالثة مجانا») is not advice about the price
+     * only. The third piece exists: it leaves real stock, rides the waybill,
+     * and the delivery/settlement and label doors already count
+     * `quantity + freeQuantity` when they ask how many pieces a parcel
+     * carries. What was missing is the WRITE: the manual door recorded the
+     * price the offer struck and never the pieces it was giving away, so the
+     * order detail drew two pieces of a three-piece promise.
+     *
+     * The rule is the one `createPublicOrder` already writes — bundles are
+     * how many times the paid count fits in the typed units, so a seller
+     * raising the quantity to two bundles sees two free pieces, and a typed
+     * count below one bundle awards nothing (a line that declares an offer
+     * but buys less than it pays for is a wrong offer, not a gift).
+     *
+     * THE MONEY DOES NOT MOVE: the free pieces cost the customer zero, so
+     * `computeCod` is untouched. They DO cost the company — the cost of the
+     * goods below is read per PIECE, quantity and free together.
+     */
+    const offerIdsOnLines = [
+      ...new Set(requestedLines.map((l) => l.offerId).filter((x): x is string => Boolean(x))),
+    ];
+    const ownedById = new Map<string, { productId: string; quantity: number; freeQuantity: number }>();
+    if (offerIdsOnLines.length > 0) {
+      const owned = await db.offer.findMany({
+        where: { id: { in: offerIdsOnLines }, companyId },
+        select: { id: true, productId: true, quantity: true, freeQuantity: true },
+      });
+      for (const o of owned) ownedById.set(o.id, o);
+      for (const id of offerIdsOnLines) {
+        if (!ownedById.has(id)) {
+          return NextResponse.json(
+            { error: 'أحد العروض المرفقة غير متاحة — أعد اختيار العرض' },
+            { status: 400 }
+          );
+        }
+      }
+      for (const line of requestedLines) {
+        const o = line.offerId ? ownedById.get(line.offerId) : null;
+        if (o && o.productId !== line.productId) {
+          return NextResponse.json(
+            { error: 'العرض المرفق لا يطابق منتج السطر' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    const lineFreePieces = requestedLines.map((line) => {
+      const o = line.offerId ? ownedById.get(line.offerId) : null;
+      if (!o || o.freeQuantity <= 0 || line.quantity < o.quantity) return 0;
+      return o.freeQuantity * Math.floor(line.quantity / o.quantity);
+    });
+
     // ONE COD function, used by every screen and service (contract PART 5).
     // It takes the whole order at once, so a discount spread over several
     // lines is allocated in one place rather than guessed per line.
@@ -417,9 +472,8 @@ export async function POST(req: Request) {
       [...new Set(requestedLines.map((l) => l.productId))]
     );
     const estimatedCostOfGoods = Number(
-      requestedLines
-        .reduce((sum, l) => sum + (costByProduct.get(l.productId)?.average || 0) * l.quantity, 0)
-        .toFixed(2)
+      requestedLines.reduce((sum, l, i) => sum + (costByProduct.get(l.productId)?.average || 0) * (l.quantity + lineFreePieces[i]), 0)
+      .toFixed(2)
     );
 
     /*
@@ -537,6 +591,10 @@ export async function POST(req: Request) {
           productId: line.productId,
           productName: productById.get(line.productId)?.name ?? '',
           quantity: line.quantity,
+          // The bundle's gift units, promised by the offer the line names —
+          // real stock at a zero price; the delivery, label and settlement
+          // doors add this to `quantity` when they ask for pieces.
+          freeQuantity: lineFreePieces[i],
           // The same reading as `codLines` above, and for the same reason:
           // `unitPrice` is zod-validated money by the time it is here, so a
           // `|| 0` could only ever have replaced a real zero with zero.

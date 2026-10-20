@@ -134,8 +134,16 @@ export async function POST(req: Request) {
          *
          * The bounds are unchanged; only what counts as a number is.
          */
-        quantity: count(999, 1),
-        finalPrice: amount(100000),
+        quantity: count(999, 1),
+        finalPrice: amount(100000),
+        /**
+         * THE OFFER THE REVIEWER KEPT, AND THE PIECES IT GIVES AWAY.
+         * Optional: a pasted message with no bundle lands as a plain line as
+         * it always did. When it is here, the door resolves it itself —
+         * own company, SAME product — and writes the promise on the line;
+         * the reviewer sees «+ N هدية» in the order the moment it opens.
+         */
+        offerId: z.string().min(10).max(64).optional().nullable(),
         moderatorId: z.string().min(10).max(64).optional().nullable(),
         notes: z.string().trim().max(500).optional().nullable(),
         source: z.string().trim().max(40).optional().nullable(),
@@ -187,7 +195,29 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'المنتج غير موجود' }, { status: 404 });
       }
 
-      const qty = p.quantity;
+      const qty = p.quantity;
+
+      /**
+       * THE BUNDLE'S GIFT PIECES, RESOLVED HERE AND NOT TAKEN FROM THE BROWSER.
+       * The offer must belong to THIS company and THIS product; the free
+       * count is the same rule the manual and storefront doors write —
+       * bundles × the promise — and zero when the confirmed quantity never
+       * reaches a bundle, so a reviewer who typed 2 of a «3 + 1» bundle sees
+       * a plain line, not an invented gift.
+       */
+      const keptOffer = p.offerId
+        ? await db.offer.findFirst({ where: { id: p.offerId, companyId, productId: product.id } })
+        : null;
+      if (p.offerId && !keptOffer) {
+        return NextResponse.json(
+          { error: 'العرض المقترح غير متاح لهذا المنتج — أعد اختيار العرض أو أزله' },
+          { status: 400 }
+        );
+      }
+      const freePieces =
+        keptOffer && keptOffer.freeQuantity > 0 && qty >= keptOffer.quantity
+          ? keptOffer.freeQuantity * Math.floor(qty / keptOffer.quantity)
+          : 0;
       /**
        * WHAT THE REVIEWER CONFIRMED, INCLUDING A ZERO.
        *
@@ -332,8 +362,9 @@ export async function POST(req: Request) {
                 claimedById: entry.claimedById,
                 claimedAt: entry.claimedAt,
                 currentOwnerId: entry.currentOwnerId,
-                // Rounded by the currency, like the total beside it.
-                estimatedCostOfGoods: roundMinor(unitCost * qty, country.minorUnit),
+                // Rounded by the currency, like the total beside it. The gift
+                // pieces leave real stock too, so they are costed.
+                estimatedCostOfGoods: roundMinor(unitCost * (qty + freePieces), country.minorUnit),
                 productNameSnapshot: product.name,
                 productImageSnapshot: product.image || null,
                 status: 'NEW',
@@ -356,14 +387,17 @@ export async function POST(req: Request) {
         await recordEntryClaim(tx, { companyId, orderId: created.id, ownership: entry });
 
         // The order's line. Reservation and the discount share live per line.
-        await tx.orderItem.create({
-          data: {
-            companyId,
-            orderId: created.id,
-            productId: product.id,
-            productName: product.name,
-            quantity: qty,
-            unitPrice: money.subtotal / qty,
+        await tx.orderItem.create({
+          data: {
+            companyId,
+            orderId: created.id,
+            productId: product.id,
+            productName: product.name,
+            quantity: qty,
+            // The offer's gift units, when the reviewer kept one — the same
+            // column every other door writes; «+ N هدية» in the detail.
+            freeQuantity: freePieces,
+            unitPrice: money.subtotal / qty,
             lineTotal: money.lineTotals[0] ?? money.subtotal,
             addedById: user.id,
             addedStage: 'INTAKE',
@@ -501,35 +535,44 @@ export async function POST(req: Request) {
       ? matchProduct(parsed.productQuery, products)
       : null;
 
-    // Suggest price from matched product's offers
-    let suggestedPrice: number | null = parsed.price;
-    let suggestedOfferName: string | null = null;
-    if (match) {
-      const offers = await activeOffersFor(db, companyId, match.id, country.minorUnit);
-      const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
-      if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
-        /*
-         * WHAT THE OFFER PROMISES, AND NOW THAT IS WHAT THE VIEW SAYS.
-         *
-         * A second read of the offer table and a `computeCod` of its own
-         * stood here, because `OfferView.price` used to be `sellingPrice` —
-         * the figure BEFORE the bundle's own discount — while every door
-         * charged the figure after it. Showing the reviewer 25 for a bundle
-         * that charges 22 is not harmless: the modal copies this straight
-         * into `finalPrice`, and their confirmation is what turns the wrong
-         * number into a charge. They cannot catch an error never shown them.
-         *
-         * `activeOffersFor` now applies the reduction once, through
-         * `allocateDiscount`, so `price` IS the charged total and a second
-         * subtraction here would charge 19 for a bundle promising 22. The
-         * suggestion is simply what the customer would pay.
-         */
-        suggestedPrice = qtyOffer.price;
-        suggestedOfferName = qtyOffer.name;
-      } else if (qtyOffer) {
-        suggestedOfferName = qtyOffer.name;
-      }
-    }
+    // Suggest price from matched product's offers
+    let suggestedPrice: number | null = parsed.price;
+    let suggestedOfferName: string | null = null;
+    /**
+     * THE BUNDLE WHOLE, NOT ITS NAME. The reviewer must see «٣ قطع + ١
+     * هدية» to know what confirming holds, and the screen needs the
+     * quantity and the count to decide whether the offer is even met.
+     */
+    const suggestedOffer = await (async () => {
+      if (!match) return null;
+      const offers = await activeOffersFor(db, companyId, match.id, country.minorUnit);
+      const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
+      if (!qtyOffer) return null;
+      suggestedOfferName = qtyOffer.name;
+      /*
+       * WHAT THE OFFER PROMISES, AND NOW THAT IS WHAT THE VIEW SAYS.
+       *
+       * A second read of the offer table and a `computeCod` of its own
+       * stood here, because `OfferView.price` used to be `sellingPrice` —
+       * the figure BEFORE the bundle's own discount — while every door
+       * charged the figure after it. Showing the reviewer 25 for a bundle
+       * that charges 22 is not harmless: the modal copies this straight
+       * into `finalPrice`, and their confirmation is what turns the wrong
+       * number into a charge. They cannot catch an error never shown them.
+       *
+       * `activeOffersFor` now applies the reduction once, through
+       * `allocateDiscount`, so `price` IS the charged total and a second
+       * subtraction here would charge 19 for a bundle promising 22. The
+       * suggestion is simply what the customer would pay.
+       */
+      if (parsed.price === null || parsed.price <= 0) suggestedPrice = qtyOffer.price;
+      return {
+        id: qtyOffer.id,
+        name: qtyOffer.name,
+        quantity: qtyOffer.quantity,
+        freeQuantity: qtyOffer.freeQuantity,
+      };
+    })();
 
     // Duplicate customer check
     let existingCustomer = null;
@@ -543,16 +586,19 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({
-      parsed,
-      engine,
-      aiSkipped,
-      matchedProduct: match,
-      productMatchConfident: match ? match.score >= 16 : false,
-      suggestedPrice,
-      suggestedOfferName,
-      existingCustomer,
-    });
+    return NextResponse.json({
+      parsed,
+      engine,
+      aiSkipped,
+      matchedProduct: match,
+      productMatchConfident: match ? match.score >= 16 : false,
+      suggestedPrice,
+      suggestedOfferName,
+      // The bundle the reviewer may keep — pieces and all — so the confirm
+      // payload can name it back and the reviewer sees what it promises.
+      suggestedOffer,
+      existingCustomer,
+    });
   } catch (error) {
     const { body, status } = apiError(error);
     return NextResponse.json(body, { status });

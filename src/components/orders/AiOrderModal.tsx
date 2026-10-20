@@ -80,6 +80,12 @@ interface ParseResult {
   productMatchConfident: boolean;
   suggestedPrice: number | null;
   suggestedOfferName: string | null;
+  /**
+   * THE BUNDLE THE REVIEWER MAY KEEP, WHOLE. Kept iff the confirmed quantity
+   * reaches the bundle — below that, a «3 + 1» promise under a quantity of
+   * 2 has no third piece to give, and the door writes a plain line.
+   */
+  suggestedOffer: { id: string; name: string; quantity: number; freeQuantity: number } | null;
   existingCustomer: { fullName: string; totalOrders: number; city: string } | null;
   /**
    * WHY THE MODEL DID NOT READ THE TEXT, WHEN IT DID NOT.
@@ -118,6 +124,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
    */
   const [priceTyped, setPriceTyped] = useState('');
   const [quantityTyped, setQuantityTyped] = useState('');
+  /** The offer the reviewer keeps, or null — cleared with the product change. */
+  const [keptOffer, setKeptOffer] = useState<ParseResult['suggestedOffer']>(null);
   /** The price this screen prints on its own button — never a figure it invented. */
   const priceFigure = typedFigure(priceTyped);
   /** Read only to SAY what the total covers — never to divide anything by. */
@@ -134,6 +142,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setProductId('');
       setPriceTyped('');
       setQuantityTyped('');
+      setKeptOffer(null);
     }
   }, [isOpen]);
 
@@ -165,6 +174,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       // customer pays nothing» the same opening state.
       setPriceTyped(boxFor(data.suggestedPrice ?? data.parsed.price));
       setQuantityTyped(boxFor(data.parsed.quantity));
+      setKeptOffer(data.suggestedOffer ?? null);
     } catch (err: any) {
       toast.failed(err.message);
     } finally {
@@ -191,6 +201,17 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
           parsed: {
             ...result.parsed,
             productId,
+            /*
+             * THE OFFER, ONLY WHILE IT HOLDS. An offer kept from the parse
+             * rides on the line ONLY when the confirmed quantity reaches
+             * its bundle; below that the door would award zero free pieces
+             * anyway, and naming an offer the line does not meet is the
+             * quiet lie this screen refuses to send.
+             */
+            offerId:
+              keptOffer && quantityFigure !== undefined && quantityFigure >= keptOffer.quantity
+                ? keptOffer.id
+                : undefined,
             /*
              * THE CHARACTERS, OR THE FIELD IS NOT THERE — and these two keys
              * come AFTER the spread deliberately. `result.parsed.quantity`
@@ -358,6 +379,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                   placeholder="ابحث عن منتج…"
                   onChange={(id) => {
                     setProductId(id);
+                    setKeptOffer(null); // another product, another bundle
                     /*
                      * CHANGING THE PRODUCT NO LONGER FILLS IN A PRICE.
                      *
@@ -440,6 +462,27 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 }
               />
             </div>
+
+            {/*
+              THE BUNDLE THE REVIEWER KEEPS, SAID IN PIECES.
+              Kept iff the confirmed quantity reaches it: under that, the
+              door would award nothing, so the sentence says so instead of a
+              badge promising pieces the order will not carry.
+            */}
+            {result.suggestedOffer && productId === result.matchedProduct?.id && (
+              <div className="p-2.5 rounded-lg text-xs flex items-center space-x-2 rtl:space-x-reverse bg-[var(--sys-success-soft)] text-[var(--sys-success)]">
+                <RiSparkling2Line className="w-4 h-4 shrink-0" />
+                <span>
+                  {quantityFigure !== undefined && quantityFigure >= result.suggestedOffer.quantity
+                    ? `العرض المطبَّق: ${result.suggestedOffer.name} — ${result.suggestedOffer.quantity} قطعة + ${result.suggestedOffer.freeQuantity} هدية${
+                        Math.floor(quantityFigure / result.suggestedOffer.quantity) > 1
+                          ? ` (${Math.floor(quantityFigure / result.suggestedOffer.quantity)} مرات)`
+                          : ''
+                      }`
+                    : `العرض ${result.suggestedOffer.name} — الكمية أقل من ${result.suggestedOffer.quantity} قطعة، فلن تُسجّل هدية`}
+                </span>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="المصدر / اسم الصفحة" value={p.source} onChange={(e) => setResult({ ...result, parsed: { ...p, source: e.target.value } })} />
