@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
 import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -97,9 +98,7 @@ export function AgentCustodyScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   async function openAgent(id: string) {
     setLoadingDetail(true);

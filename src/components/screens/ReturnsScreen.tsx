@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonRows } from '@/components/ui/Skeleton';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
@@ -93,9 +94,7 @@ export function ReturnsScreen() {
     }
   }, [term]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: term });
 
   return (
     <div className="max-w-5xl space-y-3">

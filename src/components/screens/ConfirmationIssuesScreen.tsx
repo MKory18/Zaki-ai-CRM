@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { useOrderPatch } from '@/components/orders/useOrderPatch';
 import { useRegions } from '@/hooks/useRegions';
@@ -9,6 +9,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiForbidLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /confirmation/issues — entry issues on moderator-entered orders only.
@@ -110,9 +111,7 @@ export function ConfirmationIssuesScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   function openCorrection(issue: Issue) {
     setError(null);

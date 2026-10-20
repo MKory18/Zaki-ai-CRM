@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { userCan } from '@/lib/can';
 import { useApp } from '@/context/AppContext';
@@ -9,6 +9,7 @@ import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@rem
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * WHAT THE SYSTEM PROPOSED, AND WHAT A PERSON DECIDES.
@@ -79,9 +80,7 @@ export function PenaltiesScreen() {
     }
   }, [tab]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: tab });
 
   const decide = async (row: Row, action: 'apply' | 'waive' | 'reverse', note?: string) => {
     setBusy(row.id);

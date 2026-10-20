@@ -15,6 +15,7 @@ import { RiAddCircleLine, RiArrowRightLine, RiCheckLine, RiComputerLine, RiDashb
 import { PageHeader } from '@/components/ui/PageHeader';
 import { publicAddress } from '@/lib/public-address';
 import type { DomainCheck } from '@/lib/domain-verify';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 export function LandingPageDetailScreen() {
   const tell = useTell();
@@ -104,7 +105,7 @@ export function LandingPageDetailScreen() {
   }, [lpId]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { void loadDomain(); }, [loadDomain]);
+  useLiveRefresh(loadDomain, { key: lpId });
   useEffect(() => {
     if (lpId) { loadRecs(); }
   }, [lpId, loadRecs]);

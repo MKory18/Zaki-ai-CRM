@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
@@ -13,6 +13,7 @@ import type { StoreTheme } from '@/lib/store-theme';
 import { RiCheckLine, RiExternalLinkLine, RiLoader4Line, RiRocketLine, RiSaveLine } from '@remixicon/react';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { arDateTime } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * THE SHOP'S HOME PAGE.
@@ -94,7 +95,7 @@ export function StoreDesignScreen() {
     // so naming it here does not make `load` change on every render.
   }, [history.reset]);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   async function save() {
     setBusy(true);

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import type { StoreLanguage } from '@/lib/store-languages';
 import { RiCheckLine, RiLoader4Line } from '@remixicon/react';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * WHAT THE SHOP SPEAKS, AND WHICH WAY IT READS.
@@ -48,7 +49,7 @@ export function StoreLanguagesScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   async function save() {
     setBusy(true);

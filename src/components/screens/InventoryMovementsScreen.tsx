@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDateTime } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /inventory/movements — how the stock got to where it is.
@@ -56,9 +57,7 @@ export function InventoryMovementsScreen() {
     }
   }, [term, type]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: `${term}·${type}` });
 
   return (
     <div className="max-w-6xl space-y-3">

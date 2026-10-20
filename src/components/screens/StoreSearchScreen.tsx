@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
@@ -8,6 +8,7 @@ import { apiJson } from '@/lib/api-client';
 import type { Synonym } from '@/lib/store-search';
 import { FIELD_KINDS, type AttributeField, type FieldKind } from '@/lib/product-attributes';
 import { RiAddLine, RiDeleteBinLine, RiLoader4Line } from '@remixicon/react';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * HOW A SHOPPER FINDS THE THING THEY CAME FOR.
@@ -71,9 +72,7 @@ export function StoreSearchScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   async function save() {
     setBusy(true);

@@ -43,6 +43,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 export function OrdersScreen() {
   const { t, currentUser, locale } = useApp();
@@ -226,23 +227,19 @@ export function OrdersScreen() {
     return () => clearTimeout(timer);
   }, [loadOrders]);
 
-  // Light polling (30s) — keeps queues in sync (claims by others appear without
-  // a manual refresh). No WebSockets needed; server RBAC stays the source of truth.
-  // Mirrors the dashboard: on visibilitychange, returning to the tab refetches
-  // immediately so data is fresh without waiting for the next tick.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!document.hidden) loadOrdersRef.current(paginationRef.current.page);
-    }, 30_000);
-    const onVisibility = () => {
-      if (!document.hidden) loadOrdersRef.current(paginationRef.current.page);
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
+  /*
+   * Light polling, and a refresh the moment the person comes back —
+   * «claims by others appear without a manual refresh». The twelve lines
+   * that did it here were a copy of the dashboard's twelve, and the
+   * WhatsApp inbox had a third; they are one hook now, which also
+   * catches coming back to the WINDOW. Alt-tab fires `focus` and not
+   * `visibilitychange`, so the old copy missed most of a working day on
+   * a desk.
+   *
+   * ⚠️ It reloads the page the person is ON, not page one — the refresh
+   * is meant to keep what they are reading true, not to move them.
+   */
+  useLiveRefresh(() => loadOrdersRef.current(paginationRef.current.page), { everyMs: 30_000 });
 
   /** Run the typed search. Nothing goes to the server until this. */
   const runSearch = () => setSearch(searchInput.trim());

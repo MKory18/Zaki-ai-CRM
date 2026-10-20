@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTell } from '@/components/ui/Confirm';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { copyText } from '@/lib/clipboard';
 import { RiAddCircleLine, RiAlertLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFileCopyLine, RiLoader4Line, RiShieldCheckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /apps/store — what this system can be connected to.
@@ -71,7 +72,7 @@ export function AppStoreScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   async function act(appCode: string, action: 'install' | 'enable' | 'disable' | 'uninstall') {
     setBusy(appCode);

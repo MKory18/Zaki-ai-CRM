@@ -19,6 +19,7 @@ import { RiAddCircleLine, RiAlertLine, RiLoader4Line, RiPercentLine } from '@rem
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /settings/commission — commission rules are dated data, not settings. A
@@ -132,9 +133,7 @@ export function CommissionSettingsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   return (
     <div className="max-w-5xl space-y-3">

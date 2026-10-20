@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
@@ -10,6 +10,7 @@ import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -78,9 +79,7 @@ export function PreparationScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   if (error) return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;
   if (!data) {

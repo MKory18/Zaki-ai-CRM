@@ -11,6 +11,7 @@ import { storeTabHref } from '@/lib/store-admin';
 import { useToast } from '@/components/ui/Toast';
 import { apiJson } from '@/lib/api-client';
 import { catalogModeAr } from '@/lib/catalog-mode';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * المتجر — EVERY SHOP, ONE CARD EACH.
@@ -92,7 +93,7 @@ export function StoresScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   /** The shop the header is editing. Its tabs are the one primary action. */
   const current = shops?.find((s) => s.current) ?? null;

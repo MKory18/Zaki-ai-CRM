@@ -2,7 +2,7 @@
 
 import { AssistantsTable } from '@/components/screens/ai/AssistantsTable';
 import { MessageTemplatesCard } from '@/components/settings/MessageTemplatesCard';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MAX_PROMPT, missingSlots, type AiJob, type PromptVersion } from '@/lib/ai-prompts';
@@ -10,6 +10,7 @@ import { tierOf } from '@/lib/ai-provider';
 import { RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiKey2Line, RiLoader4Line, RiPlugLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { arDate } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * THE AI, AND EVERY WORD THE SYSTEM SAYS TO IT.
@@ -187,7 +188,7 @@ export function AiSettingsScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   async function save() {
     if (!settings) return;

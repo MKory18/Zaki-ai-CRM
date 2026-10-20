@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -10,6 +10,7 @@ import { HealthChip } from '@/components/ui/HealthChip';
 import { healthOf } from '@/lib/health';
 import type { ChannelScore } from '@/lib/channel-score';
 import type { Trust } from '@/lib/cod-vitals';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -128,9 +129,7 @@ export function ChannelsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   async function create() {
     if (draft.name.trim().length < 2) {

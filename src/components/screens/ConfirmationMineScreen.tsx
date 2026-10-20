@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { CONTACT_FIRST_MESSAGE } from '@/lib/confirmation-queue';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
@@ -28,6 +28,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
 import { cardTone, noAnswerWords } from '@/lib/no-answer-tone';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /confirmation/mine — two sections: in-confirmation (workable) and
@@ -224,9 +225,7 @@ export function ConfirmationMineScreen() {
     }
   }, [doneDay, doneQuery, donePage]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: `${doneDay}·${doneQuery}·${donePage}` });
 
   const act = async (id: string, fn: () => Promise<unknown>) => {
     setBusyId(id);

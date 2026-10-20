@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -22,6 +22,7 @@ import {
 // component, and the service half of that pair imports Prisma.
 } from '@/lib/reviews';
 import { RiEyeOffLine, RiLoader4Line, RiRocketLine, RiShieldCheckLine } from '@remixicon/react';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * «الآراء» — WHAT BUYERS SAID, AND WHAT THE SHOP DOES ABOUT IT.
@@ -101,9 +102,7 @@ export function StoreReviewsScreen() {
     }
   }, [page, status, term]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: `${page}·${status}·${term}` });
 
   async function publish(id: string) {
     setBusy(id);

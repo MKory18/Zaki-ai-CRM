@@ -11,6 +11,7 @@ import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remi
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
@@ -64,9 +65,7 @@ export function GeoSettingsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   // ?store=<id> — the storefronts screen's "settings" link opens that
   // store's panel directly instead of dropping the owner at the top.

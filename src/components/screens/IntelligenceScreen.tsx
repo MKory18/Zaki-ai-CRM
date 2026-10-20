@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { AskAi } from '@/components/growth/AskAi';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Tabs } from '@/components/ui/Tabs';
 import { RiAlertLine, RiCheckboxCircleLine, RiEyeLine, RiLightbulbLine, RiLoader4Line } from '@remixicon/react';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /growth/intelligence — what is bleeding, and what to do about it.
@@ -91,9 +92,7 @@ export function IntelligenceScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   return (
     <div className="max-w-4xl space-y-3">
