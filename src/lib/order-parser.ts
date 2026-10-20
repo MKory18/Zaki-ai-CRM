@@ -12,6 +12,8 @@
  * اسم الصفحة: الشيت
  */
 
+import { toLatinDigits } from './latin-digits';
+
 export interface ParsedOrder {
   customerName: string;
   phone: string;
@@ -50,6 +52,17 @@ const FIELD_PATTERNS: Array<{ key: keyof ParsedOrder; regex: RegExp }> = [
 ];
 
 export function parseOrderText(text: string): ParsedOrder {
+  /**
+   * A MESSAGE PASTED FROM WHATSAPP READS IN BOTH SCRIPTS. The field
+   * captures below match ASCII digits only (`[0-9]`), and the phone
+   * fallback is `\b…0?[0-9]{9,10}` — a message typed on an Arabic keypad
+   * missed every one of them. `toLatinDigits` is the ONE named place for
+   * the conversion (latin-digits.ts) — the same tool the phone rules, the
+   * numeric readers and the geo schemas already trust; it maps a digit to
+   * a digit and touches nothing else, so a product name or an address
+   * passes through unchanged.
+   */
+  text = toLatinDigits(text);
   const lines = text.split(/\n|؛|;/);
   const result: ParsedOrder = {
     customerName: '',

@@ -10,7 +10,8 @@ import { resolveRegionId } from '@/lib/regions';
 import { computeCod, roundMinor } from '@/lib/money';
 import { count, money as amount } from '@/lib/numeric-input';
 import { productCost } from '@/lib/product-cost';
-import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
+import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
+import { toLatinDigits } from '@/lib/latin-digits';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
@@ -462,8 +463,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'الصق نص الطلب أولاً' }, { status: 400 });
     }
 
-    // Try AI first, fallback to deterministic parser
-    const attempt = await aiAssistedParse(companyId, text);
+    // Try AI first, fallback to deterministic parser.
+    // BOTH engines read the same normalized sentence: Arabic-keypad digits
+    // become ASCII before anything looks at them (toLatinDigits is the one
+    // named place for it), so the AI sees the numbers the deterministic
+    // fallback would read.
+    const normalized = toLatinDigits(text);
+    const attempt = await aiAssistedParse(companyId, normalized);
     const aiSkipped = attempt.skipped;
     let parsed = attempt.parsed;
     let engine = 'ai';
