@@ -1,0 +1,14 @@
+-- ── THE ADDRESS AN ORDER WENT TO ──
+--
+-- The customer row holds one address — the latest. The legacy «صحة بلس»
+-- dump holds one per order (18,822 addresses for 17,021 orders), so an
+-- import that only wrote the customer kept the newest and dropped the rest.
+-- This gives each order its own, and a null still reads the customer's.
+--
+-- NULLABLE WITH NO DEFAULT: not one existing row is written. Reversible by
+-- `ALTER TABLE "orders" DROP COLUMN "deliveryAddress";` — only on an
+-- explicit instruction, since by then imported rows may carry values.
+--
+-- Hand-written and applied with `prisma db execute`, then recorded with
+-- `prisma migrate resolve --applied` — never `prisma migrate dev`.
+ALTER TABLE "orders" ADD COLUMN "deliveryAddress" TEXT;

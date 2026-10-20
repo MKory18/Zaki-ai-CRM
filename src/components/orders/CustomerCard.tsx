@@ -35,6 +35,8 @@ interface Props {
     trackingNumber?: string | null;
     regionId: string | null;
     region?: { id: string; name: string } | null;
+    /** The address this order went to; null = the customer's latest. */
+    deliveryAddress?: string | null;
     customer: {
       id: string;
       fullName: string;
@@ -294,7 +296,7 @@ export function CustomerCard({ order, canEdit, dialCode, onAcquireLock, onSaved,
             </div>
           )}
           <div className="sm:col-span-2">
-            <Row label="عنوان التوصيل" value={order.customer.address || '—'} />
+            <Row label="عنوان التوصيل" value={order.deliveryAddress || order.customer.address || '—'} />
           </div>
         </dl>
       ) : (
