@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { OrderNotesPeek } from '@/components/orders/OrderNotesPeek';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
-import { RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -58,6 +59,14 @@ interface Completion {
  */
 const GOODS_NOTES = ['follow_up', 'return', 'internal'] as const;
 
+/** What the door says about the list behind this page. */
+interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface Row {
   id: string;
   orderNumber: string;
@@ -82,19 +91,68 @@ export function ReturnsScreen() {
   const [active, setActive] = useState<Row | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 25, totalPages: 1 });
+  /*
+   * The page lives in a ref too: `useLiveRefresh` attaches its listeners
+   * once, so reading the page through the closure would refresh page one
+   * for ever — and a clerk reading page three would be sent to the top
+   * every time they came back to the tab.
+   */
+  const loadRef = useRef<(page?: number) => Promise<void>>(async () => {});
+  const pageRef = useRef(1);
 
-  const load = useCallback(async () => {
+  /*
+   * ── PAGES, BECAUSE THE LIST WAS CUT AT TWO HUNDRED ──
+   *
+   * The owner, 20/10: «المرتجعات صفحات اعملها».
+   *
+   * The door took the two hundred OLDEST — it is ordered by `returnedAt`
+   * ascending, which is right, because the return sitting longest is the
+   * one costing money. But a shop past that number could not reach a
+   * return that came back yesterday at all.
+   *
+   * A page turn keeps the search; a new SEARCH starts at page one,
+   * because page seven of a different question is not where the reader
+   * was. Same rule as the customers list, which is the screen beside it.
+   */
+  const load = useCallback(async (pageToLoad = 1) => {
+    setLoading(true);
     try {
       const raw = term.trim();
-      const q = raw ? `?q=${encodeURIComponent(raw)}` : '';
-      const data = await apiJson<{ orders: Row[] }>(`/api/ops/returns${q}`);
+      const params = new URLSearchParams({ page: String(pageToLoad), limit: String(pagination.limit) });
+      if (raw) params.set('q', raw);
+      const data = await apiJson<{ orders: Row[]; pagination?: Pagination }>(
+        `/api/ops/returns?${params.toString()}`
+      );
       setRows(data.orders);
+      if (data.pagination) setPagination(data.pagination);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
+    } finally {
+      setLoading(false);
     }
+    // `pagination.limit` is a constant the person never changes; listing
+    // it would rebuild the loader on every page turn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term]);
 
-  useLiveRefresh(load, { key: term });
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+  useEffect(() => {
+    pageRef.current = 1;
+  }, [term]);
+  useEffect(() => {
+    pageRef.current = pagination.page;
+  }, [pagination.page]);
+
+  /*
+   * A new search starts at page one; coming back to the screen reloads
+   * the page the clerk is ON. Two different questions, so two different
+   * answers — `key` for the first, the ref for the second.
+   */
+  useLiveRefresh(() => loadRef.current(pageRef.current), { key: term });
 
   return (
     <div className="max-w-5xl space-y-3">
@@ -194,6 +252,52 @@ export function ReturnsScreen() {
               />
             }
           />
+
+          {/*
+            THE PAGER, AND IT ONLY APPEARS WHEN THERE IS A SECOND PAGE.
+            A clerk with eleven returns should not be shown «صفحة ١ من ١»
+            and two dead arrows — that is furniture telling them nothing.
+
+            The sentence above the arrows is «عرض ١٢ من ٨٧» and not a page
+            number, because «كم ضايل» is the question a returns desk
+            actually asks of this screen.
+          */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between border-t border-[var(--sys-border)] pt-3 text-xs text-[var(--sys-muted-foreground)]">
+              <span>
+                عرض <strong>{rows.length}</strong> من <strong>{pagination.total}</strong> مرتجع
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={loading}
+                  disabled={loading || pagination.page <= 1}
+                  onClick={() => void load(pagination.page - 1)}
+                  aria-label="الصفحة السابقة"
+                  title="الصفحة السابقة"
+                  className="p-1.5"
+                >
+                  <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
+                </Button>
+                <span className="tabular-nums" dir="ltr">
+                  {pagination.page} / {pagination.totalPages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={loading}
+                  disabled={loading || pagination.page >= pagination.totalPages}
+                  onClick={() => void load(pagination.page + 1)}
+                  aria-label="الصفحة التالية"
+                  title="الصفحة التالية"
+                  className="p-1.5"
+                >
+                  <RiArrowRightSLine className="icon-mirror w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
