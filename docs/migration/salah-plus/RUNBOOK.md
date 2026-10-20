@@ -61,6 +61,34 @@ node scripts/migration/run.mjs --orders-only --store-id <uuid متجر سوري�
 - ⚠️ **لا تشغّل** `scripts/backfill-delivered-stock.ts` على هذا المتجر بعد الاستيراد: سيسحب مخزوناً لكل طلب قديم مسلَّم.
 - مهمة العمولات الليلية تستثني `source = 'Legacy import'`، فالعمولات القديمة دُفعت في النظام القديم.
 
+### على السيرفر (Coolify) — المعاينة فقط
+
+بعد دمج الكود ونشره، الحاوية تطبّق `20261021000000_order_delivery_address` وحدها عند الإقلاع (`prisma migrate deploy`).
+
+```bash
+# من اللابتوب: رفع النسخة المضغوطة (4 MB بدل 28.7)
+scp "u885958873_yazeed_backup.sql.gz" root@<IP>:/root/
+
+# على السيرفر: الحاوية التي فيها الأداة
+for c in $(docker ps --format '{{.Names}}'); do docker exec "$c" test -f /app/scripts/migration/run.mjs 2>/dev/null && echo "$c"; done
+C=<اسم الحاوية>
+docker cp /root/u885958873_yazeed_backup.sql.gz "$C":/tmp/legacy.sql.gz
+docker exec "$C" sh -c 'gunzip -c /tmp/legacy.sql.gz > /tmp/legacy.sql && ls -la /tmp/legacy.sql'   # 28734487
+docker exec "$C" ./node_modules/.bin/prisma migrate status                                        # up to date
+docker exec "$C" node scripts/migration/run.mjs --list-stores                                    # سطر SY
+docker exec -e LEGACY_DUMP=/tmp/legacy.sql "$C" node scripts/migration/run.mjs --orders-only --store-id <ID> 2>&1 | grep -v "no customer for phone" | tee /root/dry-run.txt
+```
+
+المعاينة لا تكتب شيئاً. تفحص ما يلي:
+- حقل العنوان موجود.
+- ربط شركات الشحن.
+- كم عميلاً موجوداً سيُعاد استعماله.
+- المنتجات المكررة بالاسم.
+- الطلبات المستوردة سابقاً.
+- توزيع الحالات وفحص الأسعار.
+
+`--apply` لا يُشغَّل إلا بعد مراجعة `dry-run.txt` وأخذ `pg_dump`.
+
 ## المخاطر
 
 | خطر | التخفيف |
