@@ -373,6 +373,13 @@ async function stepCustomers(ctx, dump) {
     for (const a of tuples(dump, 'addresses')) { const p = normPhone(a.phone); if (p) phones.add(p); }
     for (const u of tuples(dump, 'users')) { if (assign[u.id]) continue; const p = normPhone(u.phone); if (p) phones.add(p); }
     log('[dry] distinct customer phones (users+addresses):', phones.size);
+    if (ctx.store?.id) {
+      // already in the store = REUSED (their name and address are left as they are)
+      const inStore = new Set((await prisma.customer.findMany({ where: { companyId: ctx.company.id, storeId: ctx.store.id }, select: { phone: true } })).map((c) => c.phone));
+      let reused = 0;
+      for (const p of phones) if (inStore.has(p)) reused++;
+      log(`[dry] of those: ${reused} already customers of this store (reused) · ${phones.size - reused} would be created`);
+    }
     return;
   }
   const assign = {};
@@ -424,7 +431,24 @@ async function stepCustomers(ctx, dump) {
 
 /** Step: products — products + opening stock batch + inventory movements. */
 async function stepProducts(ctx, dump) {
-  if (DRY_RUN) { log('[dry] would create products + opening batches + opening count'); return; }
+  if (DRY_RUN) {
+    const legacy = rows(dump, 'products');
+    if (ctx.store?.id) {
+      // a legacy product is created as its own LEG-{id} row with its old stock
+      // as an opening balance; one the store ALREADY sells under its own sku
+      // would then exist twice — this is the list to decide on before --apply
+      const inStore = await prisma.product.findMany({ where: { companyId: ctx.company.id, storeId: ctx.store.id }, select: { name: true, sku: true } });
+      const leg = new Set(inStore.filter((p) => p.sku.startsWith('LEG-')).map((p) => p.sku));
+      const byName = new Map(inStore.filter((p) => !p.sku.startsWith('LEG-')).map((p) => [p.name.trim(), p.sku]));
+      const twins = legacy.filter((p) => byName.has((p.name || '').trim()));
+      log(`[dry] products: ${legacy.length} legacy · ${leg.size} already imported (LEG-) · ${legacy.length - leg.size} would be created with opening stock`);
+      if (twins.length) {
+        log(`[dry] ⚠ ${twins.length} legacy product(s) share a name with a product this store already sells — they would exist TWICE:`);
+        for (const p of twins) log(`    «${p.name.trim()}» (legacy ${p.id}) ↔ store sku ${byName.get(p.name.trim())}`);
+      } else log('[dry] no legacy product shares a name with a product of this store');
+    } else log('[dry] would create products + opening batches + opening count');
+    return;
+  }
   const inventory = new Map(rows(dump, 'inventory').map((i) => [i.product_id, parseInt(i.quantity)]));
   const variants = new Map(rows(dump, 'variants').map((v) => [v.product_id, v]));
   const products = rows(dump, 'products');
@@ -962,6 +986,13 @@ async function stepTarget(ctx, dump) {
   ctx.country = country;
   log(`target store VERIFIED: "${store.name}" (${store.id})`);
   log(`  company ${company.id} "${company.name}" · country ${country?.code ?? 'n/a'} (${country?.id ?? 'n/a'})`);
+
+  // The orders carry their own address now — migration
+  // 20261021000000_order_delivery_address must be on this database first.
+  const col = await prisma.$queryRaw`SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'deliveryAddress'`;
+  if (col.length) log('✅ orders.deliveryAddress exists');
+  else if (DRY_RUN) warn('orders.deliveryAddress is MISSING — deploy the code (the container applies the migration at start) before --apply');
+  else throw new Error('orders.deliveryAddress is missing — apply migration 20261021000000_order_delivery_address first');
 
   // regions under the store's country: reuse by name, create only what's missing
   ctx.regionMap = new Map();
