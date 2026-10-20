@@ -15,6 +15,7 @@ import {
   completionOf, doorUnits, expectedBackTotal, extraAction, needsExtraAction, settledLines,
 } from '@/lib/partial-delivery';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { typed } from '@/lib/text-search';
 
 /**
@@ -52,25 +53,63 @@ export async function GET(req: Request) {
     await requirePermission('ops.returns');
     const maySeeContact = can(user, 'customers.view');
 
-    const term = new URL(req.url).searchParams.get('q')?.trim();
+    const searchParams = new URL(req.url).searchParams;
+    const term = searchParams.get('q')?.trim();
+
+    /*
+     * ── PAGES, BECAUSE `take: 200` WAS A CEILING NOBODY COULD SEE PAST ──
+     *
+     * The owner, 20/10: «المرتجعات صفحات اعملها».
+     *
+     * This list is ordered by `returnedAt` ASCENDING — oldest first, which
+     * is right, because the return that has been sitting longest is the one
+     * costing money. But it meant the two hundred shown were the two
+     * hundred OLDEST, and a shop past that number could not reach a return
+     * that came back yesterday at all. Not «slow to find»: unreachable.
+     *
+     * The same shape `customers/route.ts` uses, through the same shared
+     * readers, so a page number behaves identically on both screens.
+     */
+    /**
+     * WHAT THIS LIST IS, NAMED ONCE.
+     *
+     * The count and the page must ask the same question as the rows, or
+     * the heading says «١٢٠ مرتجع» over a list of a different hundred and
+     * twenty. It was written inline when only the rows needed it; a
+     * second reader means it gets a name.
+     *
+     * `PARTIALLY_DELIVERED` belongs here: the customer refused some lines
+     * and those units are on their way back — but the desk never listed
+     * the order, so nobody counted them in and they never reached a
+     * shelf. Leaving it out would understate stock by every refused unit,
+     * for ever.
+     */
+    const listWhere = {
+      companyId,
+      storeId,
+      shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY', 'PARTIALLY_DELIVERED'] },
+      returnReceipt: null,
+      ...(term
+        ? { OR: [{ orderNumber: typed(term) }, { merchantRef: typed(term) }, { trackingNumber: typed(term) }] }
+        : {}),
+    };
+
+    const limit = readLimit(searchParams, 25, 100);
+    const total = await db.order.count({ where: listWhere });
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    /*
+     * Clamped to the last page that exists. Asking for page 9 of 3 is
+     * what a bookmark becomes after the queue is worked down, and an
+     * empty screen reads as «there are no returns» — which is a lie about
+     * the three on page 3.
+     */
+    const page = Math.min(readPage(searchParams), totalPages);
 
     const orders = await db.order.findMany({
-      where: {
-        companyId,
-        storeId,
-        // PARTIALLY_DELIVERED belongs here. The customer refused some lines
-        // and those units are on their way back — but the desk never listed
-        // the order, so nobody counted them in and they never reached a
-        // shelf. Now that the door consumes the whole parcel, leaving it out
-        // would understate stock by every refused unit, for ever.
-        shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY', 'PARTIALLY_DELIVERED'] },
-        returnReceipt: null,
-        ...(term
-          ? { OR: [{ orderNumber: typed(term) }, { merchantRef: typed(term) }, { trackingNumber: typed(term) }] }
-          : {}),
-      },
+      where: listWhere,
       orderBy: { returnedAt: 'asc' },
-      take: 200,
+      skip: (page - 1) * limit,
+      take: limit,
       select: {
         id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
         shippingStatus: true, settlementStatus: true, returnReason: true, returnedAt: true,
@@ -88,6 +127,12 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       count: orders.length,
+      /*
+       * The page, beside the rows. `count` is what is ON this page and
+       * `pagination.total` is how many there are — two different facts
+       * that a single number was being asked to carry.
+       */
+      pagination: { total, page, limit, totalPages },
       // `items` is deliberately NOT spread out below: `lines` is the same
       // fact in the shape the desk needs, and shipping both invites the
       // screen to reach for the raw one again.

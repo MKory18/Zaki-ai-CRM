@@ -85,6 +85,22 @@ interface Options {
    * that has a filter, which is most of them.
    */
   key?: string | number | boolean | null;
+  /**
+   * Set false when the SCREEN already owns its first load.
+   *
+   * Most screens have none of their own, so the hook doing it is what
+   * makes adopting this remove a line rather than add one. But a screen
+   * with a debounced search box loads itself — `ShipmentsNewScreen` and
+   * `CustomersScreen` both wait 250ms after a keystroke — and the hook
+   * firing as well means two requests on mount for the same rows.
+   *
+   * ⚠️ Measured, not theorised: it broke
+   * `select-all-takes-what-is-shown.test.tsx`. The second answer landed
+   * after the three rows had been ticked and replaced them, so «إنشاء
+   * شحنة (3)» became «(0)» — a clerk's whole selection, gone, with
+   * nothing on the screen to explain it.
+   */
+  initial?: boolean;
 }
 
 /**
@@ -96,7 +112,7 @@ interface Options {
  * second.
  */
 export function useLiveRefresh(load: () => void | Promise<unknown>, options: Options = {}): void {
-  const { everyMs, enabled = true, key } = options;
+  const { everyMs, enabled = true, key, initial = true } = options;
   const loadRef = useRef(load);
   const lastAt = useRef(0);
 
@@ -120,8 +136,8 @@ export function useLiveRefresh(load: () => void | Promise<unknown>, options: Opt
 
     // The first load is forced: the throttle is about repeat triggers,
     // and a screen must never open empty because another screen asked a
-    // second ago.
-    run(true);
+    // second ago. Skipped entirely when the screen loads itself.
+    if (initial) run(true);
 
     const onReturn = () => {
       if (!document.hidden) run();
@@ -148,5 +164,5 @@ export function useLiveRefresh(load: () => void | Promise<unknown>, options: Opt
     };
     // `load` is deliberately absent — see the note on the ref above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, everyMs, key]);
+  }, [enabled, everyMs, key, initial]);
 }

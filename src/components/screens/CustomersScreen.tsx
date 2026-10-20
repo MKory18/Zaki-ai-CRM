@@ -105,7 +105,7 @@ export function CustomersScreen() {
     pageRef.current = pagination.page;
   }, [pagination.page]);
 
-  useLiveRefresh(() => loadRef.current(pageRef.current));
+  useLiveRefresh(() => loadRef.current(pageRef.current), { initial: false });
 
   /** Page turns go through a stable reference, like the orders screen. */
   const loadRef = useRef(loadCustomers);

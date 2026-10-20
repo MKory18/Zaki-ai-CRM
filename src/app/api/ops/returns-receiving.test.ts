@@ -7,7 +7,13 @@ import { join } from 'node:path';
 const { db, requireContext, requirePermission, logAudit, reverseForOrder } = vi.hoisted(() => ({
   reverseForOrder: vi.fn(async (..._a: unknown[]) => 1),
   db: {
-    order: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    /*
+     * `count` is here because the list is PAGED now: the heading says
+     * «عرض ١٢ من ٨٧», and the second number is a count over the same
+     * predicate the rows use. Without it the door throws before it ever
+     * reaches the arithmetic these tests are about.
+     */
+    order: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), count: vi.fn(async () => 0) },
     returnReceipt: { create: vi.fn() },
     inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
     productionBatch: { findFirst: vi.fn(), create: vi.fn(), aggregate: vi.fn() },

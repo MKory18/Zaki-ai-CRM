@@ -215,7 +215,7 @@ export function ShipmentsNewScreen() {
    * The debounce above stays: it is about the search box, not about
    * returning to the screen.
    */
-  useLiveRefresh(() => void load());
+  useLiveRefresh(() => void load(), { initial: false });
 
   const create = async () => {
     const orderIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
