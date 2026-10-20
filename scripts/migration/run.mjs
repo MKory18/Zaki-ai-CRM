@@ -24,7 +24,7 @@ import { execFileSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
-import { resolveWipeTarget, evaluateVerify } from './lib/safety-rules.mjs';
+import { resolveWipeTarget, resolveStoreTarget, evaluateVerify, verifyGateNames, delegateName, missingDelegates } from './lib/safety-rules.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -45,7 +45,10 @@ if (!LEGACY_DUMP) {
   console.error('LEGACY_DUMP env var is required (path to the legacy MariaDB SQL dump).');
   process.exit(1);
 }
-const PG_DUMP_BIN = process.env.PG_DUMP_BIN || 'F:/ddddddddddddddddd/New folder/PostgreSQL/bin/pg_dump.exe';
+// pg_dump must come from the environment on the server (Coolify/Linux);
+// the Windows default below is only for this development machine.
+const PG_DUMP_BIN = process.env.PG_DUMP_BIN
+  || (process.platform === 'win32' ? 'F:/ddddddddddddddddd/New folder/PostgreSQL/bin/pg_dump.exe' : 'pg_dump');
 
 const COMPANY_NAME = 'صحة بلس';
 const STORE_SLUG = 'salah-plus';
@@ -152,11 +155,39 @@ async function stepWipeDemo(ctx) {
   log(`demo company: "${demo.name}" → users=${demo._count.users} products=${demo._count.products} orders=${demo._count.orders} customers=${demo._count.customers} stores=${demo._count.stores}`);
   const superAdmins = await prisma.user.count({ where: { role: 'SUPER_ADMIN', companyId: null } });
   log(`protected: ${superAdmins} superadmins (companyId=null), global roles, RolePermissionDefaults, SystemSettings`);
-  if (DRY_RUN) { log('[dry] would delete this ONE company row (explicit ordered deletes below)'); return; }
+  if (DRY_RUN) { log(`[dry] would clear ALL business data of "${demo.name}" and DISABLE its ${demo._count.users} users (accounts + audit history stay); nothing is deleted without --apply`); return; }
   // Explicit ordered cleanup — Postgres cascade order is unspecified and
   // Restrict edges (OrderItem→Product, Region→Country, …) can fire before
   // their parents' rows are gone. Delete every demo-scoped row explicitly,
   // children first. No company-wide wildcard deletes: scope = demo.id only.
+  // audit_logs is deliberately ABSENT: it is append-only by trigger (no
+  // UPDATE, no DELETE) and its history must survive the wipe.
+  // Delegate names must match THIS Prisma Client exactly (WhatsAppMessage →
+  // whatsAppMessage, NOT whatsappMessage) — an undefined delegate used to
+  // skip a whole table silently. Anything missing here is a hard stop.
+  const WIPE_MODELS = [
+    'orderItem', 'orderActivity', 'orderNote', 'orderStatusLog',
+    'orderContactAttempt', 'orderClaimHistory', 'orderChangeRequest',
+    'orderIssue', 'orderAddOn', 'deliveryAttempt',
+    'returnReceipt', 'callLog', 'financialTransaction',
+    'commissionEntry', 'settlementMatch', 'conversionDelivery',
+    'walletMovement', 'walletTransfer', 'dailyClosing',
+    'walletOpeningCount', 'wallet',
+    'statementLine', 'statementReceipt', 'courierStatement',
+    'penalty', 'payslip', 'commissionPayout',
+    'commissionPeriod', 'commissionRule', 'penaltyRule',
+    'attendanceMark', 'aiDailySummary', 'notification',
+    'productReview', 'productImage',
+    'landingPageView', 'landingPageRecommendation',
+    'customConversion', 'trackingPixel', 'adAccount', 'campaign',
+    'storeFont', 'storePage', 'storeMenu', 'storeRedirect',
+    'telegramMessage', 'telegramSource',
+    'whatsAppMessage', 'whatsAppConversation', 'whatsAppConnection',
+    'appDelivery', 'appInstall', 'app',
+    'idempotencyRecord', 'systemToken',
+  ];
+  const missing = missingDelegates(WIPE_MODELS, prisma);
+  if (missing.length) throw new Error(`Prisma Client is missing delegates for: ${missing.join(', ')} — the wipe cannot proceed partially blind`);
   const D = async (model, relWhere = null) => {
     try {
       await prisma[model].deleteMany({ where: relWhere || { companyId: demo.id } });
@@ -165,30 +196,10 @@ async function stepWipeDemo(ctx) {
       // model has no companyId column — retry through its parent relation
       const rel = { statementLine: 'statement', statementReceipt: 'statement', landingPageRecommendation: 'landingPage', landingPageView: 'landingPage' }[model];
       if (rel) return D(model, { [rel]: { companyId: demo.id } });
-      warn(`wipe: ${model} skipped (${e.message.split('\n')[0].slice(0, 120)})`);
+      throw new Error(`wipe: ${model} could not be cleared — refusing to continue silently (${e.message.split('\n')[0].slice(0, 160)})`);
     }
   };
-  await D('orderItem');
-  await D('orderActivity'); await D('orderNote'); await D('orderStatusLog');
-  await D('orderContactAttempt'); await D('orderClaimHistory'); await D('orderChangeRequest');
-  await D('orderIssue'); await D('orderAddOn'); await D('deliveryAttempt');
-  await D('returnReceipt'); await D('callLog'); await D('financialTransaction');
-  await D('commissionEntry'); await D('settlementMatch');
-  await D('conversionDelivery');
-  await D('walletMovement'); await D('walletTransfer'); await D('dailyClosing');
-  await D('walletOpeningCount'); await D('wallet');
-  await D('statementLine'); await D('statementReceipt'); await D('courierStatement');
-  await D('penalty'); await D('payslip'); await D('commissionPayout');
-  await D('commissionPeriod'); await D('commissionRule'); await D('penaltyRule');
-  await D('attendanceMark'); await D('aiDailySummary'); await D('notification'); await D('auditLog');
-  await D('productReview'); await D('productImage');
-  await D('landingPageView'); await D('landingPageRecommendation');
-  await D('customConversion'); await D('trackingPixel'); await D('adAccount'); await D('campaign');
-  await D('storeFont'); await D('storePage'); await D('storeMenu'); await D('storeRedirect');
-  await D('telegramMessage'); await D('telegramSource');
-  await D('whatsappMessage'); await D('whatsappConversation'); await D('whatsappConnection');
-  await D('appDelivery'); await D('appInstall'); await D('app');
-  await D('idempotencyRecord'); await D('systemToken');
+  for (const m of WIPE_MODELS) await D(m);
   await prisma.userStoreAccess.deleteMany({ where: { store: { companyId: demo.id } } });
   await prisma.userCountryAccess.deleteMany({ where: { country: { companyId: demo.id } } });
   await D('inventoryMovement'); await D('productionBatchCost'); await D('productionBatch');
@@ -198,16 +209,42 @@ async function stepWipeDemo(ctx) {
   await D('deliveryProvider'); await D('shippingBatch');
   await D('country'); await D('store'); await D('category'); await D('orderChannel');
   await D('product'); await D('customer'); await D('expense');
-  await prisma.user.deleteMany({ where: { companyId: demo.id } });
-  await prisma.company.delete({ where: { id: demo.id } });
-  bump('demo_company_deleted');
-  const left = await prisma.user.findMany({ where: { companyId: null }, select: { email: true } });
-  log('users kept (companyId=null):', left.map((u) => u.email).join(', '));
+  // The company ROW and its users STAY. audit_logs is append-only and may
+  // still reference them (rows written from other scopes too), and the owner
+  // wants the old staff accounts disabled, not erased. Everything above —
+  // orders, products, customers, stock, finance — is already gone.
+  const disabled = await prisma.user.updateMany({
+    where: { companyId: demo.id, status: { not: 'DISABLED' } },
+    data: { status: 'DISABLED', tokenVersion: { increment: 1 } },
+  });
+  bump('legacy_users_disabled', disabled.count);
+  log(`legacy users disabled: ${disabled.count} (login blocked, sessions killed, audit history untouched)`);
+  // Optional, explicit: keep exactly ONE active platform owner.
+  const keepIdx = process.argv.indexOf('--disable-superadmins-except');
+  const keepEmail = keepIdx !== -1 ? process.argv[keepIdx + 1] : null;
+  if (keepEmail) {
+    const others = await prisma.user.updateMany({
+      where: { role: 'SUPER_ADMIN', companyId: null, email: { not: keepEmail }, status: { not: 'DISABLED' } },
+      data: { status: 'DISABLED', tokenVersion: { increment: 1 } },
+    });
+    bump('superadmins_disabled', others.count);
+    log(`other superadmins disabled: ${others.count} — the one active platform owner is ${keepEmail}`);
+  } else {
+    const supers = await prisma.user.findMany({ where: { role: 'SUPER_ADMIN', companyId: null, status: { not: 'DISABLED' } }, select: { email: true } });
+    log(`active superadmins left untouched (${supers.length}): ${supers.map((s) => s.email).join(', ')} — pass --disable-superadmins-except <email> to keep only one`);
+  }
+  log('company shell kept (audit history references it) — its business data is fully cleared');
 }
 
 /** Step: infra — company, country, regions, store, providers, fees, categories, channel. */
 async function stepInfra(ctx, dump) {
   let { company } = await getSalahContext();
+  // Ambiguity guard: two companies with the destination's name make every
+  // later findFirst meaningless — stop instead of guessing.
+  if (!DRY_RUN) {
+    const sameName = await prisma.company.findMany({ where: { name: COMPANY_NAME }, select: { id: true } });
+    if (sameName.length > 1) throw new Error(`${sameName.length} companies are named "${COMPANY_NAME}" (${sameName.map((c) => c.id).join(', ')}) — resolve the duplication before migrating`);
+  }
   if (!company) {
     log('creating company', COMPANY_NAME, `(currency ${CURRENCY})`);
     if (!DRY_RUN) company = await prisma.company.create({ data: { name: COMPANY_NAME, currency: CURRENCY, country: 'سوريا', settings: JSON.stringify({ legacyMigration: true, migratedAt: now().toISOString() }) } });
@@ -236,9 +273,22 @@ async function stepInfra(ctx, dump) {
   }
   log(`regions: ${ctx.regionMap.size}/${legacyRegions.length} mapped`);
 
-  let store = DRY_RUN ? null : await prisma.store.findFirst({ where: { companyId: company.id, slug: STORE_SLUG } });
-  if (!store && !DRY_RUN) {
+  // The store is REUSED, never duplicated: explicit --store-id first, then the
+  // destination company's own salah-plus slug, then creation — with company
+  // and country ownership verified (see lib/safety-rules.mjs).
+  const allStores = await prisma.store.findMany({ select: { id: true, slug: true, companyId: true, countryId: true, name: true } });
+  const storeTarget = resolveStoreTarget(process.argv, allStores, { companyId: company.id, countryId: country?.id ?? null });
+  log(`store: ${storeTarget.reason}`);
+  if (!storeTarget.ok) {
+    for (const c of storeTarget.candidates) log(`  existing store: ${c.id}  slug="${c.slug}"  company=${c.companyId}  country=${c.countryId}`);
+    if (!DRY_RUN) throw new Error(`store resolution failed: ${storeTarget.reason}`);
+    log('[dry] store step would ABORT — resolve the store ownership/country first');
+    return;
+  }
+  let store = storeTarget.store || null;
+  if (storeTarget.action === 'create' && !DRY_RUN) {
     store = await prisma.store.create({ data: { companyId: company.id, countryId: country.id, name: COMPANY_NAME, slug: STORE_SLUG, status: 'ACTIVE', type: 'MULTI_PRODUCT', language: 'ar', priceIncludesDelivery: false } });
+    log(`store created: ${store.id}`);
   }
   ctx.store = store;
 
@@ -701,25 +751,34 @@ async function stepPages(ctx, dump) {
 /** Step: verify — counts + integrity checks vs legacy dump. */
 async function stepVerify(ctx, dump) {
   log('=== VERIFY ===');
-  const c = await getSalahContext();
+  // --orders-only targets an explicitly-named company: never re-resolve by name.
+  const c = ctx.company ? { company: ctx.company } : await getSalahContext();
   if (!c.company) { log('company missing — nothing to verify'); return; }
   const cid = c.company.id;
   const legacyOrders = rows(dump, 'orders').length;
   const legacyItems = rows(dump, 'order_items').length;
-  const newOrders = await prisma.order.count({ where: { companyId: cid } });
-  const newItems = await prisma.orderItem.count({ where: { companyId: cid } });
   const newCustomers = await prisma.customer.count({ where: { companyId: cid } });
-  const newProducts = await prisma.product.count({ where: { companyId: cid } });
-  const newOffers = await prisma.offer.count({ where: { companyId: cid } });
   const newStaff = await prisma.user.count({ where: { companyId: cid } });
   const newCommissions = await prisma.commissionEntry.count({ where: { companyId: cid } });
   const newActivities = await prisma.orderActivity.count({ where: { companyId: cid } });
-  const newPages = await prisma.landingPage.count({ where: { companyId: cid } });
 
   // money checksums
   const legacyTotalSum = rows(dump, 'orders').reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-  const agg = await prisma.order.aggregate({ where: { companyId: cid }, _sum: { totalAmount: true } });
-  const newTotalSum = agg._sum.totalAmount || 0;
+  // On production the destination company may already hold its own data, so
+  // hard counts compare THE MIGRATION'S OWN ROWS (marked at import), never the
+  // company's grand totals. A pre-existing storefront survives untouched and
+  // the gate stays honest in both directions.
+  const LEGACY_MARK = 'Legacy import';
+  const legacyOrdersMigrated = await prisma.order.count({ where: { companyId: cid, source: LEGACY_MARK } });
+  const legacyItemsMigrated = await prisma.orderItem.count({ where: { companyId: cid, order: { source: LEGACY_MARK } } });
+  const legacyProductsMigrated = await prisma.product.count({ where: { companyId: cid, sku: { startsWith: 'LEG-' } } });
+  const legacyOffersMigrated = await prisma.offer.count({ where: { companyId: cid, product: { sku: { startsWith: 'LEG-' } } } });
+  const legacyPagesMigrated = await prisma.landingPage.count({ where: { companyId: cid, pageSettings: { contains: 'legacyBuilderContent' } } });
+  const aggLegacyOnly = await prisma.order.aggregate({ where: { companyId: cid, source: LEGACY_MARK }, _sum: { totalAmount: true } });
+  const newTotalSum = aggLegacyOnly._sum.totalAmount || 0;
+  const aggAll = await prisma.order.aggregate({ where: { companyId: cid }, _sum: { totalAmount: true } });
+  const grandTotalSum = Number(aggAll._sum.totalAmount || 0);
+  log(`order totals: legacy-marked ${Number(newTotalSum).toFixed(2)} | company grand total ${grandTotalSum.toFixed(2)} (pre-existing data kept as-is)`);
 
   // orphan checks — customerId/productId are required relations, so orphans are
   // structurally impossible; verify FK integrity via cross-counts instead.
@@ -729,14 +788,14 @@ async function stepVerify(ctx, dump) {
   });
 
   const checks = [
-    ['orders', legacyOrders, newOrders],
-    ['order_items', legacyItems, newItems],
-    ['products', rows(dump, 'products').length, newProducts],
-    ['offers', rows(dump, 'bundle_quantity').length, newOffers],
+    ['orders', legacyOrders, legacyOrdersMigrated],
+    ['order_items', legacyItems, legacyItemsMigrated],
+    ['products', rows(dump, 'products').length, legacyProductsMigrated],
+    ['offers', rows(dump, 'bundle_quantity').length, legacyOffersMigrated],
     ['staff', 23, newStaff],
     ['customers', '≤ users+addresses distinct', newCustomers],
     ['commissions', rows(dump, 'wallet_transactions').filter((w) => w.reference_table === 'orders').length, newCommissions],
-    ['landing_pages', rows(dump, 'landing_pages').length, newPages],
+    ['landing_pages', rows(dump, 'landing_pages').length, legacyPagesMigrated],
   ];
   log('table                legacy      migrated');
   for (const [n, a, b] of checks) log(`${n.padEnd(20)} ${String(a).padStart(10)} ${String(b).padStart(10)}`);
@@ -749,18 +808,23 @@ async function stepVerify(ctx, dump) {
   stats.moneyOk = moneyOk;
 
   // THE GATE: the tool may not exit green while money or references disagree.
+  // --orders-only answers for the orders pipeline only (orders, items,
+  // products, money); everything else is out of its verdict by design.
+  const gate = new Set(verifyGateNames(ORDERS_ONLY));
+  if (ORDERS_ONLY) log(`orders-only gate: ${[...gate].join(', ')} + money checksum (offers, landing_pages, staff, commissions excluded)`);
   const verdict = evaluateVerify({
     legacySum: legacyTotalSum,
     migratedSum: Number(newTotalSum),
-    countChecks: Object.fromEntries(checks.filter(([n]) => n !== 'customers' && n !== 'commissions' && n !== 'staff').map(([n, a, b]) => [n, [a, b]])),
-    orphanCounts: { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
+    countChecks: Object.fromEntries(checks.filter(([n]) => gate.has(n)).map(([n, a, b]) => [n, [a, b]])),
+    orphanCounts: ORDERS_ONLY ? {} : { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
   });
   stats.verifyFailures = verdict.failures;
-  if (!verdict.ok) {
+  if (DRY_RUN) {
+    log('[dry] database verification is DEFERRED because no writes occurred — run --step verify after --apply for the real gate');
+  } else if (!verdict.ok) {
     for (const f of verdict.failures) log('  ❌', f);
     stats.verifyFailed = true;
-    if (!DRY_RUN) throw new Error(`verification FAILED — the migration must not be reported as a success (${verdict.failures.length} failure(s))`);
-    log('[dry] verification would FAIL — see failures above');
+    throw new Error(`verification FAILED — the migration must not be reported as a success (${verdict.failures.length} failure(s))`);
   } else {
     log('✅ verification passed: money, counts and references all agree');
   }
@@ -768,7 +832,70 @@ async function stepVerify(ctx, dump) {
 
 // ─────────────────────────── runner ───────────────────────────
 
-const STEPS = [
+/** --orders-only: import orders into an EXISTING store — no wipe, no new
+ * company/store, nothing deleted. The store id is required and explicit. */
+function argVal(name) {
+  const i = process.argv.indexOf(name);
+  return i !== -1 ? process.argv[i + 1] : null;
+}
+
+/** Step: target — verify the explicit store and derive company/country/
+ * regions/providers from it. Creation here is strictly additive (missing
+ * regions only); no rename, no move, no delete. */
+async function stepTarget(ctx, dump) {
+  const storeId = argVal('--store-id');
+  if (!storeId) throw new Error('--orders-only requires --store-id <uuid of the existing Syria store>');
+  const store = await prisma.store.findUnique({ where: { id: storeId }, include: { country: true } });
+  if (!store) throw new Error(`no store with id ${storeId} — refusing to import into a guess`);
+  const company = await prisma.company.findUnique({ where: { id: store.companyId } });
+  const country = store.country;
+  ctx.company = company;
+  ctx.store = store;
+  ctx.country = country;
+  log(`target store VERIFIED: "${store.name}" (${store.id})`);
+  log(`  company ${company.id} "${company.name}" · country ${country?.code ?? 'n/a'} (${country?.id ?? 'n/a'})`);
+
+  // regions under the store's country: reuse by name, create only what's missing
+  ctx.regionMap = new Map();
+  if (country) {
+    const existing = await prisma.region.findMany({ where: { countryId: country.id } });
+    const byName = new Map(existing.map((r) => [r.name, r]));
+    for (const lr of rows(dump, 'regions')) {
+      let reg = byName.get(lr.name);
+      if (!reg && !DRY_RUN) reg = await prisma.region.create({ data: { countryId: country.id, name: lr.name } });
+      if (reg) { ctx.regionMap.set(lr.id, reg.id); byName.set(lr.name, reg); }
+    }
+    log(`regions: ${ctx.regionMap.size}/${rows(dump, 'regions').length} mapped under the store's country`);
+  }
+
+  // delivery providers: match BY NAME only — orders-only never creates providers
+  const providers = await prisma.deliveryProvider.findMany({ where: { companyId: company.id } });
+  const byName = new Map(providers.map((p) => [p.name, p]));
+  ctx.providerMap = new Map();
+  for (const s of rows(dump, 'shippings')) {
+    const p = byName.get(s.name);
+    if (p) ctx.providerMap.set(s.id, p.id);
+  }
+  log(`providers matched by name: ${ctx.providerMap.size}/${rows(dump, 'shippings').length} (unmatched stay null on orders)`);
+
+  // channel: reuse if present, never created here
+  ctx.channel = await prisma.orderChannel.findFirst({ where: { companyId: company.id, name: 'الموقع القديم' } });
+  // categories: link by name only (categoryId is nullable on Product)
+  const cats = await prisma.category.findMany({ where: { companyId: company.id } });
+  const catByName = new Map(cats.map((c) => [c.name, c]));
+  ctx.categoryMap = new Map();
+  for (const c of rows(dump, 'categories')) {
+    const cat = catByName.get(c.name);
+    if (cat) ctx.categoryMap.set(c.id, cat.id);
+  }
+  log(`categories matched by name: ${ctx.categoryMap.size}/${rows(dump, 'categories').length}`);
+}
+
+
+
+const ORDERS_ONLY = process.argv.includes('--orders-only');
+
+const FULL_STEPS = [
   ['backup', stepBackup],
   ['wipe-demo', stepWipeDemo],
   ['infra', stepInfra],
@@ -782,6 +909,19 @@ const STEPS = [
   ['pages', stepPages],
   ['verify', stepVerify],
 ];
+
+// --orders-only: straight import into an existing store. No wipe, no staff,
+// no offers/commissions/activity/pages — customers and products are created
+// only as far as the orders need them.
+const STEPS = ORDERS_ONLY
+  ? [
+      ['target', stepTarget],
+      ['customers', stepCustomers],
+      ['products', stepProducts],
+      ['orders', stepOrders],
+      ['verify', stepVerify],
+    ]
+  : FULL_STEPS;
 
 async function main() {
   if (process.argv.includes('--list')) { log(STEPS.map((s) => s[0]).join('\n')); return; }
