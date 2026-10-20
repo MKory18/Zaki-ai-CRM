@@ -28,6 +28,14 @@ import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { useApp } from '@/context/AppContext';
 import { apiFetch } from '@/lib/api-client';
 import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
+/*
+ * «مغلق» sits beside the core states in the dropdown, though it is a zone
+ * with both stages finished rather than a state — `ordersWhere` knows the
+ * value and renders it as the `closingStages` query. One list, so the
+ * dropdown, the URL validation and the API accept exactly the same values.
+ */
+const STATUS_FILTER_OPTIONS: readonly string[] = [...FILTERABLE_STATES, 'CLOSED'];
+const STATUS_FILTER_LABELS: Record<string, string> = { ...STATE_LABEL_AR, CLOSED: 'مغلق' };
 import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine, RiUploadCloud2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { arDateTime } from '@/lib/format';
@@ -69,7 +77,7 @@ export function OrdersScreen() {
     // A URL is typed by anyone. An unknown state would reach the API and
     // come back 400 «حالة غير معروفة» — a filter nobody chose, refusing
     // to load the screen.
-    askedState && (FILTERABLE_STATES as string[]).includes(askedState) ? askedState : 'all'
+    askedState && STATUS_FILTER_OPTIONS.includes(askedState) ? askedState : 'all'
   );
   /*
    * AND TWO MORE FILTERS ARRIVE BY LINK NOW.
@@ -277,7 +285,15 @@ export function OrdersScreen() {
     const v = orderFiltersFromQuery(query);
     setSearchInput(v.q);
     setSearch(v.q);
-    setStatus((FILTERABLE_STATES as string[]).includes(v.status) ? v.status : EMPTY_ORDER_FILTERS.status);
+    // The check is against the shared floor — FILTERABLE_STATES — with the
+    // one derived state the product added on top spelled at its use: a view
+    // saved with «مغلق» loads; anything the floor does not know is dropped
+    // to the empty view, never handed to an API that will refuse it.
+    setStatus(
+      v.status === 'CLOSED' || (FILTERABLE_STATES as readonly string[]).includes(v.status)
+        ? v.status
+        : EMPTY_ORDER_FILTERS.status
+    );
     setSource(v.source);
     setProductId(v.productId);
     setCourierId(v.courierId);
@@ -519,8 +535,8 @@ export function OrdersScreen() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 p-3">
             <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="فلتر الحالة" className="text-xs py-2">
               <option value="all">كل الحالات</option>
-              {FILTERABLE_STATES.map((st) => (
-                <option key={st} value={st}>{STATE_LABEL_AR[st]}</option>
+              {STATUS_FILTER_OPTIONS.map((st) => (
+                <option key={st} value={st}>{STATUS_FILTER_LABELS[st] ?? st}</option>
               ))}
             </Select>
 
