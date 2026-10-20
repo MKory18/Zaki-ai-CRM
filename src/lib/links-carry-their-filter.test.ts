@@ -128,7 +128,9 @@ describe('the orders list honours what points at it', () => {
     expect(src).toMatch(/asked\.get\('state'\)/);
     // And refuses one that is not ours: a URL is typed by anyone, and an
     // unknown state comes back from the API as 400 «حالة غير معروفة».
-    expect(src).toMatch(/FILTERABLE_STATES as string\[\]\)\.includes\(askedState\)/);
+    // The allow-list is STATUS_FILTER_OPTIONS — FILTERABLE_STATES plus the
+    // derived «مغلق» zone filter, which the API's ordersWhere accepts.
+    expect(src).toMatch(/STATUS_FILTER_OPTIONS\.includes\(askedState\)/);
   });
 
   it('opens the order the discount alert names', () => {

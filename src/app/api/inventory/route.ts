@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { count, money } from '@/lib/numeric-input';
 import { apiErrorResponse } from '@/lib/api-error';
