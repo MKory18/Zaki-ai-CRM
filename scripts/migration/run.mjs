@@ -47,6 +47,15 @@ const IDMAP_PATH = path.join(MIG_DIR, 'idmap.json');
 const CREDS_PATH = path.join(MIG_DIR, '.credentials.local.json');
 const REPORT_PATH = path.join(MIG_DIR, 'migration-report.local.json');
 
+// --list-stores: the ids --store-id takes, read-only, no dump needed — so
+// the person at the server terminal never has to write a query to find one.
+if (process.argv.includes('--list-stores')) {
+  const stores = await prisma.store.findMany({ select: { id: true, name: true, slug: true, country: { select: { code: true } }, _count: { select: { orders: true } } }, orderBy: { createdAt: 'asc' } });
+  for (const s of stores) console.log(`${s.id}  ${s.country?.code ?? '--'}  «${s.name}»  slug=${s.slug}  orders=${s._count.orders}`);
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
 const LEGACY_DUMP = process.env.LEGACY_DUMP;
 if (!LEGACY_DUMP) {
   console.error('LEGACY_DUMP env var is required (path to the legacy MariaDB SQL dump).');
