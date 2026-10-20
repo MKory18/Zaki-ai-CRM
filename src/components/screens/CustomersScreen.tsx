@@ -91,7 +91,7 @@ export function CustomersScreen() {
 
   /** Page turns go through a stable reference, like the orders screen. */
   const loadRef = useRef(loadCustomers);
-  loadRef.current = loadCustomers;
+  useEffect(() => { loadRef.current = loadCustomers; }, [loadCustomers]);
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
