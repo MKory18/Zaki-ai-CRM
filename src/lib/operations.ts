@@ -202,16 +202,50 @@ export async function shipmentBlocks(
     select: { productId: true, productName: true, quantity: true, freeQuantity: true, reservedQty: true },
   });
   for (const line of lines) {
-    const need = line.quantity + line.freeQuantity - line.reservedQty;
+    /*
+     * ── WHAT THIS LINE NEEDS, NOT WHAT IS LEFT UNRESERVED ──
+     *
+     * The owner, 20/10: an order may be taken with no stock, from either
+     * door, «بس يوقف عند انشاء الشحنة».
+     *
+     * This read `quantity + freeQuantity - reservedQty`, and that made the
+     * whole check skippable by the very thing it was guarding against.
+     * With `allowNegativeStock` ON, confirming RESERVES the line against
+     * stock that does not exist — so `need` came out zero, the line was
+     * skipped, and the shipment was built for goods that are not in the
+     * building. No block, no acknowledgement, nothing on the screen.
+     *
+     * Worse than «it did not stop»: the flag was written to SOFTEN this
+     * block (`hard: !allowNegativeStock`), and that soft branch could
+     * never run. `STOCK_SHORTAGE` only ever fired for a line nothing had
+     * reserved — which only happens when the flag is OFF, where `hard` is
+     * `true`. The flag did not soften the stop; it deleted it.
+     *
+     * So the question is the honest one: is the stock THERE. A
+     * reservation made against nothing is not an answer to it.
+     */
+    const need = line.quantity + line.freeQuantity;
     if (need <= 0) continue;
-    // This store's shelf only. Two stores drawing on one pile can each
-    // promise a customer what the other has already taken.
+    /*
+     * This store's shelf only. Two stores drawing on one pile can each
+     * promise a customer what the other has already taken.
+     *
+     * ⚠️ `order.id` is passed so this order's OWN reservation is excluded:
+     * a line holding two of the ten on the shelf must read as «my two are
+     * covered», not as a shortage of its own making. Without that, every
+     * correctly reserved shipment in the company would be blocked.
+     */
     const free = await availableStock(tx, order.companyId, line.productId, order.id, order.storeId);
     if (free < need) {
       blocks.push({
         code: 'STOCK_SHORTAGE',
         message: `نقص مخزون: ${line.productName} (ينقص ${need - Math.max(0, free)})`,
-        // With negative stock disallowed the shipment is refused outright.
+        /*
+         * Refused outright where negative stock is forbidden; where it is
+         * allowed, a SOFT block — which the shipments door still refuses
+         * unless this order was acknowledged by name. Soft is «somebody
+         * decided», never «nobody was told».
+         */
         hard: !opts.allowNegativeStock,
       });
     }

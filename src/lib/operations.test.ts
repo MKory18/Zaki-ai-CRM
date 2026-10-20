@@ -75,6 +75,19 @@ describe('shipment blocks', () => {
   const order = { id: 'o1', companyId: 'c1', storeId: 's1', customerId: 'cust1', regionId: 'r1', deliveryProviderId: 'dp1' };
 
   it('is clean when nothing is wrong', async () => {
+    /*
+     * ⚠️ THE SHELF IS STATED NOW, AND IT HAS TO BE.
+     *
+     * This passed with no stock set at all, because the shortage check
+     * skipped any line whose `reservedQty` covered its quantity — so
+     * «clean» was being read off the reservation rather than off the
+     * shelf. That skip is exactly what let a shipment be built for goods
+     * that are not in the building when `allowNegativeStock` was on; see
+     * `a-shipment-of-stock-that-is-not-there.test.ts`.
+     *
+     * A fixture that proves cleanliness by not looking proves nothing.
+     */
+    stock(5, 0);
     db.orderItem.findMany.mockResolvedValue([{ productId: 'p1', productName: 'x', quantity: 1, freeQuantity: 0, reservedQty: 1 }]);
     expect(await shipmentBlocks(db as never, order, { allowNegativeStock: false })).toEqual([]);
   });
