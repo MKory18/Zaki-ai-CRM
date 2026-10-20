@@ -106,6 +106,50 @@ function reason(s: {
   return head + waiting.join('، و');
 }
 
+/**
+ * THE SAME RULING AS A QUERY.
+ *
+ * The orders list needs a «مغلق» filter, and a filter that re-derived the
+ * two stages in JavaScript over every row of every page would be the slow
+ * way of asking the same question. This renders `closingStages` backwards
+ * into a `where`, the way `leftWarehouseWhere` renders `hasLeftWarehouse`.
+ *
+ * Read from the same constants the function reads, so the two cannot drift
+ * quietly: CASH_DONE above, GOODS_COMING_BACK above, and the zone list from
+ * order-state. A stage that does not apply (cash on a return, goods on a
+ * plain delivery) is DONE here exactly as it is NONE there — `NONE` never
+ * holds an order open.
+ *
+ * FAILED_DELIVERY is in the goods list because a failed parcel may still
+ * come back; in the data today it no longer occurs (the legacy «مفقود»
+ * rows were re-read as CANCELLED), but the clause is written for the
+ * workflow, not for yesterday's dump.
+ */
+export function whereClosed(): Record<string, unknown> {
+  const CASH_WAITING = ['DELIVERED', 'PARTIALLY_DELIVERED'] as const;
+  const GOODS_WAITING = [...GOODS_COMING_BACK, PARTIAL] as const;
+  const AT_A_DOOR = ['DELIVERED', 'PARTIALLY_DELIVERED', ...RETURNED_SHIPPING, 'CANCELLED'] as const;
+  return {
+    AND: [
+      { shippingStatus: { in: [...AT_A_DOOR] } },
+      // cash: NONE on everything that never took money, DONE once settled
+      {
+        OR: [
+          { shippingStatus: { notIn: [...CASH_WAITING] } },
+          { settlementStatus: CASH_DONE },
+        ],
+      },
+      // goods: NONE on a whole delivery and on a pre-shipping cancel, DONE once received
+      {
+        OR: [
+          { shippingStatus: { notIn: [...GOODS_WAITING] } },
+          { returnReceipt: { isNot: null } },
+        ],
+      },
+    ],
+  };
+}
+
 /** Both stages, named for a screen that lists them side by side. */
 export const STAGE_AR: Record<'cash' | 'goods', string> = {
   cash: 'الكاش',

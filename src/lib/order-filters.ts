@@ -1,4 +1,5 @@
 import { CORE_STATES, whereForState, type CoreState } from './order-state';
+import { whereClosed } from './order-closing';
 import { normalizePhoneNumber } from './phone';
 import { typed } from './text-search';
 
@@ -115,12 +116,22 @@ export function ordersWhere(params: URLSearchParams, input: OrdersWhereInput = {
    */
   const status = params.get('status')?.trim();
   if (status && status !== 'all') {
-    if (!CORE_STATES.includes(status as CoreState)) {
+    /*
+     * «مغلق» is not a core state — it is the closed ZONE with both of its
+     * stages finished (the money settled, the goods received), the ruling
+     * `closingStages` makes and `whereClosed` renders as a query. It sits
+     * beside the states in the dropdown because that is how the owner reads
+     * the list: finished work in one pile, whatever the winning state was.
+     */
+    if (status === 'CLOSED') {
+      and.push(whereClosed());
+    } else if (!CORE_STATES.includes(status as CoreState)) {
       return { ok: false, error: `حالة غير معروفة: ${status}` };
+    } else {
+      // A state nothing can currently be in returns nothing, rather than
+      // silently returning everything.
+      and.push(whereForState(status as CoreState) ?? { id: '' });
     }
-    // A state nothing can currently be in returns nothing, rather than
-    // silently returning everything.
-    and.push(whereForState(status as CoreState) ?? { id: '' });
   }
 
   const productId = params.get('productId')?.trim();

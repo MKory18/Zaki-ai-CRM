@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const { db, requireCompanyTenant, requireContext, can, getPermissionScope } = vi.hoisted(() => ({
-  db: { customer: { findMany: vi.fn() } },
+  db: { customer: { findMany: vi.fn(), count: vi.fn() } },
   requireCompanyTenant: vi.fn(),
   requireContext: vi.fn(),
   can: vi.fn(),
@@ -40,10 +40,12 @@ beforeEach(() => {
     user: { id: USER, role: 'MODERATOR', status: 'ACTIVE', permissions: [] },
     companyId: COMPANY,
     storeId: STORE,
+    country: { code: 'SY' },
   };
   requireCompanyTenant.mockResolvedValue(ctx);
   requireContext.mockResolvedValue(ctx);
   db.customer.findMany.mockResolvedValue([]);
+  db.customer.count.mockResolvedValue(0);
 });
 
 const req = (url = 'http://localhost/api/customers') => new Request(url);
@@ -102,5 +104,49 @@ describe('customers are scoped the same way orders are', () => {
 
     expect(getPermissionScope).toHaveBeenCalledWith(expect.anything(), 'customers.view_basic');
     expect(whereOfLastQuery().orders).toEqual({ some: { companyId: COMPANY, moderatorId: USER } });
+  });
+});
+
+describe('customers arrive twenty-five to a page', () => {
+  // The book is thousands of names. One request never carried all of it
+  // (the old `take: 100` was not even) — now the reader chooses the page,
+  // and the count lives with the page, not with a guessed slice.
+  it('slices with skip/take and reports the real total', async () => {
+    can.mockReturnValue(true);
+    getPermissionScope.mockReturnValue({ scope: 'ALL_COMPANY' });
+    db.customer.count.mockResolvedValue(17248);
+
+    const res = await GET(req('http://localhost/api/customers?page=3'));
+
+    // calls[0] is the page query; the one after it selects only the
+    // facts above the list.
+    expect(db.customer.findMany.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ skip: 50, take: 25 })
+    );
+    const body = await res.json();
+    expect(body.pagination).toEqual({ total: 17248, page: 3, limit: 25, totalPages: 690 });
+  });
+
+  it('caps a hand-crafted limit so one URL cannot swallow the book', async () => {
+    can.mockReturnValue(true);
+    getPermissionScope.mockReturnValue({ scope: 'ALL_COMPANY' });
+
+    await GET(req('http://localhost/api/customers?limit=9999&page=0'));
+
+    const q = db.customer.findMany.mock.calls[0][0];
+    expect(q.take).toBe(100);
+    expect(q.skip).toBe(0);
+  });
+
+  it('answers a page past the end with the last page, not with an empty shelf', async () => {
+    can.mockReturnValue(true);
+    getPermissionScope.mockReturnValue({ scope: 'ALL_COMPANY' });
+    db.customer.count.mockResolvedValue(17248); // 690 pages of 25
+
+    const res = await GET(req('http://localhost/api/customers?page=999'));
+    const q = db.customer.findMany.mock.calls[0][0];
+    expect(q.skip).toBe(690 * 25 - 25); // the last page's rows
+    const body = await res.json();
+    expect(body.pagination.page).toBe(690);
   });
 });

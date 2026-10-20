@@ -8,6 +8,7 @@ import { can, getPermissionScope, requirePermission } from '@/lib/authorization'
 import { normalizePhoneNumber } from '@/lib/phone';
 import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { customerFacts } from '@/lib/customer-insights';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { typed } from '@/lib/text-search';
@@ -79,6 +80,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('q')?.trim();
 
+    // PAGED, NOT DUMPED: a book of thousands does not fit one request,
+    // and `take: 100` did not let the reader choose which hundred.
+    // 25 rows to a page, the number the orders screen shows, with the
+    // shared reader's cap so a hand-crafted URL cannot pull the whole
+    // table either. The page itself is re-clamped below, after the count
+    // knows how many pages exist.
+    const limit = readLimit(searchParams, 25, 100);
+
     // This store's customers. The stores are separate businesses: one
     // store's complaint about a person is not the other's to read.
     const whereClause: any = { companyId, ...(storeId ? { storeId } : {}) };
@@ -102,11 +111,31 @@ export async function GET(req: Request) {
       ];
     }
 
+    const total = await db.customer.count({ where: whereClause });
+    /*
+     * A PAGE PAST THE END IS THE LAST PAGE. `?page=999` with 690 pages
+     * used to answer with the number as asked, an empty row list and a
+     * bar reading «صفحة 999 من 690» — a screen that said it held nothing
+     * and somewhere else at once. The clamp keeps the reader on real
+     * rows: the last page, never off the shelf.
+     */
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const page = Math.min(readPage(searchParams), totalPages);
     const customers = await db.customer.findMany({
       where: whereClause,
       select: canViewFull ? FULL_CUSTOMER_SELECT : BASIC_CUSTOMER_SELECT,
-      orderBy: { updatedAt: 'desc' },
-      take: 100,
+      /*
+       * THE BOOK READS FROM THE CUSTOMERS WHO MATTER. `updatedAt` alone
+       * put the legacy import's never-ordered rows — created last, so
+       * newest — across the first sixty pages of zeros, with the people
+       * behind 17,021 orders on page one hundred and something. Count
+       * first, recency second, and the id so a page is a place and not a
+       * shuffle: equal counters and equal timestamps can still be told
+       * apart, so the «التالي» of one reader never hands him another's.
+       */
+      orderBy: [{ totalOrders: 'desc' }, { updatedAt: 'desc' }, { id: 'asc' }],
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     /**
@@ -160,6 +189,7 @@ export async function GET(req: Request) {
       customers,
       limited: !canViewFull,
       facts,
+      pagination: { total, page, limit, totalPages },
       dialCode: ruleFor(country.code)?.dialCode ?? null,
     });
   } catch (error: any) {
