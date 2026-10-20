@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { apiJson } from '@/lib/api-client';
 import { MENU_AR, MENU_KEYS, storePageHref, type MenuItem, type MenuKey } from '@/lib/store-menus';
 import { RiAddCircleLine, RiArrowDownLine, RiArrowUpLine, RiCheckLine, RiDeleteBinLine, RiEyeLine, RiEyeOffLine, RiLoader4Line } from '@remixicon/react';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * THE SHOP'S FIVE MENUS.
@@ -58,7 +59,7 @@ export function StoreMenusScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   function edit(key: MenuKey, items: MenuItem[]) {
     setMenus((m) => (m ? { ...m, [key]: items } : m));

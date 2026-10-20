@@ -21,6 +21,7 @@ import { userCan } from '@/lib/can';
 import { GRADE_RANK, scoreCustomer } from '@/lib/customer-score';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { apiFetch } from '@/lib/api-client';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 export function CustomersScreen() {
   const { t, currentUser } = useApp();
@@ -80,14 +81,31 @@ export function CustomersScreen() {
     }
   };
 
+  /*
+   * The typed search is debounced by 250ms and starts again at page one
+   * — page 7 of a different world is not where the reader was. The
+   * debounce stays here; what the hook adds is the refresh on return,
+   * reloading the page they are ON rather than sending them to the
+   * first one.
+   */
   useEffect(() => {
     const timer = setTimeout(() => {
       loadCustomers(1);
     }, 250);
     return () => clearTimeout(timer);
-    // A new search starts from the first page — page 7 of a different
-    // world is not where the reader was.
   }, [search]);
+
+  /*
+   * The page lives in a ref as well, for the same reason the loader does:
+   * the hook's listeners are attached once, so reading `pagination`
+   * through the closure would refresh page one forever.
+   */
+  const pageRef = useRef(pagination.page);
+  useEffect(() => {
+    pageRef.current = pagination.page;
+  }, [pagination.page]);
+
+  useLiveRefresh(() => loadRef.current(pageRef.current));
 
   /** Page turns go through a stable reference, like the orders screen. */
   const loadRef = useRef(loadCustomers);

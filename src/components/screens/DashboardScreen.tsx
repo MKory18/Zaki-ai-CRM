@@ -20,6 +20,7 @@ import { HealthChip } from '@/components/ui/HealthChip';
 import type { Trust } from '@/lib/cod-vitals';
 import { STATE_TONE, type CoreState } from '@/lib/order-state';
 import { TONE_DOT, TONE_TEXT } from '@/components/ui/StatusChip';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 const PERIODS = [
   { key: 'today', ar: 'اليوم', en: 'Today' },
@@ -81,29 +82,15 @@ export function DashboardScreen() {
       if (seq === loadAnalyticsSeq.current) setLoading(false);
     }
   }, [period]);
-  useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics]);
-
-  // Ref mirror so the 30s polling interval + visibility handler always call
-  // the latest loadAnalytics (current period) without re-subscribing
-  const loadAnalyticsRef = useRef<() => Promise<void>>(async () => {});
-  useEffect(() => { loadAnalyticsRef.current = loadAnalytics; }, [loadAnalytics]);
-
-  // Light polling (30s) + refetch when the tab becomes visible again
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!document.hidden) loadAnalyticsRef.current();
-    }, 30_000);
-    const onVisibility = () => {
-      if (!document.hidden) loadAnalyticsRef.current();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
+  /*
+   * These twelve lines were written here, in the orders list and in the
+   * WhatsApp inbox — three copies of one idea, while fifty-four other
+   * screens had none of it. They are `useLiveRefresh` now, which also
+   * catches coming back to the WINDOW and not only to the tab: alt-tab
+   * fires `focus` and not `visibilitychange`, and that is most of a
+   * working day on a desk.
+   */
+  useLiveRefresh(loadAnalytics, { everyMs: 30_000, key: period });
 
   const fin = analytics?.financials ?? {
     deliveredRevenue: 0, costOfGoodsSold: 0, shippingCosts: 0,

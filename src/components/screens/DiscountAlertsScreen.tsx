@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Rows } from '@/components/ui/Rows';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiDiscountPercentLine, RiLoader4Line } from '@remixicon/react';
 import { arDate } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /control/discount-alerts — what was given away, and by whom.
@@ -67,9 +68,7 @@ export function DiscountAlertsScreen() {
     }
   }, [days]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: days });
 
   const rows = (data?.orders ?? []).filter((r) => (onlyNotable ? r.notable : true));
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
@@ -12,6 +12,7 @@ import { ScanSheet } from '@/components/scan/ScanButton';
 import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -79,9 +80,7 @@ export function ShippingBatchesScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   async function setStatus(batch: Batch, status: 'SHIPPED' | 'CLOSED') {
     setBusy(batch.id);

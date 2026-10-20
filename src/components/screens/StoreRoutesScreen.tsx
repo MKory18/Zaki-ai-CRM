@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -9,6 +9,7 @@ import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiLoader4Line, RiShutDow
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * OLD ADDRESSES THAT STILL ARRIVE.
@@ -55,7 +56,7 @@ export function StoreRoutesScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   async function call(fn: () => Promise<unknown>, okText?: string) {
     setBusy(true);

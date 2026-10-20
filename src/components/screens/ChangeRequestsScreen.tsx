@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiFetch, apiJson } from '@/lib/api-client';
 import { CourierNotifyDialog, type CourierAsk } from '@/components/orders/CourierNotifyDialog';
 import { ChangeRequestReview } from '@/components/orders/ChangeRequestReview';
@@ -15,6 +15,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArrowGoBackLine, RiArrowLeftLine, RiCheckboxCircleLine, RiFileEditLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /control/change-requests — the review queue, in its two halves.
@@ -102,9 +103,7 @@ export function ChangeRequestsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   /**
    * TAKE BACK A REQUEST YOU RAISED.

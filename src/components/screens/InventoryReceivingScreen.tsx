@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ORIGIN } from '@/lib/batch-grade';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /inventory/receiving — put stock in.
@@ -81,9 +82,7 @@ export function InventoryReceivingScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   const linked = useMemo(() => {
     if (dismissed || !asked || !products) return { row: null, message: null as string | null };

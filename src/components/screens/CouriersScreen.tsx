@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useConfirm } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
@@ -16,6 +16,7 @@ import { RiAddCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiEBike2Lin
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /settings/couriers — THE SHIPPING COMPANIES AND WHAT THEY CHARGE, ON ONE
@@ -92,9 +93,7 @@ export function CouriersScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   const open = (c: Courier, which: 'fees' | 'account') => {
     setTab(which);

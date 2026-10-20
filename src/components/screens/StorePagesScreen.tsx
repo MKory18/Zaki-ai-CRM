@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -8,6 +8,7 @@ import { apiJson } from '@/lib/api-client';
 import { PAGE_KIND_AR, REQUIRED_FOR_ADS, type PageKind } from '@/lib/store-pages';
 import { RiAddCircleLine, RiCheckLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
 import { PanelHeader } from '@/components/store-admin/PanelHeader';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * THE SHOP'S OWN PAGES.
@@ -56,7 +57,7 @@ export function StorePagesScreen() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   function open(page: PageRow) {
     setOpenId(page.id);

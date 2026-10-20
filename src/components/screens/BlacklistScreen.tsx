@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
@@ -8,6 +8,7 @@ import { RiAddCircleLine, RiArrowGoBackLine, RiLoader4Line, RiSearchLine } from 
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /control/blacklist — who may not order again.
@@ -54,9 +55,7 @@ export function BlacklistScreen() {
     }
   }, [term]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: term });
 
   const rows = (blocks ?? []).filter((b) => (showReleased ? true : b.active));
   /** Why the list is empty, if it is — the three answers are not the same. */

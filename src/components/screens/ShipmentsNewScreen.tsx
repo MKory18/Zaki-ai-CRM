@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -204,6 +205,17 @@ export function ShipmentsNewScreen() {
     }, 250);
     return () => clearTimeout(timer);
   }, [load]);
+
+  /*
+   * And again when the person comes back. This screen builds a shipment
+   * out of orders that are «ready to ship» — a list another agent is
+   * changing at the same time. Reading it from twenty minutes ago is how
+   * an order already in somebody else's batch gets picked a second time.
+   *
+   * The debounce above stays: it is about the search box, not about
+   * returning to the screen.
+   */
+  useLiveRefresh(() => void load());
 
   const create = async () => {
     const orderIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);

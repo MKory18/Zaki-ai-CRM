@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
@@ -8,6 +8,7 @@ import { arDateTime } from '@/lib/format';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SystemTokensPanel } from '@/components/apps/SystemTokensPanel';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /apps/installed — what is connected, and whether it is hearing us.
@@ -62,7 +63,7 @@ export function InstalledAppsScreen() {
     }
   }, [filter]);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load, { key: filter });
 
   if (!shelf || !deliveries) {
     return (

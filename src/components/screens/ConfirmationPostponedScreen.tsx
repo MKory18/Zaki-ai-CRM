@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiInboxUnarchiveLine, RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -73,9 +74,7 @@ export function ConfirmationPostponedScreen() {
     }
   };
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   if (error) {
     return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;

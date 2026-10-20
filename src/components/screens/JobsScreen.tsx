@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
@@ -8,6 +8,7 @@ import { RiAlertLine, RiArrowGoBackLine, RiCheckboxCircleLine, RiCloseCircleLine
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDateTime } from '@/lib/format';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /admin/jobs — is anything quietly not running?
@@ -76,9 +77,7 @@ export function JobsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load);
 
   const overdue = (data?.jobs ?? []).filter((j) => j.overdue);
 

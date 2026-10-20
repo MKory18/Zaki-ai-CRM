@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arTime } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 interface Conversation {
   id: string;
@@ -176,26 +177,28 @@ export function WhatsAppInboxScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Polling — only while the page is visible (no request storm, no stale
-  // closures: callbacks are stable and guarded by inFlightRef/selectedIdRef)
-  useEffect(() => {
-    if (!canView) return;
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-    const tick = () => {
-      if (document.visibilityState !== 'visible') return;
+  /*
+   * An inbox is the one screen where stale IS the bug, so it polls at
+   * five seconds — and refreshes the moment the person comes back, or
+   * the connection does.
+   *
+   * These lines were the third hand-written copy of that idea (the
+   * dashboard and the orders list had the other two). They are the one
+   * hook now, and the `online` listener that only this screen had is in
+   * it for every screen.
+   *
+   * It refreshes TWO things: the list, and the conversation that is
+   * open. A list that updates while the thread under it does not is the
+   * same staleness wearing a fresher list.
+   */
+  useLiveRefresh(
+    () => {
+      if (!canView) return;
       loadConversations(true);
       if (selectedIdRef.current) loadMessages(selectedIdRef.current, true);
-    };
-    const iv = setInterval(tick, 5000);
-    const onVis = () => { if (document.visibilityState === 'visible') tick(); };
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('online', onVis);
-    return () => {
-      clearInterval(iv);
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('online', onVis);
-    };
-  }, [canView, loadConversations, loadMessages]);
+    },
+    { everyMs: 5_000, enabled: canView }
+  );
 
   const selectConversation = (c: Conversation) => {
     setSelectedId(c.id);

@@ -8,6 +8,7 @@ import { RiInboxLine, RiLoader4Line, RiPhoneLockLine, RiTimerFlashLine } from '@
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /confirmation/queue — agents see NO list: one "pull next" button and a
@@ -59,13 +60,13 @@ export function ConfirmationQueueScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => {
-      if (!document.hidden) void load();
-    }, 30_000);
-    return () => clearInterval(t);
-  }, [load]);
+  /*
+   * A pull queue is the screen where stale costs the most: two agents
+   * reading a list from five minutes ago both reach for the same order.
+   * It polled already; what it did not do was refresh when somebody came
+   * BACK to it, which is how it is actually used.
+   */
+  useLiveRefresh(load, { everyMs: 30_000 });
 
   const pullNext = async () => {
     setPulling(true);

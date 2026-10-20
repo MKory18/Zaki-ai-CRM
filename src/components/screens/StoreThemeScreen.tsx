@@ -23,6 +23,7 @@ import { PaneToggle, editPaneClass, previewPaneClass, type EditorPane } from '@/
 import { StoreThemePreview } from '@/components/landing-editor/StoreThemePreview';
 import { UndoBar } from '@/components/landing-editor/UndoBar';
 import { useHistory, useUndoKeys } from '@/lib/use-history';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * THE STORE'S TEMPLATE — one panel of «الواجهة», beside the home page.
@@ -208,7 +209,7 @@ export function StoreThemeScreen() {
     // does not make `load` change on every render.
   }, [history.reset]);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load);
 
   // The cart-bar tab is not rendered at all for a shop with no cart.
   const tabs = useMemo(

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useAsk, useTell } from '@/components/ui/Confirm';
 import { REJECTION_REASON_AR } from '@/lib/confirmation-workflow';
 import { RiLoader4Line, RiPhoneLine, RiPriceTag3Line } from '@remixicon/react';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /confirmation/winback — the lost orders worth one more call.
@@ -63,9 +64,7 @@ export function WinbackScreen() {
     }
   }, [showSkipped]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: showSkipped });
 
   async function offer(r: Row) {
     if (!r.verdict.eligible) return;

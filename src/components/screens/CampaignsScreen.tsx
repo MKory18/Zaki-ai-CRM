@@ -8,6 +8,7 @@ import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
 import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -185,7 +186,7 @@ export function CampaignsScreen() {
     }
   }, [period]);
 
-  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(load, { key: period });
   useEffect(() => {
     void fetch('/api/landing-pages')
       .then((r) => r.json())

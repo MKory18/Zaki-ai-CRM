@@ -1,7 +1,7 @@
 'use client';
 
 import { lateLabel } from '@/lib/transit';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { ContactButtons } from '@/components/orders/ContactButtons';
@@ -27,6 +27,7 @@ import {
   type ConditionKey,
 } from '@/lib/tracking-priority';
 import { Money } from '@/components/ui/Money';
+import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
@@ -297,9 +298,7 @@ export function TrackingScreen() {
     }
   }, [term, status]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLiveRefresh(load, { key: `${term}·${status}` });
 
   /**
    * THE WORK WAITING, FROM ONE DEFINITION OF EACH CONDITION.
