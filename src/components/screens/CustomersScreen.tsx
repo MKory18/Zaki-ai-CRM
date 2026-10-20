@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -9,7 +9,7 @@ import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowLeftSLine, RiArrowRightSLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { HealthChip } from '@/components/ui/HealthChip';
 import { ContactButtons } from '@/components/orders/ContactButtons';
@@ -36,6 +36,8 @@ export function CustomersScreen() {
   const [dialCode, setDialCode] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  /** 25 to a page, like the orders screen — the book is read in pages. */
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
 
   // Selected customer for order history
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -55,29 +57,41 @@ export function CustomersScreen() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalMsg, setModalMsg] = useState<string | null>(null);
 
-  const loadCustomers = async () => {
+  /** Latest wins: a second press while a page is in the air replaces it. */
+  const seqRef = useRef(0);
+
+  const loadCustomers = async (pageToLoad = 1) => {
+    const seq = ++seqRef.current;
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/customers?q=${encodeURIComponent(search)}`);
+      const res = await apiFetch(`/api/customers?q=${encodeURIComponent(search)}&page=${pageToLoad}&limit=${pagination.limit}`);
+      if (seq !== seqRef.current) return; // a newer page already answered
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
         setFacts(data.facts ?? null);
         setDialCode(data.dialCode ?? null);
+        setPagination(data.pagination || { total: 0, page: 1, limit: pagination.limit, totalPages: 1 });
       }
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (seq === seqRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadCustomers();
+      loadCustomers(1);
     }, 250);
     return () => clearTimeout(timer);
+    // A new search starts from the first page — page 7 of a different
+    // world is not where the reader was.
   }, [search]);
+
+  /** Page turns go through a stable reference, like the orders screen. */
+  const loadRef = useRef(loadCustomers);
+  loadRef.current = loadCustomers;
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,6 +312,55 @@ export function CustomersScreen() {
               />
             }
           />
+        </div>
+
+        {/*
+          THE PAGE BAR. 25 rows to a page, read forward with «التالي» —
+          the same controls the orders screen uses, so one habit of hand
+          works everywhere. The count under the figures describes what is
+          shown against the whole book, not this page alone.
+
+          THE BUTTON'S OWN PROMISE-LOCK IS DELIBERATELY NOT USED HERE.
+          That lock is for submissions — a second shipment, a second
+          payout. A page turn is a read, and reads arrive late through
+          nothing of the reader's doing; the screen's own `loading`
+          drives these two instead, and an ignored click while a load is
+          in the air is exactly right: the rows are still the truth of
+          the page in hand.
+        */}
+        <div className="flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">
+          <span>
+            عرض <strong>{customers.length}</strong> من <strong>{pagination.total}</strong> عميل
+          </span>
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={loading}
+              disabled={loading || pagination.page <= 1}
+              onClick={() => { void loadRef.current(pagination.page - 1); }}
+              aria-label="الصفحة السابقة"
+              title="الصفحة السابقة"
+              className="p-1.5"
+            >
+              <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
+            </Button>
+            <span className="font-medium">
+              صفحة {pagination.page} من {pagination.totalPages || 1}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              loading={loading}
+              disabled={loading || pagination.page >= pagination.totalPages}
+              onClick={() => { void loadRef.current(pagination.page + 1); }}
+              aria-label="الصفحة التالية"
+              title="الصفحة التالية"
+              className="p-1.5"
+            >
+              <RiArrowRightSLine className="icon-mirror w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         {/*
