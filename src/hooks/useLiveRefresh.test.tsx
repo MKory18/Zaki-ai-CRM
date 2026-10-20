@@ -221,3 +221,36 @@ describe('what the screen controls', () => {
 function wait2(ms = 5_000) {
   act(() => void vi.advanceTimersByTime(ms));
 }
+
+describe('a screen that loads itself', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setHidden(false);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('is not loaded a second time on mount', () => {
+    /*
+     * A screen with a debounced search box loads itself 250ms after a
+     * keystroke. The hook firing as well is two requests for the same
+     * rows — and the second answer lands after the clerk has ticked
+     * them, replacing the rows and emptying the selection. Measured:
+     * «إنشاء شحنة (3)» became «(0)».
+     */
+    const load = vi.fn();
+    renderHook(() => useLiveRefresh(load, { initial: false }));
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('but still refreshes when the person comes back', () => {
+    // Skipping the first load must not switch the hook off — that is the
+    // whole reason the screen has it.
+    const load = vi.fn();
+    renderHook(() => useLiveRefresh(load, { initial: false }));
+    wait2();
+    comeBack('focus');
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+});
