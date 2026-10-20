@@ -951,6 +951,10 @@ model Order {
   merchantRef               String?
   // Stage 5: the delivery region drives the fee table and the late threshold.
   regionId                  String?
+  // The street address THIS order went to. The customer keeps only their
+  // latest one, and the legacy import carries a separate address per order;
+  // without this the older ones were lost. Null = read the customer's.
+  deliveryAddress           String?
   // A manual fee override always carries a reason (written to the audit log).
   deliveryFeeOverrideReason String?
   // A courier may only be changed at shipment creation. Afterwards the

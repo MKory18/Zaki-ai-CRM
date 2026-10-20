@@ -112,6 +112,11 @@ export const accrueCommission: JobDefinition = {
           storeId: store.id,
           shippingStatus: 'DELIVERED',
           commissions: { none: {} },
+          // Imported history (scripts/migration) was paid in the old system
+          // and names nobody here, so it never accrues — and 10,391 such rows
+          // would fill this 500-row batch every night, ahead of the real
+          // deliveries still waiting for theirs.
+          source: { not: 'Legacy import' },
         },
         select: { id: true },
         take: 500,

@@ -32,6 +32,35 @@ SELECT current_database(), inet_server_addr();  -- وهل هي إنتاج؟ تو
 الخطوات بالترتيب: `backup → wipe-demo → infra → staff → customers → products → offers → orders → commissions → activity → pages → verify`
 كل خطوة idempotent — إعادة التشغيل لا تكرر الطلبات أو العملاء (مفاتيح طبيعية: `SY-{legacyId}`, `LEG-{id}`, الهاتف normalized، email).
 
+## الاستيراد إلى متجر سوريا الموجود (`--orders-only`) — قواعد 2026-10-21
+
+```bash
+node scripts/migration/run.mjs --orders-only --store-id <uuid متجر سوريا>          # معاينة
+node scripts/migration/run.mjs --orders-only --store-id <uuid متجر سوريا> --apply  # تنفيذ
+```
+
+- **الحالات** (`scripts/migration/lib/legacy-map.mjs` ← `LEGACY_STATUS`): كل الطلبات مؤكدة. يُقرأ `status_id` وحده؛ أعمدة `status_order/delivery_status/payment_status` القديمة مُهمَلة.
+  - مطلوب تجهيزه ← مؤكد وتم شحنه.
+  - قيد التوصيل وتم استلام الطلب الملغي ← مرتجع مستلم بدون رسوم (إيصال استلام) = مغلق.
+  - تم توصيله وتم استلام المبلغ ← تم الاستلام + تم التحصيل (SETTLED) = مغلق.
+  - ملغي ومفقود وملغي من الشركة ← ملغي قبل الشحن.
+  - مكرر ← ملغي مكرر.
+  - مؤجل ← مؤجل.
+  - أي `status_id` غير معروف يوقف التشغيل.
+- **العنوان**: كل طلب يحمل عنوانه في `Order.deliveryAddress`. الـ migration `20261021000000_order_delivery_address` يُطبَّق **قبل** الاستيراد.
+- **الأسعار**:
+  - سعر البند المسجّل هو سعر البيع. سعر المتغيّر يُستعمل فقط إذا كان البند بلا سعر. الصفر المسجّل يبقى صفراً.
+  - الإجمالي يُنقل كما سُجّل.
+  - الفروقات تظهر في المعاينة وفي `migration-report.local.json`، ولا يُصحَّح شيء.
+  - كل طلب `priceIncludesDelivery = false`، لأن التوصيل كان فوق السعر.
+- **الشحن**:
+  - «الباشا» يُربط بـ«Basha Delivery» الموجود (`PROVIDER_ALIASES`).
+  - الشركات الناقصة تُنشأ على المتجر ومعها أسعارها من `shipping_prices`.
+  - أسعار شركة موجودة لا تُلمس أبداً.
+- **مُتجاهَل**: الصور والميديا والمصاريف.
+- ⚠️ **لا تشغّل** `scripts/backfill-delivered-stock.ts` على هذا المتجر بعد الاستيراد: سيسحب مخزوناً لكل طلب قديم مسلَّم.
+- مهمة العمولات الليلية تستثني `source = 'Legacy import'`، فالعمولات القديمة دُفعت في النظام القديم.
+
 ## المخاطر
 
 | خطر | التخفيف |

@@ -123,6 +123,16 @@ describe('the jobs that may run twice', () => {
     expect(job.slice(0, job.indexOf('\n};'))).toContain('commissions: { none: {} }');
   });
 
+  it('the per-order accrual never takes imported history into its batch', () => {
+    // A legacy order never accrues (no moderator, no confirmer), so without
+    // this it stays «no commission» forever and crowds the 500-row batch.
+    const defs = read('src/lib/jobs/definitions.ts');
+    const job = defs.slice(defs.indexOf("name: 'accrue-commission'"));
+    expect(job.slice(0, job.indexOf('\n};'))).toContain("source: { not: 'Legacy import' }");
+    // the mark the job excludes is the mark the import writes
+    expect(read('scripts/migration/run.mjs')).toContain("source: 'Legacy import'");
+  });
+
   it('the period accrual checks before it writes, AND the database refuses a race', () => {
     // The check alone is a read followed by a write. The job runs hourly over
     // the same closed span, and a forced manual run bypasses the runner's

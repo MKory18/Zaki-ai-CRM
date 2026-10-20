@@ -15,6 +15,12 @@
 //   node scripts/migration/run.mjs --step orders   # one step, dry-run
 //   node scripts/migration/run.mjs --apply         # full apply (writes!)
 //   node scripts/migration/run.mjs --apply --step customers
+//   node scripts/migration/run.mjs --orders-only --store-id <uuid>          # into an existing store, dry-run
+//   node scripts/migration/run.mjs --orders-only --store-id <uuid> --apply  # writes!
+//
+// The dry-run prints the status distribution and the price check (orders
+// whose recorded money disagrees with itself or the courier fee table);
+// details go to migration-report.local.json. Nothing is corrected.
 
 import fs from 'fs';
 import path from 'path';
@@ -25,6 +31,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { loadDump, tuples, rows, dt } from './lib/dump.mjs';
 import { resolveWipeTarget, resolveStoreTarget, evaluateVerify, verifyGateNames, delegateName, missingDelegates } from './lib/safety-rules.mjs';
+import { LEGACY_STATUS, mapLegacyStatus, legacyTimestamps, resolveLinePrice, checkOrderPrices, allocateDiscount, roundMinor, normPhone } from './lib/legacy-map.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -55,19 +62,13 @@ const STORE_SLUG = 'salah-plus';
 const CURRENCY = 'USD'; // evidenced: totals 2–460, shipping 3–5; SYP would be 6+ orders of magnitude larger
 const COUNTRY_CODE = 'SY';
 
-// old status_id → [legacyStatus, confirmationStatus, shippingStatus, settlementStatus, rejectionReason]
-const STATUS_MAP = {
-  2:  ['NEW',           'NEW',       'NOT_READY',         'NOT_APPLICABLE', null],
-  4:  ['SHIPPED',       'CONFIRMED', 'SHIPPED',           'PENDING',        null],
-  5:  ['DELIVERED',     'CONFIRMED', 'DELIVERED',         'COLLECTED',      null],
-  6:  ['CANCELLED',     'CANCELLED', 'CANCELLED',         'CANCELLED',      null],
-  8:  ['POSTPONED',     'POSTPONED', 'NOT_READY',         'NOT_APPLICABLE', null],
-  9:  ['VOIDED',        'REJECTED',  'NOT_READY',         'NOT_APPLICABLE', 'DUPLICATE_ORDER'],
-  12: ['DELIVERED',     'CONFIRMED', 'DELIVERED',         'COLLECTED',      null],
-  13: ['RETURNED',      'CONFIRMED', 'RETURNED',          'REFUNDED',       null],
-  15: ['WAITING_RETURN','CONFIRMED', 'FAILED_DELIVERY',   'PENDING',        null],
-  16: ['CANCELLED',     'CANCELLED', 'CANCELLED',         'CANCELLED',      'OTHER'],
-};
+// old status_id → new fields: LEGACY_STATUS in lib/legacy-map.mjs (the
+// owner's ruling of 2026-10-21, held by src/lib/legacy-map.test.ts).
+
+// A legacy courier that IS a courier the store already runs, under another
+// name. Matched by the live provider's code so the import links to it
+// instead of raising a twin — and a live courier's fee table is never written.
+const PROVIDER_ALIASES = { 'الباشا': 'BASHA' };
 
 const STAFF_ROLE_MAP = { 'super-admin': 'SUPER_ADMIN', manager: 'MANAGER', seller: 'MODERATOR' };
 
@@ -86,16 +87,6 @@ function saveIdmap(m) { fs.writeFileSync(IDMAP_PATH, JSON.stringify(m, null, 1))
 function saveReport() {
   fs.writeFileSync(REPORT_PATH, JSON.stringify({ dryRun: DRY_RUN, at: now().toISOString(), ...stats }, null, 1));
   log('\nreport →', REPORT_PATH);
-}
-
-/** Normalize a legacy phone to the SY national form used by Customer.phone. */
-function normPhone(raw) {
-  if (!raw) return null;
-  let d = String(raw).replace(/\D/g, '');
-  if (d.startsWith('00')) d = d.slice(2);
-  while (d.startsWith('0')) d = d.slice(1);
-  if (!d) return null;
-  return d; // national digits, no trunk zero — matches src/lib/phone-rules SY national number
 }
 
 async function getSalahContext() {
@@ -407,8 +398,11 @@ async function stepCustomers(ctx, dump) {
   }
   log('distinct customer phones:', people.size);
 
-  const regionNameById = new Map((ctx.regions || []).map((r) => [r.id, r.name]));
-  const existing = await prisma.customer.findMany({ where: { companyId: ctx.company.id }, select: { phone: true } });
+  // keyed by the LEGACY region id — the ids collected above are legacy ones,
+  // and a map keyed by the new ids left every imported customer's city empty
+  const regionNameById = new Map(rows(dump, 'regions').map((r) => [r.id, r.name]));
+  // a customer is unique per store (schema @@unique [companyId, storeId, phone])
+  const existing = await prisma.customer.findMany({ where: { companyId: ctx.company.id, storeId: ctx.store?.id ?? null }, select: { phone: true } });
   const have = new Set(existing.map((c) => c.phone));
   const batch = [];
   for (const [ph, cur] of people) {
@@ -448,6 +442,10 @@ async function stepProducts(ctx, dump) {
     if (exists) { bump('products_existing'); continue; }
     const v = variants.get(p.id);
     const cost = parseFloat(v?.cost ?? p.cost ?? 0);
+    // the price is the variant's (every legacy product has one default
+    // variant); the product row's own price only when there is none.
+    // image_path and media are not carried — the files never left the old host.
+    const price = parseFloat(v?.price ?? p.price ?? 0);
     const invQty = inventory.has(p.id) ? inventory.get(p.id) : parseInt(p.quantity);
     let qty = isNaN(invQty) ? 0 : invQty;
     if (qty < 0) { warn(`product ${p.id} (${p.name}): negative stock ${qty} clamped to 0`); qty = 0; }
@@ -457,7 +455,7 @@ async function stepProducts(ctx, dump) {
         name: (p.name || `منتج ${p.id}`).trim(), sku,
         description: p.description || null,
         sourceType: 'PURCHASED', status: 'ACTIVE',
-        basePrice: parseFloat(p.price), categoryId: ctx.categoryMap.get(p.category_id) || null,
+        basePrice: price, categoryId: ctx.categoryMap.get(p.category_id) || null,
         createdAt: dt(p.created_at) || now(),
       },
     });
@@ -493,26 +491,84 @@ async function stepOffers(ctx, dump) {
   log('offers created:', stats.counters.offers_created || 0);
 }
 
-/** Step: orders — orders + items + statuses + money. */
+function itemsByOrderOf(dump) {
+  const m = new Map();
+  for (const it of tuples(dump, 'order_items')) (m.get(it.order_id) || m.set(it.order_id, []).get(it.order_id)).push(it);
+  return m;
+}
+
+/** legacy courier × region → its shipping_prices fee */
+function tableFeesOf(dump) {
+  return new Map(rows(dump, 'shipping_prices').map((f) => [`${f.shipping_id}|${f.region_id}`, parseFloat(f.price)]));
+}
+
+/** Step: prices — read every order's recorded money against itself and the
+ * courier fee table. Dump only, writes nothing, runs in the dry-run too.
+ * Nothing is corrected: the report is for a person to read. */
+async function stepPrices(ctx, dump) {
+  const variants = new Map(rows(dump, 'variants').map((v) => [v.id, v]));
+  const addrById = new Map(rows(dump, 'addresses').map((a) => [a.id, a]));
+  const fees = tableFeesOf(dump);
+  const itemsByOrder = itemsByOrderOf(dump);
+  const byCode = {}, byStatus = {}, examples = {};
+  let checked = 0, clean = 0, totalDrift = 0;
+  for (const o of tuples(dump, 'orders')) {
+    const m = mapLegacyStatus(o.status_id); // an unknown status stops the run here, before any write
+    byStatus[`${o.status_id} → ${m.label}`] = (byStatus[`${o.status_id} → ${m.label}`] || 0) + 1;
+    const items = itemsByOrder.get(o.id) || [];
+    const lines = items.map((it) => ({ price: resolveLinePrice(it.price, variants.get(it.variant_id)?.price).price, quantity: it.quantity }));
+    const addr = addrById.get(o.address_id);
+    const fee = addr ? fees.get(`${o.shipping_id}|${addr.region_id}`) ?? null : null;
+    const issues = checkOrderPrices(o, lines, fee);
+    checked++;
+    if (!issues.length) { clean++; continue; }
+    for (const i of issues) {
+      byCode[i.code] = (byCode[i.code] || 0) + 1;
+      (examples[i.code] ||= []).push({ order: `SY-${String(o.id).padStart(6, '0')}`, legacyStatus: m.label, ...i });
+      if (i.code === 'TOTAL_NE_FORMULA') totalDrift += i.actual - i.expected;
+    }
+  }
+  log('status distribution:');
+  for (const [k, v] of Object.entries(byStatus)) log(`  ${k.padEnd(48)} ${v}`);
+  log(`price check: ${checked} orders, ${clean} clean`);
+  const NAMES = {
+    TOTAL_NE_FORMULA: 'الإجمالي ≠ المجموع − الخصم + الشحن',
+    LINES_NE_SUBTOTAL: 'مجموع البنود ≠ المجموع الفرعي',
+    LINE_PRICE_ZERO: 'بند بسعر صفر',
+    NEGATIVE_TOTAL: 'إجمالي سالب',
+    SHIPPING_NE_TABLE: 'الشحن ≠ جدول أسعار الشركة',
+    SHIPPING_MISSING: 'الشحن فارغ',
+  };
+  for (const [code, n] of Object.entries(byCode)) log(`  ⚠ ${String(n).padStart(5)}  ${NAMES[code] || code}`);
+  if (byCode.TOTAL_NE_FORMULA) log(`    recorded totals exceed the formula by ${totalDrift.toFixed(2)} ${CURRENCY} in all — imported AS RECORDED`);
+  stats.priceCheck = { checked, clean, byCode, byStatus, totalDrift: Math.round(totalDrift * 100) / 100, orders: examples };
+}
+
+/** Step: orders — orders + items + statuses + money + the address each went to. */
 async function stepOrders(ctx, dump) {
+  const addrById = new Map(rows(dump, 'addresses').map((a) => [a.id, a]));
   if (DRY_RUN) {
     const assign = {};
     for (const r of tuples(dump, 'auth_assignment')) assign[r.user_id] = true;
     const custPhones = new Set();
     for (const a of tuples(dump, 'addresses')) { const p = normPhone(a.phone); if (p) custPhones.add(p); }
     for (const u of tuples(dump, 'users')) { if (assign[u.id]) continue; const p = normPhone(u.phone); if (p) custPhones.add(p); }
-    const addrById = new Map(rows(dump, 'addresses').map((a) => [a.id, a]));
-    let resolvable = 0, unresolvable = 0;
+    let resolvable = 0, unresolvable = 0, withAddress = 0;
     for (const o of tuples(dump, 'orders')) {
       const a = o.address_id ? addrById.get(o.address_id) : null;
       const ph = a ? normPhone(a.phone) : null;
       if (ph && custPhones.has(ph)) resolvable++; else unresolvable++;
+      if (a?.address?.trim()) withAddress++;
     }
-    log('[dry] orders resolvable to a customer:', resolvable, '| unresolvable:', unresolvable);
+    log('[dry] orders resolvable to a customer:', resolvable, '| unresolvable:', unresolvable, '| with a delivery address:', withAddress);
+    if (ctx.store?.id) {
+      const already = await prisma.order.count({ where: { storeId: ctx.store.id, source: 'Legacy import' } });
+      if (already) log(`[dry] ⚠ ${already} legacy orders ALREADY in this store — they are skipped, NOT re-mapped. Re-mapping them is a separate decision.`);
+    }
     return;
   }
-  // indexes
-  const customers = await prisma.customer.findMany({ where: { companyId: ctx.company.id }, select: { id: true, phone: true } });
+  // indexes — customers of THIS store (unique per store)
+  const customers = await prisma.customer.findMany({ where: { companyId: ctx.company.id, storeId: ctx.store?.id ?? null }, select: { id: true, phone: true } });
   const custByPhone = new Map(customers.map((c) => [c.phone, c.id]));
   const products = await prisma.product.findMany({ where: { companyId: ctx.company.id }, select: { id: true, sku: true, name: true } });
   const prodBySku = new Map(products.map((p) => [p.sku, p]));
@@ -521,50 +577,48 @@ async function stepOrders(ctx, dump) {
   const legacyUserEmail = new Map();
   for (const u of tuples(dump, 'users')) if (u.email) legacyUserEmail.set(u.id, u.email);
   const userByLegacyEmail = new Map(staffUsers.map((u) => [u.email, u.id]));
+  // who «counted» a legacy return back in — the receipt needs a name, and
+  // nobody at this desk did; the platform admin stands for the old system
+  const receiver = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' }, orderBy: { createdAt: 'asc' }, select: { id: true } });
+  if (!receiver) throw new Error('no SUPER_ADMIN user to sign the legacy return receipts');
 
-  // legacy address id → {phone, regionId}
-  const addrById = new Map();
-  for (const a of tuples(dump, 'addresses')) addrById.set(a.id, a);
-
-  const orderItemsByOrder = new Map();
-  for (const it of tuples(dump, 'order_items')) {
-    (orderItemsByOrder.get(it.order_id) || orderItemsByOrder.set(it.order_id, []).get(it.order_id)).push(it);
-  }
+  const variants = new Map(rows(dump, 'variants').map((v) => [v.id, v]));
+  const fees = tableFeesOf(dump);
+  const orderItemsByOrder = itemsByOrderOf(dump);
+  const minorUnit = ctx.country?.minorUnit ?? 2;
 
   const existingOrders = new Set((await prisma.order.findMany({ where: { companyId: ctx.company.id }, select: { orderNumber: true } })).map((o) => o.orderNumber));
 
-  let created = 0, skipped = 0, noCustomer = 0;
-  const createdOrderIds = [];
+  let created = 0, skipped = 0, noCustomer = 0, receipts = 0, feeFromTable = 0, priceFromVariant = 0;
   for (const o of tuples(dump, 'orders')) {
     const orderNumber = `SY-${String(o.id).padStart(6, '0')}`;
     if (existingOrders.has(orderNumber)) { skipped++; continue; }
-    // resolve customer
-    let custId = null;
-    const legacyUser = o.user_id ? { phone: null } : null;
-    if (o.user_id) {
-      // find legacy user's phone from dump lazily (indexed below)
-    }
     const addr = o.address_id ? addrById.get(o.address_id) : null;
     const addrPhone = addr ? normPhone(addr.phone) : null;
-    custId = addrPhone ? custByPhone.get(addrPhone) : null;
-    if (!custId && legacyUserEmail.has(o.user_id)) {
-      const staffEmail = legacyUserEmail.get(o.user_id);
-      const uid = userByLegacyEmail.get(staffEmail);
-      if (uid) { /* staff ordering? unlikely */ }
-    }
+    const custId = addrPhone ? custByPhone.get(addrPhone) : null;
     if (!custId) { noCustomer++; warn(`order ${o.id}: no customer for phone ${addrPhone}`); continue; }
 
-    const sm = STATUS_MAP[parseInt(o.status_id)] || STATUS_MAP[2];
-    const [legacyStatus, confS, shipS, settS, rejReason] = sm;
+    const sm = mapLegacyStatus(o.status_id);
     const items = orderItemsByOrder.get(o.id) || [];
     if (!items.length) { warn(`order ${o.id}: no items`); continue; }
     const first = items[0];
     const prod = prodBySku.get(`LEG-${first.product_id}`);
     if (!prod) { warn(`order ${o.id}: product ${first.product_id} missing`); continue; }
 
+    const lines = items.map((it) => {
+      const r = resolveLinePrice(it.price, variants.get(it.variant_id)?.price);
+      if (r.fromVariant) { priceFromVariant++; warn(`order ${o.id}: line ${it.id} had no price — variant price ${r.price} used`); }
+      return { it, quantity: parseInt(it.quantity), unitPrice: r.price };
+    });
+    const shares = allocateDiscount(lines, parseFloat(o.discount) || 0, minorUnit);
+
     const subtotal = parseFloat(o.sub_total) || 0;
     const discount = parseFloat(o.discount) || 0;
-    const shippingPrice = parseFloat(o.shipping_price) || 0;
+    let shippingPrice = o.shipping_price === null ? null : parseFloat(o.shipping_price);
+    if (shippingPrice === null) {
+      shippingPrice = addr ? fees.get(`${o.shipping_id}|${addr.region_id}`) ?? 0 : 0;
+      feeFromTable++; warn(`order ${o.id}: no shipping price — courier table fee ${shippingPrice} used`);
+    }
     const total = parseFloat(o.total) || 0;
     const productCost = items.reduce((s, it) => s + parseFloat(it.cost) * parseInt(it.quantity), 0);
     const netProfit = o.profit === null ? null : parseFloat(o.profit);
@@ -572,51 +626,78 @@ async function stepOrders(ctx, dump) {
     const regionId = addr && ctx.regionMap.get(addr.region_id) ? ctx.regionMap.get(addr.region_id) : null;
     const deliveryProviderId = ctx.providerMap.get(o.shipping_id) || null;
     const createdAt = dt(o.created_at) || now();
+    const updatedAt = dt(o.updated_at) || createdAt;
+    const stamps = legacyTimestamps(sm, createdAt, updatedAt);
 
-    const delivered = shipS === 'DELIVERED';
-    const returned = shipS === 'RETURNED';
+    const delivered = sm.shippingStatus === 'DELIVERED';
+    const returned = sm.shippingStatus === 'RETURNED';
+    const qty = lines.reduce((s, l) => s + l.quantity, 0);
 
     const orderData = {
       id: uuid(), companyId: ctx.company.id, orderNumber,
+      // the courier reference every order carries — the same value the
+      // manual path writes (merchantRef = orderNumber)
+      merchantRef: orderNumber,
       customerId: custId, channelId: ctx.channel?.id ?? null,
-      productId: prod.id, quantity: items.reduce((s, it) => s + parseInt(it.quantity), 0),
-      sellingPrice: parseFloat(first.price), shippingCost: shippingPrice, discountAmount: discount, totalAmount: total,
+      productId: prod.id, quantity: qty,
+      sellingPrice: subtotal, shippingCost: shippingPrice, discountAmount: discount, totalAmount: total,
       currency: CURRENCY,
+      // The legacy total is subtotal − discount + shipping: delivery was ON
+      // TOP. Said per order, because the store's own default may say the
+      // opposite (the Syria store's priceIncludesDelivery is true).
+      priceIncludesDelivery: false,
       createdById: legacyUserEmail.get(o.creator_id) ? userByLegacyEmail.get(legacyUserEmail.get(o.creator_id)) || null : null,
       moderatorId: null, moderatorCommission: parseFloat(o.commission_amount) || 0,
       estimatedCostOfGoods: productCost,
       productNameSnapshot: prod.name,
-      status: legacyStatus, confirmationStatus: confS, shippingStatus: shipS, settlementStatus: settS,
-      rejectionReason: rejReason,
-      deliveryProviderId, deliveryFee: shippingPrice || null,
+      status: sm.status, confirmationStatus: sm.confirmationStatus, shippingStatus: sm.shippingStatus, settlementStatus: sm.settlementStatus,
+      rejectionReason: sm.rejectionReason,
+      ...stamps,
+      deliveryProviderId, deliveryFee: shippingPrice,
       shippingReference: o.invoice_number || null,
       subtotal, discount, shippingRevenue: shippingPrice, totalRevenue: total,
       productCost, netProfit,
-      collectedAmount: settS === 'COLLECTED' ? total : null,
+      collectedAmount: sm.collected ? total : null,
       source: 'Legacy import',
       regionId, countryId: ctx.country?.id ?? null, storeId: ctx.store.id,
+      deliveryAddress: addr?.address?.trim() || null,
       internalNotes: o.note || null,
-      createdAt, updatedAt: dt(o.updated_at) || createdAt,
+      createdAt, updatedAt,
       items: {
-        create: items.map((it) => {
+        create: lines.map(({ it, quantity: q, unitPrice }, i) => {
           const p2 = prodBySku.get(`LEG-${it.product_id}`);
-          const q = parseInt(it.quantity);
           return {
             id: uuid(), companyId: ctx.company.id, productId: p2?.id || prod.id,
             productName: p2?.name || `LEG-${it.product_id}`,
-            quantity: q, unitPrice: parseFloat(it.price), lineTotal: parseFloat(it.price) * q,
+            quantity: q, unitPrice, discountShare: shares[i], lineTotal: roundMinor(unitPrice * q - shares[i], minorUnit),
             deliveredQty: delivered ? q : null, returnedQty: returned ? q : null,
             createdAt,
           };
         }),
       },
+      // «تم استلام الطلب الملغي بدون رسوم»: the goods were counted back in and
+      // the courier charged nothing. The receipt is what closes a return
+      // (order-closing.ts) — in the same write as the order. No stock moves:
+      // a legacy sale never took stock out here, so nothing comes back in.
+      ...(sm.returnReceipt ? {
+        returnReceipt: {
+          create: {
+            companyId: ctx.company.id, expectedQty: qty, receivedQty: qty,
+            courierFeeCharged: false, courierFeeAmount: 0,
+            inspectedById: receiver.id, inspectedAt: stamps.returnedAt || updatedAt,
+            note: 'ترحيل من النظام القديم — مرتجع مستلم بدون رسوم', stockRestored: false,
+            createdAt: stamps.returnedAt || updatedAt,
+          },
+        },
+      } : {}),
     };
     await prisma.order.create({ data: orderData });
-    created++; createdOrderIds.push(orderNumber);
+    created++; if (sm.returnReceipt) receipts++;
     if (created % 2000 === 0) log(`  … ${created} orders`);
   }
-  bump('orders_created', created); bump('orders_skipped_existing', skipped);
-  log(`orders created: ${created} | skipped(existing): ${skipped} | no-customer: ${noCustomer}`);
+  bump('orders_created', created); bump('orders_skipped_existing', skipped); bump('return_receipts_created', receipts);
+  log(`orders created: ${created} | return receipts: ${receipts} | skipped(existing): ${skipped} | no-customer: ${noCustomer}`);
+  if (priceFromVariant || feeFromTable) log(`filled in: ${priceFromVariant} line price(s) from the variant, ${feeFromTable} shipping fee(s) from the courier table`);
 }
 
 /** Step: commissions — wallet_transactions → CommissionEntry (ACCRUED). */
@@ -667,7 +748,7 @@ async function stepActivity(ctx, dump) {
   const staffUsers = await prisma.user.findMany({ where: { companyId: ctx.company.id }, select: { id: true, email: true } });
   const userByEmail = new Map(staffUsers.map((u) => [u.email, u.id]));
   // legacy status id → legacyStatus string
-  const statusIdName = new Map(Object.entries(STATUS_MAP).map(([k, v]) => [k, v[0]]));
+  const statusIdName = new Map(Object.entries(LEGACY_STATUS).map(([k, v]) => [k, v.status]));
 
   const existing = new Set((await prisma.orderActivity.findMany({ where: { companyId: ctx.company.id }, select: { orderId: true, createdAt: true, action: true } })).map((a) => `${a.orderId}|${a.createdAt.toISOString()}|${a.action}`));
 
@@ -807,6 +888,33 @@ async function stepVerify(ctx, dump) {
   stats.moneySumLegacy = legacyTotalSum; stats.moneySumMigrated = Number(newTotalSum);
   stats.moneyOk = moneyOk;
 
+  // The owner's status ruling, landed: the stored (confirmation, shipping,
+  // settlement) triples of the imported rows against what LEGACY_STATUS makes
+  // of the dump, and one return receipt per «received return» — the receipt
+  // is what closes a return (order-closing.ts), so this is the «مغلق» count.
+  const expectedTriples = {};
+  let expectedReceipts = 0;
+  for (const o of tuples(dump, 'orders')) {
+    const m = mapLegacyStatus(o.status_id);
+    const k = `${m.confirmationStatus}/${m.shippingStatus}/${m.settlementStatus}`;
+    expectedTriples[k] = (expectedTriples[k] || 0) + 1;
+    if (m.returnReceipt) expectedReceipts++;
+  }
+  const gotTriples = Object.fromEntries((await prisma.order.groupBy({
+    by: ['confirmationStatus', 'shippingStatus', 'settlementStatus'],
+    where: { companyId: cid, source: LEGACY_MARK },
+    _count: { _all: true },
+  })).map((g) => [`${g.confirmationStatus}/${g.shippingStatus}/${g.settlementStatus}`, g._count._all]));
+  const receiptsMigrated = await prisma.returnReceipt.count({ where: { order: { companyId: cid, source: LEGACY_MARK } } });
+  const statusChecks = {};
+  for (const k of new Set([...Object.keys(expectedTriples), ...Object.keys(gotTriples)])) {
+    statusChecks[`status ${k}`] = [expectedTriples[k] || 0, gotTriples[k] || 0];
+  }
+  statusChecks['return_receipts'] = [expectedReceipts, receiptsMigrated];
+  log('status (confirmation/shipping/settlement)         legacy   migrated');
+  for (const [n, [a, b]] of Object.entries(statusChecks)) log(`  ${n.padEnd(46)} ${String(a).padStart(7)} ${String(b).padStart(9)}`);
+  stats.statusChecks = statusChecks;
+
   // THE GATE: the tool may not exit green while money or references disagree.
   // --orders-only answers for the orders pipeline only (orders, items,
   // products, money); everything else is out of its verdict by design.
@@ -815,7 +923,7 @@ async function stepVerify(ctx, dump) {
   const verdict = evaluateVerify({
     legacySum: legacyTotalSum,
     migratedSum: Number(newTotalSum),
-    countChecks: Object.fromEntries(checks.filter(([n]) => gate.has(n)).map(([n, a, b]) => [n, [a, b]])),
+    countChecks: { ...Object.fromEntries(checks.filter(([n]) => gate.has(n)).map(([n, a, b]) => [n, [a, b]])), ...statusChecks },
     orphanCounts: ORDERS_ONLY ? {} : { orders_without_customer: ordersNoCustomer, items_without_product: itemsNoProduct },
   });
   stats.verifyFailures = verdict.failures;
@@ -868,15 +976,54 @@ async function stepTarget(ctx, dump) {
     log(`regions: ${ctx.regionMap.size}/${rows(dump, 'regions').length} mapped under the store's country`);
   }
 
-  // delivery providers: match BY NAME only — orders-only never creates providers
-  const providers = await prisma.deliveryProvider.findMany({ where: { companyId: company.id } });
+  // delivery providers — only ones this store can use (its own, or the
+  // company-wide null-store ones): a Jordan store's courier is not Syria's.
+  // Matched by name, then by a known alias (PROVIDER_ALIASES → live code).
+  // A courier still missing is created on this store with the legacy fee
+  // table. A courier that already existed keeps ITS fees untouched: a live
+  // fee table is what tomorrow's orders are priced from.
+  const providers = await prisma.deliveryProvider.findMany({ where: { companyId: company.id, OR: [{ storeId: store.id }, { storeId: null }] } });
   const byName = new Map(providers.map((p) => [p.name, p]));
+  const byCode = new Map(providers.map((p) => [p.code, p]));
+  const allCodes = new Set((await prisma.deliveryProvider.findMany({ where: { companyId: company.id }, select: { code: true } })).map((p) => p.code));
   ctx.providerMap = new Map();
+  const createdByImport = new Set();
+  const plan = [];
   for (const s of rows(dump, 'shippings')) {
-    const p = byName.get(s.name);
-    if (p) ctx.providerMap.set(s.id, p.id);
+    let p = byName.get(s.name) || (PROVIDER_ALIASES[s.name] && byCode.get(PROVIDER_ALIASES[s.name])) || null;
+    if (p) { plan.push(`${s.name} → existing «${p.name}» (${p.code})`); ctx.providerMap.set(s.id, p.id); continue; }
+    const code = `LEG-${s.id}`;
+    if (allCodes.has(code)) throw new Error(`provider code ${code} is taken in this company by another store's courier — refusing to guess`);
+    plan.push(`${s.name} → NEW on this store (${code})`);
+    if (DRY_RUN) continue;
+    p = await prisma.deliveryProvider.create({ data: { companyId: company.id, storeId: store.id, name: s.name, code, kind: 'COMPANY', isActive: true } });
+    allCodes.add(code);
+    ctx.providerMap.set(s.id, p.id);
+    createdByImport.add(p.id);
   }
-  log(`providers matched by name: ${ctx.providerMap.size}/${rows(dump, 'shippings').length} (unmatched stay null on orders)`);
+  log('providers:');
+  for (const line of plan) log(`  ${line}`);
+
+  // legacy shipping_prices → DeliveryFee, for the couriers the import created
+  const feeRows = rows(dump, 'shipping_prices');
+  const legacyShippings = new Map(rows(dump, 'shippings').map((s) => [s.id, s]));
+  let feesMade = 0, feesWould = 0;
+  for (const f of feeRows) {
+    const legacyProvider = legacyShippings.get(f.shipping_id);
+    const isNew = DRY_RUN ? plan.some((l) => l.startsWith(`${legacyProvider?.name} → NEW`)) : createdByImport.has(ctx.providerMap.get(f.shipping_id));
+    if (!isNew) continue;
+    const regionId = ctx.regionMap.get(f.region_id);
+    if (!regionId) { warn(`shipping_price ${f.id}: region ${f.region_id} not mapped — skipped`); continue; }
+    if (DRY_RUN) { feesWould++; continue; }
+    const providerId = ctx.providerMap.get(f.shipping_id);
+    const exists = await prisma.deliveryFee.findFirst({ where: { deliveryProviderId: providerId, regionId } });
+    if (exists) continue;
+    await prisma.deliveryFee.create({ data: { companyId: company.id, countryId: country.id, deliveryProviderId: providerId, regionId, fee: parseFloat(f.price) } });
+    feesMade++;
+  }
+  log(DRY_RUN
+    ? `[dry] delivery fees that would be created for new couriers: ${feesWould} (existing couriers' fees are never touched)`
+    : `delivery fees created for new couriers: ${feesMade} (existing couriers' fees untouched)`);
 
   // channel: reuse if present, never created here
   ctx.channel = await prisma.orderChannel.findFirst({ where: { companyId: company.id, name: 'الموقع القديم' } });
@@ -903,6 +1050,7 @@ const FULL_STEPS = [
   ['customers', stepCustomers],
   ['products', stepProducts],
   ['offers', stepOffers],
+  ['prices', stepPrices],
   ['orders', stepOrders],
   ['commissions', stepCommissions],
   ['activity', stepActivity],
@@ -918,6 +1066,7 @@ const STEPS = ORDERS_ONLY
       ['target', stepTarget],
       ['customers', stepCustomers],
       ['products', stepProducts],
+      ['prices', stepPrices],
       ['orders', stepOrders],
       ['verify', stepVerify],
     ]
