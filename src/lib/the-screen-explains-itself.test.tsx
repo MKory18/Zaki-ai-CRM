@@ -95,7 +95,7 @@ describe('the index says exactly which screens have a guide', () => {
 describe('what each guide says is short, plain and in Arabic', () => {
   const entries = Object.entries(GUIDE_TEXTS);
   // Letters of the Latin alphabet that are names of things on the screen or in the trade.
-  const LATIN_OK = /\b(QR|CSV|Excel|SKU)\b/g;
+  const LATIN_OK = /\b(QR|CSV|Excel|SKU|WhatsApp)\b/g;
 
   it.each(entries)('%s', (path, g) => {
     expect(g.steps.length, `${path}: عدد الخطوات`).toBeGreaterThanOrEqual(2);
@@ -410,6 +410,34 @@ describe('the stop after this one', () => {
       fireEvent.click(within(dialog).getByRole('link', { name: /التالي/ }));
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+// ───────────────────────── a new screen cannot skip it ─────────────────────────
+
+describe('a screen cannot be added to the menu without explaining itself', () => {
+  const storefront = NAV.find((g) => g.key === 'storefront')!.routes.map((r) => r.path);
+  /** Waiting on something else; the day that arrives, its entry is deleted from here. */
+  const WAITING: Record<string, string> = {
+    '/dashboard': 'قسم «شغلك اليوم» فيها دفعة لحالها، وشرحُها يُكتب معه',
+  };
+  /** Draws no title at all (neither PageHeader nor ScreenTitle), so there is nowhere to put the button. */
+  const NO_TITLE = ['/settings/tracking'];
+
+  it('— every screen of the menu has a guide, except the ones named here, and each exception says why', () => {
+    const exempt = new Set([...storefront, ...Object.keys(WAITING), ...NO_TITLE]);
+    const want = ALL_ROUTES.map((r) => r.path).filter((p) => !exempt.has(p)).sort();
+    expect([...GUIDED_PATHS].sort(), 'شاشة بلا شرح — اكتبه أو سمِّها استثناءً مع سببه').toEqual(want);
+    for (const [path, why] of Object.entries(WAITING)) expect(why.length, `${path}: بلا سبب`).toBeGreaterThan(10);
+  });
+
+  it('and a screen excused for having no title still has none — the day it gets one it needs its guide', () => {
+    for (const path of NO_TITLE) {
+      const page = pageFileFor(path);
+      expect(page, `${path}: ما لقيت صفحة`).not.toBeNull();
+      const source = closure(page!).join('\n');
+      expect(/<PageHeader\b|<ScreenTitle\b/.test(source), `${path}: صار له عنوان — اكتب شرحه`).toBe(false);
+    }
   });
 });
 
