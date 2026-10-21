@@ -281,6 +281,7 @@ export function CommissionSettingsScreen() {
               <EmptyState
                 title="لا قواعد عمولة بعد"
                 why="بلا قاعدةٍ لا تُحتسب عمولةٌ لأحد، مهما سُلِّم من طلبات. أضِف واحدةً من الزرّ أعلاه."
+                action={{ label: 'أضف أول قاعدة', onClick: () => setNewOpen(true) }}
               />
             }
           />

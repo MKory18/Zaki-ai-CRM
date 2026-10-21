@@ -362,6 +362,8 @@ export function WalletsScreen() {
                   <EmptyState
                     title="لا حركاتٍ على هذه المحفظة"
                     why="كلُّ تحصيلٍ وصرفٍ وتحويلٍ يكتب حركةً هنا. فراغُها يعني أنّ المحفظة لم يمرّ بها مال بعد."
+                    // The header's button is disabled for a stopped wallet; so is this one — absent, rather.
+                    action={wallet?.isActive ? { label: 'سجّل أول حركة', onClick: () => setRecordOpen(true) } : undefined}
                   />
                 }
                 actions={(m) => (
