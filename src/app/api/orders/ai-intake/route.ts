@@ -9,10 +9,11 @@ import { orderRefFields } from '@/lib/order-ref';
 import { resolveRegionId } from '@/lib/regions';
 import { computeCod, roundMinor } from '@/lib/money';
 import { priceIncludesDeliveryFor } from '@/lib/delivery-fees';
-import { count, money as amount } from '@/lib/numeric-input';
+import { count, money as amount, readTypedFigure } from '@/lib/numeric-input';
 import { productCost } from '@/lib/product-cost';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { toLatinDigits } from '@/lib/latin-digits';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
@@ -80,15 +81,24 @@ async function aiAssistedParse(
     // A local model fences its JSON more often than a vendor does.
     const clean = answer.replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
     const parsed = JSON.parse(clean);
+    /*
+     * THE NUMBERS COME OUT OF THE MODEL IN WHATEVER DIGITS IT FELT LIKE — and are made Latin HERE, in code.
+     *
+     * The owner, 22/10: «ارقام الهواتف بالادخال بال ai حولها برمجيا من عربي لانجليزي». A model that was shown «٠٧٩١٢٣٤٥٦٧» answers
+     * with «٠٧٩١٢٣٤٥٦٧» as often as not, and `parseInt('٣', 10)` is NaN — so «الكمية: ٣» silently became a quantity of ONE.
+     * The phone, the quantity and the price are converted before they are parsed or returned, whatever the model wrote.
+     */
     return {
       parsed: {
         customerName: parsed.customerName || '',
-        phone: parsed.phone || '',
+        phone: toLatinDigits(String(parsed.phone ?? '')).trim(),
         governorate: parsed.governorate || '',
         address: parsed.address || '',
         productQuery: parsed.productQuery || '',
-        quantity: parseInt(parsed.quantity, 10) || 1,
-        price: parsed.price != null ? Number(parsed.price) : null,
+        quantity: parseInt(toLatinDigits(String(parsed.quantity ?? '')), 10) || 1,
+        // The house reader: Arabic-Indic digits are read, and anything that is not written the way a number is written is NO price
+        // (`Number('')` was a price of zero, and `Number('0x10')` was sixteen).
+        price: parsed.price != null ? readTypedFigure(parsed.price) : null,
         notes: parsed.notes || '',
         source: parsed.source || '',
       },
@@ -156,10 +166,12 @@ export async function POST(req: Request) {
         );
       }
 
-      const normalizedPhone = normalizePhoneNumber(p.phone);
+      // What the reviewer's box held may still be Arabic-Indic digits (they can type them): stored and checked as Latin.
+      const phone = toLatinDigits(p.phone);
+      const normalizedPhone = normalizePhoneNumber(phone);
 
       // Blacklist, company-wide. Staff get the real reason.
-      const block = await activeBlock(db, companyId, p.phone);
+      const block = await activeBlock(db, companyId, phone);
       if (block) {
         return NextResponse.json(
           { error: `هذا الرقم محظور: ${block.reason}`, code: 'CUSTOMER_BLOCKED', blockId: block.id },
@@ -172,7 +184,7 @@ export async function POST(req: Request) {
         companyId,
         storeId,
         phone: normalizedPhone,
-        rawPhone: p.phone.trim(),
+        rawPhone: phone,
         fullName: p.customerName.trim(),
         address: p.address?.trim() || '',
         city: p.governorate?.trim() || '',

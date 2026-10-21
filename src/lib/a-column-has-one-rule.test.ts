@@ -1281,17 +1281,19 @@ describe('every bare Number() on money or a count is accounted for', () => {
    *
    * `order-parser.ts` reads a price out of a pasted order message with
    * `parseFloat(value.replace(',', '.'))`, and `value` is the capture of
-   * `/([0-9]+(?:[.,][0-9]+)?)/`. The replace therefore CANNOT delete
-   * anything: the only characters in the string are ASCII digits and one
-   * separator, and swapping that separator for a point is a translation of
-   * an already-checked shape rather than a strip of an unknown one. Which is
-   * the exact difference from the importer: there the class deleted
-   * characters nobody had checked for, and Arabic-Indic digits were among
-   * them.
+   * `/([0-9٠-٩۰-۹]+(?:[.,٫][0-9٠-٩۰-۹]+)?)/` AFTER `latinFigure` has
+   * translated it digit for digit (and «٫» to «.») — 22/10, when the owner
+   * asked for the digits of an AI entry to be made Latin in code. The replace
+   * therefore CANNOT delete anything: the only characters in the string are
+   * digits and one separator, and swapping that separator for a point is a
+   * translation of an already-checked shape rather than a strip of an unknown
+   * one. Which is the exact difference from the importer: there the class
+   * deleted characters nobody had checked for, and Arabic-Indic digits were
+   * among them — here they are translated, never dropped.
    */
   const REWRITES_WITH_A_REASON: Record<string, string> = {
     "src/lib/order-parser.ts: parseFloat(value.replace(',', '.'))":
-      'الخليّةُ فُحِصَت قبلَ الاستبدال: value هو التقاطُ ‎/([0-9]+(?:[.,][0-9]+)?)/‎ فلا يحوي إلّا أرقاماً لاتينيّةً وفاصلاً واحداً، واستبدالُ الفاصلِ بنقطةٍ ترجمةُ شكلٍ مُتحقَّقٍ منه لا حشوُ شكلٍ مجهول — ولا يمكنه حذفَ محرفٍ واحدٍ لأنّ ما عداه لم يُلتَقَطْ أصلاً',
+      'الخليّةُ فُحِصَت قبلَ الاستبدال: value هو التقاطُ ‎/([0-9٠-٩۰-۹]+(?:[.,٫][0-9٠-٩۰-۹]+)?)/‎ تُرجِمَت أرقامُه إلى اللاتينيّة رقماً برقمٍ وفاصلُه العربيُّ إلى نقطةٍ (`latinFigure`) فلا يحوي إلّا أرقاماً لاتينيّةً وفاصلاً واحداً، واستبدالُ الفاصلِ بنقطةٍ ترجمةُ شكلٍ مُتحقَّقٍ منه لا حشوُ شكلٍ مجهول — ولا يمكنه حذفَ محرفٍ واحدٍ لأنّ ما عداه لم يُلتَقَطْ أصلاً',
   };
 
   it('and the sweep over the whole tree holds no unclassified rewrite', () => {
@@ -1351,7 +1353,7 @@ describe('every bare Number() on money or a count is accounted for', () => {
    */
   const TWO_STEP_CLASSIFIED: Record<string, string> = {
     'src/lib/order-parser.ts: parseInt(value,':
-      'الاستبدالُ هنا يُزيلُ قوسين محيطين فقط من التقاطِ ‎/([0-9]+)/‎ — شكلٌ فُحِصَ قبلَه فلا يُحذَفُ منه محرفٌ ذو معنى، وما يُنتِجُه يَمُرُّ بمخطَّطِ باب ai-intake قبل الكتابة',
+      'الاستبدالُ هنا يُزيلُ قوسين محيطين فقط من التقاطِ أرقامٍ (‎/([0-9٠-٩۰-۹]+)/‎ — تُترجَمُ إلى اللاتينيّة رقماً برقمٍ قبل الاستبدال) — شكلٌ فُحِصَ قبلَه فلا يُحذَفُ منه محرفٌ ذو معنى، وما يُنتِجُه يَمُرُّ بمخطَّطِ باب ai-intake قبل الكتابة',
   };
 
   it('and every two-step strip in the tree is named, with its reason', () => {
