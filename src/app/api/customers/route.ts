@@ -10,6 +10,7 @@ import { logAudit, redactCustomerForAudit } from '@/lib/audit';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { readLimit, readPage } from '@/lib/numeric-input';
 import { customerFacts } from '@/lib/customer-insights';
+import { customerFilters } from '@/lib/customer-filters';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { typed } from '@/lib/text-search';
 
@@ -90,7 +91,11 @@ export async function GET(req: Request) {
 
     // This store's customers. The stores are separate businesses: one
     // store's complaint about a person is not the other's to read.
-    const whereClause: any = { companyId, ...(storeId ? { storeId } : {}) };
+    //
+    // THE BOOK, before anything the reader typed or chose: who this person
+    // may see at all. The figures above the list are counted over exactly
+    // this, so a filter can narrow the list and never the figures.
+    const bookWhere: any = { companyId, ...(storeId ? { storeId } : {}) };
 
     // OWN scope means the customers this person actually brought in: the
     // ones with at least one order they are the moderator of. A customer
@@ -98,8 +103,24 @@ export async function GET(req: Request) {
     // derived here rather than stored, the same way the order state is.
     const scope = getPermissionScope(user, canViewFull ? 'customers.view' : 'customers.view_basic');
     if (scope?.scope === 'OWN') {
-      whereClause.orders = { some: { companyId, moderatorId: user.id } };
+      bookWhere.orders = { some: { companyId, moderatorId: user.id } };
     }
+
+    /*
+     * THE FILTERS: القائمة بحسب فئة العميل أو محافظته، وبترتيبٍ يختاره القارئ.
+     *
+     * Added on top of the book, never instead of it — the scope above is
+     * already inside `bookWhere`, so no combination of parameters can reach
+     * a customer the scope hides. And the limited view (`view_basic`) gets
+     * none of them: a filter by refusals or a sort by purchase value would
+     * show it the history it is deliberately not shown. See
+     * `customer-filters.ts`; an unknown value is a 400, not a guess.
+     */
+    const filters = customerFilters(searchParams, { full: canViewFull, now: new Date() });
+    if (!filters.ok) {
+      return NextResponse.json({ error: filters.error, errorAr: filters.errorAr }, { status: 400 });
+    }
+    const whereClause: any = { ...bookWhere, ...filters.where };
 
     if (search) {
       const normalizedSearch = normalizePhoneNumber(search);
@@ -132,8 +153,11 @@ export async function GET(req: Request) {
        * first, recency second, and the id so a page is a place and not a
        * shuffle: equal counters and equal timestamps can still be told
        * apart, so the «التالي» of one reader never hands him another's.
+       *
+       * That is the DEFAULT. The reader may ask for another (`sort=`), and
+       * every one of them still ends in the id for the same reason.
        */
-      orderBy: [{ totalOrders: 'desc' }, { updatedAt: 'desc' }, { id: 'asc' }],
+      orderBy: filters.orderBy,
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -145,7 +169,9 @@ export async function GET(req: Request) {
      * that counted those would change every time somebody typed, and
      * «١٦٧ عميلاً طلبوا» would silently become «٣ من نتائج بحثك». So the
      * counts are taken over everything this person may see, with the
-     * search dropped and only the counters selected.
+     * search and the filters dropped (`bookWhere`) and only the counters
+     * selected. The same figures print the number beside each filter, so
+     * the count on «رفضوا طرداً (3)» is the book's, whatever is selected.
      *
      * Withheld from the limited projection on purpose: an agent who may
      * not see a customer's history may not see the history of all of them
@@ -154,7 +180,7 @@ export async function GET(req: Request) {
     const facts = canViewFull
       ? customerFacts(
           await db.customer.findMany({
-            where: { ...whereClause, OR: undefined },
+            where: bookWhere,
             select: {
               city: true,
               totalOrders: true,

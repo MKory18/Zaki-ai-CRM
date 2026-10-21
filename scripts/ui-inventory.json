@@ -720,12 +720,12 @@
     "tabs": 0
   },
   "src/components/screens/CustomersScreen.tsx": {
-    "buttons": 5,
-    "inputs": 7,
+    "buttons": 6,
+    "inputs": 10,
     "columns": 5,
     "cards": 0,
     "modals": 2,
-    "icons": 5,
+    "icons": 6,
     "links": 0,
     "tabs": 0
   },

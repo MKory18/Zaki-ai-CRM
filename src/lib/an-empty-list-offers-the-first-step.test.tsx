@@ -137,8 +137,9 @@ const { APP, REGIONS } = vi.hoisted(() => ({
 }));
 vi.mock('@/context/AppContext', () => ({ useApp: () => APP }));
 vi.mock('@/hooks/useRegions', () => ({ useRegions: () => REGIONS }));
-// `ScreenTitle` reads the address to find the screen's own name.
-vi.mock('next/navigation', () => ({ usePathname: () => '/control/blacklist' }));
+// `ScreenTitle` reads the address to find the screen's own name; and the customers screen reads what points at it
+// (`?search=`, `?segment=`) once, at the start — an address with nothing in it here.
+vi.mock('next/navigation', () => ({ usePathname: () => '/control/blacklist', useSearchParams: () => new URLSearchParams() }));
 vi.mock('@/components/growth/AskAi', () => ({ AskAi: () => null }));
 
 import { BlacklistScreen } from '@/components/screens/BlacklistScreen';
