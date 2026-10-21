@@ -19,7 +19,7 @@ const { api } = vi.hoisted(() => ({ api: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => api(...a) }));
 
 import { Pager } from './Pager';
-import { ListToolbar } from './ListToolbar';
+import { ListToolbar, withChosen } from './ListToolbar';
 import { usePagedList, type PagedRead } from '@/hooks/usePagedList';
 
 beforeEach(() => {
@@ -170,6 +170,54 @@ describe('the toolbar', () => {
   it('and it carries no state of its own — what is chosen is the screen’s, drawn back', () => {
     const src = stripComments(repoFile('src/components/ui/ListToolbar.tsx'));
     expect(src).not.toMatch(/useState|useReducer/);
+  });
+
+  describe('for a desk that scans', () => {
+    const bare = (extra: Partial<React.ComponentProps<typeof ListToolbar>> = {}) =>
+      render(<ListToolbar search="" onSearch={() => undefined} placeholder="بحث" filters={[]} activeCount={0} onReset={() => undefined} {...extra} />);
+
+    it('— a screen that asks for none of it gets the box as it always was: no cursor in it, no direction of its own, no button', () => {
+      bare();
+      const box = screen.getByRole('textbox', { name: 'بحث' }) as HTMLInputElement;
+      expect(box.getAttribute('dir')).toBeNull();
+      expect(document.activeElement).not.toBe(box);
+      expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('and one that scans puts the cursor in the box, makes it left-to-right for codes, and draws its button beside it', () => {
+      bare({ searchExtra: <button type="button">امسح</button>, searchAutoFocus: true, searchDir: 'ltr' });
+      const box = screen.getByRole('textbox', { name: 'بحث' });
+      expect(box.getAttribute('dir')).toBe('ltr');
+      expect(document.activeElement).toBe(box);
+      expect(screen.getByRole('button', { name: 'امسح' })).toBeTruthy();
+    });
+
+    it('and the box and its button share one row — the button is not on a line of its own', () => {
+      bare({ searchExtra: <button type="button">امسح</button> });
+      const row = screen.getByRole('button', { name: 'امسح' }).parentElement!;
+      expect(row.className).toContain('flex');
+      expect(row.contains(screen.getByRole('textbox', { name: 'بحث' }))).toBe(true);
+    });
+  });
+});
+
+// ───────────────────────── the chosen value stays in its box ─────────────────────────
+
+describe('a chosen value is always in its box', () => {
+  const options = [
+    { value: 'all', label: 'كل الشركات' },
+    { value: 'a', label: 'ناقل (3)' },
+  ];
+
+  it('— left as it is while the counts still hold it, or while it is «all» — even from a list that forgot to name «all»', () => {
+    expect(withChosen('a', options)).toBe(options);
+    expect(withChosen('all', options)).toBe(options);
+    const forgot = [{ value: 'a', label: 'ناقل (3)' }];
+    expect(withChosen('all', forgot)).toBe(forgot);
+  });
+
+  it('and a value the new counts have lost stays in the list, last, with a zero — the box never snaps back behind the reader', () => {
+    expect(withChosen('gone', options)).toEqual([...options, { value: 'gone', label: 'gone (0)' }]);
   });
 });
 

@@ -26,13 +26,26 @@ import { repoFile, stripComments } from './guard-source';
 
 const route = () => stripComments(repoFile('src/app/api/ops/returns/route.ts'));
 const screen = () => stripComments(repoFile('src/components/screens/ReturnsScreen.tsx'));
+/*
+ * THE PAGE ARITHMETIC MOVED, AND THESE PINS WENT WITH IT.
+ *
+ * The door used to count, clamp and take the page inline, and the screen used to carry its own loader, its own
+ * page ref and its own pager. «صفحات + فلاتر + بحث» wrote all of that four times, so it is written once now:
+ * `readOrderPage` (lib/paged-read.ts) for the door, `usePagedList` and `Pager` for the screen. What these
+ * claims say is unchanged — no ceiling, one question for the count and the rows, a clamped page, a pager only
+ * when there is a second page; where each is HELD is `paged-read.test.ts` and `the-list-kit.test.tsx`, which
+ * run it, and `the-returns-screen-filters-and-finds.test.tsx`, which turns the pages on screen.
+ */
+const reader = () => stripComments(repoFile('src/lib/paged-read.ts'));
+const hook = () => stripComments(repoFile('src/hooks/usePagedList.ts'));
 
 describe('the returns door hands out pages', () => {
   it('— and no longer cuts the list at a number nobody could see past', () => {
     const src = route();
     expect(src, 'السقف الثابت رجع').not.toMatch(/take:\s*200/);
-    expect(src).toMatch(/skip:\s*\(page - 1\) \* limit/);
-    expect(src).toMatch(/take:\s*limit/);
+    expect(src).toContain('readOrderPage');
+    expect(reader()).toMatch(/skip:\s*\(page - 1\) \* input\.limit/);
+    expect(reader()).toMatch(/take:\s*input\.limit/);
   });
 
   it('and reads the page through the shared readers, like every other paged door', () => {
@@ -50,10 +63,11 @@ describe('the returns door hands out pages', () => {
   it('and the count asks the same question as the rows', () => {
     // One named predicate, both readers — or the heading is a fact about
     // a different list than the one under it.
-    const src = route();
-    expect(src).toMatch(/const listWhere = \{/);
-    expect(src).toMatch(/count\(\{ where: listWhere \}\)/);
-    expect(src).toMatch(/findMany\(\{\s*where: listWhere/);
+    // The door hands ONE `where` to the reader, and the reader hands that same object to both calls.
+    expect(route()).toMatch(/const where = \{ \.\.\.viewScope\(parsed\.view, scope\), AND: parsed\.clauses \}/);
+    expect(route()).toMatch(/readOrderPage<.*>\(db, \{\s*where,/);
+    expect(reader()).toMatch(/count\(\{ where: input\.where \}\)/);
+    expect(reader()).toMatch(/findMany\(\{\s*where: input\.where/);
   });
 
   it('and a page past the end is clamped, not answered with emptiness', () => {
@@ -62,12 +76,12 @@ describe('the returns door hands out pages', () => {
      * worked down. An empty screen reads as «there are no returns», which
      * is a lie about the three on page 3.
      */
-    expect(route()).toMatch(/Math\.min\(readPage\(searchParams\), totalPages\)/);
+    expect(reader()).toMatch(/Math\.min\(Math\.max\(input\.page, 1\), totalPages\)/);
   });
 
   it('and says how many there are, not only how many are on this page', () => {
     const src = route();
-    expect(src).toMatch(/pagination: \{ total, page, limit, totalPages \}/);
+    expect(src).toMatch(/pagination: \{ total: list\.total, page: list\.page, limit: list\.limit, totalPages: list\.totalPages \}/);
     // `count` stays: it is what is ON the page, a different fact.
     expect(src).toMatch(/count: orders\.length/);
   });
@@ -77,8 +91,8 @@ describe('and the screen turns them', () => {
   it('— the clerk can reach page two', () => {
     const src = screen();
     expect(src).toContain('pagination.totalPages');
-    expect(src).toMatch(/load\(pagination\.page \+ 1\)/);
-    expect(src).toMatch(/load\(pagination\.page - 1\)/);
+    // The bar's two arrows call back with the page they want; the screen hands it the hook's `goTo`.
+    expect(src).toContain('onPage={list.goTo}');
   });
 
   it('and the arrows are drawn only when there IS a second page', () => {
@@ -94,15 +108,15 @@ describe('and the screen turns them', () => {
      * page they are ON, or a clerk reading page three is thrown to the
      * top every time they look away.
      */
-    const src = screen();
-    expect(src).toMatch(/pageRef\.current = 1;/);
-    expect(src).toMatch(/useLiveRefresh\(\(\) => loadRef\.current\(pageRef\.current\), \{ key: term \}\)/);
+    // Both answers are the hook's: a change of choice starts at page one, and coming back reloads the page you are on.
+    expect(screen()).toContain('usePagedList');
+    expect(hook()).toMatch(/setTimeout\(\(\) => void load\(1\), wait\)/);
+    expect(hook()).toMatch(/useLiveRefresh\(\(\) => loadRef\.current\(pageRef\.current\)/);
   });
 
   it('and the page it refreshes is read from a ref, not from a closure', () => {
     // The hook attaches its listeners once, so a page read through the
     // closure would be page one for ever.
-    const src = screen();
-    expect(src).toMatch(/pageRef\.current = pagination\.page;/);
+    expect(hook()).toMatch(/pageRef\.current = pagination\.page;/);
   });
 });

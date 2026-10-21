@@ -25,6 +25,14 @@ import { Select } from './Input';
  * start again at page one when it changes — see `usePagedList`) and hands it
  * back here to draw; this is a face, not a store.
  *
+ * A desk that SCANS has three more needs, each optional and each off by default:
+ * the scan button beside the box (`searchExtra` — a scan is a search typed by a
+ * camera, so it lands in the same box), the cursor already in it (`searchAutoFocus`
+ * — a hand holding a parcel has no hand free to click), and a left-to-right box
+ * (`searchDir` — a waybill is Latin, and in a right-to-left box «123-ABC» reads
+ * back to front). A screen that asks for none of them gets exactly the markup
+ * it always had.
+ *
  * Every class below is one the customers screen already carried, so the
  * stylesheet does not grow by a byte for the fifth list.
  */
@@ -41,6 +49,16 @@ export interface ToolbarFilter {
   onChange: (value: string) => void;
 }
 
+/**
+ * THE CHOSEN VALUE IS ALWAYS IN THE BOX.
+ *
+ * The numbers beside the options come from the server and are counted over what the list can hold NOW, so a choice
+ * made a moment ago may have no row left in them (the last parcel of a courier was just received). The box must not
+ * snap back to «all» behind the reader's back, or draw an empty control: the choice stays in the list, with a zero.
+ */
+export const withChosen = (value: string, options: ToolbarFilter['options']): ToolbarFilter['options'] =>
+  value === 'all' || options.some((o) => o.value === value) ? options : [...options, { value, label: `${value} (0)` }];
+
 export function ListToolbar({
   search,
   onSearch,
@@ -48,6 +66,9 @@ export function ListToolbar({
   filters,
   activeCount,
   onReset,
+  searchExtra,
+  searchAutoFocus,
+  searchDir,
 }: {
   search: string;
   onSearch: (value: string) => void;
@@ -57,20 +78,39 @@ export function ListToolbar({
   /** How many of the filters (and the search) are not at their default. */
   activeCount: number;
   onReset: () => void;
+  /** Something that belongs beside the box — a scan button. Nothing, for the lists that have none. */
+  searchExtra?: React.ReactNode;
+  /** The cursor is in the box when the screen opens. */
+  searchAutoFocus?: boolean;
+  /** `ltr` for a box that takes codes. Unset, the box follows the page. */
+  searchDir?: 'ltr' | 'rtl';
 }) {
+  const box = (
+    <div className={searchExtra ? 'relative max-w-md flex-1' : 'relative max-w-md'}>
+      <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
+      <input
+        type="text"
+        aria-label={placeholder}
+        placeholder={placeholder}
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        autoFocus={searchAutoFocus}
+        dir={searchDir}
+        className="h-11 md:h-auto w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 md:py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
+      />
+    </div>
+  );
+
   return (
     <div className="space-y-2">
-      <div className="relative max-w-md">
-        <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
-        <input
-          type="text"
-          aria-label={placeholder}
-          placeholder={placeholder}
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          className="h-11 md:h-auto w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 md:py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
-        />
-      </div>
+      {searchExtra ? (
+        <div className="flex items-center gap-2">
+          {box}
+          {searchExtra}
+        </div>
+      ) : (
+        box
+      )}
 
       {(filters.length > 0 || activeCount > 0) && (
         <div className="grid grid-cols-2 items-end gap-2 md:grid-cols-4">

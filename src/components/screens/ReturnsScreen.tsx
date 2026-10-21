@@ -1,24 +1,36 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { OrderNotesPeek } from '@/components/orders/OrderNotesPeek';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { ScanButton } from '@/components/scan/ScanButton';
-import { RiArrowLeftSLine, RiArrowRightSLine, RiCheckLine, RiInboxUnarchiveLine, RiQrScan2Line, RiTimeLine } from '@remixicon/react';
+import { RiCheckLine, RiInboxUnarchiveLine, RiTimeLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonRows } from '@/components/ui/Skeleton';
-import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { Pager } from '@/components/ui/Pager';
+import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
+import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
+import { arDate } from '@/lib/format';
+import { arabicDays } from '@/lib/transit';
+import { AGES, AGE_AR, DEFAULT_VIEW, RETURN_STATUSES, STATUS_AR, VIEWS, VIEW_AR, type View } from '@/lib/returns-filters';
+import type { ReturnsFacts } from '@/lib/returns-list';
 
 /**
  * /ops/returns — scan or pick a returned shipment, then record the physical
  * receipt. Missing units are computed by the server, and nothing enters stock
  * before the count-and-inspect acknowledgement.
+ *
+ * «المرتجعات — صفحات + فلاتر + بحث». Read in pages of 25 through the list kit;
+ * a view (waiting to be counted in · already counted in), the state of the
+ * parcel, the delivery company and how long it has waited — each with the
+ * server's number beside it — and the search box, which is also where a scan
+ * lands: a scan is a search typed by a camera, so it is subject to exactly the
+ * permissions a typed search is.
  *
  * THIS DESK SETTLES ONE HALF OF A PARTIAL DELIVERY.
  *
@@ -59,146 +71,186 @@ interface Completion {
  */
 const GOODS_NOTES = ['follow_up', 'return', 'internal'] as const;
 
-/** What the door says about the list behind this page. */
-interface Pagination {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-interface Row {
+interface RowBase {
   id: string;
   orderNumber: string;
   merchantRef: string | null;
   trackingNumber: string | null;
   shippingStatus: string;
   returnReason: string | null;
-  expectedQty: number;
   customer: { fullName: string; phone?: string | null };
   region: { name: string } | null;
   deliveryProvider: { name: string } | null;
+}
+
+/** A parcel waiting to be counted in. */
+interface PendingRow extends RowBase {
+  receipt?: undefined;
+  expectedQty: number;
+  /** Whole days since the courier last spoke of it — the server's count, cut into the age piles. */
+  daysWaited: number | null;
   lines: SettledLine[];
   completion: Completion;
   /** The owner's «هل الطلب استلم؟ نعم / لا», or null when it does not apply. */
   action: { key: 'MONEY' | 'GOODS'; question: string; yes: string; no: string } | null;
 }
 
+/** A parcel that was: what was counted, by whom and when. */
+interface ReceivedRow extends RowBase {
+  receipt: {
+    expectedQty: number;
+    receivedQty: number;
+    damagedQty: number;
+    missingQty: number;
+    courierFeeCharged: boolean;
+    inspectedAt: string;
+    inspectedBy: string | null;
+    note: string | null;
+  } | null;
+}
+
+type Row = PendingRow | ReceivedRow;
+
+interface Extra {
+  facts: ReturnsFacts;
+  /** The view these rows belong to — the answer's own word, so a column is never drawn for rows of the other kind. */
+  view: View;
+}
+
+/** Module-level, so the hook's loader keeps one identity — see `usePagedList`. */
+const read = (body: unknown): PagedRead<Row, Extra> => {
+  const b = body as { orders: Row[]; pagination: Paging; facts: ReturnsFacts; applied: { view: View } };
+  return { rows: b.orders, pagination: b.pagination, extra: { facts: b.facts, view: b.applied.view } };
+};
+
+const since = (days: number | null) => (days === null ? '—' : days === 0 ? 'اليوم' : `منذ ${arabicDays(days)}`);
+
 export function ReturnsScreen() {
-  const toast = useToast();
-  const [rows, setRows] = useState<Row[] | null>(null);
   const [term, setTerm] = useState('');
-  const [active, setActive] = useState<Row | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>(DEFAULT_VIEW);
+  const [status, setStatus] = useState('all');
+  const [courier, setCourier] = useState('all');
+  const [age, setAge] = useState('all');
+  const [active, setActive] = useState<PendingRow | null>(null);
   const [done, setDone] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 25, totalPages: 1 });
-  /*
-   * The page lives in a ref too: `useLiveRefresh` attaches its listeners
-   * once, so reading the page through the closure would refresh page one
-   * for ever — and a clerk reading page three would be sent to the top
-   * every time they came back to the tab.
-   */
-  const loadRef = useRef<(page?: number) => Promise<void>>(async () => {});
-  const pageRef = useRef(1);
 
   /*
-   * ── PAGES, BECAUSE THE LIST WAS CUT AT TWO HUNDRED ──
+   * ── PAGES, AND WHAT WAS CHOSEN ──
    *
-   * The owner, 20/10: «المرتجعات صفحات اعملها».
-   *
-   * The door took the two hundred OLDEST — it is ordered by `returnedAt`
-   * ascending, which is right, because the return sitting longest is the
-   * one costing money. But a shop past that number could not reach a
-   * return that came back yesterday at all.
-   *
-   * A page turn keeps the search; a new SEARCH starts at page one,
-   * because page seven of a different question is not where the reader
-   * was. Same rule as the customers list, which is the screen beside it.
+   * The owner, 20/10: «المرتجعات صفحات اعملها», 21/10: «صفحات + فلاتر + بحث».
+   * A page turn keeps the choices; a new CHOICE starts at page one, because
+   * page seven of a different question is not where the reader was; and
+   * coming back to the screen reloads the page the clerk is ON — all of it in
+   * `usePagedList`, the same hook the other lists read through.
    */
-  const load = useCallback(async (pageToLoad = 1) => {
-    setLoading(true);
-    try {
-      const raw = term.trim();
-      const params = new URLSearchParams({ page: String(pageToLoad), limit: String(pagination.limit) });
-      if (raw) params.set('q', raw);
-      const data = await apiJson<{ orders: Row[]; pagination?: Pagination }>(
-        `/api/ops/returns?${params.toString()}`
-      );
-      setRows(data.orders);
-      if (data.pagination) setPagination(data.pagination);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحميل');
-    } finally {
-      setLoading(false);
-    }
-    // `pagination.limit` is a constant the person never changes; listing
-    // it would rebuild the loader on every page turn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [term]);
+  const list = usePagedList<Row, Extra>({
+    url: '/api/ops/returns',
+    params: { q: term.trim() || undefined, view, status, courier, age },
+    read,
+  });
 
-  useEffect(() => {
-    loadRef.current = load;
-  }, [load]);
-  useEffect(() => {
-    pageRef.current = 1;
-  }, [term]);
-  useEffect(() => {
-    pageRef.current = pagination.page;
-  }, [pagination.page]);
+  /** What narrows the view that is open: the state, the company, the age, the word typed or scanned. */
+  const narrowing = [status, courier, age].filter((v) => v !== 'all').length + (term.trim() ? 1 : 0);
+  /** …and the view itself, when it is not the work — what «إعادة تعيين» counts. */
+  const activeCount = narrowing + (view !== DEFAULT_VIEW ? 1 : 0);
+  const reset = () => {
+    setTerm('');
+    setView(DEFAULT_VIEW);
+    setStatus('all');
+    setCourier('all');
+    setAge('all');
+  };
 
-  /*
-   * A new search starts at page one; coming back to the screen reloads
-   * the page the clerk is ON. Two different questions, so two different
-   * answers — `key` for the first, the ref for the second.
-   */
-  useLiveRefresh(() => loadRef.current(pageRef.current), { key: term });
+  const { extra, rows, pagination } = list;
+
+  const filters: ToolbarFilter[] | undefined = extra && [
+    {
+      key: 'view',
+      label: 'العرض',
+      value: view,
+      // The state and the age describe a parcel that has not been counted in; they are not carried into the record.
+      onChange: (v) => {
+        setView(v as View);
+        setStatus('all');
+        setAge('all');
+      },
+      options: VIEWS.map((v) => ({ value: v, label: `${VIEW_AR[v]} (${extra.facts.views[v]})` })),
+    },
+    ...(view === DEFAULT_VIEW
+      ? [
+          {
+            key: 'status',
+            label: 'الحالة',
+            value: status,
+            onChange: setStatus,
+            options: [
+              { value: 'all', label: 'كل الحالات' },
+              ...RETURN_STATUSES.map((s) => ({ value: s, label: `${STATUS_AR[s]} (${extra.facts.statuses[s]})` })),
+            ],
+          },
+        ]
+      : []),
+    {
+      key: 'courier',
+      label: 'شركة الشحن',
+      value: courier,
+      onChange: setCourier,
+      options: withChosen(courier, [
+        { value: 'all', label: 'كل الشركات' },
+        ...extra.facts.couriers.map((c) => ({ value: c.id, label: `${c.name} (${c.count})` })),
+      ]),
+    },
+    ...(view === DEFAULT_VIEW
+      ? [
+          {
+            key: 'age',
+            label: 'مدّة الانتظار',
+            value: age,
+            onChange: setAge,
+            options: [
+              { value: 'all', label: 'أيّ مدّة' },
+              ...AGES.map((a) => ({ value: a, label: `${AGE_AR[a]} (${extra.facts.ages[a]})` })),
+            ],
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void load();
-        }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex gap-3 items-end"
-      >
-        <label className="flex-1">
-          <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">امسح الرمز (QR أو باركود) أو اكتب المرجع</span>
-          <div className="relative">
-            <RiQrScan2Line className="w-4 h-4 text-[var(--sys-muted)] absolute right-3 top-3 z-10" />
-            <Input
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              autoFocus
-              placeholder="امسح الرمز هنا"
-              className="pr-9 pl-3"
-              dir="ltr"
-            />
-          </div>
-        </label>
-        <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
-        {/* A phone is the scanner a warehouse already owns. It keeps
-            scanning: a returned pallet is twenty parcels, not one. */}
-        <ScanButton
-          title="امسح بوليصة المرتجع — QR أو باركود"
-          continuous
-          onScan={(code) => {
-            // Putting it in the box IS the search — the effect below
-            // already reloads whenever the term changes, so there is one
-            // request and one code path, the same one a typed search takes.
-            setTerm(code);
-            return code;
-          }}
-        />
-      </form>
+      {/* Drawn from the first moment, with or without the numbers: a desk that scans must never open without its box. */}
+      <ListToolbar
+        search={term}
+        onSearch={setTerm}
+        placeholder="امسح أو اكتب المرجع أو الاسم…"
+        searchAutoFocus
+        searchDir="ltr"
+        // A phone is the scanner a warehouse already owns. It keeps
+        // scanning: a returned pallet is twenty parcels, not one.
+        searchExtra={
+          <ScanButton
+            title="امسح بوليصة المرتجع — QR أو باركود"
+            continuous
+            onScan={(code) => {
+              // Putting it in the box IS the search — the list reloads whenever the
+              // box changes, so there is one request and one code path, the same
+              // one a typed search takes.
+              setTerm(code);
+              return code;
+            }}
+          />
+        }
+        filters={filters ?? []}
+        activeCount={activeCount}
+        onReset={reset}
+      />
 
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {list.error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{list.error}</p>}
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
-      {!rows ? (
+      {!extra ? (
         <SkeletonRows rows={4} />
       ) : (
         <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
@@ -208,48 +260,105 @@ export function ReturnsScreen() {
           <Rows
             rows={rows}
             keyOf={(r) => r.id}
-            columns={[
-              {
-                key: 'ref',
-                label: 'المرجع',
-                primary: true,
-                render: (r) => (
-                  <span className="font-medium text-[var(--sys-heading)]" dir="ltr">
-                    {r.merchantRef ?? r.orderNumber}
-                  </span>
-                ),
-              },
-              { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customer.fullName },
-              { key: 'courier', label: 'شركة الشحن', render: (r) => r.deliveryProvider?.name ?? '—' },
-              { key: 'reason', label: 'السبب', render: (r) => r.returnReason ?? '—' },
-              // NOT «المشحون». This column has always been what is coming
-              // BACK — the parcel less whatever the customer kept — and
-              // calling it "shipped" made a partial return look like a
-              // shortage to the one person counting the units. (The comment
-              // sits outside the object because `scripts/ui-inventory.ts`
-              // counts a column by `{ key:` and a comment between the two
-              // reads as a deleted column.)
-              {
-                key: 'qty',
-                label: 'المتوقَّع رجوعه',
-                align: 'end',
-                render: (r) => <span className="tabular-nums">{r.expectedQty}</span>,
-              },
-            ]}
-            actions={(r) => (
-              <button
-                onClick={() => setActive(r)}
-                className="text-xs font-semibold text-[var(--sys-primary)] hover:underline"
-              >
-                استلام
-              </button>
-            )}
+            columns={
+              extra.view === 'pending'
+                ? [
+                    {
+                      key: 'ref',
+                      label: 'المرجع',
+                      primary: true,
+                      render: (r) => (
+                        <span className="font-medium text-[var(--sys-heading)]" dir="ltr">
+                          {r.merchantRef ?? r.orderNumber}
+                        </span>
+                      ),
+                    },
+                    { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customer.fullName },
+                    { key: 'courier', label: 'شركة الشحن', render: (r) => r.deliveryProvider?.name ?? '—' },
+                    { key: 'reason', label: 'السبب', render: (r) => r.returnReason ?? '—' },
+                    { key: 'since', label: 'المدّة', render: (r) => since((r as PendingRow).daysWaited) },
+                    // NOT «المشحون». This column has always been what is coming
+                    // BACK — the parcel less whatever the customer kept — and
+                    // calling it "shipped" made a partial return look like a
+                    // shortage to the one person counting the units. (The comment
+                    // sits outside the object because `scripts/ui-inventory.ts`
+                    // counts a column by `{ key:` and a comment between the two
+                    // reads as a deleted column.)
+                    {
+                      key: 'qty',
+                      label: 'المتوقَّع رجوعه',
+                      align: 'end',
+                      render: (r) => <span className="tabular-nums">{(r as PendingRow).expectedQty}</span>,
+                    },
+                  ]
+                : [
+                    {
+                      key: 'ref',
+                      label: 'المرجع',
+                      primary: true,
+                      render: (r) => (
+                        <span className="font-medium text-[var(--sys-heading)]" dir="ltr">
+                          {r.merchantRef ?? r.orderNumber}
+                        </span>
+                      ),
+                    },
+                    { key: 'customer', label: 'العميل', primary: true, render: (r) => r.customer.fullName },
+                    { key: 'courier', label: 'شركة الشحن', render: (r) => r.deliveryProvider?.name ?? '—' },
+                    {
+                      key: 'counted',
+                      label: 'الاستلام',
+                      render: (r) => {
+                        const c = r.receipt;
+                        if (!c) return '—';
+                        return (
+                          <span className="tabular-nums">
+                            {c.receivedQty} من {c.expectedQty}
+                            {c.damagedQty > 0 && ` · تالف ${c.damagedQty}`}
+                            {c.missingQty > 0 && ` · ناقص ${c.missingQty}`}
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: 'when',
+                      label: 'عُدَّ في',
+                      render: (r) => (r.receipt ? `${arDate(r.receipt.inspectedAt)}${r.receipt.inspectedBy ? ` · ${r.receipt.inspectedBy}` : ''}` : '—'),
+                    },
+                  ]
+            }
+            actions={
+              extra.view === 'pending'
+                ? (r) => (
+                    <button
+                      onClick={() => setActive(r as PendingRow)}
+                      className="text-xs font-semibold text-[var(--sys-primary)] hover:underline"
+                    >
+                      استلام
+                    </button>
+                  )
+                : undefined
+            }
             empty={
-              <EmptyState
-                icon={RiInboxUnarchiveLine}
-                title="لا مرتجعات بانتظار الاستلام"
-                why="المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة."
-              />
+              narrowing > 0 ? (
+                <EmptyState
+                  icon={RiInboxUnarchiveLine}
+                  title="لا مرتجعات بهذه الشروط"
+                  why="ما من طرد يطابق العرض والبحث والفلاتر المختارة معاً."
+                  action={{ label: 'امسح الفلاتر', onClick: reset }}
+                />
+              ) : extra.view === 'pending' ? (
+                <EmptyState
+                  icon={RiInboxUnarchiveLine}
+                  title="لا مرتجعات بانتظار الاستلام"
+                  why="المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة."
+                />
+              ) : (
+                <EmptyState
+                  icon={RiInboxUnarchiveLine}
+                  title="لم يُستلم أيّ مرتجع بعد"
+                  why="ما يُعدّ في هذه الشاشة يُسجَّل هنا: كم استُلم، وكم كان تالفاً أو ناقصاً، ومن عدّه ومتى."
+                />
+              )
             }
           />
 
@@ -263,39 +372,16 @@ export function ReturnsScreen() {
             actually asks of this screen.
           */}
           {pagination.totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between border-t border-[var(--sys-border)] pt-3 text-xs text-[var(--sys-muted-foreground)]">
-              <span>
-                عرض <strong>{rows.length}</strong> من <strong>{pagination.total}</strong> مرتجع
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  loading={loading}
-                  disabled={loading || pagination.page <= 1}
-                  onClick={() => void load(pagination.page - 1)}
-                  aria-label="الصفحة السابقة"
-                  title="الصفحة السابقة"
-                  className="p-1.5"
-                >
-                  <RiArrowLeftSLine className="icon-mirror w-4 h-4" />
-                </Button>
-                <span className="tabular-nums" dir="ltr">
-                  {pagination.page} / {pagination.totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  loading={loading}
-                  disabled={loading || pagination.page >= pagination.totalPages}
-                  onClick={() => void load(pagination.page + 1)}
-                  aria-label="الصفحة التالية"
-                  title="الصفحة التالية"
-                  className="p-1.5"
-                >
-                  <RiArrowRightSLine className="icon-mirror w-4 h-4" />
-                </Button>
-              </div>
+            <div className="mt-3 border-t border-[var(--sys-border)] pt-3">
+              <Pager
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                shown={rows.length}
+                noun="مرتجع"
+                loading={list.loading}
+                onPage={list.goTo}
+              />
             </div>
           )}
         </div>
@@ -308,7 +394,7 @@ export function ReturnsScreen() {
           onDone={async (message) => {
             setActive(null);
             setDone(message);
-            await load();
+            await list.reload();
           }}
         />
       )}
@@ -321,7 +407,7 @@ function ReceiveDialog({
   onClose,
   onDone,
 }: {
-  order: Row;
+  order: PendingRow;
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
@@ -332,7 +418,6 @@ function ReceiveDialog({
   const [acknowledged, setAcknowledged] = useState(false);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   /**
    * THE EXTRA ACTION'S ANSWER — «هل الطلب استلم؟ نعم / لا».
    *
@@ -385,8 +470,6 @@ function ReceiveDialog({
   return (
     <Modal isOpen onClose={onClose} title="استلام مرتجع" subtitle={order.merchantRef ?? order.orderNumber} maxWidth="sm">
       <form onSubmit={submit} className="space-y-3">
-        {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-2">{error}</p>}
-
         {/*
           WHICH PRODUCT, HOW MANY TAKEN, HOW MANY DUE BACK.
 

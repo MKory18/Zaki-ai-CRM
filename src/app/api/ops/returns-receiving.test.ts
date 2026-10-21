@@ -13,7 +13,10 @@ const { db, requireContext, requirePermission, logAudit, reverseForOrder } = vi.
      * predicate the rows use. Without it the door throws before it ever
      * reaches the arithmetic these tests are about.
      */
-    order: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), count: vi.fn(async () => 0) },
+    order: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), count: vi.fn(async () => 0), groupBy: vi.fn(async () => []) },
+    // The numbers beside the filters, and the names of the page's couriers and inspectors (the-returns-list-is-filtered.test.ts).
+    deliveryProvider: { findMany: vi.fn(async () => []) },
+    user: { findMany: vi.fn(async () => []) },
     returnReceipt: { create: vi.fn() },
     inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },
     productionBatch: { findFirst: vi.fn(), create: vi.fn(), aggregate: vi.fn() },
