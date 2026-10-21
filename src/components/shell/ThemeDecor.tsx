@@ -23,7 +23,29 @@ import { DECOR_CLASS, type DecorPlace } from '@/lib/theme-decoration';
  * screen that renders any of those.
  */
 export function ThemeDecor({ place }: { place: DecorPlace }) {
-  return <div aria-hidden className={`${DECOR_CLASS} ${DECOR_CLASS}-${place} ${DECOR_CLASS}-full`} />;
+  return (
+    <div aria-hidden className={`${DECOR_CLASS} ${DECOR_CLASS}-${place} ${DECOR_CLASS}-full`}>
+      {/*
+        THE DOOR HAS FOUR DRAWINGS AND A PSEUDO-ELEMENT PAIR HOLDS TWO.
+
+        A composed theme (see `COMPOSED` in theme-decoration.ts) draws a
+        rosette, a corner at each top corner, and a skyline: the rosette and
+        the right corner are `::before` and `::after`, and these two are the
+        left corner (the right one, turned) and the skyline.
+
+        They are EMPTY ELEMENTS and nothing more: no class carries a rule
+        unless the person's theme is composed, so for the other nine themes
+        these are two inline boxes with no size, which paint nothing. The
+        layer is still `aria-hidden` and `pointer-events: none` as a whole.
+      */}
+      {place === 'door' && (
+        <>
+          <i className={`${DECOR_CLASS}-l`} />
+          <i className={`${DECOR_CLASS}-b`} />
+        </>
+      )}
+    </div>
+  );
 }
 
 /**

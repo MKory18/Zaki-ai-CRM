@@ -392,7 +392,20 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'border-strong': '#999999',
       heading: '#1D2A29',
       foreground: '#1D2A29',
-      'muted-foreground': '#48706B',
+      /*
+       * DARKER BY 12%, FOR THE ORNAMENT THAT NOW SITS UNDER IT.
+       *
+       * It was #48706B — 4.90:1 on this theme's paper, which is a pass with
+       * 0.4 to spare and nothing for a drawing to take. The door's
+       * tagline and its footer line are THIS colour, outside the card, and
+       * the theme's rosette is drawn behind them: at the opacity it is set
+       * to, a line passing under a letter takes the contrast to 3.96:1.
+       * #3F635E is 5.93 on the paper and 4.79 under the rosette's worst
+       * case, which is what `a-theme-wears-its-own-ornament.test.ts`
+       * computes and holds. The hierarchy survives: it is still lighter
+       * than `foreground` and still green, only less pale.
+       */
+      'muted-foreground': '#3F635E',
       'border-input': '#55716E',
       muted: '#55716E',
       primary: '#0E5E55',
