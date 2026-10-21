@@ -47,7 +47,36 @@ export async function reservedElsewhere(
         // The order already knows its store — this side needs no migration.
         ...(storeId ? { storeId } : {}),
         confirmationStatus: { notIn: ['REJECTED', 'CANCELLED'] },
-        shippingStatus: { notIn: ['DELIVERED', 'RETURNED', 'CANCELLED'] },
+        /*
+         * ── «RETURNED» IS NOT ON THIS LIST, AND THAT IS THE POINT ──
+         *
+         * The owner, 21/10: «بالمرتجعات لما يرجع لا ترجع — سواء جزئي او
+         * غيرو — للمخزون غير لما احط انو استلم المرتجع و سليم».
+         *
+         * The two that remain belong here because by then nothing is
+         * held any more: delivery CONSUMED the units (`consumeOrderStock`
+         * clears `reservedQty`) and a cancellation RELEASED them. Their
+         * reservation is already zero; skipping them only saves the read.
+         *
+         * A return is the opposite. A full return was never consumed —
+         * the units are still counted in the batches as physically on
+         * hand — and its reservation is cleared by the returns desk, when
+         * the parcel is in somebody's hands. Excluding it here meant that
+         * between «the courier says it came back» and «we have counted
+         * it», the order stopped holding its units and `availableStock`
+         * rose by exactly them.
+         *
+         * Those units are in a van, or in a courier's warehouse, or lost.
+         * The shop could promise them to the next customer, and did.
+         *
+         * ⚠️ RETURNED is set without anybody counting anything — by the
+         * door outcome «nothing taken», and by a manual transition on the
+         * shipping screen. So the hold has to outlast the status and end
+         * where the counting is: `POST /api/ops/returns`, which refuses
+         * to restore a thing without `countedAndInspected` and returns
+         * only the units ticked as sound.
+         */
+        shippingStatus: { notIn: ['DELIVERED', 'CANCELLED'] },
       },
     },
     _sum: { reservedQty: true },
