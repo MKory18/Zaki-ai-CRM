@@ -4,9 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { RiArrowRightLine } from '@remixicon/react';
-import { useApp } from '@/context/AppContext';
-import { userCan } from '@/lib/can';
-import { canAccessRoute } from '@/lib/route-registry';
+import { useMayOpen } from '@/hooks/useMayOpen';
 import { roadPosition } from '@/lib/next-stop';
 
 /**
@@ -24,18 +22,18 @@ import { roadPosition } from '@/lib/next-stop';
  * next stop is one this person may open. See `roadPosition` for why it is
  * never the next stop THEY can open.
  *
- * The check here is the client's `userCan`, the same one the dashboard's
- * cards use to decide whether to link. It decides whether to OFFER; the
- * door behind every screen decides whether to open it.
+ * The check is `useMayOpen` — the client's `userCan` through the registry's
+ * own `canAccessRoute`, the same answer the toasts and the dashboard's cards
+ * ask. It decides whether to OFFER; the door behind every screen decides
+ * whether to open it.
  */
 export function RoadStrip() {
   const pathname = usePathname();
-  const { currentUser } = useApp();
+  // The one question «may this person open that screen?», asked the one way.
+  // This was its own copy of it until the toast needed the same answer.
+  const mayOpen = useMayOpen();
 
-  const at = roadPosition(
-    pathname,
-    (route) => !!currentUser && canAccessRoute(currentUser, route, userCan)
-  );
+  const at = roadPosition(pathname, mayOpen);
   if (!at) return null;
 
   return (

@@ -21,6 +21,8 @@ import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { useMayOpen } from '@/hooks/useMayOpen';
+import { deskIsEmpty, pullMoreStep } from '@/lib/next-step';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { Rows } from '@/components/ui/Rows';
@@ -162,6 +164,7 @@ function sourceLabel(order: OrderRow): string {
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
+  const mayOpen = useMayOpen();
   /**
    * ── THE PHONE STRIP FOLLOWS ITS OWN PERMISSION ──
    *
@@ -212,27 +215,45 @@ export function ConfirmationMineScreen() {
    */
   const [tab, setTab] = useState<'work' | 'noAnswer' | 'done'>('work');
 
-  const load = useCallback(async () => {
+  /**
+   * Returns what it loaded — or `null` — so a caller that needs to know what
+   * is on her desk AFTER an action has the answer in hand. It used to return
+   * nothing, and the only way to learn it was to wait for the next render and
+   * read state, which is a render too late to decide what to say.
+   */
+  const load = useCallback(async (): Promise<MineResponse | null> => {
     try {
       const qs = new URLSearchParams();
       if (doneDay) qs.set('day', doneDay);
       if (doneQuery) qs.set('q', doneQuery);
       if (donePage > 1) qs.set('page', String(donePage));
       const suffix = qs.toString();
-      setData(await apiJson<MineResponse>(`/api/confirmation/mine${suffix ? `?${suffix}` : ''}`));
+      const fresh = await apiJson<MineResponse>(`/api/confirmation/mine${suffix ? `?${suffix}` : ''}`);
+      setData(fresh);
+      return fresh;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التحميل');
+      return null;
     }
   }, [doneDay, doneQuery, donePage]);
 
-  useLiveRefresh(load, { key: `${doneDay}·${doneQuery}·${donePage}` });
+  // The hook's loader answers nothing; ours answers the desk. Wrapped, not widened.
+  useLiveRefresh(
+    async () => {
+      await load();
+    },
+    { key: `${doneDay}·${doneQuery}·${donePage}` }
+  );
 
-  const act = async (id: string, fn: () => Promise<unknown>) => {
+  const act = async (id: string, fn: () => Promise<unknown>, after?: (fresh: MineResponse | null) => void) => {
     setBusyId(id);
     setError(null);
     try {
       const result = await fn();
-      await load();
+      const fresh = await load();
+      // Only on SUCCESS — a refusal throws above and lands in `catch`, so
+      // «what to say next» is never said about something that did not happen.
+      after?.(fresh);
       return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تنفيذ الإجراء');
@@ -266,14 +287,41 @@ export function ConfirmationMineScreen() {
       return res;
     });
 
+  /**
+   * CONFIRMING WAS SILENT.
+   *
+   * The row vanished and that was all: no word that it had worked, and no
+   * sign of what to do next. An agent working a list of forty confirms one
+   * and cannot tell «done» from «the screen refreshed under me» — which is
+   * the moment she presses it again on the next row, or looks away to check.
+   *
+   * It says so now, with the number. And when that was the LAST thing on her
+   * desk — nothing to call, nothing to decide — it offers the one thing that
+   * follows, which is to pull more. Not before: with forty rows still there,
+   * «اسحب طلبات جديدة» would be an instruction to take on more work while
+   * the work in front of her is not done.
+   *
+   * A link to the pull screen and not a second pull: the pull has exactly one
+   * door and one set of refusals (the cap, the empty pool, «not your desk»),
+   * and a button here that called it directly would need all of them again.
+   * Offered only to somebody who may open that screen — a moderator may not.
+   */
   const confirm = (order: OrderRow) =>
-    act(order.id, () =>
-      apiJson(`/api/orders/${order.id}/confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Optimistic concurrency: the version the screen loaded.
-        body: JSON.stringify({ action: 'confirm', expectedVersion: order.version }),
-      })
+    act(
+      order.id,
+      () =>
+        apiJson(`/api/orders/${order.id}/confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // Optimistic concurrency: the version the screen loaded.
+          body: JSON.stringify({ action: 'confirm', expectedVersion: order.version }),
+        }),
+      (fresh) =>
+        toast.done(
+          `تم تأكيد الطلب ${order.orderNumber}`,
+          deskIsEmpty(fresh) ? 'لا شيء بقي على مكتبك.' : undefined,
+          pullMoreStep(fresh, mayOpen)
+        )
     );
 
   const submitPostpone = (order: OrderRow, value: PostponeValue) => {
