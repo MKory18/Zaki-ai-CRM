@@ -892,6 +892,27 @@ export async function runMatching(
       storeId,
       deliveryProviderId: statement.deliveryProviderId,
       shippingStatus: { in: ['DELIVERED', 'PARTIALLY_DELIVERED'] },
+      /*
+       * ── AND A PARCEL ALREADY PAID FOR BY HAND IS NOT MISSING ──
+       *
+       * `POST /api/ops/tracking/collect` settles an order with no statement
+       * at all: a مندوب hands the cash over, a person names the orders, the
+       * wallet movement is written and `settlementStatus` becomes SETTLED.
+       * For a courier with no API that is the ONLY road the money takes.
+       *
+       * The sweep below then flagged every one of those as «طلب مسلَّم لم
+       * يرد في كشف الشركة». Literally true — and useless: nothing is owed,
+       * nothing is to be chased, and the operator cannot make the row go
+       * away because there is no statement for the parcel to appear on. It
+       * is the same false alarm this sweep was already rewritten once to
+       * stop producing, arriving by a second road.
+       *
+       * Safe to exclude, and it loses no real alarm: an order settled by a
+       * STATEMENT was by definition named on one, so `mentioned` below
+       * already skips it. The only rows this drops are the hand-collected
+       * ones, whose money is in a wallet and provable from the movement.
+       */
+      settlementStatus: { not: 'SETTLED' },
       ...(statement.periodFrom || statement.periodTo
         ? {
             deliveredAt: {

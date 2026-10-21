@@ -21,6 +21,16 @@ import { typed } from '@/lib/text-search';
  */
 const IN_FLIGHT = ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'FAILED_DELIVERY', 'RETURN_REQUESTED'];
 
+/**
+ * Arrived, and the money is still with the courier.
+ *
+ * The same two statuses `canCollect` reads in `tracking-priority.ts`. A
+ * partial delivery belongs here as much as a full one: the customer took
+ * some of it and paid for what they took, and that cash is owed exactly
+ * like any other.
+ */
+const AWAITING_COLLECTION = ['DELIVERED', 'PARTIALLY_DELIVERED'];
+
 export async function GET(req: Request) {
   try {
     const { user, companyId, storeId, country } = await requireContext();
@@ -34,11 +44,41 @@ export async function GET(req: Request) {
       where: {
         companyId,
         storeId,
-        // "all" means all. It used to fall back to the in-flight list, which
-        // hid every delivered shipment — the very ones you collect against.
+        /*
+         * ── AND THE DEFAULT CARRIES WHAT IS WAITING TO BE COLLECTED ──
+         *
+         * The owner, 21/10: «التحصيل لازم اقدر اعمل تحصيل... افرض ما
+         * عندي كشف، لازمني آلية للمطابقة واغلاق الطلب وتحصيله».
+         *
+         * That mechanism already exists: `POST /api/ops/tracking/collect`
+         * settles an order by hand, «for both there is no statement to
+         * import», and the «استلمت منه» button on this screen calls it.
+         *
+         * Nobody could find it. This screen's own task list declares the
+         * condition COLLECT — «بانتظار التحصيل: سُلّمت ولم تُسوَّ» — and
+         * builds its chip from the rows it was given. The default load
+         * asked for IN_FLIGHT only, and a delivered order is not in
+         * flight. So the chip's rows were never fetched, the chip never
+         * drew, and the one door that collects without a statement sat
+         * behind a filter nobody knew to change.
+         *
+         * «all» still means all. What changed is that the default is now
+         * the screen's own job description: what is moving, PLUS what has
+         * arrived and whose money is still out there.
+         */
         ...(status === 'all'
           ? {}
-          : { shippingStatus: status ? status : { in: IN_FLIGHT } }),
+          : status
+            ? { shippingStatus: status }
+            : {
+                OR: [
+                  { shippingStatus: { in: IN_FLIGHT } },
+                  {
+                    shippingStatus: { in: AWAITING_COLLECTION },
+                    settlementStatus: { not: 'SETTLED' },
+                  },
+                ],
+              }),
         ...(term
           ? {
               OR: [
