@@ -489,6 +489,26 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/products/ProductPerformance.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 1,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/products/ProductRecentOrders.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 6,
+    "cards": 1,
+    "modals": 0,
+    "icons": 1,
+    "links": 2,
+    "tabs": 0
+  },
   "src/components/products/ProductStock.tsx": {
     "buttons": 1,
     "inputs": 0,
@@ -1012,10 +1032,10 @@
   "src/components/screens/ProductDetailScreen.tsx": {
     "buttons": 10,
     "inputs": 1,
-    "columns": 12,
-    "cards": 6,
+    "columns": 6,
+    "cards": 4,
     "modals": 1,
-    "icons": 10,
+    "icons": 9,
     "links": 1,
     "tabs": 0
   },
