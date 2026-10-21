@@ -6,9 +6,22 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
-import { RiAddCircleLine, RiArrowDownSLine, RiArrowUpSLine, RiDeleteBinLine, RiEyeOffLine, RiLoader4Line, RiMagicLine, RiPencilLine, RiPriceTag3Line, RiStarLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowDownSLine, RiArrowUpSLine, RiDeleteBinLine, RiDraggable, RiEyeOffLine, RiLoader4Line, RiMagicLine, RiPencilLine, RiPriceTag3Line, RiStarLine } from '@remixicon/react';
 import { moneyText } from '@/lib/money';
 import { minorUnitFor } from '@/lib/currencies';
+import { moveAfterDrag, moveOffer, type OfferMove } from '@/lib/offer-order';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type Announcements,
+} from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 /**
  * A product's offers, edited where the product is.
@@ -235,15 +248,36 @@ export function ProductOffers({
     }
   }
 
-  async function move(i: number, dir: -1 | 1) {
+  /**
+   * ONE MOVE, FOR THE GRIP AND FOR THE ARROWS — `lib/offer-order.ts` says what it is; this puts it on the screen and on the server.
+   *
+   * It shows the new order AT ONCE (a drop that waited for the server would snap back and then forward), writes only the offers
+   * whose stored number changed — one `PATCH { sortOrder }` each, the edit this screen has always sent — and then reads the list
+   * back: the server's own order is the truth, after a success and after a failure alike. A write that failed says so, and the
+   * list reads back as it really is rather than as it was drawn.
+   */
+  async function applyMove(m: OfferMove) {
     if (!offers) return;
-    const j = i + dir;
-    if (j < 0 || j >= offers.length) return;
-    await Promise.all([
-      crmApi(`/api/offers/${offers[i].id}`, { method: 'PATCH', body: JSON.stringify({ sortOrder: j }) }),
-      crmApi(`/api/offers/${offers[j].id}`, { method: 'PATCH', body: JSON.stringify({ sortOrder: i }) }),
-    ]);
-    await load();
+    const byId = new Map(offers.map((o) => [o.id, o]));
+    setOffers(m.ids.map((id) => byId.get(id)!));
+    setBusy(true);
+    setMsg(null);
+    try {
+      await Promise.all(
+        m.writes.map((w) => crmApi(`/api/offers/${w.id}`, { method: 'PATCH', body: JSON.stringify({ sortOrder: w.sortOrder }) }))
+      );
+    } catch (e: any) {
+      setMsg({ ok: false, text: e.message || 'تعذر حفظ الترتيب' });
+    } finally {
+      await load();
+      setBusy(false);
+    }
+  }
+
+  function move(i: number, dir: -1 | 1) {
+    if (!offers) return;
+    const m = moveOffer(offers, i, i + dir);
+    if (m) void applyMove(m);
   }
 
   const money = (n: number) => moneyText(Number(n), currency, minorUnitFor(currency) ?? 2);
@@ -329,13 +363,18 @@ export function ProductOffers({
             لا عروض بعد — النموذج سيعرض سعر المنتج الأساسي فقط.
           </p>
         ) : (
+          <ReorderFrame enabled={canManage} offers={offers} onMove={applyMove}>
           <ul className="space-y-2">
             {offers.map((o, i) => {
               const units = o.quantity + o.freeQuantity;
               const inactive = o.status !== 'ACTIVE';
+              const Item = canManage ? SortableLi : PlainLi;
               return (
-                <li
+                <Item
                   key={o.id}
+                  id={o.id}
+                  name={o.name}
+                  disabled={busy}
                   className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border px-3 py-2.5 ${
                     inactive
                       ? 'border-[var(--sys-border)] bg-[var(--sys-surface)] opacity-60'
@@ -345,23 +384,26 @@ export function ProductOffers({
                   }`}
                 >
                   {canManage && (
-                    <div className="flex shrink-0 flex-col">
-                      <button
-                        onClick={() => move(i, -1)}
-                        disabled={i === 0 || busy}
-                        className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
-                        aria-label="لأعلى" title="لأعلى"
-                      >
-                        <RiArrowUpSLine className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => move(i, 1)}
-                        disabled={i === offers.length - 1 || busy}
-                        className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
-                        aria-label="لأسفل" title="لأسفل"
-                      >
-                        <RiArrowDownSLine className="w-4 h-4" />
-                      </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <GripSlot />
+                      <div className="flex shrink-0 flex-col">
+                        <button
+                          onClick={() => move(i, -1)}
+                          disabled={i === 0 || busy}
+                          className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
+                          aria-label="لأعلى" title="لأعلى"
+                        >
+                          <RiArrowUpSLine className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => move(i, 1)}
+                          disabled={i === offers.length - 1 || busy}
+                          className="cursor-pointer text-[var(--sys-muted)] hover:text-[var(--sys-primary)] disabled:opacity-25"
+                          aria-label="لأسفل" title="لأسفل"
+                        >
+                          <RiArrowDownSLine className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -453,10 +495,11 @@ export function ProductOffers({
                       </button>
                     </div>
                   )}
-                </li>
+                </Item>
               );
             })}
           </ul>
+          </ReorderFrame>
         )}
 
         {draft && (
@@ -609,5 +652,141 @@ export function ProductOffers({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/* ───────────────────────────── the order of the list, by hand ───────────────────────────── */
+
+/** What a screen reader is told before it picks an offer up. */
+const INSTRUCTIONS = {
+  draggable: 'لتغيير ترتيب هذا العرض: اضغط مسافة لتمسكه، ثم السهم لأعلى أو لأسفل، ثم مسافة لتفلته. اضغط Esc للإلغاء.',
+};
+
+/**
+ * THE LIST CAN BE DRAGGED — AND THE ARROWS ARE STILL THERE.
+ *
+ * The owner asked (21/10) for the offers to be reordered by drag and drop. The pattern is the one `MenuOrderCard` already
+ * answers for the menu, with the same two promises:
+ *
+ *   • the engine is `@dnd-kit`: a pointer sensor that needs six pixels of travel before a press is a drag (a tap on the
+ *     grip is not a move), and a keyboard sensor with Arabic announcements — Space to pick an offer up, ↑ ↓ to move it,
+ *     Space to put it down, Esc to cancel;
+ *   • the drag starts ONLY from the grip, and the grip alone carries `touch-action: none` — a thumb on the rest of the row
+ *     scrolls the page exactly as before, so the scroll is never fought, only the grip is.
+ *
+ * The arrows stay: a drag is a pointer's surface, and the arrows are what a thumb, a keyboard and a screen reader reach on the
+ * first day. Both go through `moveOffer`, so they cannot disagree about what a move means.
+ *
+ * Without `offers.manage` (`enabled` false) there is no grip, no arrows, and not even a drag context: a list that cannot
+ * be changed does not offer to change.
+ */
+function ReorderFrame({
+  enabled, offers, onMove, children,
+}: {
+  enabled: boolean;
+  offers: Offer[];
+  onMove: (m: OfferMove) => void;
+  children: React.ReactNode;
+}) {
+  // Hooks first, the early return after: the order of hooks must not depend on a permission.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  if (!enabled) return <>{children}</>;
+
+  const nameOf = (id: string | number) => offers.find((o) => o.id === String(id))?.name ?? '';
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `أمسكتَ «${nameOf(active.id)}».`,
+    onDragOver: ({ active, over }) =>
+      over && over.id !== active.id ? `«${nameOf(active.id)}» فوق «${nameOf(over.id)}».` : undefined,
+    onDragEnd: ({ active, over }) =>
+      over && over.id !== active.id
+        ? `أُفلت «${nameOf(active.id)}» مكان «${nameOf(over.id)}».`
+        : `أُفلت «${nameOf(active.id)}» في مكانه.`,
+    onDragCancel: ({ active }) => `أُلغي تحريك «${nameOf(active.id)}».`,
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      // The vertical axis is locked and the row kept inside its list, so a hand that drifts sideways does not lose the row.
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragEnd={(end) => {
+        const m = moveAfterDrag(offers, end);
+        if (m) onMove(m);
+      }}
+      accessibility={{ announcements, screenReaderInstructions: INSTRUCTIONS }}
+    >
+      <SortableContext items={offers.map((o) => o.id)} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+/**
+ * The grip is made by the row's own `useSortable` (it needs the same hook instance as the row's node) and is DRAWN where the
+ * row's markup says `<GripSlot />` — handed down through context so the row's markup stays what it was.
+ */
+const GripContext = React.createContext<React.ReactNode>(null);
+function GripSlot() {
+  return <>{React.useContext(GripContext)}</>;
+}
+
+interface RowProps {
+  id: string;
+  name: string;
+  disabled: boolean;
+  className: string;
+  children: React.ReactNode;
+}
+
+/** A row nobody may reorder: the old `<li>`, nothing added. */
+function PlainLi({ className, children }: RowProps) {
+  return <li className={className}>{children}</li>;
+}
+
+/**
+ * ONE ROW THAT CAN BE CARRIED.
+ *
+ * The grip is the ONLY thing that starts a drag (`useSortable`'s listeners are on it and nowhere else) and it alone refuses the
+ * browser's scroll gesture. The row's look while it is carried is INLINE — lifted, a little transparent, above its neighbours —
+ * because the stylesheet is capped to the byte and a drag state is not worth a utility class nothing else uses.
+ */
+function SortableLi({ id, name, disabled, className, children }: RowProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+    // The library announces the grip as «sortable» unless told otherwise — one English word in an Arabic sentence.
+    attributes: { roleDescription: 'مقبض ترتيب' },
+  });
+  const grip = (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={`اسحب «${name}» لتغيير ترتيبه`}
+      title="اسحب لتغيير الترتيب"
+      style={{ touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+    >
+      <RiDraggable className="w-4 h-4" />
+    </button>
+  );
+  return (
+    <li
+      ref={setNodeRef}
+      className={className}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(isDragging ? { position: 'relative', zIndex: 1, opacity: 0.85, boxShadow: 'var(--sys-shadow-overlay)' } : null),
+      }}
+    >
+      <GripContext.Provider value={grip}>{children}</GripContext.Provider>
+    </li>
   );
 }

@@ -480,12 +480,12 @@
     "tabs": 0
   },
   "src/components/products/ProductOffers.tsx": {
-    "buttons": 10,
+    "buttons": 11,
     "inputs": 9,
     "columns": 0,
     "cards": 1,
     "modals": 0,
-    "icons": 14,
+    "icons": 15,
     "links": 0,
     "tabs": 0
   },
