@@ -437,7 +437,15 @@ export function TrackingScreen() {
           onChange={(e) => setStatus(e.target.value)}
           className="w-auto"
         >
-          <option value="">قيد الشحن</option>
+          {/*
+            THE DEFAULT SAYS WHAT IT ACTUALLY FETCHES.
+            It used to say «قيد الشحن» and ask the door for in-flight only,
+            so «بانتظار التحصيل» — the chip below, and the «استلمت منه»
+            button behind it — never had a single row to draw. The door now
+            sends what is moving PLUS what arrived and was not settled, and
+            this label is that sentence.
+          */}
+          <option value="">قيد الشحن وبانتظار التحصيل</option>
           {Object.entries(STATUS_LABEL).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
