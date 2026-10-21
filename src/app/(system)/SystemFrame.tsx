@@ -3,6 +3,7 @@ import { arabic, arabicLatin, publicSans, systemFontVars } from './fonts';
 import { sanitizeTheme, themeByKey, themeStyle } from '@/lib/system-themes';
 import { decorCss, sanitizeDecor } from '@/lib/theme-decoration';
 import { shapeCss } from '@/lib/theme-shape';
+import { headingFontCss } from '@/lib/theme-heading-font';
 import { DecorVisibility } from '@/components/shell/ThemeDecor';
 
 /**
@@ -67,6 +68,15 @@ export function SystemFrame({
    * See src/lib/theme-shape.ts.
    */
   const shape = shapeCss(chosen);
+  /*
+   * ── AND ITS TITLES' FACE, FOR THE TWO THEMES THAT HAVE ONE ──
+   *
+   * Reem Kufi on `h1`–`h3` under the two Islamic themes, and nothing for
+   * the other nine: written here, for the one theme rendered, for the same
+   * reason as the three above — a fourth `next/font` family would be weight
+   * in the first-load sheet for everybody. See src/lib/theme-heading-font.ts.
+   */
+  const headings = headingFontCss(chosen);
 
   return (
     <div
@@ -74,7 +84,7 @@ export function SystemFrame({
       data-rail={railed ? '1' : undefined}
       className={`${systemFontVars} flex min-h-screen flex-col bg-[var(--sys-background)] text-[var(--sys-foreground)]`}
     >
-      <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-arabic-latin:${arabicLatin.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}${palette}${shape}${ambient}`}</style>
+      <style>{`:root{--font-arabic:${arabic.style.fontFamily};--font-arabic-latin:${arabicLatin.style.fontFamily};--font-public-sans:${publicSans.style.fontFamily}}${palette}${shape}${headings}${ambient}`}</style>
       {/* Only the «full» level animates, so only it needs pausing. */}
       {level === 'full' && <DecorVisibility />}
       {children}
