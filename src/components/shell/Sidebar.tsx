@@ -8,7 +8,7 @@ import { useNotifications } from './NotificationsProvider';
 import clsx from 'clsx';
 import type { NavGroup } from '@/lib/route-registry';
 import { iconFor } from './icons';
-import { RiArrowDownSLine, RiListSettingsLine, RiSideBarLine, RiTreeLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiDraggable, RiListSettingsLine, RiSideBarLine, RiTreeLine } from '@remixicon/react';
 import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail';
 import { ThemeDecor } from './ThemeDecor';
 
@@ -352,6 +352,28 @@ export function Sidebar({
             );
           })}
         </nav>
+
+        {/*
+          «رتّب القائمة», WHERE THE MENU IS.
+
+          Arranging the menu lives on the profile page — it is a personal
+          preference and needs no permission of its own — and a control that
+          reorders the menu is found, by most people, by looking at the menu.
+          It was reachable only by knowing that «الملف الشخصي» hid it, which
+          is how a feature the owner asked for ends up unused.
+
+          Same classes as the row beneath it, so the footer reads as one list
+          of two things to do with the menu. Hidden on the rail with the rest
+          of the labels: a folded menu has no room for a sentence.
+        */}
+        <Link
+          href="/admin/profile#menu-order"
+          onClick={onClose}
+          className="rail-hide shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-border)] text-xs text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] transition-colors"
+        >
+          <RiDraggable className="w-4 h-4" />
+          رتّب القائمة
+        </Link>
 
         {/* Show everything at once, or fold it back. Fifty screens in one
             scroll is a hunt; ten headings is a menu. Whichever you prefer is
