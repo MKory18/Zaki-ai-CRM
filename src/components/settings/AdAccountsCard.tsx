@@ -2,10 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { apiJson } from '@/lib/api-client';
 import { Input } from '@/components/ui/Input';
 import { useConfirm } from '@/components/ui/Confirm';
-import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiLoginBoxLine, RiMegaphoneLine, RiPlugLine } from '@remixicon/react';
+import { RiAlertLine, RiArrowDownSLine, RiDeleteBinLine, RiExternalLinkLine, RiLoader4Line, RiLoginBoxLine, RiMegaphoneLine, RiPencilLine, RiPlugLine } from '@remixicon/react';
 import { arDateTime } from '@/lib/format';
+import { isMadeUpAccountId, isManualAccount } from '@/lib/ads/manual';
 
 /**
  * CONNECTING THE PLACES THE SPEND COMES FROM.
@@ -24,6 +26,14 @@ import { arDateTime } from '@/lib/format';
  * The secrets are write-only: checked against the platform before they are
  * stored, encrypted, and never returned — only the last four characters, so
  * a seller can tell which token is in there.
+ *
+ * TWO WAYS IN, BOTH VISIBLE WITHOUT A CLICK — «اوتوماتيك او ادخال يدوي
+ * بالكامل. اريد الخيارين». Under the platform tabs there is a switch with both
+ * names on it: «ربط تلقائي» (everything below, unchanged) and «إدخال يدوي
+ * بالكامل», which adds the same account with NO token — a name and
+ * optionally the platform's id — whose campaigns keep the spend the seller
+ * types. A choice that lived behind a menu would be a choice most people
+ * never learn exists. See `lib/ads/manual.ts` for what a manual account is.
  */
 
 interface Field {
@@ -76,6 +86,9 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [howOpen, setHowOpen] = useState(false);
+  const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  const [manualName, setManualName] = useState('');
+  const [manualId, setManualId] = useState('');
   const confirm = useConfirm();
 
   const active = useMemo(
@@ -101,6 +114,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
     setChosen(p);
     setValues({});
     setAccountId('');
+    setManualId('');
     setMsg(null);
   }
 
@@ -141,12 +155,15 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
   }
 
   async function disconnect(a: Account) {
+    const manual = isManualAccount(a);
     const ok = await confirm({
-      title: `فصل «${a.accountName ?? a.accountId}»؟`,
+      title: `${manual ? 'حذف' : 'فصل'} «${a.accountName ?? a.accountId}»؟`,
       body: a._count.campaigns
-        ? `${a._count.campaigns} حملة ستعود إلى إدخال الإنفاق يدوياً. الأرقام المسحوبة تبقى كما هي — هي مصروف حقيقي.`
+        ? manual
+          ? `${a._count.campaigns} حملة ستبقى بلا حساب، وإنفاقها بيدك كما كان.`
+          : `${a._count.campaigns} حملة ستعود إلى إدخال الإنفاق يدوياً. الأرقام المسحوبة تبقى كما هي — هي مصروف حقيقي.`
         : 'ستُحذف البيانات المحفوظة.',
-      confirmLabel: 'افصل',
+      confirmLabel: manual ? 'احذف' : 'افصل',
       cancelLabel: 'إلغاء',
       tone: 'danger',
     });
@@ -155,6 +172,58 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
     const json = await res.json().catch(() => ({}));
     await load();
     if (json.message) setMsg({ ok: true, text: json.message });
+  }
+
+  /** «إدخال يدوي بالكامل»: the account with no token. */
+  async function addManual() {
+    if (!active) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      // `apiJson`, not a bare fetch: it throws the server's own sentence on a
+      // refusal (a duplicate, a bad id) and sends an expired session to sign in.
+      const json = await apiJson<{ account: { accountName: string } }>('/api/settings/ad-accounts/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: active.platform,
+          accountName: manualName.trim(),
+          accountId: manualId.trim() || undefined,
+        }),
+      });
+      setManualName('');
+      setManualId('');
+      await load();
+      setMsg({ ok: true, text: `أُضيف «${json.account.accountName}» كحساب يدوي — أنشئ حملاتك وانسبها إليه من شاشة الحملات.` });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الحفظ' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** A connected account becomes manual: the token is deleted, the campaigns stay. */
+  async function switchToManual(a: Account) {
+    const ok = await confirm({
+      title: `تحويل «${a.accountName ?? a.accountId}» إلى يدوي؟`,
+      body: `سيُحذف الرمز المحفوظ ولن يُسحب الإنفاق بعد الآن. ${
+        a._count.campaigns ? `${a._count.campaigns} حملة تبقى في الحساب وإنفاقها بيدك، و` : ''
+      }الأرقام المسحوبة تبقى كما هي — هي مصروف حقيقي.`,
+      confirmLabel: 'حوّله إلى يدوي',
+      cancelLabel: 'إلغاء',
+    });
+    if (!ok) return;
+    try {
+      const json = await apiJson<{ message?: string }>(`/api/settings/ad-accounts/${a.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'MANUAL' }),
+      });
+      await load();
+      setMsg({ ok: true, text: json.message || 'تم.' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر التحويل' });
+    }
   }
 
   const labelOf = (p: string) => platforms.find((x) => x.platform === p)?.short ?? p;
@@ -171,8 +240,9 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
         )}
       </div>
       <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-        اربط حساباتك الإعلانية ليأتي الإنفاق تلقائياً بدل أن تكتبه. كل شيء آخر في شاشة الحملات
-        محسوب من طلباتك أصلاً. الحساب يُربط بالمتجر المختار من الأعلى — بدّل المتجر لتربط حساب متجر آخر.
+        اربط حساباتك الإعلانية ليأتي الإنفاق تلقائياً بدل أن تكتبه — أو أضفها يدوياً بالكامل وسجّل
+        الإنفاق بيدك في شاشة الحملات. كل شيء آخر هناك محسوب من طلباتك أصلاً. الحساب يتبع المتجر
+        المختار من الأعلى — بدّل المتجر لتضيف حساب متجر آخر.
       </p>
 
       {accounts === null ? (
@@ -192,27 +262,51 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
                     </span>
                     <span
                       className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
-                        a.status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
+                        isManualAccount(a)
+                          ? 'bg-[var(--sys-surface-strong)] text-[var(--sys-foreground)]'
+                          : a.status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] text-[var(--sys-success)]' : 'bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]'
                       }`}
                     >
-                      {a.status === 'CONNECTED' ? 'متصل' : 'يحتاج انتباهاً'}
+                      {isManualAccount(a) ? 'يدوي' : a.status === 'CONNECTED' ? 'متصل' : 'يحتاج انتباهاً'}
                     </span>
                   </p>
-                  <p className="mt-0.5 font-mono text-xs text-[var(--sys-muted)]" dir="ltr">
-                    {a.accountId} · ••••{a.tokenHint ?? ''}
-                  </p>
+                  {/* A manual account has no token to show the end of, and
+                      may have no platform id either — say that, rather than
+                      print an id this system made up as if Meta had issued it. */}
+                  {isManualAccount(a) ? (
+                    <p className="mt-0.5 text-xs text-[var(--sys-muted)]" dir={isMadeUpAccountId(a.accountId) ? 'rtl' : 'ltr'}>
+                      {isMadeUpAccountId(a.accountId) ? 'بلا رقم من المنصة' : a.accountId}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 font-mono text-xs text-[var(--sys-muted)]" dir="ltr">
+                      {a.accountId} · ••••{a.tokenHint ?? ''}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
-                    {a._count.campaigns} حملة مربوطة
+                    {isManualAccount(a) ? `${a._count.campaigns} حملة في هذا الحساب` : `${a._count.campaigns} حملة مربوطة`}
                     {a.lastSyncAt && ` · آخر سحب ${arDateTime(a.lastSyncAt)}`}
                   </p>
                 </div>
-                <button
-                  onClick={() => void disconnect(a)}
-                  aria-label="فصل" title="فصل"
-                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
-                >
-                  <RiDeleteBinLine className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 items-center">
+                  {/* The other way across: a connected account can be made manual
+                      without losing its campaigns — the token goes, they stay. */}
+                  {!isManualAccount(a) && (
+                    <button
+                      onClick={() => void switchToManual(a)}
+                      aria-label="حوّله إلى يدوي" title="حوّله إلى يدوي"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)] hover:text-[var(--sys-primary)]"
+                    >
+                      <RiPencilLine className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void disconnect(a)}
+                    aria-label={isManualAccount(a) ? 'احذف' : 'فصل'} title={isManualAccount(a) ? 'احذف' : 'فصل'}
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-destructive-soft)] hover:text-[var(--sys-destructive)]"
+                  >
+                    <RiDeleteBinLine className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* The platform's own words, not a summary of them. A seller who
@@ -252,6 +346,36 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
             </div>
           )}
 
+          {/*
+            THE CHOICE, WITH BOTH NAMES ON IT.
+
+            Same segmented look as the platform tabs above it, so it reads as
+            «now pick how», and never collapsed: «اوتوماتيك او ادخال يدوي
+            بالكامل. اريد الخيارين» is two things the owner wants to SEE.
+          */}
+          <div role="group" aria-label="طريقة إضافة الحساب" className="flex gap-1 rounded-lg bg-[var(--sys-surface-strong)] p-0.5">
+            {([['auto', 'ربط تلقائي'], ['manual', 'إدخال يدوي بالكامل']] as const).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                onClick={() => {
+                  setMode(m);
+                  setMsg(null);
+                }}
+                className={`min-h-11 md:min-h-0 inline-flex items-center flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
+                  mode === m
+                    ? 'bg-[var(--sys-card)] text-[var(--sys-primary)] shadow-raised'
+                    : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'auto' && (
+          <>
           {/*
             SIGNING IN, OR THE REASON IT IS NOT OFFERED.
 
@@ -331,6 +455,43 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
             {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPlugLine className="h-4 w-4" />}
             اربط الحساب
           </Button>
+          </>
+          )}
+
+          {mode === 'manual' && (
+            <div className="space-y-2">
+              <p className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-2.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+                حساب يدوي: لا ربط ولا رمز ولا سحب. تكتب حملاتك وإنفاقها بيدك في شاشة «الحملات» وتنسبها
+                لهذا الحساب. وإن أردته تلقائياً لاحقاً فاربطه من «ربط تلقائي» بنفس رقمه.
+              </p>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">اسم الحساب</label>
+                <Input
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  placeholder={`مثلاً: حساب ${active.short} الرئيسي`}
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--sys-foreground)]">رقم الحساب الإعلاني (اختياري)</label>
+                <input
+                  value={manualId}
+                  onChange={(e) => setManualId(e.target.value)}
+                  placeholder={ACCOUNT_PLACEHOLDER[active.platform] ?? ''}
+                  className={INPUT}
+                  dir="ltr"
+                />
+                <p className="mt-1 text-xs leading-relaxed text-[var(--sys-muted)]">
+                  إن كان عندك رقمه فاكتبه ليُربط لاحقاً بنفسه؛ وإلا اتركه فارغاً.
+                </p>
+              </div>
+              <Button size="sm" onClick={addManual} disabled={busy || manualName.trim().length < 2}>
+                {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiPencilLine className="h-4 w-4" />}
+                احفظ الحساب اليدوي
+              </Button>
+            </div>
+          )}
 
           {msg && (
             <p className={`text-xs font-medium ${msg.ok ? 'text-[var(--sys-success)]' : 'text-[var(--sys-destructive)]'}`}>{msg.text}</p>
@@ -341,7 +502,7 @@ export function AdAccountsCard({ storeName }: { storeName?: string }) {
       {/* The instructions are the feature. "Paste your access token" helps
           somebody who already knows how. They come from the adapter, so each
           platform's steps are its own. */}
-      {active && (
+      {active && mode === 'auto' && (
         <>
           <button
             type="button"
