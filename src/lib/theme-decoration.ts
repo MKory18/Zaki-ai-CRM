@@ -115,6 +115,32 @@ export function decorCss(theme: SystemTheme, level: DecorLevel, chosenKey?: stri
     `.${DECOR_CLASS}-sidebar{background:radial-gradient(140% 160% at 100% 0%,var(--sys-primary-soft) 0%,transparent 70%)}` +
     art;
   if (level === 'light') return wash;
+  /*
+   * ── A COMPOSED THEME TURNS ITS ROSETTE; IT DOES NOT DRIFT ──
+   *
+   * The drift moves the whole layer by up to 2% — a glow that wanders, which
+   * is fine for a wash and wrong for a corner and a roofline that are
+   * anchored to the edges of the screen: they would show a seam of
+   * background along one side for half of every cycle. So the layer stays
+   * put and only the rosette moves, once round in seven minutes — slow
+   * enough that nobody sees it turn and everybody sees that it did.
+   *
+   * Door only. An empty list's box is wider than it is tall, and a mask
+   * cannot be drawn outside the box it belongs to, so a rosette turning
+   * inside one would be clipped differently every frame.
+   *
+   * The same two guards as the drift, for the same two reasons: reduced
+   * motion removes it outright, and a hidden tab pauses it.
+   */
+  if (COMPOSED[theme.key] && chosenKey !== AUTO_THEME) {
+    return (
+      wash +
+      `@keyframes zk-decor-turn{to{transform:rotate(1turn)}}` +
+      `.${DECOR_CLASS}-door.${DECOR_CLASS}-full::before{animation:zk-decor-turn 420s linear infinite}` +
+      `[data-decor-hidden] .${DECOR_CLASS}-door.${DECOR_CLASS}-full::before{animation-play-state:paused}` +
+      `@media (prefers-reduced-motion: reduce){.${DECOR_CLASS}-door.${DECOR_CLASS}-full::before{animation:none}}`
+    );
+  }
   return (
     wash +
     `@keyframes zk-decor-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-2%,1.5%,0)}}` +
@@ -170,14 +196,106 @@ const DECOR_INK: Record<string, number> = {
   day: 0.031,
   calm: 0.15,
   cyber: 1,
-  'islamic-epic': 0.234,
-  'islamic-calm': 0.261,
   space: 1,
   sea: 0.19,
   city90: 0.192,
   epic: 0.144,
   lux: 0.24,
 };
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * A THEME THAT WEARS THREE DRAWINGS, NOT ONE.
+ *
+ * The owner, 21/10: «الشكل خرافي مستوحى من الإسلامي حتى الرسوميات». One
+ * mask behind a sign-in card is a pattern; the two Islamic themes are
+ * meant to be a PLACE — a rosette to stand in front of, a corner of vine
+ * and strapwork at each top corner, and a city's roofline along the
+ * bottom. Each is its own drawing (`<key>.rosette.webp`, `.corner.webp`,
+ * `.skyline.webp`), all masks, all painted from `--sys-primary`, so the
+ * rule above holds for every one of them: no colour of their own.
+ *
+ * ── WHERE EACH GOES, AND WHY NOT ANYWHERE ELSE ──
+ *
+ *   door     rosette centred, a corner in each top corner, the skyline on
+ *            the bottom edge. The corners and the skyline sit at the
+ *            VIEWPORT'S edges, where nothing is ever drawn, so they work
+ *            at any width — a frame around the card would have needed the
+ *            card to be one size.
+ *   empty    the rosette alone, fitted to the box. A list with nothing in
+ *            it is the other place that is not measuring anything.
+ *   sidebar  one corner, at the end of the header away from the wordmark.
+ *
+ * Never behind a figure. `a-theme-is-not-a-mood-swing.test.ts` sweeps the
+ * screens for that and is not touched.
+ *
+ * ── THE LEFT CORNER IS THE RIGHT ONE, TURNED ──
+ *
+ * One drawing, mirrored by `transform: scaleX(-1)` on the layer that
+ * carries it. A second file of the same drawing would be 68 KB of the same
+ * bytes, for a person who only ever sees one of them at a time.
+ *
+ * ── AND THE NUMBERS BELOW ARE CHOSEN, NOT MEASURED ──
+ *
+ * The eleven single masks were weighed by the light they move and given the
+ * opacity that put them on one target (above). That worked for one mask
+ * behind a card and it did not survive a browser: a proof sheet of 260px
+ * tiles measured a kinder screen than the real door, and the first build
+ * put a radar through the wordmark. These three are set by eye, in a
+ * browser, at 1920, 1280 and 390 pixels wide, over the real card size.
+ * The corners and the skyline are quieter than they look and the rosette
+ * quieter still, because the rosette is the one that sits where text is.
+ *
+ * The CSS below does exactly one thing differently from a single mask: it
+ * hides the circuit-wave banner the door draws under everything
+ * (`.zk-door-banner`), because a door that brings its own picture should
+ * not be wearing another one beneath it.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export interface Composition {
+  rosette: number;
+  corner: number;
+  skyline: number;
+}
+export const COMPOSED: Record<string, Composition> = {
+  // Night: navy and gold. Dense strapwork, a grand skyline — louder, because
+  // gold on navy is a gentler pair than it looks and carries the weight.
+  'islamic-epic': { rosette: 0.15, corner: 0.28, skyline: 0.17 },
+  // Day: ivory and green. Single lines and palms — quieter, because dark on
+  // pale paper is the loudest pairing in the set.
+  'islamic-calm': { rosette: 0.14, corner: 0.24, skyline: 0.16 },
+};
+
+/** The three drawings of a composed theme, by the name the file carries. */
+export const PIECES = ['rosette', 'corner', 'skyline'] as const;
+
+function composed(key: string, c: Composition): string {
+  const D = DECOR_CLASS;
+  const url = (piece: string) => `url(/brand/decor/${key}.${piece}.webp)`;
+  // `at` and `size` are the two halves of the mask shorthand, and the
+  // shorthand is written in both spellings: Safari still wants the prefix.
+  const paint = (piece: string, at: string, size: string, opacity: number) =>
+    `background-color:var(--sys-primary);opacity:${opacity};` +
+    `-webkit-mask:${url(piece)} no-repeat ${at}/${size};mask:${url(piece)} no-repeat ${at}/${size}`;
+  const pseudo = `content:'';position:absolute;inset:0;`;
+  const box = `position:absolute;inset:0;`;
+  const CORNER = 'min(46vmin,420px) auto';
+  return (
+    // The door brings its own picture; take the circuit wave out from under it.
+    `.zk-door-banner{display:none}` +
+    // ── the door ──
+    // The rosette is `::before`, so it is painted FIRST and the corners and
+    // the skyline sit over it where they meet at the bottom.
+    `.${D}-door::before{${pseudo}${paint('rosette', 'center', 'min(92vmin,1000px)', c.rosette)}}` +
+    `.${D}-door::after{${pseudo}${paint('corner', 'right top', CORNER, c.corner)}}` +
+    `.${D}-door .${D}-l{${box}${paint('corner', 'right top', CORNER, c.corner)};transform:scaleX(-1)}` +
+    `.${D}-door .${D}-b{${box}${paint('skyline', 'center bottom', 'min(100%,1700px) auto', c.skyline)}}` +
+    // ── an empty list: the rosette, fitted to the box, never cropped by it ──
+    `.${D}-empty::after{${pseudo}${paint('rosette', 'center', 'contain', c.rosette)}}` +
+    // ── the sidebar: one corner, at the end away from the wordmark ──
+    `.${D}-sidebar::after{${pseudo}${paint('corner', 'right top', '170px auto', c.corner)};transform:scaleX(-1)}`
+  );
+}
 
 /**
  * The mask layer for one theme, or nothing.
@@ -188,6 +306,7 @@ const DECOR_INK: Record<string, number> = {
  * mask leaves behind. Hence `background-color` only inside this rule.
  */
 function ornament(key: string): string {
+  if (COMPOSED[key]) return composed(key, COMPOSED[key]);
   const ink = DECOR_INK[key];
   if (!ink) return '';
   const url = `url(/brand/decor/${key}.webp)`;
