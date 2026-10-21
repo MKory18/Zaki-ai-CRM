@@ -116,6 +116,16 @@ export const storeUpdateSchema = z
   .partial()
   .strict();
 
+/**
+ * DELETE /api/geo/stores/:id — the shop's own name, typed, is the second key.
+ *
+ * A button can be pressed by a finger that meant the one beside it, and a
+ * store is the one thing here that takes its address, its pages and its look
+ * with it. The route compares this with the stored name; the schema only says
+ * it must be there and that nothing else may ride along.
+ */
+export const storeDeleteSchema = z.object({ confirm: z.string().min(1, 'اكتب اسم المتجر لتأكيد الحذف') }).strict();
+
 export const contextSelectSchema = z.object({
   countryId: z.string().uuid(),
   storeId: z.string().uuid().nullable().optional(),

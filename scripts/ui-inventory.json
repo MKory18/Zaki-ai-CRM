@@ -830,12 +830,12 @@
     "tabs": 0
   },
   "src/components/screens/GeoSettingsScreen.tsx": {
-    "buttons": 12,
+    "buttons": 14,
     "inputs": 11,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
+    "icons": 7,
     "links": 0,
     "tabs": 0
   },

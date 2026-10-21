@@ -372,3 +372,18 @@ export async function requireContext(): Promise<GeoContext> {
   if (!country) throw new Error('Forbidden: country not accessible');
   return { user, companyId, countryId: country.id, storeId: valid.storeId as string, country };
 }
+
+/**
+ * The store this person is standing in right now, from their own cookie —
+ * null when they have picked none, or the cookie is not theirs.
+ *
+ * It does not validate against access: a person who may not enter a store
+ * is still, for the one question this answers («is the store I am about to
+ * delete the one my own screen is scoped to?»), standing in what their
+ * cookie says.
+ */
+export async function standingStoreId(userId: string): Promise<string | null> {
+  const jar = await cookies();
+  const sel = await readSelection(userId, jar.get(CONTEXT_COOKIE)?.value);
+  return sel?.storeId ?? null;
+}
