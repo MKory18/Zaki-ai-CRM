@@ -504,6 +504,39 @@ export function DashboardScreen() {
           ))}
         </div>
 
+        {/* ─── Where every order ended up, in the owner's words ───
+            The whole history, not the period above: the server counts it
+            (order-outcome.ts) and this only draws the rows it sends. */}
+        {analytics?.outcomes?.outcomes?.length > 0 && (
+          <Card>
+            <CardHeader
+              title={locale === 'ar' ? 'حالات الطلبات — كل التاريخ' : 'Order outcomes — all time'}
+              action={
+                mayOpen('/orders') ? (
+                  <Link href="/orders?state=CLOSED" className="tap-safe text-xs text-[var(--sys-primary)] font-medium hover:underline">
+                    {locale === 'ar' ? 'الطلبات المغلقة' : 'Closed orders'}
+                  </Link>
+                ) : undefined
+              }
+            />
+            <ul className="divide-y divide-[var(--sys-border)]/60">
+              {analytics.outcomes.outcomes.map((r: { key: string; label: string; count: number; closed: boolean }) => (
+                <li key={r.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className={`inline-block w-2 h-2 rounded-full ${r.closed ? 'bg-[var(--sys-success)]' : 'bg-[var(--sys-warning)]'}`} />
+                    <span className="text-[var(--sys-heading)]">{r.label}</span>
+                  </span>
+                  <span className="font-bold tabular-nums">{r.count.toLocaleString('en-US')}</span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between px-4 py-2.5 text-sm bg-[var(--sys-surface)]">
+                <span className="font-semibold">{locale === 'ar' ? 'المجموع' : 'Total'}</span>
+                <span className="font-black tabular-nums">{analytics.outcomes.total.toLocaleString('en-US')}</span>
+              </li>
+            </ul>
+          </Card>
+        )}
+
         {/* ─── Rankings + Leaderboard ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>

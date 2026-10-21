@@ -5,6 +5,7 @@ import { can, requirePermission } from '@/lib/authorization';
 import { getCompanyAnalytics, getDateRange, previousRange, DateFilter } from '@/lib/analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { db } from '@/lib/db';
+import { countOutcomes } from '@/lib/order-outcome';
 import { DELIVERED_SHIPPING, rateOf, whereDelivered } from '@/lib/order-state';
 import {
   DOOR_FAILED_SHIPPING,
@@ -116,6 +117,9 @@ export async function GET(req: Request) {
 
     const filter: DateFilter = { period, startDate, endDate };
     const analytics = await getCompanyAnalytics({ companyId, storeId }, filter);
+    // Where every order ended up, in the owner's words — over the WHOLE
+    // history, not the period: «how did my orders end» is asked of all of them.
+    const outcomes = await countOutcomes(db, { companyId, storeId });
 
     /**
      * AND THE SAME FIGURES FOR THE WINDOW BEFORE THIS ONE.
@@ -265,6 +269,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ...rest,
+      outcomes,
       ...(maySeeMoney ? { financials } : {}),
       // The AI context carries the same figures in another shape — net
       // profit, production cost, margin, the most profitable product —
