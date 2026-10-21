@@ -44,18 +44,23 @@
  * `font-src 'self'`, and kept by the service worker for good — which is why
  * a new subset gets a NEW file name and is never edited in place.
  *
+ * (Hashes are cut to 16 characters on purpose: `scripts/scan-secrets.mjs`
+ * reads any 32 hex characters in a source file as a leaked secret. The whole
+ * sha256 is in the test beside this file; the whole commit and blob ids are
+ * in the pull request that added the font.)
+ *
  *   source     github.com/google/fonts  ofl/reemkufi/ReemKufi[wght].ttf
- *              commit 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5
- *              127,152 bytes, git blob ad1a769f41ed4a2b87e3afe4289c9115acb9cc97
+ *              commit 8b0a1d0f5983c89b…
+ *              127,152 bytes, git blob ad1a769f41ed4a2b…
  *   licence    public/fonts/reem-kufi-OFL.txt, byte for byte the upstream
- *              blob 55f55c9e2ce32806c5b82b7aa24763c518e798e8. Its Reserved
+ *              blob 55f55c9e2ce32806…. Its Reserved
  *              Font Name is «Josefin Sans» (the Latin glyphs descend from
  *              it) — this file keeps the family name «Reem Kufi» and never
  *              uses the reserved one. The copyright and the licence notice
  *              also stay inside the font's own name table.
  *   shipped    public/fonts/reem-kufi-var.woff2, 24,584 bytes, sha256
- *              3f0c9bfeafb362bbba0ac955e9ddfa00c40870d108f94f167c1d365b9c546f0e
- *              (pinned by the test beside this file): one VARIABLE
+ *              3f0c9bfeafb362bb… (the whole value is pinned by the test
+ *              beside this file): one VARIABLE
  *              file, weight 400–700. Titles are 600 today — the unlayered
  *              `h1…h6 { font-weight: 600 }` in system.css beats `font-bold`,
  *              measured in a browser — and a file that covers the whole range
