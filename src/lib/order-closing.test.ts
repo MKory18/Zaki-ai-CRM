@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CASH_DONE, closingStages, type ClosingSource } from './order-closing';
+import { CASH_DONE, closingStages, whereClosed, type ClosingSource } from './order-closing';
 import { getZone, deriveCoreState, type StateSource } from './order-state';
 
 /**
@@ -150,5 +150,26 @@ describe('beside the zone, never instead of it', () => {
     expect(deriveCoreState(order)).toBe('PARTIALLY_DELIVERED');
     expect(getZone('PARTIALLY_DELIVERED')).toBe('CLOSED');
     expect(closingStages(o({ shippingStatus: 'PARTIALLY_DELIVERED' })).closed).toBe(false);
+  });
+});
+
+describe('«ملغي قبل الشحن» is finished however it was cancelled', () => {
+  it('a refusal at confirmation never reached shipping, and is closed', () => {
+    for (const confirmationStatus of ['REJECTED', 'CANCELLED']) {
+      const s = closingStages(o({ shippingStatus: 'NOT_READY', settlementStatus: 'NOT_APPLICABLE', confirmationStatus }));
+      expect(s.closed, confirmationStatus).toBe(true);
+    }
+  });
+
+  it('a new order waiting at NOT_READY is NOT closed — only a refusal is', () => {
+    for (const confirmationStatus of ['NEW', 'IN_PROGRESS', 'CONFIRMED', 'POSTPONED', undefined]) {
+      const s = closingStages(o({ shippingStatus: 'NOT_READY', settlementStatus: 'NOT_APPLICABLE', confirmationStatus }));
+      expect(s.closed, String(confirmationStatus)).toBe(false);
+    }
+  });
+
+  it('and the «مغلق» filter asks the same question', () => {
+    const w = JSON.stringify(whereClosed());
+    expect(w).toContain('"confirmationStatus":{"in":["REJECTED","CANCELLED"]}');
   });
 });

@@ -774,6 +774,12 @@ export function OrdersScreen() {
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="font-bold text-[var(--sys-heading)] text-xs" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
+                          {/* where it ended up, in the owner's words — sent by the server */}
+                          {order.outcome && (
+                            <span className={`text-xs font-medium ${order.outcomeClosed ? 'text-[var(--sys-success)]' : 'text-[var(--sys-muted-foreground)]'}`}>
+                              {order.outcome}
+                            </span>
+                          )}
                           {order.deliveryProvider && (
                             <span className="inline-flex items-center gap-1 text-xs text-[var(--sys-muted-foreground)]">
                               {order.deliveryProvider.kind === 'AGENT' ? (

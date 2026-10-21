@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { findOrCreateCustomer } from '@/lib/customer-identity';
 import { CORE_STATES, deriveCoreState, getZone, whereForState, type CoreState, type StateSource } from '@/lib/order-state';
+import { OUTCOME_CLOSED, OUTCOME_LABEL_AR, orderOutcome } from '@/lib/order-outcome';
 import { orderRefFields } from '@/lib/order-ref';
 import { computeCod } from '@/lib/money';
 import { productCosts } from '@/lib/product-cost';
@@ -97,6 +98,9 @@ export async function GET(req: Request) {
           // list, so neither needs opening the order to see.
           region: { select: { id: true, name: true } },
           deliveryProvider: { select: { id: true, name: true, kind: true } },
+          // whether the counting desk received it, and with a fee or not —
+          // the half of «where it ended up» the order's own columns lack
+          returnReceipt: { select: { courierFeeCharged: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
@@ -116,6 +120,9 @@ export async function GET(req: Request) {
         ...o,
         state: deriveCoreState(o as unknown as StateSource),
         zone: getZone(deriveCoreState(o as unknown as StateSource)),
+        // in the owner's words, read from the same fields (order-outcome.ts)
+        outcome: OUTCOME_LABEL_AR[orderOutcome(o)],
+        outcomeClosed: OUTCOME_CLOSED[orderOutcome(o)],
         previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
       })),
       // The store's own currency. The list used to print a hard-coded $ on

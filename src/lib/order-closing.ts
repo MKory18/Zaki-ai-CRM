@@ -1,4 +1,4 @@
-import { DELIVERED_SHIPPING, RETURNED_SHIPPING } from './order-state';
+import { CONFIRMATION_REFUSED, DELIVERED_SHIPPING, RETURNED_SHIPPING } from './order-state';
 
 /**
  * WHEN IS AN ORDER FINISHED? — TWO STAGES, AND BOTH HAVE TO LAND.
@@ -48,6 +48,12 @@ export interface ClosingSource {
   settlementStatus: string;
   /** A return receipt exists: somebody counted the goods back in. */
   returnReceived: boolean;
+  /**
+   * Read only to recognise an order refused at confirmation, which never
+   * reaches the shipping columns. Optional so a caller that has no order
+   * row (a single stage question) is not made to invent one.
+   */
+  confirmationStatus?: string;
 }
 
 export interface ClosingStages {
@@ -70,11 +76,26 @@ const PARTIAL = 'PARTIALLY_DELIVERED';
 /** Nothing is owed and nothing is coming back from these. */
 const NO_DOOR = ['CANCELLED'];
 
+/**
+ * «ملغي قبل الشحن» IS FINISHED, HOWEVER IT WAS CANCELLED.
+ *
+ * The owner's ruling (21/10): cancelled before shipping = the order is done.
+ * A cancellation from the shipping side writes shippingStatus CANCELLED and
+ * was already closed. A refusal at CONFIRMATION writes only the
+ * confirmation column and leaves shipping at NOT_READY — the same parcel
+ * that never left, read as «not yet at a door» and so never closed. Same
+ * fact, two readings; this makes them one. Nothing is owed by it and
+ * nothing is coming back from it, which is all «closed» asks.
+ */
+const REFUSED_BEFORE_SHIPPING = (o: ClosingSource) =>
+  o.shippingStatus === 'NOT_READY' &&
+  (CONFIRMATION_REFUSED as readonly string[]).includes(o.confirmationStatus ?? '');
+
 export function closingStages(o: ClosingSource): ClosingStages {
   const delivered = (DELIVERED_SHIPPING as readonly string[]).includes(o.shippingStatus);
   const partial = o.shippingStatus === PARTIAL;
   const comingBack = (GOODS_COMING_BACK as readonly string[]).includes(o.shippingStatus) || partial;
-  const cancelled = NO_DOOR.includes(o.shippingStatus);
+  const cancelled = NO_DOOR.includes(o.shippingStatus) || REFUSED_BEFORE_SHIPPING(o);
 
   const cash: StageState = delivered ? (o.settlementStatus === CASH_DONE ? 'DONE' : 'PENDING') : 'NONE';
   const goods: StageState = comingBack ? (o.returnReceived ? 'DONE' : 'PENDING') : 'NONE';
@@ -131,7 +152,13 @@ export function whereClosed(): Record<string, unknown> {
   const AT_A_DOOR = ['DELIVERED', 'PARTIALLY_DELIVERED', ...RETURNED_SHIPPING, 'CANCELLED'] as const;
   return {
     AND: [
-      { shippingStatus: { in: [...AT_A_DOOR] } },
+      {
+        OR: [
+          { shippingStatus: { in: [...AT_A_DOOR] } },
+          // refused at confirmation: never shipped, nothing owed, nothing coming
+          { shippingStatus: 'NOT_READY', confirmationStatus: { in: [...CONFIRMATION_REFUSED] } },
+        ],
+      },
       // cash: NONE on everything that never took money, DONE once settled
       {
         OR: [

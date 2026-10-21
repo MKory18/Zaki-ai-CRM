@@ -385,6 +385,7 @@ export async function GET(
       shippingStatus: order.shippingStatus,
       settlementStatus: order.settlementStatus,
       returnReceived,
+      confirmationStatus: order.confirmationStatus,
     });
 
     // What the customer actually pays at the door, from the ONE cod function
