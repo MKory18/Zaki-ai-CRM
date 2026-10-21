@@ -122,7 +122,7 @@ export function PenaltyRulesCard() {
     <Card>
       <CardHeader
         title="قواعد الخصم"
-        subtitle="تقترح فقط — لا خصم يصير مالاً إلا بقرار إنسان على شاشة «الخصومات»"
+        subtitle="تقترح فقط — لا خصم يصير مالاً إلا بقرار إنسان على شاشة «خصومات الموظفين»"
       />
       <CardContent className="space-y-3">
         {rules.length === 0 && (

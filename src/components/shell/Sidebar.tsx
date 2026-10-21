@@ -304,7 +304,22 @@ export function Sidebar({
                       <span className="w-8 h-8 flex items-center justify-center shrink-0">
                         <Icon className="w-[18px] h-[18px]" />
                       </span>
-                      <span className="rail-hide">{route.label}</span>
+                      {/*
+                        THE STOP'S NUMBER, WHEN THE GROUP IS A ROAD.
+
+                        «3. دفعات الشحن»: a plain prefix in the label's own
+                        colour, so it needs no new class and cannot fall
+                        below the contrast the label already has — on the
+                        lit row it would have been the one text on the
+                        accent that was NOT `primary-foreground`. See
+                        `RouteDef.step` for why it belongs to the screen and
+                        not to its place in the list. Folded to a rail the
+                        label is not drawn, and the number goes with it.
+                      */}
+                      <span className="rail-hide">
+                        {route.step ? `${route.step}. ` : ''}
+                        {route.label}
+                      </span>
                     </span>
 
                     {/*
