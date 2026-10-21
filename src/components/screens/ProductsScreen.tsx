@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent, KpiCard } from '@/components/ui/Card';
 import { useConfirm, useTell } from '@/components/ui/Confirm';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select } from '@/components/ui/Input';
@@ -12,7 +12,7 @@ import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { CategoryPicker } from '@/components/products/CategoryPicker';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -22,6 +22,11 @@ import { HealthChip } from '@/components/ui/HealthChip';
 import type { CatalogueReadiness, ProductGrade } from '@/lib/product-grade';
 import { PRODUCT_STATUS_AR, productStatusAr, productStatusTone } from '@/lib/product-status';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
+import { apiJson } from '@/lib/api-client';
+import type { ProductStats } from '@/lib/product-stats';
+
+/** A count as a reader reads it — Latin digits, thousands separated. */
+const count = (n: number) => n.toLocaleString('en-US');
 
 /**
  * What the grades route answers with, so the screen never guesses a shape.
@@ -54,6 +59,35 @@ export function ProductsScreen() {
    * page came to print two different «متوسط تكلفة الوحدة» a fortnight ago.
    */
   const [gradeData, setGradeData] = useState<GradeAnswer | null>(null);
+
+  /**
+   * THE FIGURES ABOVE THE TABLE AND THE UNITS IN ITS «المبيعات» COLUMN — FETCHED, NEVER COMPUTED HERE.
+   *
+   * The owner, 21/10: «المبيعات في جدول المنتجات فش ارقام؟». The column read `analytics.totalSold`, a counter that is only
+   * moved when a delivery draws its units from a production batch: 14 products held 17,664 delivered units and 13 of them
+   * showed 0. `GET /api/products/stats` counts what a customer actually took (see `lib/product-stats.ts`), and this screen
+   * only prints it.
+   *
+   * THREE STATES, AND NONE OF THEM IS A ZERO. `undefined` until the first answer is in — the column says «…», because a 0
+   * painted over a product with thousands of units is a claim; `null` when it could not be read — «—»; and the answer. The
+   * old figure is NOT the fallback: a number that is wrong is worse than a dash. A reload (after a create or a delete) keeps
+   * the numbers on screen until the new ones arrive rather than blinking to «…» — and an answer that arrives late never
+   * replaces a newer one.
+   */
+  const [stats, setStats] = useState<ProductStats | null | undefined>(undefined);
+  const statsSeq = useRef(0);
+  const loadStats = async () => {
+    const mine = ++statsSeq.current;
+    let answer: ProductStats | null = null;
+    try {
+      const data = await apiJson<ProductStats>('/api/products/stats');
+      // A shape that is not the answer is no answer: the cards and the column read it field by field.
+      if (data && data.totals && data.unitsSold) answer = data;
+    } catch {
+      // The catalogue must render even when its numbers cannot — a dash says so.
+    }
+    if (mine === statsSeq.current) setStats(answer);
+  };
 
   /**
    * Whether this viewer was given costs at all — asked of the DATA, not of
@@ -162,6 +196,7 @@ export function ProductsScreen() {
 
   const loadProducts = async () => {
     setLoading(true);
+    void loadStats();
     try {
       const res = await fetch('/api/products');
       if (res.ok) {
@@ -245,6 +280,10 @@ export function ProductsScreen() {
 
   const primaryImageOf = (p: any) => p.images?.find((i: any) => i.isPrimary) || p.images?.[0];
 
+  /** «الأكثر مبيعاً» — the NAME comes from the list this screen already holds; the number from the server. */
+  const topSeller = stats?.top ? products.find((p) => p.id === stats.top!.id) : undefined;
+  const topSellerLine = topSeller && stats?.top ? `الأكثر: ${productName(topSeller, locale)} (${count(stats.top.units)})` : undefined;
+
   return (
     <>
       <div className="space-y-6">
@@ -270,6 +309,48 @@ export function ProductsScreen() {
           </div></>
             }
           />
+
+        {/*
+          «بطاقات ذكية في المنتجات زي احصائيات» — THE OWNER, 21/10.
+
+          Four figures about the catalogue, each from the server and each with the sentence that says what it counts: a card a
+          reader cannot check is a number nobody trusts. Nothing is drawn until the answer is in, so there is no card of zeros
+          to be read in the meantime; and the value of the stock is a card only when the server sent it — it is what the goods
+          cost, and a caller who may not see that is not shown a zero in its place.
+        */}
+        {stats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              title="المنتجات"
+              rule="مجموع المنتجات في كتالوج هذا المتجر ممّا يحقّ لك رؤيته. «نشط» حالته نشط، و«بلا تصنيف» ما إله فئة."
+              value={count(stats.totals.products)}
+              subtitle={`${count(stats.totals.active)} نشط · ${count(stats.totals.unfiled)} بلا تصنيف`}
+              icon={RiFoldersLine}
+            />
+            <KpiCard
+              title="القطع المباعة"
+              rule="مجموع القطع اللي استلمها الزبائن فعلاً من الطلبات الموصَّلة — عند التسليم الجزئي ما انقبل منها بس، والهديّة قطعة منها — من أوّل طلب. هو نفس الرقم بعمود «المبيعات»."
+              value={count(stats.totals.unitsSold)}
+              subtitle={topSellerLine}
+              icon={RiTruckLine}
+            />
+            <KpiCard
+              title="القطع في المستودع"
+              rule="مجموع اللي بقي بدفعات المنتجات اللي فيها رصيد، لكلّ منتج بهالمتجر. قبل ما ينخصم المحجوز لطلبات ما انشحنت — «المتاح للبيع» بصفحة كل منتج."
+              value={count(stats.totals.unitsOnHand)}
+              subtitle={`${count(stats.totals.outOfStock)} منتج نافد من المستودع`}
+              icon={RiArchiveLine}
+            />
+            {stats.totals.stockValue !== undefined && (
+              <KpiCard
+                title="قيمة المخزون"
+                rule="لكلّ منتج: ما بقي بكلّ دفعة × تكلفة وحدتها، ثمّ مجموعها على المنتجات. هو نفس رقم «قيمة المخزون» بصفحة المنتج."
+                value={<Money value={stats.totals.stockValue} />}
+                icon={RiWallet3Line}
+              />
+            )}
+          </div>
+        )}
 
         {/*
           WHAT THE GRADE IS MADE OF, AND WHAT IS MISSING BEFORE IT SPEAKS.
@@ -455,11 +536,11 @@ export function ProductsScreen() {
                     : []),
                   {
                     key: 'sold',
-                    label: 'المبيعات',
+                    label: 'المبيعات (قطعة)',
                     align: 'end',
                     render: (p) => (
                       <span className="font-medium tabular-nums text-[var(--sys-primary)]">
-                        {p.analytics?.totalSold ?? 0}
+                        {stats === undefined ? '…' : stats === null ? '—' : count(stats.unitsSold[p.id] ?? 0)}
                       </span>
                     ),
                   },
