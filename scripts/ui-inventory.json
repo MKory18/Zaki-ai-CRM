@@ -1380,12 +1380,12 @@
     "tabs": 0
   },
   "src/components/settings/MenuOrderCard.tsx": {
-    "buttons": 6,
+    "buttons": 7,
     "inputs": 2,
     "columns": 0,
     "cards": 2,
     "modals": 0,
-    "icons": 6,
+    "icons": 7,
     "links": 0,
     "tabs": 0
   },
@@ -1635,8 +1635,8 @@
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 5,
-    "links": 2,
+    "icons": 6,
+    "links": 3,
     "tabs": 0
   },
   "src/components/store-admin/PanelHeader.tsx": {

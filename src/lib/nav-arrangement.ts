@@ -200,3 +200,83 @@ export function cleanLayout(layout: NavLayout, allowed: readonly string[]): NavL
     pinned: layout.pinned.filter((p) => ok.has(p)),
   };
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * MOVING ONE SCREEN, WITHIN ITS OWN GROUP — BY BUTTON OR BY HAND.
+ *
+ * The menu arrangement had two buttons per row, up and down, and the owner
+ * asked for dragging («سحب وإفلات»). The reasons it had been deferred are in
+ * `MenuOrderCard`: a drag needs pointer, touch and keyboard paths to be
+ * equal, and on a 390px screen a drag inside a scrolling column fights the
+ * scroll. Both are answered there, by a library built for exactly that and by
+ * keeping the buttons.
+ *
+ * What is HERE is the part that is the same whichever way it was moved: given
+ * the whole menu's order and one group, where does the screen end up. Pure
+ * and free of any drag library, so the buttons and the drag run through ONE
+ * function and cannot disagree about what «move this one down» means.
+ *
+ * ── WITHIN ITS OWN GROUP, AND THAT IS A RULE ──
+ *
+ * A screen does not change what it is about by being dragged under another
+ * heading. It was true of the buttons, which cannot leave the group, and it
+ * stays true of the drag: each group is its own drop zone, and a drop that
+ * names something outside the group moves nothing.
+ *
+ * ── AND ONE GROUP NEVER RESHUFFLES ANOTHER ──
+ *
+ * `order` is a flat list of paths across the whole menu (see `NavLayout`),
+ * and a group is sorted by the rank of its own members. So the new order is
+ * «everything before this group, then this group in its new order, then
+ * everything after» — the other groups' paths keep their places exactly.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export function reorderWithinGroup(
+  flat: readonly string[],
+  group: readonly string[],
+  from: number,
+  to: number
+): string[] {
+  const last = group.length - 1;
+  // Nothing to do, or an index that is not in the group: leave the menu as it was.
+  if (from === to || from < 0 || to < 0 || from > last || to > last) return [...flat];
+
+  const moved = [...group];
+  const [one] = moved.splice(from, 1);
+  moved.splice(to, 0, one);
+
+  const inGroup = new Set(group);
+  const outside = flat.filter((p) => !inGroup.has(p));
+  // How many of the others sit before this group's first member — those keep
+  // their place, and the group goes in right after them.
+  const firstAt = flat.findIndex((p) => inGroup.has(p));
+  const before = firstAt < 0 ? outside.length : flat.slice(0, firstAt).filter((p) => !inGroup.has(p)).length;
+  return [...outside.slice(0, before), ...moved, ...outside.slice(before)];
+}
+
+/** The two things a finished drag tells us, as the drag library reports them. */
+export interface DragEnd {
+  active: { id: string | number };
+  over: { id: string | number } | null;
+}
+
+/**
+ * The new order after a drag — or `null` when nothing moved.
+ *
+ * `null` for a drop on nothing, a drop on yourself, and a drop on something
+ * that is not in this group (which a per-group drop zone cannot produce, and
+ * which is refused here regardless: the rule does not depend on the library
+ * being set up right).
+ */
+export function orderAfterDrag(
+  flat: readonly string[],
+  group: readonly string[],
+  end: DragEnd
+): string[] | null {
+  if (!end.over || end.over.id === end.active.id) return null;
+  const from = group.indexOf(String(end.active.id));
+  const to = group.indexOf(String(end.over.id));
+  if (from < 0 || to < 0) return null;
+  return reorderWithinGroup(flat, group, from, to);
+}

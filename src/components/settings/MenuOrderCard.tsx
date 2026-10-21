@@ -6,11 +6,31 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { THEME_CHOICES } from '@/lib/system-themes';
 import { Select } from '@/components/ui/Input';
-import { NAV } from '@/lib/route-registry';
-import { applyArrangement, EMPTY_LAYOUT, type NavLayout } from '@/lib/nav-arrangement';
+import { ALL_ROUTES, NAV } from '@/lib/route-registry';
+import { applyArrangement, EMPTY_LAYOUT, orderAfterDrag, reorderWithinGroup, type NavLayout } from '@/lib/nav-arrangement';
+import type { RouteDef } from '@/lib/route-registry';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   RiArrowDownSLine,
   RiArrowUpSLine,
+  RiDraggable,
   RiEyeLine,
   RiEyeOffLine,
   RiLoader4Line,
@@ -24,15 +44,28 @@ import {
  * role; each person adjusts on top of it; «رجّع الأساس» brings the base
  * back.
  *
- * ── UP AND DOWN, NOT DRAG ──
+ * ── DRAG, AND THE BUTTONS ARE STILL THERE ──
  *
- * The design shows drag handles. Buttons ship the control today and a
- * dragged list does not: a drag needs pointer, touch and keyboard paths to
- * be equal, and on a 390 px screen — which this product is held to — a
- * drag inside a scrolling column fights the scroll. Two buttons work with
- * a thumb, with a keyboard and with a screen reader on the first day.
- * Dragging is recorded (RV46) as the nicer surface over the same stored
- * shape, which is the part that is hard to change later.
+ * This shipped with up and down buttons and dragging was recorded (RV46) as
+ * the nicer surface over the same stored shape — deferred for two honest
+ * reasons: a drag needs pointer, touch and keyboard paths to be equal, and
+ * on a 390 px screen a drag inside a scrolling column fights the scroll.
+ *
+ * Dragging is here now (the owner asked for it by name: «سحب وإفلات»), and
+ * the two reasons are answered rather than waved away:
+ *
+ *   • the engine is `@dnd-kit`, which carries a pointer sensor and a keyboard
+ *     sensor with Arabic announcements for a screen reader — Space to pick a
+ *     row up, the arrows to move it, Space to put it down, Esc to cancel;
+ *   • the drag starts ONLY from a handle, and the handle alone has
+ *     `touch-action: none`. A thumb on the rest of the row scrolls the page
+ *     exactly as before, so the scroll is never fought, only the grip is.
+ *
+ * And the buttons stay. A drag is a pointer's surface; the arrows are what a
+ * thumb on a phone, a keyboard and a screen reader reach on the first day,
+ * and removing them to make room for the nicer control would have traded the
+ * accessible path for the pleasant one. Both go through the SAME function —
+ * `reorderWithinGroup` — so they cannot disagree about what a move means.
  *
  * ── AND ARRANGING OPENS NOTHING ──
  *
@@ -40,6 +73,9 @@ import {
  * removes a row from a list; the door is still checked when it is opened,
  * and a hidden screen reached by its URL is refused exactly as before.
  */
+/** Every screen's name, by path — what the announcements say instead of an address. */
+const ALL_LABELS = new Map(ALL_ROUTES.map((r) => [r.path, r.label]));
+
 export function MenuOrderCard() {
   const [layout, setLayout] = useState<NavLayout>(EMPTY_LAYOUT);
   const [paths, setPaths] = useState<string[]>([]);
@@ -105,17 +141,25 @@ export function MenuOrderCard() {
     if (!group) return;
     const within = group.routes.map((r) => r.path);
     const at = within.indexOf(path);
-    const to = at + by;
-    // Inside its own group only: a screen does not change what it is about
-    // by being dragged under another heading.
-    if (to < 0 || to >= within.length) return;
-    [within[at], within[to]] = [within[to], within[at]];
-    const next = flat.filter((p) => !within.includes(p));
-    // Rebuilt as «everything else, with this group's new order spliced in
-    // where the group sits», so one group's move never reshuffles another.
-    const head = flat.slice(0, flat.indexOf(group.routes[0].path)).filter((p) => !within.includes(p));
-    setLayout({ ...layout, order: [...head, ...within, ...next.slice(head.length)] });
+    // Inside its own group only — `reorderWithinGroup` leaves the menu as it
+    // was for an index outside it, which is what pressing «up» on the first
+    // row asks for.
+    setLayout({ ...layout, order: reorderWithinGroup(flat, within, at, at + by) });
   }
+
+  /** A finished drag: the same function, asked by hand instead of by button. */
+  function dropped(groupPaths: string[], end: DragEndEvent) {
+    const next = orderAfterDrag(flat, groupPaths, end);
+    if (next) setLayout({ ...layout, order: next });
+  }
+
+  // One set of sensors for the whole card. Six pixels before a press becomes a
+  // drag, so a tap on the handle (or a shaky one) is not a move; and the
+  // keyboard sensor walks the rows by their own order.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const toggle = (key: 'hidden' | 'pinned', path: string) =>
     setLayout({
@@ -184,12 +228,13 @@ export function MenuOrderCard() {
   }
 
   return (
-    <div dir="rtl" className="space-y-3">
+    // `id` is where the sidebar's «رتّب القائمة» link lands (`/admin/profile#menu-order`).
+    <div dir="rtl" id="menu-order" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-xs font-black text-[var(--sys-foreground)]">ترتيب القائمة</h3>
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
-            رتّب قائمتك: حرّك، ثبّت، أو اخفِ ما لا تستعمله. الإخفاء لا يفتح ولا يغلق أي صلاحية.
+            رتّب قائمتك: اسحب الصف من المقبض، أو استعمل السهمين. ثبّت أو اخفِ ما لا تستعمله. الإخفاء لا يفتح ولا يغلق أي صلاحية.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -251,74 +296,183 @@ export function MenuOrderCard() {
         </p>
       )}
 
-      {ordered.map((group) => (
-        <Card key={group.key}>
-          <CardHeader title={group.label} />
-          <CardContent>
-            <ul className="divide-y divide-[var(--sys-border)]">
-              {group.routes.map((route, i) => (
-                <li key={route.path} className="flex items-center gap-2 py-2">
-                  <span
-                    className={
-                      isHidden(route.path)
-                        ? 'flex-1 text-sm text-[var(--sys-muted)] line-through'
-                        : 'flex-1 text-sm text-[var(--sys-heading)]'
-                    }
-                  >
-                    {route.label}
-                    {isPinned(route.path) && (
-                      <span className="text-xs text-[var(--sys-primary)]"> · مثبّت</span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => move(route.path, -1)}
-                    disabled={i === 0}
-                    aria-label={`ارفع ${route.label}`}
-                    title="ارفع"
-                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)] disabled:opacity-40"
-                  >
-                    <RiArrowUpSLine className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(route.path, 1)}
-                    disabled={i === group.routes.length - 1}
-                    aria-label={`انزل ${route.label}`}
-                    title="انزل"
-                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)] disabled:opacity-40"
-                  >
-                    <RiArrowDownSLine className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle('pinned', route.path)}
-                    aria-label={`${isPinned(route.path) ? 'ألغِ تثبيت' : 'ثبّت'} ${route.label}`}
-                    title={isPinned(route.path) ? 'ألغِ التثبيت' : 'ثبّت في الأعلى'}
-                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
-                  >
-                    <RiPushpinLine className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle('hidden', route.path)}
-                    aria-label={`${isHidden(route.path) ? 'أظهر' : 'اخفِ'} ${route.label}`}
-                    title={isHidden(route.path) ? 'أظهرها' : 'اخفِها من القائمة'}
-                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
-                  >
-                    {isHidden(route.path) ? (
-                      <RiEyeOffLine className="w-4 h-4" />
-                    ) : (
-                      <RiEyeLine className="w-4 h-4" />
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ))}
+      {ordered.map((group) => {
+        const groupPaths = group.routes.map((r) => r.path);
+        return (
+          <Card key={group.key}>
+            <CardHeader title={group.label} />
+            <CardContent>
+              {/*
+                ONE DROP ZONE PER GROUP.
+
+                A screen does not change what it is about by being dragged
+                under another heading, so each group is its own context: a
+                row can be dropped among its own group and nowhere else, and
+                `orderAfterDrag` refuses the rest again regardless. The
+                vertical axis is locked and the row is kept inside the list,
+                so a hand that drifts sideways does not lose the row.
+              */}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                onDragEnd={(end) => dropped(groupPaths, end)}
+                accessibility={{ announcements: ANNOUNCEMENTS, screenReaderInstructions: INSTRUCTIONS }}
+              >
+                <SortableContext items={groupPaths} strategy={verticalListSortingStrategy}>
+                  <ul className="divide-y divide-[var(--sys-border)]">
+                    {group.routes.map((route, i) => (
+                      <SortableRow
+                        key={route.path}
+                        route={route}
+                        first={i === 0}
+                        last={i === group.routes.length - 1}
+                        hidden={isHidden(route.path)}
+                        pinned={isPinned(route.path)}
+                        onMove={(by) => move(route.path, by)}
+                        onToggle={(key) => toggle(key, route.path)}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
+  );
+}
+
+/** What a screen reader hears, in the user's own language and the screen's own names. */
+const labelOf = (id: string | number) => ALL_LABELS.get(String(id)) ?? String(id);
+const ANNOUNCEMENTS: Announcements = {
+  onDragStart: ({ active }) => `أمسكتَ «${labelOf(active.id)}».`,
+  onDragOver: ({ active, over }) =>
+    over && over.id !== active.id ? `«${labelOf(active.id)}» فوق «${labelOf(over.id)}».` : undefined,
+  onDragEnd: ({ active, over }) =>
+    over && over.id !== active.id
+      ? `أُفلتت «${labelOf(active.id)}» مكان «${labelOf(over.id)}».`
+      : `أُفلتت «${labelOf(active.id)}» في مكانها.`,
+  onDragCancel: ({ active }) => `أُلغي تحريك «${labelOf(active.id)}».`,
+};
+const INSTRUCTIONS = {
+  draggable:
+    'لتغيير ترتيب هذه الشاشة: اضغط مسافة لتمسكها، ثم السهم لأعلى أو لأسفل، ثم مسافة لتفلتها. اضغط Esc للإلغاء.',
+};
+
+/**
+ * ONE ROW: ITS GRIP, ITS NAME, AND THE FOUR BUTTONS IT ALWAYS HAD.
+ *
+ * The grip is the ONLY thing that starts a drag (`useSortable`'s listeners
+ * are on it and nowhere else), and it alone carries `touch-action: none`.
+ * That is the whole answer to «a drag inside a scrolling column fights the
+ * scroll»: a thumb on the name, the buttons, or the gap between rows scrolls
+ * the page exactly as it did before there was a grip.
+ *
+ * The row's own look while it is carried is INLINE — a lifted shadow, a
+ * little transparency, above its neighbours — because the stylesheet is capped
+ * to the byte and a drag state is not worth a utility class nothing else uses.
+ */
+function SortableRow({
+  route,
+  first,
+  last,
+  hidden,
+  pinned,
+  onMove,
+  onToggle,
+}: {
+  route: RouteDef;
+  first: boolean;
+  last: boolean;
+  hidden: boolean;
+  pinned: boolean;
+  onMove: (by: -1 | 1) => void;
+  onToggle: (key: 'hidden' | 'pinned') => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: route.path,
+    // The library announces the grip as «sortable» unless told otherwise — one
+    // English word in the middle of an Arabic sentence for a screen reader.
+    attributes: { roleDescription: 'مقبض ترتيب' },
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      className="flex items-center gap-2 py-2"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(isDragging
+          ? { position: 'relative', zIndex: 1, opacity: 0.85, background: 'var(--sys-card)', boxShadow: 'var(--sys-shadow-overlay)' }
+          : null),
+      }}
+    >
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`اسحب ${route.label} لتغيير ترتيبه`}
+        title="اسحب لتغيير الترتيب"
+        // The grip, and only the grip, refuses the browser's own scroll
+        // gesture: this is what keeps the rest of the row scrollable.
+        style={{ touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+      >
+        <RiDraggable className="w-4 h-4" />
+      </button>
+      <span
+        className={
+          hidden
+            ? 'flex-1 text-sm text-[var(--sys-muted)] line-through'
+            : 'flex-1 text-sm text-[var(--sys-heading)]'
+        }
+      >
+        {route.label}
+        {pinned && <span className="text-xs text-[var(--sys-primary)]"> · مثبّت</span>}
+      </span>
+      <button
+        type="button"
+        onClick={() => onMove(-1)}
+        disabled={first}
+        aria-label={`ارفع ${route.label}`}
+        title="ارفع"
+        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)] disabled:opacity-40"
+      >
+        <RiArrowUpSLine className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(1)}
+        disabled={last}
+        aria-label={`انزل ${route.label}`}
+        title="انزل"
+        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)] disabled:opacity-40"
+      >
+        <RiArrowDownSLine className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onToggle('pinned')}
+        aria-label={`${pinned ? 'ألغِ تثبيت' : 'ثبّت'} ${route.label}`}
+        title={pinned ? 'ألغِ التثبيت' : 'ثبّت في الأعلى'}
+        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+      >
+        <RiPushpinLine className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onToggle('hidden')}
+        aria-label={`${hidden ? 'أظهر' : 'اخفِ'} ${route.label}`}
+        title={hidden ? 'أظهرها' : 'اخفِها من القائمة'}
+        className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-lg p-1.5 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-primary-soft)] hover:text-[var(--sys-primary)]"
+      >
+        {hidden ? <RiEyeOffLine className="w-4 h-4" /> : <RiEyeLine className="w-4 h-4" />}
+      </button>
+    </li>
   );
 }
 
