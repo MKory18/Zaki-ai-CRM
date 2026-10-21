@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { onTheWire, typedFigure } from '@/lib/typed-box';
+import { toLatinDigits } from '@/lib/latin-digits';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -307,7 +308,9 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="الاسم" value={p.customerName} onChange={(e) => setResult({ ...result, parsed: { ...p, customerName: e.target.value } })} />
-              <Input label="الرقم" value={p.phone} onChange={(e) => setResult({ ...result, parsed: { ...p, phone: e.target.value } })} />
+              {/* Arabic-Indic digits typed here become Latin as they are typed: the number is read by a dialler, a blacklist and a
+                  duplicate check, none of which should have to guess which script it was written in (22/10: «حولها برمجيا»). */}
+              <Input label="الرقم" value={p.phone} onChange={(e) => setResult({ ...result, parsed: { ...p, phone: toLatinDigits(e.target.value) } })} />
               <Select
               label={`المحافظة${countryName ? ` — ${countryName}` : ''}`}
               value={regionNames.includes(p.governorate) ? p.governorate : ''}

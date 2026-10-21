@@ -12,6 +12,8 @@
  * اسم الصفحة: الشيت
  */
 
+import { toLatinDigits } from './latin-digits';
+
 export interface ParsedOrder {
   customerName: string;
   phone: string;
@@ -37,14 +39,26 @@ export function normalizeArabic(text: string): string {
     .toLowerCase();
 }
 
+/*
+ * THE DIGITS THIS PARSER READS — LATIN, ARABIC-INDIC (٠-٩) AND PERSIAN (۰-۹).
+ *
+ * The owner, 22/10: «ارقام الهواتف بالادخال بال ai حولها برمجيا من عربي لانجليزي». A message pasted from an Arabic keypad
+ * says «الرقم: ٠٧٩١٢٣٤٥٦٧», and `[0-9]` in a JavaScript regex is ASCII only — so the phone was not found at all (and
+ * «الكمية: ٣» and «السعر: ٢٥» were not either). The captures accept all three scripts, and every one of them is
+ * converted to Latin digits HERE, in code, before it is parsed or handed to anything else: the conversion is never left
+ * to a model, which would do it when it felt like it.
+ */
+/** A figure typed on an Arabic keypad, as the rest of the system reads it: the digits Latin, the decimal point «.». Nothing is dropped. */
+const latinFigure = (s: string) => toLatinDigits(s).replace('٫', '.');
+
 const FIELD_PATTERNS: Array<{ key: keyof ParsedOrder; regex: RegExp }> = [
   { key: 'customerName', regex: /(?:الاسم|اسم الزبون|اسم العميل|الاسم الكامل)\s*[:：-]\s*(.+)/i },
-  { key: 'phone', regex: /(?:الرقم|رقم الهاتف|الهاتف|رقم الموبايل|رقم الواتس|واتس)\s*[:：-]\s*([0-9+\-\s()]{7,20})/ },
+  { key: 'phone', regex: /(?:الرقم|رقم الهاتف|الهاتف|رقم الموبايل|رقم الواتس|واتس)\s*[:：-]\s*([0-9٠-٩۰-۹+\-\s()]{7,20})/ },
   { key: 'governorate', regex: /(?:اسم المحافظة|المحافظة|المحافظه)\s*[:：-]\s*(.+)/ },
   { key: 'address', regex: /(?:العنوان|عنوان التوصيل|السكن)\s*[:：-]\s*(.+)/ },
   { key: 'productQuery', regex: /(?:الطلب\s*\(\s*[^)]*\s*\)|الطلب|اسم المنتج|المنتج المطلوب|المنتج|المطلوب)\s*[:：-]\s*(.+)/ },
-  { key: 'quantity', regex: /(?:الكمية|الكميه|العدد)\s*[:：-]\s*([0-9]+)/ },
-  { key: 'price', regex: /(?:السعر|المبلغ|الثمن)\s*[:：-]\s*([0-9]+(?:[.,][0-9]+)?)\s*\$?/ },
+  { key: 'quantity', regex: /(?:الكمية|الكميه|العدد)\s*[:：-]\s*([0-9٠-٩۰-۹]+)/ },
+  { key: 'price', regex: /(?:السعر|المبلغ|الثمن)\s*[:：-]\s*([0-9٠-٩۰-۹]+(?:[.,٫][0-9٠-٩۰-۹]+)?)\s*\$?/ },
   { key: 'notes', regex: /(?:الملاحظات|ملاحظات|ملاحظة)\s*[:：-]\s*(.+)/ },
   { key: 'source', regex: /(?:اسم الصفحة|اسم الصفحه|الصفحة|الصفحه|المصدر)\s*[:：-]\s*(.+)/ },
 ];
@@ -71,7 +85,10 @@ export function parseOrderText(text: string): ParsedOrder {
       if (result[key] && key !== 'quantity') continue;
       const m = trimmed.match(regex);
       if (m && m[1]) {
-        const value = m[1].replace(/^\(|\)$/g, '').trim();
+        // The three figures are translated FIRST, in one place, so every read below sees Latin digits; the address, the
+        // notes and the name keep the digits they were written with («شارع ١٥» stays «شارع ١٥»).
+        const isFigure = key === 'phone' || key === 'quantity' || key === 'price';
+        const value = (isFigure ? latinFigure(m[1]) : m[1]).replace(/^\(|\)$/g, '').trim();
         if (value && value !== '-') {
           if (key === 'quantity') {
             /**
@@ -112,9 +129,10 @@ export function parseOrderText(text: string): ParsedOrder {
     }
   }
 
-  // Fallback: find any phone number in the text
+  // Fallback: find any phone number in the text — in its Latin form: `\b` does not see an Arabic-Indic digit as a word
+  // character, so a number written on an Arabic keypad was never found, and what is found is returned as Latin digits.
   if (!result.phone) {
-    const phoneMatch = text.match(/\b(?:00962|00963|\+962|\+963)?0?[0-9]{9,10}\b/);
+    const phoneMatch = toLatinDigits(text).match(/\b(?:00962|00963|\+962|\+963)?0?[0-9]{9,10}\b/);
     if (phoneMatch) result.phone = phoneMatch[0];
   }
 
