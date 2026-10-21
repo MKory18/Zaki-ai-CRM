@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { inStore } from '../store-filter';
 import { adapterFor, readCredentials, adDate } from './index';
+import { WITH_A_PLATFORM } from './manual';
 
 /**
  * PULLING WHAT WAS SPENT.
@@ -19,6 +20,10 @@ import { adapterFor, readCredentials, adDate } from './index';
  * Only LINKED campaigns are touched. A campaign the seller types the spend
  * into keeps its typed number: a figure a person entered changing overnight
  * with no explanation is worse than a figure that was never automatic.
+ *
+ * AND ONLY ACCOUNTS THAT HAVE A PLATFORM TO ASK. A manual account (see
+ * `manual.ts`) has no token to decrypt and nowhere to call; its campaigns keep
+ * the spend the seller types, and `WITH_A_PLATFORM` keeps it out of this loop.
  *
  * One account failing does not stop the others. A shop running Meta and
  * TikTok should not lose both because one token expired, so each account is
@@ -54,7 +59,7 @@ export async function syncAdSpend(scope: {
   storeId: string | null;
 }): Promise<SpendSyncResult> {
   const accounts = await db.adAccount.findMany({
-    where: inStore(scope.companyId, scope.storeId),
+    where: { ...inStore(scope.companyId, scope.storeId), ...WITH_A_PLATFORM },
     select: {
       id: true, platform: true, accountId: true, accountName: true, tokenEncrypted: true,
       campaigns: {
@@ -85,6 +90,15 @@ export async function syncAdSpend(scope: {
       continue;
     }
 
+    // The CHECK in the database makes a connected account without a token
+    // impossible; this is the compiler's half of the same fact, and it says it
+    // on the screen instead of throwing inside the loop.
+    const token = account.tokenEncrypted;
+    if (!token) {
+      report.push({ account: label, updated: 0, error: 'لا رمز محفوظ لهذا الحساب — اربطه من جديد.' });
+      continue;
+    }
+
     try {
       // The widest window any of this account's campaigns needs, asked
       // ONCE. A call per campaign would multiply the rate limit by the
@@ -94,7 +108,7 @@ export async function syncAdSpend(scope: {
         (min, c) => (c.startDate < min ? c.startDate : min),
         account.campaigns[0].startDate
       );
-      const creds = readCredentials(account.tokenEncrypted);
+      const creds = readCredentials(token);
       const rows = await adapter.fetchSpend(creds, account.accountId, adDate(since), adDate(new Date()));
       const byId = new Map(rows.map((r) => [r.campaignId, r]));
 
