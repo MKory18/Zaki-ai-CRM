@@ -9,6 +9,7 @@ import { productConflict } from '@/lib/campaigns';
 import { campaignPatchSchema, datesMakeSense } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
 import { z } from 'zod';
+import { isManualAccount } from '@/lib/ads/manual';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -36,7 +37,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       // PATCH that changes only the page still changes which product the
       // campaign advertises.
       select: {
-        id: true, name: true, spend: true, status: true, code: true,
+        id: true, name: true, spend: true, status: true, code: true, platform: true,
         landingPageId: true, productId: true,
       },
     });
@@ -59,11 +60,32 @@ export async function PATCH(req: Request, ctx: Ctx) {
       if (link.data.adAccountId) {
         const account = await db.adAccount.findFirst({
           where: { id: link.data.adAccountId, ...inStore(companyId, storeId) },
-          select: { id: true },
+          select: { id: true, status: true, platform: true },
         });
         // An account of another store would attach this campaign's spend to
         // somebody else's money.
         if (!account) return NextResponse.json({ error: 'الحساب الإعلاني غير موجود' }, { status: 400 });
+
+        /*
+         * A MANUAL ACCOUNT IS A PLACE TO PUT A CAMPAIGN, NOT A SOURCE FOR ITS
+         * SPEND. So it takes no remote id — there is no platform behind it for
+         * the id to point into, and a campaign carrying one would wait for a
+         * sync that can never come — and it takes only campaigns of its own
+         * platform, because grouping a TikTok campaign under a Meta account is
+         * a typo that would put one platform's spend in the other's column.
+         *
+         * Only for manual accounts: a connected account's link has always
+         * been loose about the campaign's platform, and tightening that here
+         * would be a behaviour change nobody asked for.
+         */
+        if (isManualAccount(account)) {
+          if (link.data.externalId) {
+            return NextResponse.json({ error: 'الحساب يدوي — لا ربط له بحملة في المنصة' }, { status: 400 });
+          }
+          if (account.platform !== existing.platform) {
+            return NextResponse.json({ error: 'منصة الحساب غير منصة الحملة' }, { status: 400 });
+          }
+        }
       }
 
       const linked = Boolean(link.data.adAccountId && link.data.externalId);

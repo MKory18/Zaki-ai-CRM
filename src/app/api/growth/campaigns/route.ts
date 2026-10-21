@@ -151,7 +151,7 @@ export async function GET(req: Request) {
       // So the screen can offer to link a campaign without a second request.
       adAccounts: await db.adAccount.findMany({
         where: inStore(companyId, storeId),
-        select: { id: true, accountId: true, accountName: true, status: true },
+        select: { id: true, platform: true, accountId: true, accountName: true, status: true },
       }),
       window: { start: start?.toISOString() ?? null, end: end?.toISOString() ?? null },
       definitions: {

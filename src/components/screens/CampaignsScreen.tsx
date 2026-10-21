@@ -9,6 +9,7 @@ import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLin
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { isManualAccount } from '@/lib/ads/manual';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -38,7 +39,7 @@ interface Funnel {
   brought: number; confirmed: number; rejected: number; delivered: number; returned: number;
   confirmationRate: number | null; deliveryRate: number | null;
 }
-interface AdAccount { id: string; accountId: string; accountName: string | null; status: string }
+interface AdAccount { id: string; platform: string; accountId: string; accountName: string | null; status: string }
 interface Campaign {
   id: string; name: string; platform: string; code: string; status: string;
   spendSource: 'MANUAL' | 'SYNCED';
@@ -98,6 +99,9 @@ export function CampaignsScreen() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [linking, setLinking] = useState<Campaign | null>(null);
+  /** Accounts that have a platform behind them, and the ones that are just a name. */
+  const connectedAccounts = (data?.adAccounts ?? []).filter((a) => !isManualAccount(a));
+  const manualAccounts = (data?.adAccounts ?? []).filter(isManualAccount);
   const confirm = useConfirm();
 
   /**
@@ -259,7 +263,10 @@ export function CampaignsScreen() {
               </button>
             ))}
           </div>
-          {(data?.adAccounts?.length ?? 0) > 0 && (
+          {/* Only an account with a platform on the other end can be pulled
+              from. A manual account is a place to put campaigns, and offering
+              «اسحب الإنفاق» because one exists would call nobody. */}
+          {connectedAccounts.length > 0 && (
             <>
               {/* Two buttons, not one. «اسحب الحملات» brings rows that do
                   not exist; «اسحب الإنفاق» updates figures on rows that do.
@@ -319,7 +326,7 @@ export function CampaignsScreen() {
               onCopy={() => copy(c.link, c.id)}
               onEdit={() => setEditing(c)}
               onRemove={() => remove(c)}
-              onLink={(data?.adAccounts?.length ?? 0) > 0 ? () => setLinking(c) : undefined}
+              onLink={connectedAccounts.length > 0 ? () => setLinking(c) : undefined}
             />
           ))}
         </div>
@@ -336,7 +343,7 @@ export function CampaignsScreen() {
       {linking && data && (
         <LinkDialog
           campaign={linking}
-          accounts={data.adAccounts}
+          accounts={connectedAccounts}
           onClose={() => setLinking(null)}
           onSaved={async () => { setLinking(null); await load(); }}
         />
@@ -347,9 +354,10 @@ export function CampaignsScreen() {
           campaign={editing}
           pages={pages}
           products={products}
+          manualAccounts={manualAccounts}
           currency={currency}
           onClose={() => { setCreating(false); setEditing(null); }}
-          onSaved={async () => { setCreating(false); setEditing(null); await load(); }}
+          onSaved={async (note) => { setCreating(false); setEditing(null); await load(); if (note) setSyncMsg(note); }}
         />
       )}
     </div>
@@ -405,6 +413,7 @@ function Row({
           <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
             {c.landingPage?.name ?? 'واجهة المتجر'}
             {c.product ? ` · ${c.product.name}` : ''} · الرمز {c.code}
+            {c.adAccount ? ` · الحساب ${c.adAccount.accountName ?? c.adAccount.accountId}` : ''}
           </p>
         </div>
 
@@ -509,17 +518,24 @@ function Empty({ onCreate }: { onCreate: () => void }) {
 }
 
 function Editor({
-  campaign, pages, products, currency, onClose, onSaved,
+  campaign, pages, products, manualAccounts, currency, onClose, onSaved,
 }: {
   campaign: Campaign | null;
   pages: { id: string; name: string }[];
   /** Only reachable when no page is linked — see the field below. */
   products: { id: string; name: string }[];
+  /** The seller's hand-kept ad accounts — a campaign may be filed under one. */
+  manualAccounts: AdAccount[];
   currency: string;
   onClose: () => void;
-  onSaved: () => void;
+  /** `note` is a thing to tell the seller after the editor closes. */
+  onSaved: (note?: string) => void;
 }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // What the editor OPENED with, fixed for its lifetime. It is compared with the
+  // form on save to decide whether the campaign was re-filed — computed from the
+  // form it would always equal it, and the filing would never be sent.
+  const startedWithAccount = campaign?.adAccount && isManualAccount(campaign.adAccount) ? campaign.adAccount.id : '';
   const [form, setForm] = useState({
     name: campaign?.name ?? '',
     platform: campaign?.platform ?? 'META',
@@ -533,7 +549,13 @@ function Editor({
     endDate: campaign?.endDate?.slice(0, 10) ?? '',
     spend: String(campaign?.money.spend ?? 0),
     notes: campaign?.notes ?? '',
+    // Only a MANUAL account is chosen here. A campaign filed under a connected
+    // one is moved with «اربط» in the list, which also picks the remote
+    // campaign — a select could not.
+    adAccountId: startedWithAccount,
   });
+  const filedUnderConnected = !!campaign?.adAccount && !isManualAccount(campaign.adAccount);
+  const accountsHere = manualAccounts.filter((a) => a.platform === form.platform);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -559,6 +581,34 @@ function Editor({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'تعذر الحفظ');
+
+      /*
+       * FILING UNDER A MANUAL ACCOUNT IS ITS OWN EDIT, AFTER THE SAVE.
+       *
+       * The link has always been a separate request on the server (it must be
+       * checked against an account this store owns, and it decides where the
+       * spend comes from), so it stays one here rather than being folded into
+       * the body. Sent only when it CHANGED: a rename must not re-file.
+       *
+       * And a failure here does not leave the editor open on a saved campaign:
+       * in «new» mode a second press would create it twice. It closes and says
+       * what did not happen.
+       */
+      if (!filedUnderConnected && form.adAccountId !== startedWithAccount) {
+        const id: string | undefined = campaign?.id ?? json.campaign?.id;
+        try {
+          if (!id) throw new Error('');
+          await apiJson(`/api/growth/campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adAccountId: form.adAccountId || null, externalId: null }),
+          });
+        } catch (e) {
+          const why = e instanceof Error ? e.message : '';
+          onSaved(`حُفظت الحملة، لكن تعذّر نسبتها إلى الحساب${why ? `: ${why}` : '.'}`);
+          return;
+        }
+      }
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر الحفظ');
@@ -603,6 +653,32 @@ function Editor({
               </select>
             </Field>
           </div>
+
+          {/* Shown only when there is something to choose: this platform has a
+              hand-kept account, or the campaign is already filed under one. A
+              select with one option reading «بلا حساب» is clutter. */}
+          {!filedUnderConnected && (accountsHere.length > 0 || form.adAccountId) && (
+            <Field label="الحساب الإعلاني" hint="حساباتك اليدوية على هذه المنصة. للربط التلقائي استعمل «اربط» في القائمة.">
+              <select
+                value={form.adAccountId}
+                onChange={(e) => setForm({ ...form, adAccountId: e.target.value })}
+                className={INPUT}
+              >
+                <option value="">بلا حساب</option>
+                {accountsHere.map((a) => (
+                  <option key={a.id} value={a.id}>{a.accountName ?? a.accountId}</option>
+                ))}
+                {/* A campaign filed under an account of ANOTHER platform (it was
+                    changed after filing) must still show where it is, or the
+                    select would read «بلا حساب» about a campaign that has one. */}
+                {form.adAccountId && !accountsHere.some((a) => a.id === form.adAccountId) && (
+                  <option value={form.adAccountId}>
+                    {manualAccounts.find((a) => a.id === form.adAccountId)?.accountName ?? 'حساب على منصة أخرى'}
+                  </option>
+                )}
+              </select>
+            </Field>
+          )}
 
           <Field label="تذهب إلى" hint="اتركها فارغة لتذهب إلى واجهة المتجر">
             <select

@@ -581,7 +581,7 @@
   },
   "src/components/screens/CampaignsScreen.tsx": {
     "buttons": 17,
-    "inputs": 10,
+    "inputs": 11,
     "columns": 4,
     "cards": 0,
     "modals": 0,
@@ -1340,12 +1340,12 @@
     "tabs": 0
   },
   "src/components/settings/AdAccountsCard.tsx": {
-    "buttons": 4,
-    "inputs": 2,
+    "buttons": 7,
+    "inputs": 4,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 9,
+    "icons": 12,
     "links": 3,
     "tabs": 0
   },
