@@ -1,4 +1,4 @@
-import { REJECTION_REASONS } from './confirmation-workflow';
+import { REJECTION_REASONS, REJECTION_REASON_AR } from './confirmation-workflow';
 
 /**
  * A SECOND CALL, WEEKS LATER, WITH SOMETHING NEW TO SAY.
@@ -45,6 +45,30 @@ export const WINBACK_REASONS = [
 ] as const;
 export type WinbackReason = (typeof WINBACK_REASONS)[number];
 
+/**
+ * THREE MORE THE OWNER MAY CHOOSE TO INCLUDE — HIS SHOP, HIS REPUTATION.
+ *
+ * Nothing in the code can know whether a customer who said «لا أريد المنتج»
+ * would answer a second call kindly, or whether «خارج التغطية» has since been
+ * covered. The comment above argues they should not be called, and that
+ * argument is the DEFAULT; but it is an argument about a shop, and the shop's
+ * owner is the one who knows it. So he may switch each of these on.
+ */
+export const OPTIONAL_WINBACK_REASONS = ['CUSTOMER_DOES_NOT_WANT_PRODUCT', 'OUT_OF_SERVICE_AREA', 'OTHER'] as const;
+
+/** What the rule's editor offers: the four, and the three. */
+export const SELECTABLE_WINBACK_REASONS: readonly string[] = [...WINBACK_REASONS, ...OPTIONAL_WINBACK_REASONS];
+
+/**
+ * AND THE FOUR NOBODY MAY TURN ON.
+ *
+ * A duplicate was never a lost sale — the customer has the goods. A wrong
+ * number, a fake order and an entry error reach no person at all. No setting
+ * changes any of that, so no setting offers it: a rule that could be edited
+ * into ringing somebody who already has the parcel is not a rule worth having.
+ */
+export const NEVER_WINBACK_REASONS = ['DUPLICATE_ORDER', 'WRONG_NUMBER', 'FAKE_ORDER', 'MODERATOR_DATA_ERROR'] as const;
+
 /** And why each of the others is left alone — in the reader's language, on the screen. */
 export const NOT_WINBACK_AR: Record<string, string> = {
   CUSTOMER_DOES_NOT_WANT_PRODUCT: 'رفضٌ صريح — الخصم على شيءٍ لا يريده ليس عرضاً',
@@ -72,6 +96,147 @@ export const WINBACK_COOLING_DAYS = 14;
 /** The most of the price that may be given away to win one back. */
 export const WINBACK_MAX_DISCOUNT_SHARE = 0.25;
 
+/** Rejected orders are read this far back; past that a call is archaeology. */
+export const WINBACK_LOOKBACK_DAYS = 120;
+
+/**
+ * THE RULE, AS A VALUE THE OWNER MAY EDIT — WITHIN BOUNDS.
+ *
+ * The owner, 21/10: «شو القاعدة تبعو لاني ممكن اعدلها». The four numbers above
+ * were written into the code, with a reason beside each, and the answer to
+ * «could I change fourteen days?» was «ask somebody to change the code».
+ *
+ * What he may turn: which reasons are worth a second call (the four, and three
+ * more at his own risk), how long to wait, how far back to look, how much of the
+ * price may be given away. What he may NOT: a shipped parcel is a return and
+ * never a lost call; an order that was already offered is never offered again
+ * («من قال لا مرّتين قال لا»); a second chance is never itself a first one; and
+ * a duplicate, a wrong number, a fake order or an entry error has nobody to
+ * ring. Those are not settings — they are what makes the screen safe to leave
+ * alone, and the verdict still applies every one of them whatever is stored.
+ *
+ * The defaults are exactly the constants, so an owner who never opens the editor
+ * sees nothing change. The bounds are here because a stored number is read by
+ * the list AND the offer, and a «0 days» or «500%» that got in would be read by
+ * both.
+ */
+export interface WinbackRule {
+  /** The rejection reasons a second call is made for — always some of `SELECTABLE_WINBACK_REASONS`. */
+  reasons: readonly string[];
+  /** Days between the cancellation and the call. */
+  coolingDays: number;
+  /** Orders created longer ago than this are not read at all. */
+  lookbackDays: number;
+  /** The most of the price that may be given away, as a share: 0 to 0.5. */
+  maxDiscountShare: number;
+}
+
+export const DEFAULT_WINBACK_RULE: WinbackRule = {
+  reasons: WINBACK_REASONS,
+  coolingDays: WINBACK_COOLING_DAYS,
+  lookbackDays: WINBACK_LOOKBACK_DAYS,
+  maxDiscountShare: WINBACK_MAX_DISCOUNT_SHARE,
+};
+
+export const WINBACK_BOUNDS = {
+  coolingDays: { min: 1, max: 90 },
+  lookbackDays: { min: 30, max: 365 },
+  maxDiscountShare: { min: 0, max: 0.5 },
+} as const;
+
+const clampInt = (n: unknown, lo: number, hi: number, fallback: number): number =>
+  typeof n === 'number' && Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : fallback;
+
+/**
+ * A STORED RULE, AS THIS BUILD UNDERSTANDS IT.
+ *
+ * Tolerant, because it is read on every load of the list and a row that throws
+ * would take the screen down: a reason that is not one of the seven is dropped,
+ * an empty list falls back to the four, a number out of its bounds is clamped,
+ * and a look-back no longer than the cooling (which would admit no order at
+ * all) is lifted to a week past it.
+ */
+export function parseWinbackRule(raw: unknown): WinbackRule {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const chosen = Array.isArray(o.reasons)
+    ? SELECTABLE_WINBACK_REASONS.filter((r) => (o.reasons as unknown[]).includes(r))
+    : [];
+  const cooling = clampInt(o.coolingDays, WINBACK_BOUNDS.coolingDays.min, WINBACK_BOUNDS.coolingDays.max, DEFAULT_WINBACK_RULE.coolingDays);
+  const lookback = clampInt(o.lookbackDays, WINBACK_BOUNDS.lookbackDays.min, WINBACK_BOUNDS.lookbackDays.max, DEFAULT_WINBACK_RULE.lookbackDays);
+  const share =
+    typeof o.maxDiscountShare === 'number' && Number.isFinite(o.maxDiscountShare)
+      ? Math.min(WINBACK_BOUNDS.maxDiscountShare.max, Math.max(WINBACK_BOUNDS.maxDiscountShare.min, Math.round(o.maxDiscountShare * 10_000) / 10_000))
+      : DEFAULT_WINBACK_RULE.maxDiscountShare;
+  return {
+    reasons: chosen.length > 0 ? chosen : [...DEFAULT_WINBACK_RULE.reasons],
+    coolingDays: cooling,
+    lookbackDays: lookback > cooling ? lookback : Math.min(WINBACK_BOUNDS.lookbackDays.max, cooling + 7),
+    maxDiscountShare: share,
+  };
+}
+
+export type WinbackRuleInput =
+  | { ok: true; rule: WinbackRule }
+  | { ok: false; code: string; errorAr: string };
+
+/**
+ * WHAT THE EDITOR SENDS, REFUSED RATHER THAN CLAMPED.
+ *
+ * A stored rule is read leniently (above); a typed one is judged. «500%» typed
+ * into a box is a slip, and quietly storing 50 would let the owner believe he
+ * had set what he typed. Every refusal names the field and the limit, in Arabic.
+ * The discount arrives as a PERCENT, because that is what a person types, and
+ * leaves as the share the arithmetic reads.
+ */
+export function validateWinbackRule(input: unknown): WinbackRuleInput {
+  const refuse = (code: string, errorAr: string): WinbackRuleInput => ({ ok: false, code, errorAr });
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return refuse('BAD_BODY', 'الطلب غير صالح');
+  const o = input as Record<string, unknown>;
+  const known = new Set(['reasons', 'coolingDays', 'lookbackDays', 'maxDiscountPercent']);
+  const stray = Object.keys(o).find((k) => !known.has(k));
+  if (stray) return refuse('UNKNOWN_FIELD', `حقلٌ غير معروف: ${stray}`);
+
+  if (!Array.isArray(o.reasons) || o.reasons.length === 0) return refuse('REASONS', 'اختر سبباً واحداً على الأقلّ');
+  if (new Set(o.reasons).size !== o.reasons.length) return refuse('REASONS', 'سببٌ مكرَّر');
+  const bad = o.reasons.find((r) => typeof r !== 'string' || !SELECTABLE_WINBACK_REASONS.includes(r));
+  if (bad !== undefined) {
+    const label = typeof bad === 'string' ? (REJECTION_REASON_AR[bad] ?? bad) : String(bad);
+    return refuse('REASONS', `«${label}» لا يمكن الاتصال لأجله بأيّ إعداد`);
+  }
+
+  const whole = (v: unknown, name: string, b: { min: number; max: number }, code: string): number | WinbackRuleInput => {
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < b.min || v > b.max) return refuse(code, `${name}: رقمٌ صحيحٌ من ${b.min} إلى ${b.max}`);
+    return v;
+  };
+  const cooling = whole(o.coolingDays, 'المهلة بالأيام', WINBACK_BOUNDS.coolingDays, 'COOLING_DAYS');
+  if (typeof cooling !== 'number') return cooling;
+  const lookback = whole(o.lookbackDays, 'أبعد طلب بالأيام', WINBACK_BOUNDS.lookbackDays, 'LOOKBACK_DAYS');
+  if (typeof lookback !== 'number') return lookback;
+  if (lookback <= cooling) return refuse('LOOKBACK_DAYS', 'أبعد طلبٍ يجب أن يكون أكبر من المهلة — وإلا لا يدخل أيُّ طلب');
+
+  const pct = o.maxDiscountPercent;
+  const maxPct = WINBACK_BOUNDS.maxDiscountShare.max * 100;
+  if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > maxPct) {
+    return refuse('MAX_DISCOUNT', `أقصى خصم: من 0 إلى ${maxPct}٪`);
+  }
+  return {
+    ok: true,
+    rule: {
+      reasons: SELECTABLE_WINBACK_REASONS.filter((r) => (o.reasons as string[]).includes(r)),
+      coolingDays: cooling,
+      lookbackDays: lookback,
+      maxDiscountShare: Math.round(pct * 100) / 10_000,
+    },
+  };
+}
+
+/** The rule in one line — what is printed on the screen, so it never looks arbitrary. */
+export function ruleSentence(rule: WinbackRule): string {
+  const reasons = rule.reasons.map((r) => REJECTION_REASON_AR[r] ?? r).join('، ');
+  const pct = Math.round(rule.maxDiscountShare * 10_000) / 100;
+  return `ملغى · لم يُشحن · لم يُعرض عليه من قبل · السبب: ${reasons} · بعد ${rule.coolingDays} يوماً من الإلغاء · من طلباتِ آخر ${rule.lookbackDays} يوماً · خصمٌ حتى ${pct}٪`;
+}
+
 export interface WinbackSource {
   confirmationStatus: string;
   rejectionReason: string | null;
@@ -88,6 +253,11 @@ export interface WinbackSource {
   replacesOrderNumber: string | null;
   sellingPrice: number;
   discountAmount: number;
+  /**
+   * When the ORDER was made. Optional: a caller that does not know it gets no
+   * look-back check, which is what every caller got before the rule had one.
+   */
+  createdAt?: Date | string | null;
 }
 
 export type WinbackVerdict =
@@ -126,7 +296,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  */
 export const LOST_STATUSES: readonly string[] = ['REJECTED', 'CANCELLED'];
 
-export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict {
+export function winbackVerdict(order: WinbackSource, now: Date, rule: WinbackRule = DEFAULT_WINBACK_RULE): WinbackVerdict {
   if (!LOST_STATUSES.includes(order.confirmationStatus)) {
     return { eligible: false, code: 'NOT_REJECTED', reason: 'هذا الطلب ليس ملغى' };
   }
@@ -170,7 +340,10 @@ export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict 
   }
 
   const reason = order.rejectionReason;
-  if (!reason || !(WINBACK_REASONS as readonly string[]).includes(reason)) {
+  // The four nobody may turn on are refused HERE too, not only by the editor and the reader of the stored rule:
+  // a rule built by hand, or stored before a reason was classified, still cannot ring somebody who has the parcel.
+  const neverCalled = !!reason && (NEVER_WINBACK_REASONS as readonly string[]).includes(reason);
+  if (!reason || neverCalled || !rule.reasons.includes(reason)) {
     return {
       eligible: false,
       code: 'REASON_NOT_WINBACK',
@@ -182,17 +355,26 @@ export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict 
   if (!closed) {
     return { eligible: false, code: 'NO_DATE', reason: 'لا تاريخَ لإلغائه — لا يمكن حساب المهلة' };
   }
-  const dueAt = new Date(closed.getTime() + WINBACK_COOLING_DAYS * 86_400_000);
+
+  // Too old to be worth a call. The list has always read this far back and no
+  // further; the OFFER now refuses the same, so a request that names an order
+  // the screen would never have listed is turned away alike.
+  const made = asDate(order.createdAt ?? null);
+  if (made && now.getTime() - made.getTime() > rule.lookbackDays * 86_400_000) {
+    return { eligible: false, code: 'TOO_OLD', reason: `أقدم من ${rule.lookbackDays} يوماً — فات وقتُ الاتصال` };
+  }
+
+  const dueAt = new Date(closed.getTime() + rule.coolingDays * 86_400_000);
   if (now.getTime() < dueAt.getTime()) {
     return {
       eligible: false,
       code: 'COOLING',
-      reason: `ما زال في مهلة الـ${WINBACK_COOLING_DAYS} يوماً`,
+      reason: `ما زال في مهلة الـ${rule.coolingDays} يوماً`,
       dueAt,
     };
   }
 
-  return { eligible: true, dueAt, maxDiscount: maxWinbackDiscount(order) };
+  return { eligible: true, dueAt, maxDiscount: maxWinbackDiscount(order, rule.maxDiscountShare) };
 }
 
 /**
@@ -204,7 +386,10 @@ export function winbackVerdict(order: WinbackSource, now: Date): WinbackVerdict 
  * this an order could be discounted twice over by two people who each
  * thought they were within the rule.
  */
-export function maxWinbackDiscount(order: Pick<WinbackSource, 'sellingPrice' | 'discountAmount'>): number {
-  const ceiling = (order.sellingPrice || 0) * WINBACK_MAX_DISCOUNT_SHARE;
+export function maxWinbackDiscount(
+  order: Pick<WinbackSource, 'sellingPrice' | 'discountAmount'>,
+  share: number = DEFAULT_WINBACK_RULE.maxDiscountShare
+): number {
+  const ceiling = (order.sellingPrice || 0) * share;
   return round2(Math.max(0, ceiling - (order.discountAmount || 0)));
 }

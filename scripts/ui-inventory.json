@@ -29,6 +29,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/confirmation/WinbackRuleDialog.tsx": {
+    "buttons": 3,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/dashboard/LossPanel.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -1342,10 +1352,10 @@
   "src/components/screens/WinbackScreen.tsx": {
     "buttons": 2,
     "inputs": 0,
-    "columns": 0,
+    "columns": 4,
     "cards": 0,
     "modals": 0,
-    "icons": 4,
+    "icons": 5,
     "links": 0,
     "tabs": 0
   },

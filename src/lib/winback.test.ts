@@ -114,9 +114,15 @@ describe('both words for an order that did not happen', () => {
   });
 
   it('and the listing asks for both, not for one', () => {
+    // 21/10: the question moved from the route into the query (`winback-filters.ts`), so the pin moved with it.
     const route = stripComments(repoFile('src/app/api/confirmation/winback/route.ts'));
-    expect(route).toMatch(/confirmationStatus: \{ in: \[\.\.\.LOST_STATUSES\] \}/);
+    const filters = stripComments(repoFile('src/lib/winback-filters.ts'));
+    expect(filters).toMatch(/confirmationStatus: \{ in: \[\.\.\.LOST_STATUSES\] \}/);
     expect(route, 'ما زال يقرأ كلمةً واحدة').not.toMatch(/confirmationStatus: 'REJECTED'/);
+    expect(filters, 'ما زال يقرأ كلمةً واحدة').not.toMatch(/confirmationStatus: 'REJECTED'/);
+    // …and the closing date still comes from a log row of EITHER word.
+    expect(route).toMatch(/newValue: \{ in: \[\.\.\.LOST_STATUSES\] \}/);
+    expect(filters).toMatch(/newValue: \{ in: \[\.\.\.LOST_STATUSES\] \}/);
   });
 });
 
@@ -308,13 +314,16 @@ describe('and the screen teaches the rule instead of hiding it', () => {
    * A supervisor who remembers rejecting an order and cannot find it here
    * concludes the screen is broken, not that the rule excluded it.
    */
-  it('shows the refused ones with the reason, behind a switch', () => {
+  it('shows the refused ones with the reason, as a view of their own', () => {
+    // 21/10: «behind a switch» became «a view»: the refused are a page of their own (paged, filterable,
+    // searchable like the work), and every card says in words WHICH rule put it there.
     const src = screen();
-    expect(src).toContain('لا يُعاد عليه — ولماذا');
-    expect(src).toMatch(/showSkipped/);
-    expect(route()).toContain("searchParams.get('all') === '1'");
+    expect(src).toContain('VIEW_AR');
+    expect(src).toContain('r.verdict.reason');
+    expect(route()).toContain('winbackFilters(params');
+    expect(route(), 'عاد المفتاح القديم').not.toContain("searchParams.get('all') === '1'");
     // The default view is the work, not the lecture.
-    expect(route()).toContain('skipped: showAll ?');
+    expect(stripComments(repoFile('src/lib/winback-filters.ts'))).toContain("export const DEFAULT_VIEW: View = 'ready';");
   });
 
   it('and never offers more than the ceiling the server sent', () => {
