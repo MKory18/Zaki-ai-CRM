@@ -51,6 +51,15 @@ export interface WorkKind {
    */
   tone: 'urgent' | 'normal';
   /**
+   * WHAT TO DO ABOUT IT, IN ONE SENTENCE — for the dashboard's «شغلك اليوم».
+   *
+   * The header chip says «14 مرتجع» and that is all a chip has room for. The
+   * dashboard has room to say what the number is FOR: a count nobody has told
+   * what to do about is a count read and forgotten. One sentence, in the
+   * imperative, naming what the screen it leads to is for.
+   */
+  todo: string;
+  /**
    * Lower sorts first — and on a phone only the first non-zero one shows.
    * Late work outranks waiting work, because waiting work is the job and
    * late work is the exception.
@@ -66,6 +75,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: '/ops/tracking',
     icon: 'Timer',
     tone: 'urgent',
+    todo: 'تأخّرت عن مهلة منطقتها — تابعها مع شركة الشحن أو المندوب.',
     rank: 0,
   },
   {
@@ -75,6 +85,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: '/control/change-requests',
     icon: 'FilePen',
     tone: 'urgent',
+    todo: 'تنتظر قراراً، وبعضها يوقف تقدّم الطلب — راجعها واتخذ قرارك.',
     rank: 1,
   },
   {
@@ -84,6 +95,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: '/ops/returns',
     icon: 'Undo2',
     tone: 'normal',
+    todo: 'سجّل استلامها بعدّها وفحصها — لا يدخل المخزون شيء قبل ذلك.',
     rank: 2,
   },
   {
@@ -93,6 +105,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: '/ops/shipments/new',
     icon: 'Truck',
     tone: 'normal',
+    todo: 'أنشئ لها شحنة واختر شركة الشحن.',
     rank: 3,
   },
   {
@@ -102,6 +115,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: '/confirmation/queue',
     icon: 'Inbox',
     tone: 'normal',
+    todo: 'اسحب منها وابدأ بالاتصال بالزبائن.',
     rank: 4,
   },
   {
@@ -117,6 +131,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     href: null,
     icon: 'ClipboardList',
     tone: 'normal',
+    todo: 'أدخلتها ولم يؤكّدها موظف التأكيد بعد — تتابعها من «الطلبات».',
     rank: 5,
   },
 ];

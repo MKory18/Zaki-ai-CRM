@@ -15,6 +15,7 @@ import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LossPanel } from '@/components/dashboard/LossPanel';
+import { WorkToday } from '@/components/dashboard/WorkToday';
 import { healthOf, type Health } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
 import type { Trust } from '@/lib/cod-vitals';
@@ -337,6 +338,14 @@ export function DashboardScreen() {
           </div></>
             }
           />
+
+        {/* ─── What is waiting for THIS person, before anything else ───
+             «شغلك اليوم»: the counts the header chips hold, given room to say
+             what each is for. It leads the page because the tiles below say
+             how the month is going, and somebody who has just sat down needs
+             to know what to do first. Draws nothing for a person with no
+             kind of work, and nothing until the server has answered. */}
+        <WorkToday />
 
         {/* ─── What needs a person, before what merely happened ───
              Above the KPIs on purpose: the tiles say how the month is
