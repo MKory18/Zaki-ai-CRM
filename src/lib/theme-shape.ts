@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════
  * A THEME IS A SHAPE TOO — AND THE SHAPE IS THE FRAME, NEVER THE FIGURE.
  *
- * Eleven palettes made the product eleven colours. The owner's reference
+ * Twelve palettes made the product twelve colours. The owner's reference
  * screens are not eleven colours: a card under «إسلامي» wears a pointed
  * arch, one under «سايبربنك» has a cut corner and a hard edge, one under
  * «فخامة» a thin gold hairline. That is what makes a theme read as a
@@ -64,7 +64,7 @@ interface Shape {
 
 /**
  * The three that came with the product keep its own shape exactly: this is
- * an addition to eight themes, not a restyle of the product.
+ * an addition to nine themes, not a restyle of the product.
  */
 const PLAIN: Shape = { radius: '0.5rem', border: '1px', crown: 'none', mark: '' };
 
@@ -119,6 +119,14 @@ export const SHAPES: Record<string, Shape> = {
     border: '1px',
     crown: 'notch',
     mark: '<circle cx="12" cy="10" r="6" fill="currentColor"/><rect x="5" y="13" width="14" height="1.3" fill="var(--sys-card)"/><rect x="5" y="16" width="14" height="1.6" fill="var(--sys-card)"/>',
+  },
+
+  /** Soft art-deco corners, a hairline, and a half-sun of rays — the hotels' own fan. */
+  'neon-coast': {
+    radius: '0.875rem',
+    border: '1px',
+    crown: 'none',
+    mark: '<path d="M3 19a9 9 0 0 1 18 0" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 19V8M12 19L6.4 9.6M12 19l5.6-9.4M12 19L3.6 14.6M12 19l8.4-4.4" fill="none" stroke="currentColor" stroke-width="1.3"/>',
   },
 
   /** A shield, and a heavier edge. */

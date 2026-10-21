@@ -10,7 +10,7 @@ import { repoFile, stripComments } from './guard-source';
  * ═══════════════════════════════════════════════════════════════════════
  * A THEME MOVES THE SURFACE. IT DOES NOT MOVE THE WORK.
  *
- * Eight of the eleven palettes are MOODS — neon, gold, parchment, a sky
+ * Nine of the twelve palettes are MOODS — neon, gold, parchment, a sky
  * with no moon — and a mood that is only thirty-four hexes is a
  * recoloured spreadsheet. So each theme may also change the shape of a
  * card and put an ambient touch on a screen.
@@ -131,13 +131,13 @@ describe('the ambient layer, and the three places it is allowed', () => {
 
 describe('the shape of a card — the frame, and nothing under the figure', () => {
   it('leaves the three the product came with exactly as they were', () => {
-    // This is an addition to eight themes, not a restyle of the product.
+    // This is an addition to nine themes, not a restyle of the product.
     for (const key of ['ops', 'day', 'calm']) {
       expect(shapeCss(themeByKey(key)), key).toBe('');
     }
   });
 
-  it('and gives each of the eight a corner, an edge and a glyph', () => {
+  it('and gives each of the nine a corner, an edge and a glyph', () => {
     for (const theme of SYSTEM_THEMES.filter((t) => !['ops', 'day', 'calm'].includes(t.key))) {
       const css = shapeCss(theme);
       expect(css, `${theme.key}: بلا شكل`).toContain(`.${CARD_CLASS}`);
