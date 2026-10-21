@@ -363,3 +363,57 @@ describe('the cost of the goods that actually left', () => {
     expect(on(tx, 'order', 'update')).not.toHaveBeenCalled();
   });
 });
+
+describe('goods that left before the opening count', () => {
+  /**
+   * 143 imported orders were with the courier when the owner counted the
+   * shelf («طلعت قبل الجرد»). Their units are not in the count: delivering
+   * one takes nothing, and one that comes back is new to the shelf.
+   */
+  const imported = (reservedQty: number) => ({
+    ...ORDER,
+    source: 'Legacy import',
+    items: ORDER.items.map((i) => ({ ...i, reservedQty })),
+  });
+
+  it('an imported order that never reserved takes nothing at delivery', async () => {
+    const tx = makeTx({ order: { findFirst: vi.fn().mockResolvedValue(imported(0)), update: vi.fn() } });
+    const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
+    expect(res).toMatchObject({ taken: 0, short: 0, outsideTheCount: true });
+    expect(drawDownStock).not.toHaveBeenCalled();
+    expect(on(tx, 'inventoryMovement', 'create')).not.toHaveBeenCalled();
+  });
+
+  it('an imported order that IS reserved is an ordinary delivery — it consumes', async () => {
+    // the 39 postponed imports, confirmed later, and the orders imported
+    // after the count holding their reservation
+    const tx = makeTx({ order: { findFirst: vi.fn().mockResolvedValue(imported(1)), update: vi.fn() } });
+    drawDownStock.mockResolvedValue({ taken: 1, short: 0, cost: 4 });
+    const res = await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
+    expect(res.outsideTheCount).toBeUndefined();
+    expect(drawDownStock).toHaveBeenCalled();
+  });
+
+  it('an unreserved order that was NOT imported still consumes — the exception is the import only', async () => {
+    const plain = { ...ORDER, source: 'Manual', items: ORDER.items.map((i) => ({ ...i, reservedQty: 0 })) };
+    const tx = makeTx({ order: { findFirst: vi.fn().mockResolvedValue(plain), update: vi.fn() } });
+    drawDownStock.mockResolvedValue({ taken: 1, short: 0, cost: 4 });
+    await consumeOrderStock(tx, { orderId: 'o1', companyId: 'c1', allowNegativeStock: false });
+    expect(drawDownStock).toHaveBeenCalled();
+  });
+
+  it('when one comes back, its units go onto the shelf although no SALE was written', async () => {
+    const tx = makeTx({ order: { findFirst: vi.fn().mockResolvedValue(imported(0)), update: vi.fn() } });
+    const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
+    expect(res.neverConsumed).toBeUndefined();
+    expect(res.restored).toBeGreaterThan(0);
+    expect(on(tx, 'productionBatch', 'create')).toHaveBeenCalled();
+  });
+
+  it('a reserved import that comes back undelivered restores NOTHING — its units never left the count', async () => {
+    const tx = makeTx({ order: { findFirst: vi.fn().mockResolvedValue(imported(1)), update: vi.fn() } });
+    const res = await restoreOrderStock(tx, { orderId: 'o1', companyId: 'c1', receivedQty: 3 });
+    expect(res).toMatchObject({ restored: 0, neverConsumed: true });
+    expect(on(tx, 'productionBatch', 'create')).not.toHaveBeenCalled();
+  });
+});

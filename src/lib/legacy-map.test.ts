@@ -10,6 +10,7 @@ import {
   legacyTimestamps,
   mapLegacyStatus,
   normPhone,
+  priceLines,
   resolveLinePrice,
 } from '../../scripts/migration/lib/legacy-map.mjs';
 import { deriveCoreState } from './order-state';
@@ -180,5 +181,24 @@ describe('the ports agree with the app code they copy', () => {
   it('«00963…» and «09…» are the same customer — the old key kept the 963', () => {
     expect(normPhone('00963966793918')).toBe(normPhone('0966793918'));
     expect(normPhone('')).toBeNull();
+  });
+});
+
+describe('a sheet order: one total, delivery included, shared across its lines', () => {
+  it('one line takes the whole total', () => {
+    const [l] = priceLines(25, [{ basePrice: 18, quantity: 3 }], 2);
+    expect(l.lineTotal).toBe(25);
+    expect(l.unitPrice).toBe(8.333);
+  });
+
+  it('several lines share it by list value and add back up exactly — 19oct2026-20', () => {
+    const lines = priceLines(50, [{ basePrice: 20, quantity: 1 }, { basePrice: 20, quantity: 1 }, { basePrice: 20, quantity: 1 }], 2);
+    expect(lines.map((l) => l.lineTotal).reduce((a, b) => a + b, 0)).toBe(50);
+    expect(lines.map((l) => l.lineTotal).sort()).toEqual([16.66, 16.67, 16.67]);
+  });
+
+  it('a line with no list price still gets a share instead of dividing by zero', () => {
+    const lines = priceLines(30, [{ basePrice: 0, quantity: 1 }, { basePrice: 0, quantity: 2 }], 2);
+    expect(lines.map((l) => l.lineTotal).reduce((a, b) => a + b, 0)).toBe(30);
   });
 });

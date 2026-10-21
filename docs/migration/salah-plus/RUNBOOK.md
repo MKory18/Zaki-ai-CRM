@@ -89,6 +89,37 @@ docker exec -e LEGACY_DUMP=/tmp/legacy.sql "$C" node scripts/migration/run.mjs -
 
 `--apply` لا يُشغَّل إلا بعد مراجعة `dry-run.txt` وأخذ `pg_dump`.
 
+## طلبات الشيت (19 و20 تشرين الأول) — `import-sheet-orders.mjs`
+
+301 طلب كلها مؤكدة ومشحونة: 296 مع الباشا، و5 بالسويداء مع الو دليفيري كما في الملف.
+
+**القواعد:**
+- السعر الإجمالي هو ما يدفعه الزبون **شاملاً التوصيل**:
+  - `priceIncludesDelivery = true`.
+  - أجرة الشركة من جدول أسعارها، وتُخصم من الإيراد.
+- رقم الشيت هو رقم الطلب ومرجع الشركة (`merchantRef`).
+- الطلب متعدد البنود يتقاسم إجماليه حسب سعر القائمة.
+
+**المخزون:**
+- انشحنت **بعد** الجرد، فتُستورد **حاجزةً** لكميتها (`reservedQty`)، وتُخصم من الجرد عند التسليم.
+- الـ 143 القديمة («مطلوب تجهيزه») طلعت **قبل** الجرد. القاعدة `outsideTheCount` في `src/lib/stock-consumption.ts`:
+  - عند التسليم لا يُخصم منها شيء.
+  - المرتجع منها يرجع للرف.
+
+**الترتيب على السيرفر:**
+1. `run.mjs --orders-only --apply`
+2. الجرد الافتتاحي من الشاشة.
+3. `import-sheet-orders.mjs --apply`
+
+الجرد لا يرفضه الحجز، فالحجز ليس حركة مخزون. لكن المعاينة تُظهر «على الرف» صحيحاً فقط بعد الجرد.
+
+```bash
+# الملف الجاهز: syria-orders-19-20.json (حُوِّل من الشيتين على اللابتوب — بيانات زبائن، لا يُرفع للـ git)
+docker cp /root/syria-orders-19-20.json "$C":/tmp/sheet.json
+docker exec "$C" node scripts/migration/import-sheet-orders.mjs --store-id <ID> --file /tmp/sheet.json            # معاينة
+docker exec "$C" node scripts/migration/import-sheet-orders.mjs --store-id <ID> --file /tmp/sheet.json --apply    # تنفيذ
+```
+
 ## المخاطر
 
 | خطر | التخفيف |

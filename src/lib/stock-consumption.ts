@@ -38,6 +38,36 @@ export interface ConsumptionResult {
   alreadyDone: boolean;
   /** What those units cost, from the batches they actually came out of. */
   cost: number;
+  /** Its goods left before the store's opening count — see outsideTheCount. */
+  outsideTheCount?: boolean;
+}
+
+/** The mark the legacy import (scripts/migration) writes on every order. */
+export const LEGACY_IMPORT_SOURCE = 'Legacy import';
+
+/**
+ * GOODS THAT LEFT BEFORE THE OPENING COUNT WERE NEVER IN IT.
+ *
+ * The owner's count of the Syria shelf (2026-10-21) was taken after 143
+ * imported orders had already gone out with the courier: «طلعت قبل الجرد».
+ * Delivering one of them must not take its units out of that count a
+ * second time, and when one comes BACK its units are new to the shelf —
+ * so it is restored even though no SALE was ever written for it.
+ *
+ * The test is not «imported», because 39 imported orders were still
+ * postponed with their goods on the shelf, and one of them confirmed later
+ * is an ordinary order. It is «imported AND never reserved a unit»: every
+ * order that leaves through this system reserves at confirmation (no
+ * unreserved line reaches READY_TO_SHIP), and the orders imported after
+ * the count are imported holding their reservation. So the only orders
+ * this answers yes for are the ones that left before anything here held
+ * their stock.
+ */
+export function outsideTheCount(order: {
+  source?: string | null;
+  items: { reservedQty?: number | null }[];
+}): boolean {
+  return order.source === LEGACY_IMPORT_SOURCE && order.items.every((i) => (i.reservedQty ?? 0) === 0);
 }
 
 /**
@@ -78,8 +108,9 @@ export async function consumeOrderStock(
       // store-scoped; this draw-down was not, so an order could be promised
       // from its own store's shelf and served out of another's.
       storeId: true,
+      source: true,
       items: {
-        select: { productId: true, productName: true, quantity: true, freeQuantity: true },
+        select: { productId: true, productName: true, quantity: true, freeQuantity: true, reservedQty: true },
       },
       // The currency's minor unit, read from the order rather than asked of
       // the caller: it is a property of the order, and four callers would
@@ -88,6 +119,7 @@ export async function consumeOrderStock(
     },
   });
   if (!order) return { taken: 0, short: 0, alreadyDone: false, cost: 0 };
+  if (outsideTheCount(order)) return { taken: 0, short: 0, alreadyDone: false, cost: 0, outsideTheCount: true };
   const minorUnit = order.store?.country?.minorUnit ?? 2;
 
   let taken = 0;
@@ -290,8 +322,18 @@ export async function restoreOrderStock(
   // The ledger is the authority, not the order's status, for the same
   // reason `alreadyMoved` is: a status can be rewritten by a later path,
   // and then nobody can tell which of the two is lying.
+  //
+  // The one exception is an order whose goods left before the opening count
+  // (outsideTheCount): it never wrote a SALE because the count never held
+  // its units, so what comes back IS new to the shelf.
   if (!(await alreadyMoved(tx, input.orderId, SALE))) {
-    return { restored: 0, alreadyDone: false, neverConsumed: true };
+    const before = await tx.order.findFirst({
+      where: { id: input.orderId, companyId: input.companyId },
+      select: { source: true, items: { select: { reservedQty: true } } },
+    });
+    if (!before || !outsideTheCount(before)) {
+      return { restored: 0, alreadyDone: false, neverConsumed: true };
+    }
   }
 
   const order = await tx.order.findFirst({
