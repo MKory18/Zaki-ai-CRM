@@ -1,5 +1,5 @@
 import { whereDelivered } from './order-state';
-import { realStoresOnly } from './test-store';
+import { realStoresHere } from './test-store';
 import { availableStock } from './reservation';
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
@@ -533,19 +533,54 @@ export async function stockShortfall(tx: Tx, scope: Scope): Promise<Finding[]> {
  * merely old.
  */
 export async function staleStatements(tx: Tx, scope: Scope, now = new Date()): Promise<Finding[]> {
+  /*
+   * AND NOT THE TEST BENCH'S. A bench exists to try a product in front of
+   * real traffic, so its parcels really ship and a courier really hands
+   * in a statement for them — and an unclosed bench statement raised as a
+   * finding about the BUSINESS is the «أرقامٌ لا تدخل أيَّ حسبة» rule
+   * broken in the one screen built to tell the owner what is wrong.
+   *
+   * This is the only company-wide money aggregate that needed the filter:
+   * measured, the other thirty are either scoped to named ids or sit on a
+   * table that carries no store at all. See src/lib/test-store.ts.
+   *
+   * ── WHY IT IS A LIST OF STORE IDS, AND NOT `...realStoresOnly()` ──
+   *
+   * `CourierStatement` has a `storeId` COLUMN and no `store` RELATION, so
+   * the filter every other money read spells `{ store: { isTest: false } }`
+   * has nothing to stand on here. This query used to spread it anyway, and
+   * Prisma answered at RUNTIME with «Unknown argument `store`» — which took
+   * the whole of GET /api/growth/intelligence down, because `allFindings`
+   * awaits its eleven finders together. Nothing caught it until the dev
+   * server was run and the dashboard loaded:
+   *
+   *   · TypeScript does not check a SPREAD for excess properties, so
+   *     `{ status, ...realStoresOnly() }` type-checks on any model at all;
+   *   · every test of this product mocks Prisma, and a mock accepts
+   *     whatever it is handed.
+   *
+   * No relation is added, because that is a migration and this is a fix.
+   * The stores are asked first and the statements are asked about THEM: a
+   * statement whose store is not a real store of this company is not one
+   * this finding is about — which is what the relation filter would have
+   * said. `a-bench-is-not-the-business.test.ts` Ⅳ holds the line both ways:
+   * every store filter in the source sits on a model that really has a
+   * `store`, and this function's `where` is checked against the generated
+   * data model.
+   */
+  const realStores = await tx.store.findMany({
+    where: { companyId: scope.companyId, ...realStoresHere() },
+    select: { id: true },
+  });
+  // No real store, no statement to be late about — and `in: []` is a query for nothing.
+  if (realStores.length === 0) return [];
+
   const open = await tx.courierStatement.findMany({
-    /*
-     * AND NOT THE TEST BENCH'S. A bench exists to try a product in front of
-     * real traffic, so its parcels really ship and a courier really hands
-     * in a statement for them — and an unclosed bench statement raised as a
-     * finding about the BUSINESS is the «أرقامٌ لا تدخل أيَّ حسبة» rule
-     * broken in the one screen built to tell the owner what is wrong.
-     *
-     * This is the only company-wide money aggregate that needed the filter:
-     * measured, the other thirty are either scoped to named ids or sit on a
-     * table that carries no store at all. See src/lib/test-store.ts.
-     */
-    where: { companyId: scope.companyId, status: 'OPEN', ...realStoresOnly() },
+    where: {
+      companyId: scope.companyId,
+      status: 'OPEN',
+      storeId: { in: realStores.map((s) => s.id) },
+    },
     select: { createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
