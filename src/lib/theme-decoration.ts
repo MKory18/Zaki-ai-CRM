@@ -34,7 +34,7 @@
  * `SHEET_THEMES` in system-themes.ts.
  * ═══════════════════════════════════════════════════════════════════════
  */
-import type { SystemTheme } from './system-themes';
+import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, type SystemTheme } from './system-themes';
 
 /**
  * OFF · LIGHT · FULL — and `light` is the default.
@@ -87,8 +87,24 @@ export const DECOR_COOKIE = 'zk-decor';
  *   • paused while the tab is hidden, via `[data-decor-hidden]`, because
  *     an animation in a background tab is a phone's battery for nobody.
  */
-export function decorCss(theme: SystemTheme, level: DecorLevel): string {
+export function decorCss(theme: SystemTheme, level: DecorLevel, chosenKey?: string): string {
   if (level === 'off') return '';
+  /*
+   * ── «تلقائي» WEARS TWO ORNAMENTS, FOR THE SAME REASON IT HAS TWO PALETTES ──
+   *
+   * `themeByKey` resolves `auto` to the dark theme, because a function
+   * that must return one theme has to pick one. The palette does not
+   * work that way — `auto` carries both and lets the device choose — and
+   * an ornament pinned to the dark one would put a radar sweep over a
+   * white screen at noon. So the raw key is passed in, and when it is
+   * `auto` both masks are written with the light one behind a media
+   * query, exactly as the palette does it.
+   */
+  const art =
+    chosenKey === AUTO_THEME
+      ? ornament(AUTO_DARK) +
+        `@media (prefers-color-scheme: light){${ornament(AUTO_LIGHT)}}`
+      : ornament(theme.key);
   const wash =
     `.${DECOR_CLASS}{position:absolute;inset:0;pointer-events:none;z-index:0;` +
     `background:` +
@@ -96,7 +112,8 @@ export function decorCss(theme: SystemTheme, level: DecorLevel): string {
     `radial-gradient(100% 70% at 10% 100%,var(--sys-primary-soft) 0%,transparent 50%)}` +
     // The sidebar header is a short strip, so the wash comes from one side
     // only; two washes in 56 pixels read as a smudge.
-    `.${DECOR_CLASS}-sidebar{background:radial-gradient(140% 160% at 100% 0%,var(--sys-primary-soft) 0%,transparent 70%)}`;
+    `.${DECOR_CLASS}-sidebar{background:radial-gradient(140% 160% at 100% 0%,var(--sys-primary-soft) 0%,transparent 70%)}` +
+    art;
   if (level === 'light') return wash;
   return (
     wash +
@@ -104,6 +121,93 @@ export function decorCss(theme: SystemTheme, level: DecorLevel): string {
     `.${DECOR_CLASS}-full{animation:zk-decor-drift 24s ease-in-out infinite alternate;will-change:transform}` +
     `[data-decor-hidden] .${DECOR_CLASS}-full{animation-play-state:paused}` +
     `@media (prefers-reduced-motion: reduce){.${DECOR_CLASS}-full{animation:none}}`
+  );
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AND THE ORNAMENT EACH THEME WEARS — SHAPE ONLY, NEVER COLOUR.
+ *
+ * Eleven drawings live in `public/brand/decor/<key>.webp`, one per theme:
+ * a radar sweep, a girih star, an orbit, a laurel, a compass. They are
+ * **masks** — one channel of coverage, no colour at all — and the colour
+ * is painted through them from `--sys-primary`.
+ *
+ * That is not a size trick, though it is also that (440 KB for all eleven
+ * instead of 1.6 MB, and one of them reaches one person). It is the rule
+ * three paragraphs up, kept: «a decoration with a hex of its own is a
+ * twelfth palette nobody measured». A full-colour picture carries its own
+ * greens and golds that no palette test ever looks at, and it would stay
+ * that colour when the theme's primary changed. A mask cannot drift,
+ * because it has nothing to drift with.
+ *
+ * ── AND THE MIDDLE OF EVERY ONE OF THEM IS EMPTY ──
+ *
+ * Each mask fades to nothing across the middle fifth of the frame, so
+ * every ornament is a FRAME rather than a picture. The three places all
+ * put their content in the centre — the sign-in card, the empty state's
+ * sentence, the sidebar's wordmark — so the hole is exactly where the
+ * reading happens. It is cut into the art, not asked for in CSS, because
+ * the one thing a background must never do is sit between a person and a
+ * number.
+ *
+ * ── AND HOW LOUD EACH ONE IS, IS MEASURED ──
+ *
+ * Not chosen. Each mask was weighed by how much LIGHT it moves against
+ * its own theme's background — the same quantity a contrast ratio is
+ * built from — and given the opacity that lands all eleven on one target.
+ * That is why these numbers are not round: `epic`'s gold on charcoal is
+ * the biggest brightness gap in the set and lands at 0.36, while `cyber`'s
+ * hairline on black cannot reach the target at all and is left whole.
+ *
+ * Measured, so the louder art is quieter by arithmetic rather than by
+ * somebody squinting at it once — and so a replacement drawing cannot
+ * quietly arrive at the wrong volume: re-run the measurement and this
+ * table changes with it.
+ */
+const DECOR_INK: Record<string, number> = {
+  ops: 0.397,
+  day: 0.031,
+  calm: 0.15,
+  cyber: 1,
+  'islamic-epic': 0.234,
+  'islamic-calm': 0.261,
+  space: 1,
+  sea: 0.19,
+  city90: 0.192,
+  epic: 0.144,
+  lux: 0.24,
+};
+
+/**
+ * The mask layer for one theme, or nothing.
+ *
+ * `mask-image` with the `-webkit-` prefix beside it: Safari still wants
+ * the prefixed property, and a theme losing its ornament is a smaller
+ * failure than a solid primary-coloured square, which is what an ignored
+ * mask leaves behind. Hence `background-color` only inside this rule.
+ */
+function ornament(key: string): string {
+  const ink = DECOR_INK[key];
+  if (!ink) return '';
+  const url = `url(/brand/decor/${key}.webp)`;
+  return (
+    `.${DECOR_CLASS}::after{content:'';position:absolute;inset:0;` +
+    `background-color:var(--sys-primary);opacity:${ink};` +
+    `-webkit-mask:${url} no-repeat center/contain;mask:${url} no-repeat center/contain}` +
+    // ── THE DOOR'S IS BIG BECAUSE THE HOLE HAS TO CLEAR THE CARD ──
+    //
+    // The empty middle is a fixed fraction of the art, so the only way to
+    // make it wider than the sign-in card is to make the whole ornament
+    // wider. At 620px the hole was about 270 and the card is about 420, so
+    // the drawing ran straight through the wordmark — which a browser
+    // showed and the proof sheet did not. At 1020 the hole clears it.
+    `.${DECOR_CLASS}-door::after{-webkit-mask-size:min(96vmin,1020px);mask-size:min(96vmin,1020px)}` +
+    `.${DECOR_CLASS}-empty::after{-webkit-mask-size:320px;mask-size:320px}` +
+    // A corner, bled off the top edge, so the strip above the menu carries
+    // a hint of the ornament rather than a small complete copy of it.
+    `.${DECOR_CLASS}-sidebar::after{-webkit-mask:${url} no-repeat right -40px top -64px/200px;` +
+    `mask:${url} no-repeat right -40px top -64px/200px}`
   );
 }
 

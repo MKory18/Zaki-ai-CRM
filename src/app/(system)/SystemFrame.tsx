@@ -56,7 +56,7 @@ export function SystemFrame({
    */
   const level = sanitizeDecor(decor);
   const chosen = themeByKey(key);
-  const ambient = decorCss(chosen, level);
+  const ambient = decorCss(chosen, level, key);
   /*
    * ── AND ITS SHAPE ──
    *
