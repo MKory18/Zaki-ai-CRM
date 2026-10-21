@@ -17,7 +17,14 @@ const { db, requireContext, requirePermission, logAudit, activeBlock, createNoti
   db: {
     customer: { findUnique: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     product: { findMany: vi.fn(), findFirst: vi.fn() },
-    offer: { findFirst: vi.fn() },
+    /*
+     * `findMany`, because the door now loads the offer every LINE
+     * carries — which is what the order dialog actually sends. It read
+     * only the top-level `offerId` before, and this file's own fixture
+     * was the reason nobody noticed: it posted a top-level id BESIDE
+     * `items[]`, a shape no screen produces.
+     */
+    offer: { findFirst: vi.fn(), findMany: vi.fn(async (): Promise<unknown[]> => []) },
     store: { findFirst: vi.fn() },
     region: { findFirst: vi.fn() },
     user: { findFirst: vi.fn() },
@@ -198,7 +205,9 @@ describe('an order can hold more than one product', () => {
   });
 
   it('spreads a discount across the lines so the parts add back to the whole', async () => {
-    db.offer.findFirst.mockResolvedValue({ id: 'offer-bundle-0001', deliveryIncluded: false, discount: 10 });
+    const bundle = { id: 'offer-bundle-0001', deliveryIncluded: false, discount: 10, freeQuantity: 0 };
+    db.offer.findFirst.mockResolvedValue(bundle);
+    db.offer.findMany.mockResolvedValue([bundle]);
 
     await post(body({
       offerId: 'offer-bundle-0001',
@@ -215,6 +224,32 @@ describe('an order can hold more than one product', () => {
     expect(shares).toBe(10);
     expect(totals).toBe(50);
     expect(order.totalAmount).toBe(50);
+  });
+
+  it('and reads the offer each LINE carries — the shape the screen sends', async () => {
+    /*
+     * ⚠️ THE TEST ABOVE POSTS A TOP-LEVEL `offerId` BESIDE `items[]`.
+     *
+     * No screen does that. `CreateOrderModal` sends an offer on every
+     * line and nothing at the top, and the door read only the top — so
+     * the gift and «شامل سعر التوصيل» were dropped on every order a
+     * moderator typed, while this file stayed green.
+     *
+     * This one sends what the dialog sends: no top-level id, an offer on
+     * the line. The gift must reach the line and the delivery flag must
+     * reach the order.
+     */
+    const bundle = { id: 'offer-bundle-0002', deliveryIncluded: true, discount: 0, freeQuantity: 1 };
+    db.offer.findMany.mockResolvedValue([bundle]);
+
+    await post(body({
+      items: [{ productId: CREAM.id, offerId: bundle.id, quantity: 3, unitPrice: 60 }],
+    }));
+
+    const { order, lines } = written();
+    expect(lines[0].freeQuantity, 'الهديّة ما وصلت السطر').toBe(3);
+    expect(order.priceIncludesDelivery, 'العرض شامل التوصيل والطلب ما بيعرف').toBe(true);
+    expect(order.offerId, 'الطلب ما بيعرف أيّ عرض باعه').toBe(bundle.id);
   });
 });
 

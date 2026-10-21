@@ -359,8 +359,69 @@ export async function POST(req: Request) {
     // always priced as price + fee, even on a store that advertises
     // delivery-inclusive prices, and the courier statement then disagreed
     // with the order by exactly the fee.
-    const offer = offerId ? await db.offer.findFirst({ where: { id: offerId, companyId } }) : null;
-    const priceIncludesDelivery = await priceIncludesDeliveryFor(storeId, offer?.deliveryIncluded);
+    /*
+     * ── THE OFFER THE LINE CARRIED, NOT THE ONE AT THE TOP ──
+     *
+     * The owner, 21/10, as two separate complaints: «الهدية ما بتنحسب من
+     * المخزون» and «لما احط بالعرض شامل سعر التوصيل، عند انشاء الشحنة
+     * بضيف توصيل». They were one bug.
+     *
+     * `offerId` here is the TOP-LEVEL field of the single-product
+     * shorthand. The order dialog does not send it: it sends an offer on
+     * every LINE (`CreateOrderModal.tsx:168-173`), which the schema above
+     * accepts and nothing then read. So `offer` was null on every order a
+     * moderator typed, and with it went:
+     *
+     *   • the free units      → nothing reserved them, nothing deducted
+     *                           them, the shelf counted goods that had
+     *                           left the building;
+     *   • «شامل سعر التوصيل»  → the order was written `false`, and the
+     *                           shipment then added the fee to a price
+     *                           that already contained it;
+     *   • the order's own `offerId` column, left empty on every such order.
+     *
+     * ⚠️ It passed its tests because `multi-line.test.ts:203` posts a
+     * top-level `offerId` BESIDE `items[]` — a shape the real form never
+     * sends. The fixture agreed with the code and neither agreed with the
+     * screen.
+     *
+     * Every line's offer is loaded in one query, scoped to the company so
+     * an id from another tenant resolves to nothing rather than to
+     * somebody else's bundle.
+     */
+    const lineOfferIds = [
+      ...new Set(
+        [offerId, ...requestedLines.map((l) => l.offerId)].filter((id): id is string => !!id)
+      ),
+    ];
+    const offersById = new Map(
+      lineOfferIds.length
+        ? (
+            await db.offer.findMany({
+              where: { id: { in: lineOfferIds }, companyId },
+              select: { id: true, discount: true, deliveryIncluded: true, freeQuantity: true },
+            })
+          ).map((o) => [o.id, o])
+        : []
+    );
+    /** The top-level offer still wins for the single-product shorthand. */
+    const offer = offerId ? (offersById.get(offerId) ?? null) : null;
+    /*
+     * ANY line carrying a delivery-inclusive offer makes the whole order
+     * one — the same rule the storefront door already applies
+     * (`public-order.ts:480`), and the only rule that can be stated about
+     * a single parcel: a customer pays one delivery fee or none.
+     */
+    const anyLineIncludesDelivery = requestedLines.some(
+      (l) => l.offerId && offersById.get(l.offerId)?.deliveryIncluded === true
+    );
+    const priceIncludesDelivery = await priceIncludesDeliveryFor(
+      storeId,
+      offer?.deliveryIncluded === true || anyLineIncludesDelivery ? true : offer?.deliveryIncluded
+    );
+    /** The free units this line's offer gives, per unit of it. */
+    const freeFor = (line: { offerId?: string | null }) =>
+      (line.offerId ? offersById.get(line.offerId)?.freeQuantity : 0) ?? 0;
 
     // ONE COD function, used by every screen and service (contract PART 5).
     // It takes the whole order at once, so a discount spread over several
@@ -416,9 +477,21 @@ export async function POST(req: Request) {
       companyId,
       [...new Set(requestedLines.map((l) => l.productId))]
     );
+    /*
+     * ⚠️ THE GIFT COSTS WHAT IT COSTS.
+     *
+     * A free unit is free to the CUSTOMER, never to the shop: it is a unit
+     * off the shelf like any other. Costing only `l.quantity` made the
+     * profit on every bundle look better than it was, by exactly the cost
+     * of the units given away.
+     */
     const estimatedCostOfGoods = Number(
       requestedLines
-        .reduce((sum, l) => sum + (costByProduct.get(l.productId)?.average || 0) * l.quantity, 0)
+        .reduce(
+          (sum, l) =>
+            sum + (costByProduct.get(l.productId)?.average || 0) * (l.quantity + freeFor(l) * l.quantity),
+          0
+        )
         .toFixed(2)
     );
 
@@ -487,7 +560,14 @@ export async function POST(req: Request) {
               priceIncludesDelivery,
               customerId: customer.id,
               productId: product.id,
-              offerId: offerId || null,
+              /*
+               * The order's own offer: the shorthand's, or the first one
+               * a line carried. It was always null for an order typed in
+               * the dialog, so «which bundle did this sell» could not be
+               * answered about the orders a moderator takes — the
+               * commonest kind.
+               */
+              offerId: offerId || requestedLines.find((l) => l.offerId)?.offerId || null,
               quantity: qtyTotal,
               sellingPrice: price,
               shippingCost: shipCost,
@@ -537,6 +617,23 @@ export async function POST(req: Request) {
           productId: line.productId,
           productName: productById.get(line.productId)?.name ?? '',
           quantity: line.quantity,
+          /*
+           * THE FREE UNITS, WRITTEN WHERE EVERYTHING ELSE ALREADY LOOKS
+           * FOR THEM.
+           *
+           * Nothing downstream was broken: the reservation
+           * (`reservation.ts:188`), the deduction at delivery
+           * (`stock-consumption.ts:100`), the return
+           * (`stock-consumption.ts:332`), the partial delivery and the
+           * ready-to-ship guard all read `quantity + freeQuantity`
+           * already. The column was simply never filled by this door, so
+           * a gift promised on the screen left the building unrecorded.
+           *
+           * Per unit of the line, like the storefront door
+           * (`public-order.ts:152`): an offer giving one free with each
+           * unit gives three on a line of three.
+           */
+          freeQuantity: freeFor(line) * line.quantity,
           // The same reading as `codLines` above, and for the same reason:
           // `unitPrice` is zod-validated money by the time it is here, so a
           // `|| 0` could only ever have replaced a real zero with zero.

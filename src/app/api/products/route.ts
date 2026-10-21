@@ -88,6 +88,13 @@ export async function GET(req: Request) {
             id: true,
             name: true,
             quantity: true,
+            /*
+             * The free units the bundle gives. The order dialog reads its
+             * offers from this list, so without the column it could not
+             * show a gift, and the line it sent carried none — which is
+             * how «٣+١» reached the warehouse as three.
+             */
+            freeQuantity: true,
             sellingPrice: true,
             status: true,
           },

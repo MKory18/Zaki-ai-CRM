@@ -30,6 +30,14 @@ const {
 } = vi.hoisted(() => ({
   db: {
     product: { findFirst: vi.fn(), findMany: vi.fn() },
+    /*
+     * The AI door now asks the store what its prices mean — it wrote
+     * nothing before, so every order through it took the schema default
+     * `false` and the shipment added a fee to a delivery-inclusive
+     * price. A store that answers «no» keeps these fixtures saying
+     * exactly what they said.
+     */
+    store: { findFirst: vi.fn(async () => ({ priceIncludesDelivery: false })) },
     user: { findFirst: vi.fn() },
     order: { create: vi.fn() },
     orderItem: { create: vi.fn() },
