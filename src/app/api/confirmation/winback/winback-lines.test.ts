@@ -35,6 +35,8 @@ import { join, relative } from 'node:path';
 const { db, requireContext, requirePermission, logAudit, orderRefFields } = vi.hoisted(() => {
   const db = {
     order: { findFirst: vi.fn(), create: vi.fn() },
+    // The offer reads the company's own rule; none stored means the defaults, which is what these claims were written under.
+    company: { findUnique: vi.fn(async () => ({ settings: null })) },
     orderItem: { findMany: vi.fn(), createMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderStatusLog: { findFirst: vi.fn(), findMany: vi.fn() },
     orderNote: { create: vi.fn() },

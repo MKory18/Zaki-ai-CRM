@@ -2,20 +2,17 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { logAudit } from '@/lib/audit';
 import { computeCod } from '@/lib/money';
 import { orderRefFields } from '@/lib/order-ref';
-import {
-  maxWinbackDiscount,
-  WINBACK_COOLING_DAYS,
-  WINBACK_REASONS,
-  LOST_STATUSES,
-  winbackVerdict,
-  type WinbackSource,
-} from '@/lib/winback';
+import { maxWinbackDiscount, LOST_STATUSES, winbackVerdict, type WinbackSource } from '@/lib/winback';
+import { winbackRule } from '@/lib/winback-rule';
+import { baseWhere, winbackFilters } from '@/lib/winback-filters';
+import { readWinbackPage, winbackFacts } from '@/lib/winback-list';
+import { readLimit, readPage } from '@/lib/numeric-input';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 /**
@@ -48,38 +45,61 @@ const offerSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
-/** Rejected orders are read this far back; past that a call is archaeology. */
-const LOOKBACK_DAYS = 120;
-
+/**
+ * READ IN PAGES, ONE VIEW AT A TIME, UNDER THE OWNER'S RULE.
+ *
+ * «استرجاع الملغى — اعملو صفحات + فلاتر + بحث، والأهم شو القاعدة تبعو لاني ممكن
+ * اعدلها». The list used to read the last five hundred lost orders, ask «is this
+ * one eligible?» of each in memory, and cut at five hundred BEFORE asking — so a
+ * month with six hundred lost orders silently lost the oldest hundred. Now the
+ * question is in the query (`winback-filters.ts`), the answer is counted, and
+ * what is left is read in pages of 25.
+ *
+ *   ?view=ready|cooling|skipped   the work (default) · the ones still cooling · the refused
+ *   ?reason=<code>                why it was cancelled
+ *   ?product=<name>               which product
+ *   ?period=7|30|90               cancelled within the last N days
+ *   ?q=                           order number, reference, name, phone, product
+ *   ?page= ?limit=                25 a page, 100 at most
+ *
+ * An unknown value is a 400 in Arabic, never a quiet «everything». The RULE is
+ * the company's own (`Company.settings.winback`, edited in `./rule`), read here
+ * and in the offer below — so the two can never apply different rules to one
+ * order — and it is sent along, with whether this person may change it.
+ */
 export async function GET(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
     await requirePermission('confirmation.supervise');
 
-    const showAll = new URL(req.url).searchParams.get('all') === '1';
     const now = new Date();
-    const since = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000);
+    const params = new URL(req.url).searchParams;
+    const rule = await winbackRule(companyId);
 
-    const orders = await db.order.findMany({
-      where: {
-        companyId,
-        ...(storeId ? { storeId } : {}),
-        // Both words for an order that did not happen — see LOST_STATUSES.
-        confirmationStatus: { in: [...LOST_STATUSES] },
-        createdAt: { gte: since },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 500,
-      select: {
-        id: true, orderNumber: true, confirmationStatus: true, rejectionReason: true,
-        rejectionNote: true, shippedAt: true, sellingPrice: true, discountAmount: true,
-        quantity: true, currency: true, productNameSnapshot: true, createdAt: true,
-        customer: { select: { fullName: true, phone: true } },
-        replacedBy: { select: { orderNumber: true } },
-        // Whether this order is itself somebody's second chance.
-        replaces: { select: { orderNumber: true } },
-      },
-    });
+    const parsed = winbackFilters(params, { now, rule });
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorAr: parsed.errorAr }, { status: 400 });
+
+    const base = baseWhere({ companyId, storeId }, rule, now);
+    const [page, facts] = await Promise.all([
+      readWinbackPage<Record<string, any>>(db, {
+        base,
+        viewClause: parsed.viewClause,
+        clauses: parsed.clauses,
+        page: readPage(params),
+        limit: readLimit(params, 25, 100),
+        select: {
+          id: true, orderNumber: true, confirmationStatus: true, rejectionReason: true,
+          rejectionNote: true, shippedAt: true, sellingPrice: true, discountAmount: true,
+          quantity: true, currency: true, productNameSnapshot: true, createdAt: true,
+          customer: { select: { fullName: true, phone: true } },
+          replacedBy: { select: { orderNumber: true } },
+          // Whether this order is itself somebody's second chance.
+          replaces: { select: { orderNumber: true } },
+        },
+      }),
+      winbackFacts(db, { base, view: parsed.view, rule, now }),
+    ]);
+    const orders = page.rows;
 
     /**
      * WHEN IT WAS ACTUALLY CLOSED.
@@ -93,20 +113,13 @@ export async function GET(req: Request) {
      * that counts: an order rejected, re-opened and rejected again cools
      * from the second time.
      *
-     * AND BOTH WORDS FOR IT, not just the first one. `LOST_STATUSES` was
-     * widened to REJECTED **and** CANCELLED so that an order closed by the
-     * no-answer rule could be found here at all — and this lookup was left
-     * asking for REJECTED alone, so every cancelled order arrived with no
-     * closing date and the verdict said «لا تاريخَ لإلغائه» about an order
-     * whose cancellation is stamped in the log. It could never leave that
-     * state, which made «ثلاث محاولات بلا ردّ» — named on this very screen as
-     * one of the three reasons worth a second call, and the most winnable of
-     * them — a promise the screen could not keep.
+     * AND BOTH WORDS FOR IT, not just the first one — REJECTED and CANCELLED
+     * (`LOST_STATUSES`). The lookup asked for REJECTED alone once, and every
+     * cancelled order arrived with no closing date and the verdict said
+     * «لا تاريخَ لإلغائه» about an order whose cancellation is stamped in the log.
      *
-     * Measured on this database: SY-2026-0147, cancelled 2026-09-22 at
-     * NO_ANSWER_3_ATTEMPTS, was permanently skipped. The POST below has read
-     * both words all along, so the two halves of one feature disagreed about
-     * which orders exist.
+     * Read for THIS PAGE's orders only — the page is 25 and so is the lookup.
+     * (The filters, which must reason about every order, do it inside the query.)
      */
     const logs = orders.length
       ? await db.orderStatusLog.findMany({
@@ -132,8 +145,11 @@ export async function GET(req: Request) {
         replacesOrderNumber: o.replaces?.orderNumber ?? null,
         sellingPrice: Number(o.sellingPrice ?? 0),
         discountAmount: Number(o.discountAmount ?? 0),
+        createdAt: o.createdAt,
       };
-      const verdict = winbackVerdict(source, now);
+      // The row says in words WHICH rule put it in this view — a supervisor reading
+      // «مكرَّر — البضاعة عنده أصلاً» learns the rule instead of wondering where an order went.
+      const verdict = winbackVerdict(source, now, rule);
       return {
         id: o.id,
         orderNumber: o.orderNumber,
@@ -150,24 +166,18 @@ export async function GET(req: Request) {
       };
     });
 
-    /**
-     * THE REFUSED ONES ARE SHOWN TOO, WITH THE REASON.
-     *
-     * A list that silently drops what it turned down teaches nobody the
-     * rule — a supervisor who remembers rejecting an order at «مكرَّر» and
-     * cannot find it here concludes the screen is broken. They are behind a
-     * switch, so the default view is still the work.
-     */
     // Contact details left the building; the tally is the person's, not
-    // this screen's. See noteCustomersHandedOut.
+    // this screen's. See noteCustomersHandedOut. Only the page that was sent.
     await noteCustomersHandedOut({ companyId, storeId, user, where: 'استعادة العملاء', rows: orders });
 
     return NextResponse.json({
-      eligible: rows.filter((r) => r.verdict.eligible),
-      skipped: showAll ? rows.filter((r) => !r.verdict.eligible) : [],
-      skippedCount: rows.filter((r) => !r.verdict.eligible).length,
-      coolingDays: WINBACK_COOLING_DAYS,
-      reasons: WINBACK_REASONS,
+      rows,
+      pagination: { total: page.total, page: page.page, limit: page.limit, totalPages: page.totalPages },
+      facts,
+      rule,
+      // The screen offers «عدّل القاعدة» to somebody who can change it; the route that changes it asks again.
+      canEditRule: can(user, 'settings.manage'),
+      applied: parsed.applied,
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -184,6 +194,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const { orderId, discount, note } = parsed.data;
+
+    // The rule the list drew by — read again here, because the offer is where it is enforced.
+    const rule = await winbackRule(companyId);
 
     const order = await db.order.findFirst({
       where: { id: orderId, companyId, ...(storeId ? { storeId } : {}) },
@@ -212,17 +225,22 @@ export async function POST(req: Request) {
         replacesOrderNumber: order.replaces?.orderNumber ?? null,
         sellingPrice: Number(order.sellingPrice ?? 0),
         discountAmount: Number(order.discountAmount ?? 0),
+        createdAt: order.createdAt,
       },
-      new Date()
+      new Date(),
+      rule
     );
     if (!verdict.eligible) {
       return NextResponse.json({ error: verdict.reason, code: verdict.code }, { status: 409 });
     }
 
-    const ceiling = maxWinbackDiscount({
-      sellingPrice: Number(order.sellingPrice ?? 0),
-      discountAmount: Number(order.discountAmount ?? 0),
-    });
+    const ceiling = maxWinbackDiscount(
+      {
+        sellingPrice: Number(order.sellingPrice ?? 0),
+        discountAmount: Number(order.discountAmount ?? 0),
+      },
+      rule.maxDiscountShare
+    );
     if (discount > ceiling) {
       return NextResponse.json(
         {
