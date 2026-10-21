@@ -55,7 +55,7 @@ export function BrandStage({
       {/* The slot, filled: the circuit wave, in the brand's own navy. */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-cover bg-center opacity-[0.55]"
+        className="zk-door-banner absolute inset-0 -z-10 bg-cover bg-center opacity-[0.55]"
         style={{ backgroundImage: "url('/brand/banner.webp')" }}
       />
       {/*
@@ -71,9 +71,23 @@ export function BrandStage({
         risk, since the file can be swapped by anyone and these numbers can
         be nudged by anyone reading them as taste.
       */}
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[var(--sys-background)]/[0.45]" />
+      <div aria-hidden className="zk-door-banner absolute inset-0 -z-10 bg-[var(--sys-background)]/[0.45]" />
 
-      <div className="w-full max-w-lg space-y-6">
+      {/*
+        `relative` IS WHAT PUTS THE CARD ABOVE THE ORNAMENT.
+
+        The decoration layer is `position: absolute; z-index: 0`, and a
+        positioned element paints OVER a static one whatever the order in the
+        markup. This column was static — so every ornament this door has ever
+        drawn was drawn on top of the wordmark and the card, and nobody saw it
+        because the layer was two soft radial washes you cannot see through.
+        The first crisp drawing (a radar, in the default theme) crossed the
+        word «Zaki» and a browser was what showed it.
+
+        `relative` makes it positioned, and positioned siblings paint in
+        markup order — the layer comes first, so this comes after it.
+      */}
+      <div className="relative w-full max-w-lg space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/mark.png" alt="" aria-hidden className="h-20 w-20 object-contain" />
