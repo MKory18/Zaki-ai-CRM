@@ -93,7 +93,10 @@ const DIRECTION_AR: Record<SpendDirection, { label: string; cls: string }> = {
 function SpendByType({
   spend,
   currency,
+  onRecord,
 }: {
+  /** «سجّل مصروفاً» — the header's act, offered where nothing has been recorded yet. */
+  onRecord?: () => void;
   spend?: {
     byType: ExpenseTypeGrade[];
     rows: number;
@@ -128,6 +131,7 @@ function SpendByType({
             <EmptyState
               title="لا مصروف مسجَّل في هذا الشهر"
               why="بلا مصاريف مسجَّلة، صافي الربح أعلاه يطرح صفراً مقابل الرواتب والإيجار والإعلان — فهو إيراد ناقص كلفة البضاعة، لا صافي. سجّل المصروف وقتَ حدوثه ليظهر نصيب كل بند هنا."
+              action={onRecord ? { label: 'سجّل أول مصروف', onClick: onRecord } : undefined}
             />
           </div>
         ) : (
@@ -379,7 +383,7 @@ export function FinanceProfitScreen() {
           </CardContent>
         </Card>
 
-        <SpendByType spend={data?.spend} currency={data?.currency} />
+        <SpendByType spend={data?.spend} currency={data?.currency} onRecord={() => setExpenseModalOpen(true)} />
 
         {/* Expenses Ledger */}
         <Card>

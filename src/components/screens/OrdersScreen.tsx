@@ -741,7 +741,15 @@ export function OrdersScreen() {
                       ? 'الفلاتر أضيق من أن تُطابق شيئاً — وأكثرُ قائمةٍ فارغةٍ سببُها فلترٌ ضُبط قبل ساعةٍ ونُسي.'
                       : 'الطلبات تصل من صفحات الهبوط والقنوات، أو تُدخَل يدويّاً من الزرّ أعلاه.'
                   }
-                  action={activeFilters > 0 ? { label: 'امسح الفلاتر', onClick: resetFilters } : undefined}
+                  // Filtered: the way out of the filter. Not filtered: the first step — and only for
+                  // somebody who may take it (the header's button has the same gate).
+                  action={
+                    activeFilters > 0
+                      ? { label: 'امسح الفلاتر', onClick: resetFilters }
+                      : canCreate
+                        ? { label: 'أنشئ أول طلب', onClick: () => setCreateModalOpen(true) }
+                        : undefined
+                  }
                 />
               )
             ) : (

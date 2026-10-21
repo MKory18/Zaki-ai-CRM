@@ -552,7 +552,11 @@ export function ProductsScreen() {
                           ? 'البحث يقرأ الاسم العربيّ والإنجليزيّ وSKU. امسحه لترى الكتالوج كلّه.'
                           : 'بلا منتجٍ لا طلبَ ولا مخزونَ ولا صفحةَ هبوط. ابدأ بواحد.'
                       }
-                      action={search ? { label: 'امسح البحث', onClick: () => setSearch('') } : undefined}
+                      action={
+                        search
+                          ? { label: 'امسح البحث', onClick: () => setSearch('') }
+                          : { label: 'أضف أول منتج', onClick: () => setCreateModalOpen(true) }
+                      }
                     />
                   )
                 }

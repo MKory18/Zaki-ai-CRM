@@ -346,6 +346,18 @@ export function ManufacturingScreen() {
     }
   };
 
+  /**
+   * «تشغيلة جديدة» — the header's button and the empty list's one, the same act.
+   *
+   * It was written inline in the header. The empty state now offers the first
+   * batch too, and a second copy of «name the batch, then open the form» is how
+   * the two would come to number batches differently.
+   */
+  const openNewBatch = () => {
+    setBatchNumber(`BATCH-${new Date().getFullYear()}-${String(batches.length + 1).padStart(3, '0')}`);
+    setCreateModalOpen(true);
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -372,10 +384,7 @@ export function ManufacturingScreen() {
           </Link>
           <Button
             size="sm"
-            onClick={() => {
-              setBatchNumber(`BATCH-${new Date().getFullYear()}-${String(batches.length + 1).padStart(3, '0')}`);
-              setCreateModalOpen(true);
-            }}
+            onClick={openNewBatch}
             className="flex items-center space-x-1.5"
           >
             <RiAddCircleLine className="w-4 h-4" />
@@ -585,6 +594,7 @@ export function ManufacturingScreen() {
                     <EmptyState
                       title="لا تشغيلاتِ إنتاجٍ بعد"
                       why="التشغيلة هي ما يُحسب منه سعرُ الوحدة. بلا تشغيلةٍ بكلفة، الربحُ المحسوب إجماليٌّ لا صافٍ."
+                      action={{ label: 'أضف أول تشغيلة', onClick: openNewBatch }}
                     />
                   )
                 }

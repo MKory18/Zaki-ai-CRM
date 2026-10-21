@@ -327,6 +327,7 @@ export function CustomersScreen() {
                     ? 'جرّب رقماً أو جزءاً من اسم. الأرقامُ موحَّدة، فصيغةُ كتابتها لا تهمّ.'
                     : 'يُنشأ العميلُ من أوّل طلبٍ له، أو أضِفه بنفسك من الزرّ أعلاه.'
                 }
+                action={search ? undefined : { label: 'أضف أول عميل', onClick: () => setCreateModalOpen(true) }}
               />
             }
           />

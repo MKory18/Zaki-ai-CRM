@@ -175,6 +175,7 @@ export function BlacklistScreen() {
                 <EmptyState
                   title="لا أرقامَ محظورة"
                   why="الحظر على الهاتف لا على الاسم: مَن رفض الاستلام ثلاث مرّات يطلب من جديد باسمٍ آخر. أضِف رقماً حين يلزم."
+                  action={{ label: 'حظر رقم', onClick: () => setAdding(true) }}
                 />
               )
             }
