@@ -174,10 +174,14 @@ describe('Ⅱ · and the helper is the whole of the answer', () => {
      * the whole fix. The sweep covers the other twenty-eight; this says the
      * reported one is among them.
      */
-    const src = stripComments(readFileSync(join(ROOT, 'app/api/ops/returns/route.ts'), 'utf8'));
-    expect(src, 'بحثُ المرتجعاتِ لا يَمُرُّ بالمساعد').toMatch(/typed\(/);
+    // The search is written once, for every order list, in `orderSearchOr`; the returns filters ask it (and drop
+    // the phone clauses for a person who may not read phones) instead of carrying a copy.
+    const filters = stripComments(readFileSync(join(ROOT, 'lib/returns-filters.ts'), 'utf8'));
+    expect(filters, 'بحثُ المرتجعاتِ لا يَمُرُّ بالبانيِ المشترك').toMatch(/orderSearchOr\(/);
+    const builder = stripComments(readFileSync(join(ROOT, 'lib/order-filters.ts'), 'utf8'));
+    expect(builder, 'البانيُ المشتركُ لا يَمُرُّ بالمساعد').toMatch(/typed\(/);
     for (const field of ['orderNumber', 'merchantRef', 'trackingNumber']) {
-      expect(src, `«${field}» خارجَ بحثِ المرتجعات`).toContain(field);
+      expect(builder, `«${field}» خارجَ بحثِ المرتجعات`).toContain(field);
     }
   });
 });

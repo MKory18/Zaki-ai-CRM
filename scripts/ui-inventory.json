@@ -1040,12 +1040,12 @@
     "tabs": 0
   },
   "src/components/screens/ReturnsScreen.tsx": {
-    "buttons": 8,
-    "inputs": 5,
-    "columns": 5,
+    "buttons": 5,
+    "inputs": 4,
+    "columns": 15,
     "cards": 0,
     "modals": 1,
-    "icons": 5,
+    "icons": 2,
     "links": 0,
     "tabs": 0
   },

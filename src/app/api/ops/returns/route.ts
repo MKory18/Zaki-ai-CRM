@@ -16,7 +16,9 @@ import {
 } from '@/lib/partial-delivery';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { readLimit, readPage } from '@/lib/numeric-input';
-import { typed } from '@/lib/text-search';
+import { readOrderPage } from '@/lib/paged-read';
+import { PENDING_ORDER_BY, RECEIVED_ORDER_BY, daysWaitedOf, returnsFilters, sinceOf, viewScope } from '@/lib/returns-filters';
+import { returnsFacts } from '@/lib/returns-list';
 
 /**
  * Return receiving.
@@ -47,6 +49,22 @@ const receiveSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+/**
+ * READ IN PAGES, ONE VIEW AT A TIME, WITH WHAT THE CLERK CHOSE.
+ *
+ * «المرتجعات — صفحات + فلاتر + بحث». The pages were already here (#42); the choices were not.
+ *
+ *   ?view=pending|received       the parcels waiting to be counted in (default) · the ones that were
+ *   ?status=<state>              RETURN_REQUESTED · RETURNED · FAILED_DELIVERY · PARTIALLY_DELIVERED   (pending only)
+ *   ?courier=<id>|none           which delivery company carried it, or none
+ *   ?age=fresh|few|week|old      how long since the courier last spoke of it                          (pending only)
+ *   ?q=                          order number, reference, waybill, the customer's name — and phone, for whoever may read phones
+ *   ?page= ?limit=               25 a page, 100 at most
+ *
+ * An unknown value is a 400 in Arabic, never a quiet «everything». The scope (company, store, the view) is spread at
+ * the top of the question and what was chosen is ANDed onto it, so no choice can widen what the person is allowed to
+ * see; the count and the rows are asked of that same `where`.
+ */
 export async function GET(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
@@ -54,76 +72,68 @@ export async function GET(req: Request) {
     const maySeeContact = can(user, 'customers.view');
 
     const searchParams = new URL(req.url).searchParams;
-    const term = searchParams.get('q')?.trim();
+    const now = new Date();
 
-    /*
-     * ── PAGES, BECAUSE `take: 200` WAS A CEILING NOBODY COULD SEE PAST ──
-     *
-     * The owner, 20/10: «المرتجعات صفحات اعملها».
-     *
-     * This list is ordered by `returnedAt` ASCENDING — oldest first, which
-     * is right, because the return that has been sitting longest is the one
-     * costing money. But it meant the two hundred shown were the two
-     * hundred OLDEST, and a shop past that number could not reach a return
-     * that came back yesterday at all. Not «slow to find»: unreachable.
-     *
-     * The same shape `customers/route.ts` uses, through the same shared
-     * readers, so a page number behaves identically on both screens.
-     */
-    /**
-     * WHAT THIS LIST IS, NAMED ONCE.
-     *
-     * The count and the page must ask the same question as the rows, or
-     * the heading says «١٢٠ مرتجع» over a list of a different hundred and
-     * twenty. It was written inline when only the rows needed it; a
-     * second reader means it gets a name.
-     *
-     * `PARTIALLY_DELIVERED` belongs here: the customer refused some lines
-     * and those units are on their way back — but the desk never listed
-     * the order, so nobody counted them in and they never reached a
-     * shelf. Leaving it out would understate stock by every refused unit,
-     * for ever.
-     */
-    const listWhere = {
-      companyId,
-      storeId,
-      shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED', 'FAILED_DELIVERY', 'PARTIALLY_DELIVERED'] },
-      returnReceipt: null,
-      ...(term
-        ? { OR: [{ orderNumber: typed(term) }, { merchantRef: typed(term) }, { trackingNumber: typed(term) }] }
-        : {}),
-    };
+    const parsed = returnsFilters(searchParams, { now, maySeeContact });
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorAr: parsed.errorAr }, { status: 400 });
 
+    const scope = { companyId, storeId };
+    // The scope stays at the TOP of the question — spread, never nested — and what was chosen is ANDed onto it.
+    const where = { ...viewScope(parsed.view, scope), AND: parsed.clauses };
     const limit = readLimit(searchParams, 25, 100);
-    const total = await db.order.count({ where: listWhere });
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-    /*
-     * Clamped to the last page that exists. Asking for page 9 of 3 is
-     * what a bookmark becomes after the queue is worked down, and an
-     * empty screen reads as «there are no returns» — which is a lie about
-     * the three on page 3.
-     */
-    const page = Math.min(readPage(searchParams), totalPages);
+    const pending = parsed.view === 'pending';
 
-    const orders = await db.order.findMany({
-      where: listWhere,
-      orderBy: { returnedAt: 'asc' },
-      skip: (page - 1) * limit,
-      take: limit,
-      select: {
-        id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
-        shippingStatus: true, settlementStatus: true, returnReason: true, returnedAt: true,
-        regionId: true, deliveryProviderId: true,
-        customer: { select: { fullName: true, phone: true } },
-        region: { select: { id: true, name: true } },
-        deliveryProvider: { select: { id: true, name: true } },
-        items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
-      },
-    });
+    /*
+     * Clamped to the last page that exists. Asking for page 9 of 3 is what a bookmark becomes after the queue is
+     * worked down, and an empty screen reads as «there are no returns» — which is a lie about the three on page 3.
+     */
+    const [list, facts] = await Promise.all([
+      readOrderPage<Record<string, any>>(db, {
+        where,
+        orderBy: pending ? PENDING_ORDER_BY : RECEIVED_ORDER_BY,
+        page: readPage(searchParams),
+        limit,
+        select: {
+          id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
+          shippingStatus: true, settlementStatus: true, returnReason: true, returnedAt: true,
+          // The other three places a parcel's moment can live — read to say how long it has waited, not sent on.
+          failedAt: true, deliveredAt: true, updatedAt: true,
+          regionId: true, deliveryProviderId: true,
+          customer: { select: { fullName: true, phone: true } },
+          region: { select: { id: true, name: true } },
+          deliveryProvider: { select: { id: true, name: true } },
+          items: { select: { id: true, productName: true, quantity: true, freeQuantity: true, deliveredQty: true, productId: true } },
+          // The record of the count — only the record view shows it.
+          ...(pending
+            ? {}
+            : {
+                returnReceipt: {
+                  select: {
+                    expectedQty: true, receivedQty: true, damagedQty: true, missingQty: true,
+                    courierFeeCharged: true, inspectedById: true, inspectedAt: true, note: true,
+                  },
+                },
+              }),
+        },
+      }),
+      returnsFacts(db, { scope, view: parsed.view, now }),
+    ]);
+    const orders = list.rows;
 
     // Contact details left the building; the tally is the person's, not
     // this screen's. See noteCustomersHandedOut.
     await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة المرتجعات', rows: orders });
+
+    /** Who counted each parcel in — the names of the page's inspectors, in one read. */
+    const inspectorIds = pending
+      ? []
+      : [...new Set(orders.map((o) => o.returnReceipt?.inspectedById as string | undefined).filter((id): id is string => !!id))];
+    const inspectors = new Map(
+      (inspectorIds.length > 0
+        ? await db.user.findMany({ where: { id: { in: inspectorIds }, companyId }, select: { id: true, name: true } })
+        : []
+      ).map((u) => [u.id, u.name])
+    );
 
     return NextResponse.json({
       count: orders.length,
@@ -132,11 +142,24 @@ export async function GET(req: Request) {
        * `pagination.total` is how many there are — two different facts
        * that a single number was being asked to carry.
        */
-      pagination: { total, page, limit, totalPages },
+      pagination: { total: list.total, page: list.page, limit: list.limit, totalPages: list.totalPages },
+      facts,
+      applied: parsed.applied,
       // `items` is deliberately NOT spread out below: `lines` is the same
       // fact in the shape the desk needs, and shipping both invites the
       // screen to reach for the raw one again.
-      orders: orders.map(({ items, ...o }) => {
+      orders: orders.map(({ items, returnReceipt, failedAt, deliveredAt, updatedAt, ...o }) => {
+        const customer = redactCustomerForWarehouse(o.customer, maySeeContact);
+        if (!pending) {
+          // A record: what was counted, by whom and when. No lines, no extra action — nothing here can be received again.
+          return {
+            ...o,
+            customer,
+            receipt: returnReceipt
+              ? { ...returnReceipt, inspectedBy: inspectors.get(returnReceipt.inspectedById) ?? null }
+              : null,
+          };
+        }
         const units = doorUnits(items);
         // Every row in this list is a return that has NOT been received yet,
         // so the goods half is open by construction.
@@ -148,8 +171,10 @@ export async function GET(req: Request) {
         });
         return {
           ...o,
-          customer: redactCustomerForWarehouse(o.customer, maySeeContact),
+          customer,
           expectedQty: expectedBackTotal(items),
+          /** Whole days since the courier last spoke of it — the number the age filter's piles are cut from. */
+          daysWaited: daysWaitedOf(sinceOf({ returnedAt: o.returnedAt, failedAt, deliveredAt, updatedAt }), now),
           /**
            * WHICH PRODUCT, AND HOW MANY OF IT, IS COMING BACK.
            *

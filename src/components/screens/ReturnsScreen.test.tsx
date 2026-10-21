@@ -84,8 +84,22 @@ const WHOLE_ROW = {
   action: null,
 };
 
+/** The door's whole answer — the rows, the page they are on, the numbers beside the filters, the view they belong to. */
+const answer = (rows: unknown[]) => ({
+  count: rows.length,
+  orders: rows,
+  pagination: { total: rows.length, page: 1, limit: 25, totalPages: 1 },
+  facts: {
+    views: { pending: rows.length, received: 0 },
+    statuses: { RETURN_REQUESTED: 0, RETURNED: 0, FAILED_DELIVERY: 0, PARTIALLY_DELIVERED: 0 },
+    couriers: [],
+    ages: { fresh: 0, few: 0, week: 0, old: 0 },
+  },
+  applied: { view: 'pending', status: null, courier: null, age: null, q: null },
+});
+
 const openDialog = async (row: unknown) => {
-  apiJson.mockResolvedValue({ orders: [row] });
+  apiJson.mockResolvedValue(answer([row]));
   render(<ReturnsScreen />);
   const receive = await waitFor(() => screen.getAllByRole('button', { name: 'استلام' })[0]);
   await userEvent.click(receive);
