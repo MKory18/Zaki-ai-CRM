@@ -79,7 +79,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
         title={
           <span className="flex items-center gap-2">
             <RiStackLine className="h-4 w-4 text-[var(--sys-primary)]" />
-            <span>المخزون والتكلفة</span>
+            <span>معلومات المنتج وبياناته</span>
             <span className="rounded-full bg-[var(--sys-surface-strong)] px-2 py-0.5 text-xs font-bold text-[var(--sys-foreground)]">
               {made ? 'منتج مصنّع' : 'منتج جاهز'}
             </span>

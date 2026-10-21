@@ -21,6 +21,7 @@ import { Rows } from '@/components/ui/Rows';
 import { HealthChip } from '@/components/ui/HealthChip';
 import type { CatalogueReadiness, ProductGrade } from '@/lib/product-grade';
 import { PRODUCT_STATUS_AR, productStatusAr, productStatusTone } from '@/lib/product-status';
+import { ProductEditDialog } from '@/components/products/ProductEditDialog';
 
 /**
  * What the grades route answers with, so the screen never guesses a shape.
@@ -113,50 +114,11 @@ export function ProductsScreen() {
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', nameEn: '', sku: '', description: '', descriptionEn: '', basePrice: '', status: 'ACTIVE' , categoryId: null as string | null });
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
 
+  /** Open the shared dialog on this product. The form lives inside it. */
   const openEdit = (p: any) => {
     setEditProduct(p);
-    setEditForm({
-      name: p.name || '',
-      nameEn: p.nameEn || '',
-      sku: p.sku || '',
-      description: p.description || '',
-      descriptionEn: p.descriptionEn || '',
-      // `p.basePrice || 0` was the TENTH of the vacuous ones: the column is
-      // `Float @default(0.0)` and NOT NULL, so the only falsy value it can
-      // hold is a real 0, which the fallback replaced with 0. The price is
-      // now shown as the stored number, whatever it is.
-      basePrice: String(p.basePrice),
-      categoryId: p.categoryId ?? null,
-      status: p.status || 'ACTIVE',
-    });
-    setEditError(null);
     setEditOpen(true);
-  };
-
-  const handleEditSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editProduct) return;
-    setEditLoading(true);
-    setEditError(null);
-    try {
-      const res = await fetch(`/api/products/${editProduct.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setEditOpen(false);
-      loadProducts();
-    } catch (err: any) {
-      setEditError(err.message);
-    } finally {
-      setEditLoading(false);
-    }
   };
 
   const handleDelete = async (p: any) => {
@@ -778,79 +740,25 @@ export function ProductsScreen() {
         </form>
       </Modal>
 
-      {/* Edit Product Modal */}
-      <Modal
-        isOpen={editOpen}
+      {/*
+        THE ONE EDIT FORM, SHARED WITH THE PRODUCT PAGE.
+
+        It lived here as markup, and the detail page — the place this very
+        modal tells people to go — had no edit at all. Lifted out rather
+        than copied, so the two screens cannot drift into two different
+        ideas of what a product is.
+      */}
+      <ProductEditDialog
+        product={editProduct}
+        open={editOpen}
         onClose={() => setEditOpen(false)}
-        title={`تعديل المنتج: ${editProduct ? productName(editProduct, locale) : ''}`}
-        subtitle="غيّر الاسم بالعربية والإنجليزيɡ SKU، الحالة والوصف — الصور تُدار من صفحة التفاصيل"
-        maxWidth="xl"
-      >
-        <form onSubmit={handleEditSave} className="space-y-4">
-          {editError && (
-            <div className="p-3 bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] text-[var(--sys-destructive)] text-xs rounded-lg">
-              {editError}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="الاسم بالعربية *" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
-            <Input label="الاسم بالإنجليزية" placeholder="English name" dir="ltr" value={editForm.nameEn} onChange={(e) => setEditForm({ ...editForm, nameEn: e.target.value })} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label="رمز SKU *" value={editForm.sku} onChange={(e) => setEditForm({ ...editForm, sku: e.target.value.toUpperCase() })} required />
-            <Input label="السعر الأساسي ($)" type="number" step="0.01" value={editForm.basePrice} onChange={(e) => setEditForm({ ...editForm, basePrice: e.target.value })} />
-            <Select label="الحالة" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
-              <option value="ACTIVE">{PRODUCT_STATUS_AR.ACTIVE}</option>
-              <option value="INACTIVE">{PRODUCT_STATUS_AR.INACTIVE}</option>
-              <option value="OUT_OF_STOCK">{PRODUCT_STATUS_AR.OUT_OF_STOCK}</option>
-            </Select>
-          </div>
-
-          <CategoryPicker
-            value={editForm.categoryId}
-            onChange={(categoryId) => setEditForm({ ...editForm, categoryId })}
-          />
-          <Textarea label="الوصف بالعربية" rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
-          <Textarea label="الوصف بالإنجليزية" rows={2} dir="ltr" value={editForm.descriptionEn} onChange={(e) => setEditForm({ ...editForm, descriptionEn: e.target.value })} />
-
-          {editProduct && (
-            <div className="flex items-center gap-3 p-3 bg-[var(--sys-surface)] border border-[var(--sys-primary-soft)] rounded-lg">
-              <ProductThumb
-                src={editProduct.images?.find((i: any) => i.isPrimary)?.url || editProduct.images?.[0]?.url}
-                size="md"
-              />
-              <div className="text-xs text-[var(--sys-primary)]">
-                <p className="font-bold">إدارة الصور</p>
-                <p>
-                  {editProduct.images?.length || 0} صورة — للتعديل والتبديل والحذف افتح{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditOpen(false);
-                      router.push(`/products/${editProduct.id}`);
-                    }}
-                    className="underline font-bold cursor-pointer"
-                  >
-                    صفحة تفاصيل المنتج
-                  </button>
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-2 rtl:space-x-reverse pt-1">
-            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" loading={editLoading} className="bg-[var(--sys-primary)] hover:bg-[var(--sys-primary)]/85">
-              <RiPencilLine className="w-4 h-4" />
-              حفظ التعديلات
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onSaved={loadProducts}
+        locale={locale}
+        onManageImages={() => {
+          setEditOpen(false);
+          router.push(`/products/${editProduct.id}`);
+        }}
+      />
     </>
   );
 }

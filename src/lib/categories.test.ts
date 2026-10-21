@@ -86,8 +86,17 @@ describe('filing a product', () => {
     // Created and chosen in one step: naming a shelf and then hunting for
     // it in a list is two actions for one intention.
     expect(picker).toMatch(/onChange\(d\.category\.id\)/);
-    const screen = stripComments(repoFile('src/components/screens/ProductsScreen.tsx'));
-    // Both doors: a new product and an existing one.
-    expect((screen.match(/<CategoryPicker/g) ?? []).length, 'المنتقي في مكان واحد فقط').toBe(2);
+    /*
+     * BOTH DOORS: a new product and an existing one — and the existing
+     * one moved. The edit form was markup inside `ProductsScreen` while
+     * the product's own page had no edit at all; it is now
+     * `ProductEditDialog`, shared by the list and the detail page. So the
+     * two doors are two FILES, and counting them in one would pass the
+     * day the shared dialog lost its picker.
+     */
+    const create = stripComments(repoFile('src/components/screens/ProductsScreen.tsx'));
+    const editDialog = stripComments(repoFile('src/components/products/ProductEditDialog.tsx'));
+    expect((create.match(/<CategoryPicker/g) ?? []).length, 'منتقي الفئة راح من باب الإنشاء').toBe(1);
+    expect((editDialog.match(/<CategoryPicker/g) ?? []).length, 'منتقي الفئة راح من باب التعديل').toBe(1);
   });
 });

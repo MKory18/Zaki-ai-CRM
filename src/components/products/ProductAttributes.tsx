@@ -46,9 +46,26 @@ export function ProductAttributes({ productId, canManage = true }: { productId: 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const p = await apiJson<{ attributes: string | null; category: Category | null }>(
-        `/api/products/${productId}`
-      );
+      /*
+       * ── THE PRODUCT IS INSIDE `product`, AND THIS READ THE ENVELOPE ──
+       *
+       * The owner, 21/10: «الخصائص مش شغالة».
+       *
+       * `GET /api/products/[id]` answers `{ product, currencyCode }`.
+       * This read `p.category` and `p.attributes` off the envelope, so
+       * both were always `undefined`: the card decided the product had no
+       * category and drew «لا فئة لهذا المنتج — أسنِد له فئةً أولاً» —
+       * even for a product that HAD one, with questions on it. The save
+       * button sits behind that branch, so it was never rendered, and no
+       * answer could be written or read back.
+       *
+       * Nothing else was wrong. The PATCH validates and stores the
+       * answers correctly, the model has the columns, and
+       * `parseCategoryAttributes` works. One misread key.
+       */
+      const { product: p } = await apiJson<{
+        product: { attributes: string | null; category: Category | null };
+      }>(`/api/products/${productId}`);
       const schema = parseCategoryAttributes(p.category?.attributeSchema ?? null);
       setCategory(p.category ?? null);
       setFields(schema);
