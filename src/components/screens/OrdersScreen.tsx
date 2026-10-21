@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SavedViews } from '@/components/ui/SavedViews';
 import { EMPTY_ORDER_FILTERS, orderFiltersFromQuery, orderFiltersToQuery } from '@/lib/order-filters';
 import { DismissButton } from '@/components/ui/DismissButton';
@@ -135,6 +135,33 @@ export function OrdersScreen() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(asked.get('highlight'));
+  const router = useRouter();
+  const highlight = asked.get('highlight');
+  /*
+   * A LINK TO AN ORDER, FOLLOWED WHILE THIS SCREEN IS ALREADY OPEN.
+   *
+   * `/orders/<id>` lands here as `?highlight=<id>`, and the state above reads
+   * that ONCE, at mount — right for a page load and wrong for the link that
+   * matters most: «افتح الطلب» on the toast after making an order, pressed
+   * on THIS screen. Next keeps the page mounted when only the query changes,
+   * so nothing re-read it and the button did nothing at all.
+   */
+  useEffect(() => {
+    if (highlight) setSelectedOrderId(highlight);
+  }, [highlight]);
+  /*
+   * AND CLOSING IT CLEARS THE ADDRESS.
+   *
+   * The URL says what is open. Left behind, a refresh reopened a panel nobody
+   * asked for, and a second link to the SAME order changed nothing — the
+   * address already read what it was being asked to become, so the effect
+   * above never fired. Filters read from the URL are read once and not
+   * written back, and this does not change that: only the order is cleared.
+   */
+  const closeOrder = () => {
+    setSelectedOrderId(null);
+    if (highlight) router.replace('/orders', { scroll: false });
+  };
 
   const loadMetadata = async () => {
     try {
@@ -969,7 +996,7 @@ export function OrdersScreen() {
       <OrderDetailModal
         orderId={selectedOrderId}
         isOpen={!!selectedOrderId}
-        onClose={() => setSelectedOrderId(null)}
+        onClose={closeOrder}
         onRefresh={() => loadOrders(pagination.page)}
         /*
          * EVERY filter, not three of them. The arrows walk the list behind

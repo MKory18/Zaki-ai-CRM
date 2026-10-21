@@ -14,6 +14,8 @@ import { ProductLinesEditor, goodsTotal, newLine, type DraftLine } from '@/compo
 import { amount } from '@/lib/format';
 import { RiArchiveLine, RiCheckboxCircleLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { useMayOpen } from '@/hooks/useMayOpen';
+import { openOrderStep } from '@/lib/next-step';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
   const { t, locale, isRtl } = useApp();
   const ar = locale === 'ar';
   const toast = useToast();
+  const mayOpen = useMayOpen();
   const [loading, setLoading] = useState(false);
 
   const [moderators, setModerators] = useState<any[]>([]);
@@ -200,8 +203,21 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
        * الطلب» and goes looking for it in «طلباتي», where it is not.
        * A warning, not a success: the order was made, but not hers.
        */
-      if (data.notice) toast.warn(`تم إنشاء الطلب ${created?.orderNumber ?? ''} — ${data.notice}`.trim());
-      else toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح');
+      /*
+       * AND WHERE TO FIND IT.
+       *
+       * «تم إنشاء الطلب ORD-…» gave the number and nothing to do with it: the
+       * moderator who made it, and wants to check the address or add a note,
+       * went back to the list and searched for the number she had just been
+       * handed. The order's own address (`/orders/<id>`) opens it where it
+       * is — see that page for how.
+       *
+       * Offered only when she may open the orders screen: a link that ends in
+       * a refusal is worse than no link.
+       */
+      const openIt = openOrderStep(created?.id, mayOpen);
+      if (data.notice) toast.warn(`تم إنشاء الطلب ${created?.orderNumber ?? ''} — ${data.notice}`.trim(), undefined, openIt);
+      else toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح', undefined, openIt);
       onSuccess(created);
       onClose();
     } catch (err: any) {

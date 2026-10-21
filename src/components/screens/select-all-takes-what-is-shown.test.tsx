@@ -30,6 +30,10 @@ vi.mock('@/components/ui/Confirm', () => ({
   useAsk: () => vi.fn(async () => null),
   useTell: () => vi.fn(),
 }));
+// The screen now asks who is signed in — to offer «اطبع البوالص» only to
+// somebody who may open the batches screen. Nobody is, here: this test is
+// about ticking rows, and an offer that is not made is not under test.
+vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: null }) }));
 vi.mock('@/components/shell/ScreenTitle', () => ({ ScreenTitle: () => null }));
 vi.mock('@/components/orders/CustomerHistory', () => ({ CustomerHistoryButton: () => null }));
 vi.mock('@/components/screens/confirmation/ActionDialogs', () => ({ RejectDialog: () => null }));
