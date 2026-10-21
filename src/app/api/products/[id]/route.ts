@@ -6,6 +6,8 @@ import { inStore } from '@/lib/store-filter';
 import { deleteStoredFile } from '@/lib/storage';
 import { logAudit } from '@/lib/audit';
 import { parseCategoryAttributes, parseProductAttributes } from '@/lib/product-attributes';
+import { productCosts } from '@/lib/product-cost';
+import { maySeeCost, withoutCost } from '@/lib/cost-visibility';
 import { parseHistory, rememberSlug, slugify, uniqueSlug } from '@/lib/slug';
 import { can, authorize } from '@/lib/authorization';
 import { requireContext } from '@/lib/geo-context';
@@ -23,6 +25,33 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         // Apart, the card that edits them would have to ask twice and
         // could draw an answer against a schema that had since changed.
         category: { select: { id: true, name: true, attributeSchema: true } },
+        /*
+         * ── THE SCREEN HAS ALWAYS READ THESE. THE DOOR NEVER SENT THEM ──
+         *
+         * `ProductDetailScreen` reads `data.analytics`, `product.batches`
+         * and `product.orders`. This route returned `{ product,
+         * currencyCode }` and the product's own columns — since the first
+         * commit. So four cards on that page were blank for ever:
+         * «أداء المبيعات», «المخزون», «تشغيلات الإنتاج» and «أحدث
+         * الطلبات».
+         *
+         * It reads as «we have no data», which about a product that has
+         * sold for months is a lie the screen tells with a straight face.
+         * The owner reported the symptom twice — «المخزون اللي فوق» and
+         * «تشغيلات الإنتاج» — without either of us knowing they were the
+         * same missing key.
+         */
+        batches: {
+          orderBy: { productionDate: 'desc' },
+          take: 20,
+          select: {
+            id: true, batchNumber: true, quantityProduced: true, quantitySold: true,
+            quantityRemaining: true, productionDate: true, createdAt: true,
+            status: true, notes: true, openingCountId: true,
+            manufacturingCost: true, packagingCost: true, rawMaterialCost: true,
+            otherCosts: true, totalProductionCost: true, costPerUnit: true,
+          },
+        },
       },
     });
     // Scope-evaluated view authorization — out-of-scope products report 404
@@ -47,7 +76,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       currencyCode = await sellingCurrency(null, companyId);
     }
 
-    return NextResponse.json({ product, currencyCode });
+    /*
+     * ── THE SAME ARITHMETIC THE LIST ALREADY DOES ──
+     *
+     * `productCosts`, `maySeeCost` and `withoutCost` are the list route's
+     * (`products/route.ts:109-169`). Reusing them is the point: two
+     * places computing «how many were produced» is two answers to one
+     * question, and the one on this page would be the one nobody
+     * cross-checks.
+     *
+     * ⚠️ Cost is withheld from whoever may not see it, and the batches
+     * have their money STRIPPED rather than zeroed — a zero is a claim,
+     * and «this cost nothing» is a false one.
+     */
+    const showCost = maySeeCost(user);
+    const totalProduced = product.batches.reduce((s, b) => s + b.quantityProduced, 0);
+    const totalSold = product.batches.reduce((s, b) => s + b.quantitySold, 0);
+    const totalRemaining = product.batches.reduce((s, b) => s + b.quantityRemaining, 0);
+    const costOf = showCost ? await productCosts(db, companyId, [product.id]) : new Map();
+
+    return NextResponse.json({
+      product: {
+        ...product,
+        batches: showCost ? product.batches : product.batches.map(withoutCost),
+      },
+      analytics: {
+        totalProduced,
+        totalSold,
+        totalRemaining,
+        ...(showCost
+          ? { avgCostPerUnit: Number((costOf.get(product.id)?.average ?? 0).toFixed(2)) }
+          : {}),
+      },
+      currencyCode,
+    });
   } catch (error: any) {
     return apiErrorResponse(error);
   }

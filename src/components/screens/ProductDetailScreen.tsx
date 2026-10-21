@@ -16,11 +16,12 @@ import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { ProductAttributes } from '@/components/products/ProductAttributes';
 import { ProductHeadline } from '@/components/products/ProductHeadline';
-import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiShoppingCartLine, RiStackLine, RiStarLine } from '@remixicon/react';
+import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiStarLine, RiPencilLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { productStatusAr, productStatusTone } from '@/lib/product-status';
+import { ProductEditDialog } from '@/components/products/ProductEditDialog';
 
 export function ProductDetailScreen() {
   const params = useParams();
@@ -34,6 +35,7 @@ export function ProductDetailScreen() {
   const [product, setProduct] = useState<any>(null);
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [analytics, setAnalytics] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,7 +168,21 @@ export function ProductDetailScreen() {
           </div>
 
           {canManage && (
-            <div>
+            <div className="flex items-center gap-2">
+              {/*
+                ── THE BUTTON THIS PAGE NEVER HAD ──
+
+                «التعديل من داخل صفحة المنتج مش شغال» — it was not broken,
+                it was absent. The page could change images, attributes
+                and offers, and nothing else: not the name, the SKU, the
+                price, the status, the category or the type. The list's
+                own edit modal sends people HERE «للتعديل والتبديل
+                والحذف», so this is where they looked.
+              */}
+              <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                <RiPencilLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                تعديل المنتج
+              </Button>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
               <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
                 <RiImageAddLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
@@ -174,6 +190,15 @@ export function ProductDetailScreen() {
               </Button>
             </div>
           )}
+
+          {/* The shared form — the same one the list opens, so the two
+              screens cannot disagree about what a product is. */}
+          <ProductEditDialog
+            product={product}
+            open={editOpen}
+            onClose={() => setEditOpen(false)}
+            onSaved={loadProduct}
+          />
         </div>
 
         {/* Gallery + Info */}
@@ -268,7 +293,26 @@ export function ProductDetailScreen() {
           {/* Info + Performance */}
           <div className="space-y-6">
             <Card>
-              <CardHeader title="معلومات المنتج" />
+              {/*
+                ── «معلومات المنتج وبيانات» = THE WORDS, THEN THE NUMBERS ──
+
+                The owner, 21/10: «معلومات المنتج وبيانات = معلومات المنتج
+                + المخزون و التكلفة».
+
+                The words — the description and the base price — stay
+                here, because they are what a person reads first. The
+                NUMBERS are one card, and it is the stock card below,
+                which is now headed «معلومات المنتج وبياناته» and already
+                holds on-hand, reserved, available, the weighted average
+                cost, the next-out cost and the stock value, all from one
+                server-side source.
+
+                They were three cards before: these words, a broken
+                «المخزون» that read a key the door never sent, and the
+                real one. Two of the three said the same thing and one of
+                them said nothing.
+              */}
+              <CardHeader title="وصف المنتج وسعره" />
               <CardContent className="text-xs space-y-2">
                 <p className="text-[var(--sys-foreground)]">{product.description || '—'}</p>
                 <div className="pt-2 border-t border-[var(--sys-border)] grid grid-cols-2 gap-2 text-center">
@@ -306,30 +350,39 @@ export function ProductDetailScreen() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader title="المخزون" />
-              <CardContent className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <RiStackLine className="w-4 h-4 text-[var(--sys-muted)] mx-auto" />
-                  <span className="text-[var(--sys-muted)] block mt-1">المنتج</span>
-                  <span className="font-bold text-[var(--sys-heading)]">{analytics?.totalProduced}</span>
-                </div>
-                <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <RiShoppingCartLine className="w-4 h-4 text-[var(--sys-primary)] mx-auto" />
-                  <span className="text-[var(--sys-primary)] block mt-1">المبيع</span>
-                  <span className="font-bold text-[var(--sys-primary)]">{analytics?.totalSold}</span>
-                </div>
-                <div className="bg-[var(--sys-success-soft)] p-2.5 rounded-lg">
-                  <RiStackLine className="w-4 h-4 text-[var(--sys-success)] mx-auto" />
-                  <span className="text-[var(--sys-success)] block mt-1">المتبقي</span>
-                  <span className="font-black text-[var(--sys-success)]">{analytics?.totalRemaining}</span>
-                </div>
-              </CardContent>
-            </Card>
+            {/*
+              ── «المخزون» WAS HERE, TWICE OVER ──
+
+              The owner, 21/10: «المخزون اللي فوق شيله لأنّه في واحد تحت».
+
+              He was right twice. This card duplicated «المخزون والتكلفة»
+              below it — and it was the BROKEN copy: it read
+              `analytics.totalProduced/Sold/Remaining`, which this screen
+              asked for and the door never sent, so its three numbers were
+              blank on every product that ever existed.
+
+              The card below is the real one: it reads
+              `/api/products/[id]/stock`, where on-hand, reserved,
+              available and the weighted average cost are computed on the
+              SERVER from one source.
+            */}
           </div>
         </div>
 
-        {/* Production Batches */}
+        {/*
+          ── A BOUGHT PRODUCT HAS NO PRODUCTION RUNS ──
+
+          The owner, 21/10: «تشغيلات الإنتاج مش لازم تكون داخل صفحة
+          المنتج الجاهز، والعكس صحيح».
+
+          This card was drawn for EVERY product, with no check at all. On
+          a PURCHASED one it showed an empty state saying its profit is
+          only gross «for lack of a run with a cost» — which is wrong
+          advice about a product that is bought, not made: its cost comes
+          in through «استلام بضاعة جاهزة», and `ProductStock` below
+          already sends it to the right door.
+        */}
+        {product.sourceType !== 'PURCHASED' && (
         <Card>
           <CardHeader
             title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><RiBuilding4Line className="w-4 h-4 text-[var(--sys-destructive)]" /><span>تشغيلات الإنتاج</span></span>}
@@ -363,6 +416,7 @@ export function ProductDetailScreen() {
             />
           </CardContent>
         </Card>
+        )}
 
         {/* Stock, cost and the one door that adds more. */}
         <ProductStock productId={productId} canManage={!!canManage} />

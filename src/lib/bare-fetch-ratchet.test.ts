@@ -66,7 +66,12 @@ const DEBT = new Map<string, number>([
   ['src/components/screens/AiSettingsScreen.tsx', 6],
   ['src/components/screens/CampaignsScreen.tsx', 6],
   ['src/components/screens/PermissionsScreen.tsx', 6],
-  ['src/components/screens/ProductsScreen.tsx', 6],
+  /*
+   * 6 → 5: the edit form left this screen for `ProductEditDialog`, and
+   * it went through `apiJson` on the way out — so one bare `fetch` was
+   * paid off rather than moved. The ratchet only ever falls.
+   */
+  ['src/components/screens/ProductsScreen.tsx', 5],
   ['src/components/screens/ProductDetailScreen.tsx', 5],
   ['src/components/shell/SecondFactor.tsx', 5],
   ['src/components/screens/users/UserAccessSections.tsx', 4],
