@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -9,11 +10,24 @@ import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
 import { format } from 'date-fns';
-import { RiAddCircleLine, RiArrowLeftSLine, RiArrowRightSLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { HealthChip } from '@/components/ui/HealthChip';
 import { ContactButtons } from '@/components/orders/ContactButtons';
 import type { CustomerFacts } from '@/lib/customer-insights';
+import {
+  DEFAULT_SORT,
+  SEGMENTS,
+  SEGMENT_AR,
+  SORTS,
+  SORT_AR,
+  cleanCity,
+  isSegment,
+  isSort,
+  segmentCount,
+  type CustomerSort,
+  type Segment,
+} from '@/lib/customer-filters';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AskAi } from '@/components/growth/AskAi';
@@ -35,7 +49,34 @@ export function CustomersScreen() {
   const [facts, setFacts] = useState<CustomerFacts | null>(null);
   /** The country's calling code, for the contact strip's `wa.me`. */
   const [dialCode, setDialCode] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  /*
+   * WHAT POINTS HERE, READ ONCE.
+   *
+   * The WhatsApp inbox links to `/customers?search=<the number>` — a link
+   * that has carried a filter to this screen for as long as it has existed,
+   * and this screen read nothing from the address, so the person landed on
+   * the whole book to look for the customer by hand. Read at the start and
+   * not written back: the orders list's rule, because keeping the filters
+   * in the address bar is saved views, which is a feature and not a repair.
+   *
+   * A URL is typed by anyone. A value this screen does not know would
+   * reach the API and come back 400, so it is checked against the same
+   * lists the API checks against.
+   */
+  const asked = useSearchParams();
+  const askedSegment = asked.get('segment');
+  const askedSort = asked.get('sort');
+  const [search, setSearch] = useState(asked.get('search') ?? asked.get('q') ?? '');
+  /** «طلبوا», «رفضوا طرداً» … — the strip's own words, as a filter. `all` is no filter. */
+  const [segment, setSegment] = useState<Segment | 'all'>(isSegment(askedSegment) ? askedSegment : 'all');
+  const [cityFilter, setCityFilter] = useState(cleanCity(asked.get('city')) ?? 'all');
+  const [sort, setSort] = useState<CustomerSort>(isSort(askedSort) ? askedSort : DEFAULT_SORT);
+  /**
+   * The limited view (`customers.view_basic`) gets no filters and no figures:
+   * the server ignores them for it, and so does this screen — it neither
+   * sends them nor draws the controls.
+   */
+  const [limited, setLimited] = useState(false);
   const [loading, setLoading] = useState(true);
   /** 25 to a page, like the orders screen — the book is read in pages. */
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 25, totalPages: 1 });
@@ -65,11 +106,19 @@ export function CustomersScreen() {
     const seq = ++seqRef.current;
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/customers?q=${encodeURIComponent(search)}&page=${pageToLoad}&limit=${pagination.limit}`);
+      const query = new URLSearchParams({ q: search, page: String(pageToLoad), limit: String(pagination.limit) });
+      // Only what was chosen is sent, and nothing at all for the limited view.
+      if (!limited) {
+        if (segment !== 'all') query.set('segment', segment);
+        if (cityFilter !== 'all') query.set('city', cityFilter);
+        if (sort !== DEFAULT_SORT) query.set('sort', sort);
+      }
+      const res = await apiFetch(`/api/customers?${query}`);
       if (seq !== seqRef.current) return; // a newer page already answered
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
+        setLimited(!!data.limited);
         setFacts(data.facts ?? null);
         setDialCode(data.dialCode ?? null);
         setPagination(data.pagination || { total: 0, page: 1, limit: pagination.limit, totalPages: 1 });
@@ -87,13 +136,17 @@ export function CustomersScreen() {
    * debounce stays here; what the hook adds is the refresh on return,
    * reloading the page they are ON rather than sending them to the
    * first one.
+   *
+   * A filter or a sort starts again at page one for the same reason, and
+   * rides the same timer: a reader who changes two dropdowns in a row
+   * asks once, for the pair.
    */
   useEffect(() => {
     const timer = setTimeout(() => {
       loadCustomers(1);
     }, 250);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, segment, cityFilter, sort]);
 
   /*
    * The page lives in a ref as well, for the same reason the loader does:
@@ -150,9 +203,28 @@ export function CustomersScreen() {
    * line — and the clock is read once, not once per row.
    */
   const now = new Date();
-  const graded = customers
-    .map((c) => ({ customer: c, score: scoreCustomer(c, now) }))
-    .sort((a, b) => GRADE_RANK[a.score.grade] - GRADE_RANK[b.score.grade]);
+  const scored = customers.map((c) => ({ customer: c, score: scoreCustomer(c, now) }));
+  /*
+   * A reader who asked for an order gets THAT order. Re-sorting each page by
+   * grade is the default's way of putting the people worth seeing first, and
+   * on «الأعلى قيمة» it would shuffle every page of 25 against the very
+   * order that was chosen — the page would say it was sorted by value and
+   * not be.
+   */
+  const graded =
+    sort === DEFAULT_SORT
+      ? scored.sort((a, b) => GRADE_RANK[a.score.grade] - GRADE_RANK[b.score.grade])
+      : scored;
+
+  /** What is narrowing or re-ordering the list now, for the reset button's count. */
+  const activeFilters = limited
+    ? 0
+    : (segment !== 'all' ? 1 : 0) + (cityFilter !== 'all' ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
+  const resetFilters = () => {
+    setSegment('all');
+    setCityFilter('all');
+    setSort(DEFAULT_SORT);
+  };
 
   return (
     <>
@@ -172,6 +244,8 @@ export function CustomersScreen() {
             }
           />
 
+        {/* The search, and under it the three dropdowns that narrow the same list. */}
+        <div className="space-y-2">
         {/* RiSearchLine */}
         <div className="relative max-w-md">
           <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
@@ -182,6 +256,81 @@ export function CustomersScreen() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-11 md:h-auto w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 md:py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
           />
+        </div>
+
+        {/*
+          THE FILTERS ARE ON THE SCREEN, NOT BEHIND A BUTTON.
+
+            «العملاء بدي الهم فلاتر»
+
+          Three dropdowns, always drawn, each one a question the strip below
+          already asks and could not answer: who has ordered, who repeated,
+          who refused — and where, and in what order. The counts beside the
+          words are the book's, the same figures the strip prints, so
+          «رفضوا طرداً (3)» is a promise that three rows will appear.
+
+          Only for the full view. The limited one (`customers.view_basic`)
+          gets no figures, and a filter by refusals or a sort by purchase
+          value would give it the history it is deliberately not shown —
+          the server ignores the parameters for it, and so does this.
+        */}
+        {facts && !limited && (
+          <div className="grid grid-cols-2 items-end gap-2 md:grid-cols-4">
+            <Select
+              label="الفئة"
+              value={segment}
+              onChange={(e) => setSegment(e.target.value as Segment | 'all')}
+              className="text-xs py-2"
+            >
+              <option value="all">كل العملاء ({facts.total})</option>
+              {SEGMENTS.map((s) => (
+                <option key={s} value={s}>
+                  {SEGMENT_AR[s]} ({segmentCount(s, facts)})
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label="المحافظة"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="text-xs py-2"
+            >
+              <option value="all">كل المحافظات</option>
+              {/* A governorate a link asked for that this book has none of
+                  still shows, so the box never says «كل» over a list that
+                  is narrowed to nothing. */}
+              {cityFilter !== 'all' && !facts.cities.some((c) => c.city.toLowerCase() === cityFilter.toLowerCase()) && (
+                <option value={cityFilter}>{cityFilter} (0)</option>
+              )}
+              {facts.cities.map(({ city: name, count }) => (
+                <option key={name} value={name}>
+                  {name} ({count})
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label="الترتيب"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as CustomerSort)}
+              className="text-xs py-2"
+            >
+              {SORTS.map((s) => (
+                <option key={s} value={s}>
+                  {SORT_AR[s]}
+                </option>
+              ))}
+            </Select>
+
+            {activeFilters > 0 && (
+              <Button variant="outline" onClick={resetFilters} className="w-full gap-1.5 text-[var(--sys-destructive)]">
+                <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
+                إعادة تعيين ({activeFilters})
+              </Button>
+            )}
+          </div>
+        )}
         </div>
 
         {/*
@@ -320,6 +469,15 @@ export function CustomersScreen() {
               },
             ]}
             empty={
+              /* A filter is the likeliest reason a book that HAS customers
+                 shows none, so it is answered first, with the way out. */
+              activeFilters > 0 ? (
+                <EmptyState
+                  title="لا عميلَ يطابق الفلاتر"
+                  why="خفّف فلتراً أو امسحها كلّها. الأرقامُ بين القوسين في القوائم هي عددُ العملاء في كلّ خيار."
+                  action={{ label: 'امسح الفلاتر', onClick: resetFilters }}
+                />
+              ) : (
               <EmptyState
                 title={search ? 'لا عميلَ يطابق بحثك' : 'لا عملاءَ بعد'}
                 why={
@@ -329,6 +487,7 @@ export function CustomersScreen() {
                 }
                 action={search ? undefined : { label: 'أضف أول عميل', onClick: () => setCreateModalOpen(true) }}
               />
+              )
             }
           />
         </div>
