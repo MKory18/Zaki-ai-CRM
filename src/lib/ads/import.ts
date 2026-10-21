@@ -2,6 +2,7 @@ import { db } from '../db';
 import { inStore } from '../store-filter';
 import { generateCampaignCode } from '../campaigns';
 import { adapterFor, readCredentials } from './index';
+import { WITH_A_PLATFORM } from './manual';
 import type { RemoteCampaign } from './types';
 
 /**
@@ -117,8 +118,10 @@ export async function importRemoteCampaigns(scope: {
   storeId: string | null;
   createdById: string;
 }): Promise<ImportResult> {
+  // Only accounts with a platform to ask — a manual account has no token and
+  // nowhere to call (see `manual.ts`).
   const accounts = await db.adAccount.findMany({
-    where: inStore(scope.companyId, scope.storeId),
+    where: { ...inStore(scope.companyId, scope.storeId), ...WITH_A_PLATFORM },
     select: {
       id: true, platform: true, accountId: true, accountName: true, tokenEncrypted: true, storeId: true,
     },
@@ -140,8 +143,16 @@ export async function importRemoteCampaigns(scope: {
       continue;
     }
 
+    // The database's CHECK makes a connected account without a token
+    // impossible; this says so on the screen rather than throwing in the loop.
+    const token = account.tokenEncrypted;
+    if (!token) {
+      report.push({ account: label, created: [], existing: 0, skipped: 0, error: 'لا رمز محفوظ لهذا الحساب — اربطه من جديد.' });
+      continue;
+    }
+
     try {
-      const creds = readCredentials(account.tokenEncrypted);
+      const creds = readCredentials(token);
       const remote: RemoteCampaign[] = await adapter.listCampaigns(creds, account.accountId);
 
       /*
