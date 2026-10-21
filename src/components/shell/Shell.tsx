@@ -13,6 +13,7 @@ import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { BulkProvider } from './BulkBar';
 import { RoadStrip } from './RoadStrip';
+import { ScreenGuideProvider } from './ScreenGuide';
 import { StoreCurrencyProvider } from '@/context/StoreCurrency';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
@@ -48,6 +49,8 @@ export function Shell({
         three components asking separately would be three timers and three
         answers a second apart. */}
     <NotificationsProvider>
+    {/* The guide sheet is drawn here, once; the page titles only hold its button. */}
+    <ScreenGuideProvider>
     <div className="min-h-screen bg-[var(--sys-surface)] flex flex-col">
 
       {/* Registers the worker, and says when the line is down — which
@@ -115,6 +118,7 @@ export function Shell({
       {userRole !== 'SUPER_ADMIN' && <Watermark viewer={viewer} />}
       <IdleGuard />
     </div>
+    </ScreenGuideProvider>
     </NotificationsProvider>
     </StoreCurrencyProvider>
     </BulkProvider>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { GuideButton } from '@/components/shell/ScreenGuide';
 
 /**
  * THE TOP OF EVERY SCREEN, SET ONCE.
@@ -44,6 +45,8 @@ export function PageHeader({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-bold text-[var(--sys-heading)]">{title}</h1>
+          {/* Draws nothing unless this screen has a guide. See ScreenGuide.tsx. */}
+          <GuideButton />
           {children}
         </div>
         {description && (

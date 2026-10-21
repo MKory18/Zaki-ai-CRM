@@ -1619,6 +1619,16 @@
     "links": 1,
     "tabs": 0
   },
+  "src/components/shell/ScreenGuide.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 2,
+    "links": 1,
+    "tabs": 0
+  },
   "src/components/shell/SecondFactor.tsx": {
     "buttons": 6,
     "inputs": 3,
