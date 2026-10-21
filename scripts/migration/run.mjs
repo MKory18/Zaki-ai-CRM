@@ -443,18 +443,24 @@ async function stepProducts(ctx, dump) {
   if (DRY_RUN) {
     const legacy = rows(dump, 'products');
     if (ctx.store?.id) {
-      // a legacy product is created as its own LEG-{id} row with its old stock
-      // as an opening balance; one the store ALREADY sells under its own sku
-      // would then exist twice — this is the list to decide on before --apply
+      // a legacy product is created as its own LEG-{id} row; one the store
+      // ALREADY sells under its own sku would then exist twice — this is the
+      // list to decide on before --apply
       const inStore = await prisma.product.findMany({ where: { companyId: ctx.company.id, storeId: ctx.store.id }, select: { name: true, sku: true } });
       const leg = new Set(inStore.filter((p) => p.sku.startsWith('LEG-')).map((p) => p.sku));
       const byName = new Map(inStore.filter((p) => !p.sku.startsWith('LEG-')).map((p) => [p.name.trim(), p.sku]));
       const twins = legacy.filter((p) => byName.has((p.name || '').trim()));
-      log(`[dry] products: ${legacy.length} legacy · ${leg.size} already imported (LEG-) · ${legacy.length - leg.size} would be created with opening stock`);
+      log(`[dry] products: ${legacy.length} legacy · ${leg.size} already imported (LEG-) · ${legacy.length - leg.size} would be created ${CARRY_LEGACY_STOCK ? 'with the legacy inventory as opening stock' : 'WITHOUT stock'}`);
       if (twins.length) {
         log(`[dry] ⚠ ${twins.length} legacy product(s) share a name with a product this store already sells — they would exist TWICE:`);
         for (const p of twins) log(`    «${p.name.trim()}» (legacy ${p.id}) ↔ store sku ${byName.get(p.name.trim())}`);
       } else log('[dry] no legacy product shares a name with a product of this store');
+      // where the owner's physical count can go in
+      const count = await prisma.stockOpeningCount.findUnique({ where: { storeId: ctx.store.id }, select: { countedByName: true, countedAt: true } });
+      const moved = await prisma.inventoryMovement.count({ where: { companyId: ctx.company.id, storeId: ctx.store.id } });
+      if (count) log(`[dry] ⚠ this store's opening count is ALREADY recorded («${count.countedByName}», ${count.countedAt.toISOString().slice(0, 10)}) — a physical count now goes through «الجرد»`);
+      else if (moved) log(`[dry] ⚠ no opening count, but ${moved} stock movement(s) — the opening-count screen will refuse; a physical count goes through «الجرد»`);
+      else log('[dry] ✅ no opening count and no stock movement — the opening-count screen will take the physical count');
     } else log('[dry] would create products + opening batches + opening count');
     return;
   }
@@ -464,8 +470,8 @@ async function stepProducts(ctx, dump) {
   log('legacy products:', products.length);
 
   let superAdmin = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' }, orderBy: { createdAt: 'asc' } });
-  let openingCount = await prisma.stockOpeningCount.findFirst({ where: { storeId: ctx.store.id } });
-  if (!openingCount) {
+  let openingCount = CARRY_LEGACY_STOCK ? await prisma.stockOpeningCount.findFirst({ where: { storeId: ctx.store.id } }) : null;
+  if (!openingCount && CARRY_LEGACY_STOCK) {
     openingCount = await prisma.stockOpeningCount.create({ data: { companyId: ctx.company.id, storeId: ctx.store.id, countedByName: 'ترحيل القاعدة القديمة', countedAt: now(), recordedById: superAdmin.id, note: 'أرصدة افتتاحية من جدول inventory في القاعدة القديمة' } });
   }
 
@@ -481,7 +487,7 @@ async function stepProducts(ctx, dump) {
     const price = parseFloat(v?.price ?? p.price ?? 0);
     const invQty = inventory.has(p.id) ? inventory.get(p.id) : parseInt(p.quantity);
     let qty = isNaN(invQty) ? 0 : invQty;
-    if (qty < 0) { warn(`product ${p.id} (${p.name}): negative stock ${qty} clamped to 0`); qty = 0; }
+    if (qty < 0) { if (CARRY_LEGACY_STOCK) warn(`product ${p.id} (${p.name}): negative stock ${qty} clamped to 0`); qty = 0; }
     const prod = await prisma.product.create({
       data: {
         id: uuid(), companyId: ctx.company.id, storeId: ctx.store.id,
@@ -492,6 +498,7 @@ async function stepProducts(ctx, dump) {
         createdAt: dt(p.created_at) || now(),
       },
     });
+    if (!CARRY_LEGACY_STOCK) { bump('products_created'); continue; }
     const batch = await prisma.productionBatch.create({
       data: {
         companyId: ctx.company.id, storeId: ctx.store.id, productId: prod.id,
@@ -1081,6 +1088,15 @@ async function stepTarget(ctx, dump) {
 
 
 const ORDERS_ONLY = process.argv.includes('--orders-only');
+
+// Into an EXISTING store the legacy `inventory` table is not carried. It is
+// nowhere near the shelf (ear drops: 20,734 there, 349 + a carton counted on
+// 2026-10-21), and writing it would spend the store's ONE opening count
+// (stock_opening_counts.storeId is unique) and move its stock — after which
+// the opening-count screen refuses the real count (STOCK_HAS_MOVED). So the
+// products arrive empty and the owner's signed count goes in through the
+// app's own door. The full migration (a new store) keeps its old behaviour.
+const CARRY_LEGACY_STOCK = !ORDERS_ONLY;
 
 const FULL_STEPS = [
   ['backup', stepBackup],
