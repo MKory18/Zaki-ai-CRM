@@ -79,6 +79,45 @@ export const GUIDED_PATHS: readonly string[] = [
   '/finance/collection',
   '/finance/matching',
   '/finance/closing',
+  // المخزون
+  '/inventory/balances',
+  '/manufacturing',
+  '/inventory/receiving',
+  '/inventory/movements',
+  // المال — بقية الشاشات
+  '/finance/wallets',
+  '/finance/transfers',
+  '/finance/profit',
+  // الرقابة
+  '/control/change-requests',
+  '/control/discount-alerts',
+  '/control/penalties',
+  '/control/audit',
+  '/control/blacklist',
+  // النمو والذكاء
+  '/growth/performance',
+  '/growth/campaigns',
+  '/assistant',
+  '/growth/intelligence',
+  '/growth/bench',
+  '/growth/whatsapp/inbox',
+  '/growth/telegram/orders',
+  // الإعدادات
+  '/settings/geo',
+  '/settings/couriers',
+  '/settings/commission',
+  '/settings/channels',
+  '/settings/whatsapp',
+  '/settings/telegram',
+  '/settings/ai',
+  '/apps/store',
+  '/apps/installed',
+  '/settings/system',
+  '/admin/jobs',
+  // الإدارة
+  '/admin/users',
+  '/admin/permissions',
+  '/admin/profile',
 ];
 
 const GUIDED = new Set(GUIDED_PATHS);
