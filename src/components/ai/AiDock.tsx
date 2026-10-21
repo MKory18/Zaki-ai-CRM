@@ -39,7 +39,44 @@ const OPENERS = [
   'أي منتج يرتجع أكثر من غيره؟',
 ];
 
+/**
+ * THE ASSISTANT, AND THE ROOM IT FLOATS OVER.
+ *
+ * The button is `fixed`, so it takes no space in the page — which is
+ * exactly why it covers whatever the page ends with. Measured: a desk
+ * leaves 24px under the last row and the button spans 16–64px from the
+ * bottom edge, so on every list that ends in a pager (customers, orders,
+ * returns) the «التالي» arrow, which sits on the same end of the row the
+ * button is anchored to, was underneath it. «زر المساعد بغطي عليهم».
+ *
+ * The thing that floats reserves the room it floats over. Here, rather
+ * than in the shell, for three reasons: it is only reserved for someone
+ * who HAS the assistant (the layout mounts it for `ai.use` alone), it
+ * can never drift from the button's own size because they live in one
+ * file, and no page has to know there is anything in the corner.
+ *
+ * The room is the button's 48px plus a gap, 3.5rem. It is added to the
+ * padding the page already keeps under its last row — 1.5rem on a desk,
+ * the bottom strip's height on a phone — and both land clear of the
+ * button's top edge. `the-assistant-clears-the-last-row` does that
+ * arithmetic from the source, so enlarging the button or lifting it
+ * fails a claim instead of covering a pager again.
+ *
+ * On a phone it yields with the button: while a selection owns the bottom
+ * strip the button is hidden, and so is the room — that strip reserves
+ * its own height.
+ */
 export function AiDock() {
+  const yielding = useBulkActive();
+  return (
+    <>
+      <div aria-hidden className={yielding ? 'hidden h-14 md:block' : 'h-14'} />
+      <AiDockSurface />
+    </>
+  );
+}
+
+function AiDockSurface() {
   /**
    * While a selection is live the bottom strip belongs to the bar acting
    * on it, and this button sits exactly on top of that bar's last action.
