@@ -1231,6 +1231,33 @@ export async function PATCH(
       // list is removed from the order — and it happens in this transaction
       // so the order's totals and its lines can never disagree.
       if (items && lineMoney) {
+        /*
+         * ── THE GIFT SURVIVES THE EDIT ──
+         *
+         * The owner, 21/10: «الهدية ما بتنحسب من المخزون». One half of
+         * that was this rewrite.
+         *
+         * Replacing the lines wholesale is right — a product removed from
+         * the screen is removed from the order — but the new rows were
+         * built without `freeQuantity`, so the column was silently reset
+         * to zero. An order that came from a landing page **with** a
+         * gift, correctly recorded by `public-order.ts:152`, lost it the
+         * first time anybody touched its lines. That is during
+         * CONFIRMATION, which is to say: on its way to almost every
+         * order that carried one.
+         *
+         * What it held is carried over by product. This door binds no
+         * offer (its item schema has no `offerId`), so deriving the gift
+         * afresh would be inventing one; keeping what the order already
+         * had is the honest answer, and a line for a product that was not
+         * on the order before starts at none.
+         */
+        const giftByProduct = new Map<string, number>(
+          existing.items.map((it: { productId: string; freeQuantity: number | null }) => [
+            it.productId,
+            it.freeQuantity ?? 0,
+          ])
+        );
         await tx.orderItem.deleteMany({ where: { orderId: id } });
         await tx.orderItem.createMany({
           data: nextLines.map((line, i) => ({
@@ -1239,6 +1266,7 @@ export async function PATCH(
             productId: line.productId,
             productName: lineProducts.get(line.productId)?.name ?? '',
             quantity: line.quantity,
+            freeQuantity: giftByProduct.get(line.productId) ?? 0,
             unitPrice: line.quantity > 0 ? line.unitPrice / line.quantity : line.unitPrice,
             discountShare: lineMoney!.discountShares[i] ?? 0,
             lineTotal: lineMoney!.lineTotals[i] ?? 0,

@@ -6,7 +6,7 @@ import { requireContext } from '@/lib/geo-context';
 import { rateLimit } from '@/lib/rate-limit';
 import { requirePermission } from '@/lib/authorization';
 import { CORE_STATES, whereForState, type CoreState } from '@/lib/order-state';
-import { applyQueueFilter } from '@/lib/rbac';
+import { applyQueueFilter } from '@/lib/rbac';
 import { ORDER_FILTER_PARAMS, ordersWhere } from '@/lib/order-filters';
 
 /**

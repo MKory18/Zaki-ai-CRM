@@ -108,7 +108,12 @@ interface ProductOption {
   name: string;
   image?: string | null;
   basePrice?: number;
-  offers?: { id: string; name: string; quantity: number; sellingPrice: number }[];
+  /*
+   * `freeQuantity` is the bundle's gift. It is carried here so the agent
+   * can SEE what «٣+١» promises before she sends it — the door writes it
+   * onto the line either way, from the offer id.
+   */
+  offers?: { id: string; name: string; quantity: number; freeQuantity?: number; sellingPrice: number }[];
 }
 
 /**
@@ -233,7 +238,13 @@ export function ProductLinesEditor({
                 <option value="">بلا عرض — سعر مباشر</option>
                 {offers.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.name} ({o.quantity} × {amount(o.sellingPrice, currency)})
+                    {/* The gift is named here because it is the part that
+                        leaves the shelf without appearing in the price —
+                        «٣+١» has to read as four units before it is sent,
+                        not as a surprise in the warehouse. */}
+                    {o.name} ({o.quantity}
+                    {o.freeQuantity ? ` + ${o.freeQuantity} هدية` : ''} ×{' '}
+                    {amount(o.sellingPrice, currency)})
                   </option>
                 ))}
               </select>
