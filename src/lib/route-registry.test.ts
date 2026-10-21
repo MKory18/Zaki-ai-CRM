@@ -16,12 +16,17 @@ function userWith(keys: string[], role = 'MODERATOR') {
 }
 
 describe('navigation contract', () => {
-  it('has the eleven groups in contract order', () => {
+  it('has the ten groups in contract order', () => {
     // «واجهة المتجر» is the store section: how the shop looks and what it
     // says, as against /settings, which is how the system runs.
+    //
+    // Eleven until 21/10, when «التطبيقات» — a group of two entries —
+    // joined the settings it configures, «التشغيل» became «الشحن» (it is
+    // one parcel's road, not «operations»), and «النمو» became
+    // «النمو والذكاء». See `the-menu-follows-the-work.test.ts` for why.
     expect(NAV.map((g) => g.label)).toEqual([
-      'الرئيسية', 'مركز التأكيد', 'التشغيل', 'المخزون', 'المال',
-      'الرقابة', 'النمو', 'واجهة المتجر', 'التطبيقات', 'الإعدادات', 'الإدارة',
+      'الرئيسية', 'مركز التأكيد', 'الشحن', 'المخزون', 'المال',
+      'الرقابة', 'النمو والذكاء', 'واجهة المتجر', 'الإعدادات', 'الإدارة',
     ]);
   });
 
@@ -88,10 +93,15 @@ describe('navigation contract', () => {
     expect(findRoute('/confirmation/queue')).toBeDefined();
   });
 
-  it('apps appear once, as their own group', () => {
+  it('apps appear once — in the settings they configure', () => {
+    // «Once» is the half of the old rule that mattered: two screens that
+    // used to be a group of their own, with a heading you opened to find
+    // two links. They are in settings now and nowhere else.
     const appRoutes = ALL_ROUTES.filter((route) => route.path.startsWith('/apps/'));
     expect(appRoutes).toHaveLength(2);
-    expect(NAV.find((g) => g.key === 'apps')!.routes).toEqual(appRoutes);
+    expect(NAV.find((g) => g.key === 'apps')).toBeUndefined();
+    const home = NAV.filter((g) => g.routes.some((route) => route.path.startsWith('/apps/')));
+    expect(home.map((g) => g.key)).toEqual(['settings']);
   });
 
   it('/assistant and /growth/intelligence stay two distinct screens', () => {

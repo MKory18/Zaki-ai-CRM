@@ -43,6 +43,21 @@ export interface RouteDef {
    *  turns it into a glyph, and decides line or fill. */
   icon: string;
   permissions: string[] | null;
+  /**
+   * WHERE THIS SCREEN USUALLY FALLS IN A SEQUENCE THE WORK FOLLOWS.
+   *
+   * Drawn as «3.» before the label, and nothing else. A hint, never a rule:
+   * every screen still opens on its own permission, in any order, and a
+   * person who may open only the first and the last sees «1.» and «5.» —
+   * which is true, those are the first and the last stop.
+   *
+   * It lives on the ROUTE and not on its position in the group, because a
+   * position is not stable: the menu drops what a person may not open,
+   * their own arrangement reorders it, and the phone's sheet lifts four
+   * screens out into the bar. A number computed from the index would
+   * follow all of that around; a number that belongs to the screen does not.
+   */
+  step?: number;
 }
 
 export interface NavGroup {
@@ -51,8 +66,14 @@ export interface NavGroup {
   routes: RouteDef[];
 }
 
-const r = (path: string, label: string, icon: string, permissions: string[] | null): RouteDef => ({
-  path, label, icon, permissions,
+const r = (
+  path: string,
+  label: string,
+  icon: string,
+  permissions: string[] | null,
+  step?: number
+): RouteDef => ({
+  path, label, icon, permissions, ...(step ? { step } : {}),
 });
 
 export const NAV: NavGroup[] = [
@@ -82,13 +103,18 @@ export const NAV: NavGroup[] = [
   },
   {
     key: 'ops',
-    label: 'التشغيل',
+    // «الشحن» and not «التشغيل»: «operations» is every group in this menu.
+    // What stands here is one parcel's road — picked, shipped, printed,
+    // followed, and brought back — and the five stops are numbered so the
+    // road can be read off the menu. The owner, 21/10: «كل خطوة بتودّي
+    // للي بعدها».
+    label: 'الشحن',
     routes: [
-      r('/ops/preparation', 'التجهيز', 'PackageCheck', ['ops.prepare']),
-      r('/ops/shipments/new', 'إنشاء شحنة', 'Truck', ['ops.ship']),
-      r('/ops/batches', 'دفعات الشحن', 'Boxes', ['ops.ship', 'ops.track']),
-      r('/ops/tracking', 'متابعة الشحن', 'MapPin', ['ops.track']),
-      r('/ops/returns', 'المرتجعات', 'Undo2', ['ops.returns']),
+      r('/ops/preparation', 'التجهيز', 'PackageCheck', ['ops.prepare'], 1),
+      r('/ops/shipments/new', 'إنشاء شحنة', 'Truck', ['ops.ship'], 2),
+      r('/ops/batches', 'دفعات الشحن', 'Boxes', ['ops.ship', 'ops.track'], 3),
+      r('/ops/tracking', 'متابعة الشحن', 'MapPin', ['ops.track'], 4),
+      r('/ops/returns', 'المرتجعات', 'Undo2', ['ops.returns'], 5),
     ],
   },
   {
@@ -107,13 +133,20 @@ export const NAV: NavGroup[] = [
   {
     key: 'finance',
     label: 'المال',
+    // The first four are ONE errand, in the order it is usually walked: see
+    // what each courier is holding, take it in (by statement or by hand),
+    // match the statement against the orders, close the day. They sat as
+    // «collection, matching, custody» with the closing two entries away,
+    // and no screen linked to the next — so the errand was learned by
+    // being taught. The wallets, the transfers and the profit are not part
+    // of it; they are where the money ends up and what it earned.
     routes: [
-      r('/finance/collection', 'التحصيل والكشوف', 'FileSpreadsheet', ['settlement.upload', 'settlement.view']),
-      r('/finance/matching', 'المطابقة', 'GitCompare', ['settlement.review']),
-      r('/finance/agents', 'عهدة المندوبين', 'Bike', ['settlement.view', 'settlement.review']),
+      r('/finance/agents', 'عهدة المندوبين', 'Bike', ['settlement.view', 'settlement.review'], 1),
+      r('/finance/collection', 'التحصيل والكشوف', 'FileSpreadsheet', ['settlement.upload', 'settlement.view'], 2),
+      r('/finance/matching', 'المطابقة', 'GitCompare', ['settlement.review'], 3),
+      r('/finance/closing', 'الإغلاق اليومي', 'Lock', ['finance.cashbox'], 4),
       r('/finance/wallets', 'المحافظ والحركات', 'Wallet', ['finance.cashbox']),
       r('/finance/transfers', 'التحويلات', 'Repeat', ['finance.cashbox']),
-      r('/finance/closing', 'الإغلاق اليومي', 'Lock', ['finance.cashbox']),
       r('/finance/profit', 'الأرباح', 'TrendingUp', ['finance.view']),
     ],
   },
@@ -123,27 +156,40 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
       r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts']),
-      r('/control/penalties', 'الخصومات', 'ShieldQuestion', ['penalties.view']),
+      // «خصومات الموظفين», not «الخصومات»: it sat beside «تنبيهات الخصم», and
+      // one is money taken off a salary while the other is a price cut
+      // given to a customer. Two words from one root, one row apart.
+      r('/control/penalties', 'خصومات الموظفين', 'ShieldQuestion', ['penalties.view']),
       r('/control/audit', 'سجل التدقيق', 'ScrollText', ['audit.view']),
       r('/control/blacklist', 'القائمة السوداء', 'Ban', ['control.blacklist']),
     ],
   },
   {
     key: 'growth',
-    label: 'النمو',
+    // «والذكاء» because the assistant, the intelligence centre and the test
+    // bench are most of what stands here, and a group named for one of
+    // its three subjects made people look for the other two elsewhere.
+    label: 'النمو والذكاء',
     routes: [
       r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
       r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view']),
 
       /**
-       * EVERYTHING THE MODEL TOUCHES, IN ONE PLACE.
+       * THE AI'S WORK IS HERE; ITS WIRING IS IN THE SETTINGS.
        *
-       * The assistant sat under «الرئيسية», the intelligence centre here,
-       * and the prompts the model is actually given under «الإعدادات» —
-       * three menus for one subject, and the one that decides what the
-       * assistant SAYS was the hardest to find. Somebody who wants the AI
-       * to answer differently should not have to know that its words live
-       * in settings while its answers live in growth.
+       * This block used to carry «الذكاء الاصطناعي والنصوص» too, on the
+       * argument that somebody who wants the assistant to answer
+       * differently should not have to know its words live in settings
+       * while its answers live in growth. The argument is sound, and this
+       * reverses it anyway — because the contract has a rule that placement
+       * was breaking: an OPERATION sits with the work and its CONFIGURATION
+       * sits in settings. The WhatsApp inbox is here and its setup is
+       * there; the same has to hold for the model. The provider, the key,
+       * the address of a server on the owner's own machine and the house
+       * prompts are configuration. Asking the assistant a question is work.
+       *
+       * They are one click apart either way, which was the point of the
+       * old argument; and the group is named for what is DONE here.
        */
       r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
@@ -160,7 +206,6 @@ export const NAV: NavGroup[] = [
        * should I do next», and both are read by the person who decides it.
        */
       r('/growth/bench', 'منصّة التجريب', 'FlaskConical', ['growth.intelligence']),
-      r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
       r('/growth/telegram/orders', 'طلبات تلجرام', 'Send', ['telegram.view']),
     ],
@@ -207,14 +252,6 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    key: 'apps',
-    label: 'التطبيقات',
-    routes: [
-      r('/apps/store', 'متجر التطبيقات', 'LayoutGrid', ['apps.view']),
-      r('/apps/installed', 'التطبيقات المثبتة', 'Blocks', ['apps.view']),
-    ],
-  },
-  {
     key: 'settings',
     label: 'الإعدادات',
     routes: [
@@ -238,7 +275,31 @@ export const NAV: NavGroup[] = [
       r('/settings/tracking', 'بكسل التتبع والحملات', 'Radar', ['settings.view']),
       r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
       r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),
+
+      /**
+       * WHAT WAS CONFIGURED FROM OTHER GROUPS, NOW CONFIGURED HERE.
+       *
+       * Three entries arrive, each from a group it was the odd one out of:
+       *
+       *   • «الذكاء الاصطناعي والنصوص» — from النمو, where it sat beside
+       *     the assistant it configures. See the note there.
+       *   • «متجر التطبيقات» and «التطبيقات المثبتة» — a group of their own
+       *     with two entries, which is a heading you open to find two
+       *     links. Installing an app and wiring it up IS configuration.
+       *   • «المهام المجدولة» — from الإدارة, where it sat beside the
+       *     staff and the permissions although it is the schedule the
+       *     system runs itself by, and its own gate is `settings.view`.
+       *
+       * The contract had said «apps appear ONCE, as group 8, not in
+       * settings». What it was protecting was the ONCE — the same two
+       * screens in a main menu, in settings and in a group of their own —
+       * and that holds. The owner's plan of 21/10 put them here.
+       */
+      r('/settings/ai', 'الذكاء الاصطناعي والنصوص', 'Bot', ['settings.view']),
+      r('/apps/store', 'متجر التطبيقات', 'LayoutGrid', ['apps.view']),
+      r('/apps/installed', 'التطبيقات المثبتة', 'Blocks', ['apps.view']),
       r('/settings/system', 'إعدادات النظام', 'Settings', ['settings.view']),
+      r('/admin/jobs', 'المهام المجدولة', 'Timer', ['settings.view']),
     ],
   },
   {
@@ -247,7 +308,6 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/admin/users', 'الموظفين', 'UserCog', ['users.view']),
       r('/admin/permissions', 'الصلاحيات', 'ShieldCheck', ['roles.view']),
-      r('/admin/jobs', 'المهام المجدولة', 'Timer', ['settings.view']),
       r('/admin/profile', 'الملف الشخصي', 'CircleUser', null),
     ],
   },

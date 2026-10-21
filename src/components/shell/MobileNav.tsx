@@ -111,6 +111,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                             }`}
                           >
                             <Icon className="h-4 w-4 shrink-0" />
+                            {route.step ? `${route.step}. ` : ''}
                             {route.label}
                           </Link>
                         </li>

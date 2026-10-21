@@ -31,7 +31,28 @@ Rules:
 - Creating a country provisions its default wallet and makes it appear
   in delivery fees and commission rules automatically.
 
-## Navigation — ten groups, fixed
+## Navigation — ten groups
+
+The registry (`src/lib/route-registry.ts`) is the one list, and this section
+is its contract: a screen not listed does not exist, and a screen listed
+must exist at the exact path, in the exact group.
+
+**Revised 2026-10-21, on the owner's word** («حاسو معجوق وصعب … الخطوة
+يتودي للثانية»). No address moved — only the grouping, the order inside two
+groups, and three names. A bookmark, a notification and a saved menu
+arrangement (which is a list of PATHS) all still mean what they meant.
+
+Two things the earlier text did not say:
+
+- **A road is numbered.** In «الشحن» and «المال» the screens that are stops of
+  one errand carry `step` and are drawn «1.», «2.»… — a hint for reading the
+  menu, never a rule: every screen still opens on its own permission, in any
+  order, and the number belongs to the screen, not to its row.
+- **Operations sit with the work; configuration sits in settings.** The
+  WhatsApp inbox is in النمو والذكاء and its setup is in الإعدادات. The model
+  follows the same rule: the assistant, the intelligence centre and the
+  bench are work; the provider, the key, the local server and the house
+  prompts are setup.
 
 **1. الرئيسية**
 ```
@@ -39,9 +60,6 @@ Rules:
 الطلبات                  /orders
 العملاء                  /customers
 المنتجات                 /products
-العروض الترويجية          /promotions        (built — rewire)
-التصنيع والتشغيلات        /manufacturing     (built — rewire)
-المساعد الذكي             /assistant         (built — rewire)
 ```
 
 **2. مركز التأكيد**
@@ -49,70 +67,83 @@ Rules:
 الطلبات الجديدة           /confirmation/queue
 طلباتي                   /confirmation/mine
 الطلبات المؤجلة           /confirmation/postponed
-الإشكالات                 /confirmation/issues
+استرجاع الملغى            /confirmation/winback
+الإشكالات                /confirmation/issues
 ```
 
-**3. التشغيل**
+**3. الشحن** — one parcel's road. Was «التشغيل».
 ```
-التجهيز                  /ops/preparation
-إنشاء شحنة                /ops/shipments/new
-البوالص                  /ops/labels
-متابعة الشحن              /ops/tracking
-المرتجعات                 /ops/returns
+1. التجهيز                /ops/preparation
+2. إنشاء شحنة              /ops/shipments/new
+3. دفعات الشحن             /ops/batches        (labels, sizes and the courier CSV live here)
+4. متابعة الشحن            /ops/tracking
+5. المرتجعات               /ops/returns
 ```
 
 **4. المخزون**
 ```
-استلام البضاعة            /inventory/receiving
 أرصدة المخزون             /inventory/balances
+تشغيلات الإنتاج           /manufacturing
+استلام بضاعة جاهزة         /inventory/receiving
 حركات المخزون             /inventory/movements
 ```
 
-**5. المال**
+**5. المال** — the first four are one errand: see what each courier holds,
+take it in (by statement or by hand), match, close the day.
 ```
-التحصيل والكشوف           /finance/collection
-المطابقة                  /finance/matching
-المحافظ والحركات          /finance/wallets
-التحويلات                 /finance/transfers
-الإغلاق اليومي            /finance/closing
-الأرباح                   /finance/profit
+1. عهدة المندوبين           /finance/agents
+2. التحصيل والكشوف          /finance/collection
+3. المطابقة                /finance/matching
+4. الإغلاق اليومي           /finance/closing
+   المحافظ والحركات         /finance/wallets
+   التحويلات               /finance/transfers
+   الأرباح                 /finance/profit
 ```
 
 **6. الرقابة**
 ```
 طلبات التعديل             /control/change-requests
-تنبيهات الخصم             /control/discount-alerts
+تنبيهات الخصم             /control/discount-alerts   (a price cut given to a customer)
+خصومات الموظفين           /control/penalties         (money off a salary — was «الخصومات»)
 سجل التدقيق               /control/audit
 القائمة السوداء           /control/blacklist
 ```
 
-**7. النمو**
+**7. النمو والذكاء** — was «النمو».
 ```
 لوحة الأداء               /growth/performance
 الحملات                  /growth/campaigns
+المساعد الذكي             /assistant
 مركز الذكاء               /growth/intelligence
-متجر Single Product       /growth/single-product-stores
-صفحات الهبوط              /growth/landing-pages
+منصّة التجريب             /growth/bench
 صندوق الواتساب            /growth/whatsapp/inbox
 طلبات تلجرام              /growth/telegram/orders
 ```
 
-**8. التطبيقات**
+**8. واجهة المتجر** — how the shop LOOKS and what it SAYS (added 2026-10-11).
+Two entries, where eleven stood: the other eight are the tabs of `/store`
+and their old addresses redirect to the tab that holds them.
 ```
-متجر التطبيقات            /apps/store
-التطبيقات المثبتة         /apps/installed
+المتجر                    /store
+صفحات الهبوط              /store/landing-pages
 ```
+`/store` lists every shop on one card each. The old
+`/store/single-product` address redirects to `/store` permanently.
 
-**9. الإعدادات**
+**9. الإعدادات** — how the system RUNS.
 ```
 البلدان والمتاجر والمحافظ  /settings/geo
-أجور التوصيل              /settings/delivery-fees
+شركات الشحن وأجورها        /settings/couriers  (a courier and its fees are one screen)
 العمولات                  /settings/commission
-شركات الشحن               /settings/couriers
+قنوات الطلبات              /settings/channels
 بكسل التتبع والحملات       /settings/tracking
 إعدادات واتساب            /settings/whatsapp
 إعدادات تلجرام            /settings/telegram
+الذكاء الاصطناعي والنصوص    /settings/ai        (moved here from النمو)
+متجر التطبيقات            /apps/store         (was a group of its own)
+التطبيقات المثبتة          /apps/installed     (was a group of its own)
 إعدادات النظام            /settings/system
+المهام المجدولة            /admin/jobs         (moved here from الإدارة)
 ```
 
 **10. الإدارة**
@@ -122,23 +153,6 @@ Rules:
 الملف الشخصي              /admin/profile
 ```
 
-**11. واجهة المتجر** — added 2026-10-11 (was missing; the registry carries
-it as group `storefront`)
-```
-المتجر                    /store
-صفحات الهبوط              /store/landing-pages
-التصميم                   /store/design
-القوالب                   /store/themes
-القوائم                   /store/menus
-الصفحات التعريفية والسياسات /store/pages
-البحث والفلاتر            /store/search
-اللغات                    /store/languages
-المسارات                  /store/routes
-الدومين                   /store/domain
-```
-`/store` lists every shop on one card each. The old
-`/store/single-product` address redirects to `/store` permanently.
-
 ## Distinctions that must not collapse
 
 - `/assistant` is a CHAT assistant: ask about a product, an order, a
@@ -147,10 +161,12 @@ it as group `storefront`)
   pricing, offers, cross-sell, seasons, next product, expansion,
   stop-the-bleed, customers. Proposes actions. Never merged with
   `/assistant`.
-- Apps appear ONCE, as group 8. Not in main, not in settings.
+- Apps appear ONCE — in الإعدادات, beside what they configure. (Until
+  2026-10-21 they were a group of their own with two entries; what the old
+  rule protected was the ONCE, and that holds.)
 - Countries, stores and wallets live together in `/settings/geo` only.
-- WhatsApp and Telegram: operational inboxes in growth, configuration in
-  settings. Never both in one place.
+- WhatsApp, Telegram and the AI: the operational screens in النمو والذكاء,
+  the configuration in الإعدادات. Never both in one place.
 
 ## Role visibility — enforced at the API, 403 not hidden
 
@@ -173,11 +189,11 @@ confirmation_supervisor
   /growth/performance limited to own team
 
 warehouse
-  /ops/preparation, /ops/labels, /ops/returns, /inventory/*
+  /ops/preparation, /ops/batches, /ops/returns, /inventory/*
   no phone and no address in any payload
 
 shipping
-  /ops/shipments/new, /ops/labels, /ops/tracking
+  /ops/shipments/new, /ops/batches, /ops/tracking
   /control/change-requests
 
 accountant
@@ -225,7 +241,7 @@ acknowledged: duplicate in batch, previous shipment in transit, recent
 return, stock shortage when negative stock is disallowed. COD breakdown
 per row before sending. An exceptions panel lists undispatchable rows.
 
-**/ops/labels** — Filters: date range, courier, governorate, print status.
+**/ops/labels** *(no longer a screen — folded into `/ops/batches`, which carries all of this)* — Filters: date range, courier, governorate, print status.
 The label carries the courier barcode AND a QR of our order reference.
 Sizes in millimetres, custom allowed. PDF and CSV export. The URL uses a
 batch token, never a list of ids, with per-order authorization on the
@@ -269,7 +285,7 @@ user who records movements cannot approve the closing.
 weekend days, order prefix, allow_negative_stock. Stores under countries.
 Wallets under countries.
 
-**/settings/delivery-fees** — A separate table per courier per country per
+**/settings/delivery-fees** *(no longer a screen — folded into `/settings/couriers`, a courier and its fees being one subject)* — A separate table per courier per country per
 governorate, with fee and late-threshold days. A manual override requires
 a reason and is written to the audit log.
 

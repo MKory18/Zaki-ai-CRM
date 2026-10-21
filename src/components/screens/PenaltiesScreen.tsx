@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { Modal } from '@/components/ui/Modal';
 import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiLoader4Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { routeLabel } from '@/lib/route-registry';
 import { useToast } from '@/components/ui/Toast';
 import { Money } from '@/components/ui/Money';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
@@ -105,7 +106,7 @@ export function PenaltiesScreen() {
 
   return (
     <div className="max-w-4xl space-y-3" dir="rtl">
-      <PageHeader title="الخصومات"
+      <PageHeader title={routeLabel('/control/penalties')}
           description="النظام يقترح، وأنت تقرّر. لا خصم يصير مالاً بلا قرار إنسان — ولا يُقترح خصمٌ على وصولٍ مُقدَّر من أول طلب لمسه الموظف، لأنه حدٌّ أعلى لا قياس."
         />
 

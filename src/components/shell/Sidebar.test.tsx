@@ -166,6 +166,62 @@ describe('a folded menu', () => {
 
 
 /**
+ * THE ROAD, AS THE MENU DRAWS IT.
+ *
+ * A parcel's five stops and the courier's money's four are numbered, so a
+ * person can read off the menu what comes after the screen they are on.
+ * The number is the screen's own (`RouteDef.step`) — see the registry for
+ * why it is not the row's position — and it is drawn as a prefix on the
+ * label, in the label's own colour.
+ */
+describe('a numbered road', () => {
+  const ROAD = [
+    {
+      key: 'ops',
+      label: 'الشحن',
+      routes: [
+        { path: '/ops/preparation', label: 'التجهيز', icon: 'Box', permissions: null, step: 1 },
+        { path: '/ops/tracking', label: 'متابعة الشحن', icon: 'Box', permissions: null, step: 4 },
+        { path: '/ops/other', label: 'شاشة بلا رقم', icon: 'Box', permissions: null },
+      ],
+    },
+  ];
+
+  it('draws «1.» before the first stop and «4.» before the fourth', async () => {
+    here.path = '/ops/preparation';
+    await act(async () => {
+      render(<Sidebar groups={ROAD} />);
+    });
+    expect(screen.getByRole('link', { name: '1. التجهيز' })).toBeTruthy();
+    // Not renumbered by position: this is the SECOND row and says «4».
+    expect(screen.getByRole('link', { name: '4. متابعة الشحن' })).toBeTruthy();
+  });
+
+  it('and a screen that is not a stop is drawn exactly as it always was', async () => {
+    here.path = '/ops/preparation';
+    await act(async () => {
+      render(<Sidebar groups={ROAD} />);
+    });
+    const plain = screen.getByRole('link', { name: 'شاشة بلا رقم' });
+    expect(plain.textContent, 'رقمٌ على شاشة ليست خطوة').not.toMatch(/\d/);
+  });
+
+  it('and folded to a rail the name is still the plain label, with no number in it', async () => {
+    here.path = '/ops/preparation';
+    setRailed(true);
+    await act(async () => {
+      render(<Sidebar groups={ROAD} />);
+    });
+    // A tooltip and a screen reader get the screen's NAME. «4. متابعة الشحن»
+    // read aloud is a name nobody searches for.
+    const link = screen.getByRole('link', { name: 'متابعة الشحن' });
+    expect(link.getAttribute('title')).toBe('متابعة الشحن');
+    expect(link.getAttribute('aria-label')).toBe('متابعة الشحن');
+  });
+});
+
+
+/**
  * TEN GROUPS THAT EACH STAY OPEN IS A SIDEBAR THAT UNFOLDS ITSELF.
  *
  * Reported: «open التجهيز in التشغيل, then click المطابقة in المال — close
