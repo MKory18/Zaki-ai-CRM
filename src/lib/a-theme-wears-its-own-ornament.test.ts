@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { decorCss } from './theme-decoration';
+import { COMPOSED, PIECES, decorCss } from './theme-decoration';
 import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, SYSTEM_THEMES, themeByKey } from './system-themes';
 import { repoFile, stripComments } from './guard-source';
 
@@ -40,25 +40,30 @@ const DECOR_DIR = join(process.cwd(), 'public', 'brand', 'decor');
 const css = (key: string, level: 'off' | 'light' | 'full' = 'light') =>
   decorCss(themeByKey(key), level, key);
 
+/** The files a theme owns: one mask, or the three drawings of a composed one. */
+const filesOf = (key: string): string[] =>
+  COMPOSED[key] ? PIECES.map((piece) => `${key}.${piece}.webp`) : [`${key}.webp`];
+
 describe('every theme has an ornament, and it is on the disk', () => {
-  it('— one file per theme, no more and no fewer', () => {
+  it('— the files are exactly the ones the themes own, no more and no fewer', () => {
     const files = readdirSync(DECOR_DIR).filter((f) => f.endsWith('.webp')).sort();
-    const keys = SYSTEM_THEMES.map((t) => `${t.key}.webp`).sort();
-    expect(files, 'ثيم بلا رسمة أو رسمة بلا ثيم').toEqual(keys);
+    const owned = SYSTEM_THEMES.flatMap((t) => filesOf(t.key)).sort();
+    expect(files, 'ثيم بلا رسمة أو رسمة بلا ثيم').toEqual(owned);
   });
 
-  it('and each theme’s CSS actually asks for its own file', () => {
+  it('and each theme’s CSS actually asks for every file it owns', () => {
     for (const t of SYSTEM_THEMES) {
-      expect(css(t.key), `${t.key} ما بيطلب رسمته`).toContain(`/brand/decor/${t.key}.webp`);
+      for (const f of filesOf(t.key)) {
+        expect(css(t.key), `${t.key} ما بيطلب ${f}`).toContain(`/brand/decor/${f}`);
+      }
     }
   });
 
   it('and no theme reaches for another theme’s drawing', () => {
     for (const t of SYSTEM_THEMES) {
-      const others = SYSTEM_THEMES.filter((o) => o.key !== t.key).map((o) => `/brand/decor/${o.key}.webp`);
-      for (const url of others) {
-        expect(css(t.key), `${t.key} بيجيب رسمة غيره`).not.toContain(url);
-      }
+      const asked = [...css(t.key, 'full').matchAll(/\/brand\/decor\/([\w.-]+\.webp)/g)].map((m) => m[1]);
+      const mine = new Set(filesOf(t.key));
+      for (const f of asked) expect(mine.has(f), `${t.key} بيجيب ${f}`).toBe(true);
     }
   });
 });
@@ -154,6 +159,192 @@ describe('and «تلقائي» wears both, because it has two palettes', () => {
   });
 });
 
+describe('a composed theme wears three drawings, each in its own place', () => {
+  const KEYS = Object.keys(COMPOSED);
+
+  it('— the two Islamic themes, and only those', () => {
+    expect(KEYS.sort()).toEqual(['islamic-calm', 'islamic-epic']);
+    for (const k of KEYS) expect(SYSTEM_THEMES.some((t) => t.key === k)).toBe(true);
+  });
+
+  it('and the door draws all four layers: rosette, both corners, skyline', () => {
+    for (const k of KEYS) {
+      const out = css(k);
+      expect(out, `${k}: الوردة`).toContain(`.zk-decor-door::before{`);
+      expect(out, `${k}: زاوية اليمين`).toContain(`.zk-decor-door::after{`);
+      expect(out, `${k}: زاوية اليسار`).toContain(`.zk-decor-door .zk-decor-l{`);
+      expect(out, `${k}: الأفق`).toContain(`.zk-decor-door .zk-decor-b{`);
+      expect(out).toContain(`/brand/decor/${k}.rosette.webp`);
+      expect(out).toContain(`/brand/decor/${k}.skyline.webp`);
+    }
+  });
+
+  it('and the left corner is the right one TURNED, not a second file', () => {
+    for (const k of KEYS) {
+      const out = css(k);
+      const left = out.slice(out.indexOf('.zk-decor-door .zk-decor-l{'));
+      expect(left.slice(0, left.indexOf('}'))).toContain('transform:scaleX(-1)');
+      // one `.corner.webp`, drawn three times (right, left, sidebar)
+      expect(readdirSync(DECOR_DIR).filter((f) => f.startsWith(`${k}.corner`))).toEqual([`${k}.corner.webp`]);
+    }
+  });
+
+  it('and an empty list gets the rosette alone, fitted to its box', () => {
+    for (const k of KEYS) {
+      const out = css(k);
+      const empty = out.slice(out.indexOf('.zk-decor-empty::after{'));
+      const rule = empty.slice(0, empty.indexOf('}'));
+      expect(rule).toContain('rosette.webp');
+      // `contain`: a mask is clipped to the box it belongs to, and a list with
+      // nothing in it is short.
+      expect(rule).toContain('contain');
+    }
+  });
+
+  it('and the sidebar gets one corner, turned to sit away from the wordmark', () => {
+    for (const k of KEYS) {
+      const out = css(k);
+      const side = out.slice(out.indexOf('.zk-decor-sidebar::after{'));
+      const rule = side.slice(0, side.indexOf('}'));
+      expect(rule).toContain('corner.webp');
+      expect(rule).toContain('transform:scaleX(-1)');
+    }
+  });
+
+  it('and the door’s own circuit-wave banner is taken out from under it — for these themes only', () => {
+    for (const k of KEYS) expect(css(k), k).toContain('.zk-door-banner{display:none}');
+    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key])) {
+      expect(css(t.key, 'full'), `${t.key} خبّى البنر`).not.toContain('zk-door-banner');
+    }
+    const stage = stripComments(repoFile('src/components/shell/BrandStage.tsx'));
+    // Both the picture and the scrim over it carry the hook.
+    expect(stage.match(/zk-door-banner/g)).toHaveLength(2);
+  });
+
+  it('and nothing drawn here is louder than 0.3, or the rosette than 0.2', () => {
+    /*
+     * The ceiling is what stops a number being nudged «to make it show».
+     * The rosette is the one that sits where the text is, so it has the
+     * lower one; the corners and the roofline live at the edges.
+     */
+    for (const [k, c] of Object.entries(COMPOSED)) {
+      expect(c.rosette, `${k} rosette`).toBeLessThanOrEqual(0.2);
+      expect(c.corner, `${k} corner`).toBeLessThanOrEqual(0.3);
+      expect(c.skyline, `${k} skyline`).toBeLessThanOrEqual(0.3);
+      expect(c.rosette).toBeLessThan(c.corner);
+    }
+  });
+
+  it('and the heading and the tagline stay legible over the loudest the ornament can be', () => {
+    /*
+     * WORST CASE, COMPUTED: the pixel under the wordmark if the ornament
+     * covered it completely, at the highest opacity any layer of the theme
+     * has. Text is measured against THAT, not against the plain
+     * background — the same move `brand-stage.test.ts` makes for the
+     * banner, and for the same reason: the picture is the thing somebody
+     * will replace, and the numbers are the thing somebody will nudge.
+     */
+    const lin = (c: number) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const lum = (c: number[]) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const ratio = (a: number[], b: number[]) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    /*
+     * TWO BOUNDS, BECAUSE THE LAYERS ARE NOT ALL IN THE SAME PLACE.
+     *
+     * The ROSETTE is the one drawn behind the text — the wordmark, the
+     * tagline and the footer line sit over its rings by design — so both
+     * text colours must clear 4.5:1 over it at its own opacity.
+     *
+     * The corners and the roofline are at the edges of the screen, where no
+     * text is. They are held to the heading at 4.5:1 and to the muted text
+     * at 3:1, which is not a pass for small text and is not claimed as one:
+     * it is the floor for the odd viewport where an edge and a line of text
+     * meet, and the reason the loudest of them is capped at 0.3.
+     *
+     * The first version of this claim asked for 4.5 over the LOUDEST layer
+     * for both colours, and it failed the calm theme at 3.36 — which was
+     * not a bug in the claim but a true thing about the palette: 4.90:1 on
+     * plain paper leaves nothing for a drawing to take. The token was
+     * darkened (see `muted-foreground` in system-themes.ts) rather than the
+     * claim loosened.
+     */
+    const over = (hex: string, bgHex: string, inkHex: string, opacity: number) => {
+      const bg = rgb(bgHex);
+      const ink = rgb(inkHex);
+      return ratio(rgb(hex), bg.map((v, i) => v + opacity * (ink[i] - v)));
+    };
+    for (const [k, c] of Object.entries(COMPOSED)) {
+      const v = themeByKey(k).vars;
+      const loudest = Math.max(c.rosette, c.corner, c.skyline);
+      for (const name of ['heading', 'muted-foreground'] as const) {
+        const r = over(v[name], v.background, v.primary, c.rosette);
+        expect(r, `${k}: ${name} تحت الوردة = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+      }
+      const h = over(v.heading, v.background, v.primary, loudest);
+      expect(h, `${k}: heading تحت الأعلى = ${h.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+      const m = over(v['muted-foreground'], v.background, v.primary, loudest);
+      expect(m, `${k}: muted-foreground عند الحافة = ${m.toFixed(2)}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('and the door’s content is drawn ABOVE the ornament, not under it', () => {
+    /*
+     * The decoration layer is `position: absolute; z-index: 0`, and a
+     * positioned element paints over a static one whatever the markup
+     * order. The column was static, so every ornament this door ever drew
+     * went over the wordmark and the card — unseen while the layer was two
+     * soft washes, and seen the moment it became a drawing.
+     */
+    const stage = stripComments(repoFile('src/components/shell/BrandStage.tsx'));
+    expect(stage, 'عمود المحتوى مش موضَّع').toMatch(/className="relative w-full max-w-lg/);
+  });
+
+  it('and only the door gets the two extra layers', () => {
+    const src = stripComments(repoFile('src/components/shell/ThemeDecor.tsx'));
+    expect(src).toMatch(/place === 'door' && \(/);
+    expect(src).toContain('-l`');
+    expect(src).toContain('-b`');
+  });
+});
+
+describe('and it turns, but only where turning can be seen and is wanted', () => {
+  it('— the rosette turns at the full level, and the layer does not drift', () => {
+    for (const k of Object.keys(COMPOSED)) {
+      const out = css(k, 'full');
+      expect(out).toContain('@keyframes zk-decor-turn');
+      expect(out).toContain('zk-decor-door.zk-decor-full::before{animation:zk-decor-turn');
+      // A drift would show a seam along the edges the corners and the roofline sit on.
+      expect(out, `${k}: انجراف الطبقة`).not.toContain('zk-decor-drift');
+    }
+  });
+
+  it('and the light level does not move at all', () => {
+    for (const k of Object.keys(COMPOSED)) {
+      expect(css(k, 'light')).not.toContain('@keyframes');
+    }
+  });
+
+  it('and reduced motion removes it and a hidden tab pauses it', () => {
+    for (const k of Object.keys(COMPOSED)) {
+      const out = css(k, 'full');
+      expect(out).toMatch(/prefers-reduced-motion: reduce\)\{[^}]*animation:none/);
+      expect(out).toContain('[data-decor-hidden] .zk-decor-door.zk-decor-full::before{animation-play-state:paused}');
+    }
+  });
+
+  it('and the other nine still drift, exactly as they did', () => {
+    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key])) {
+      expect(css(t.key, 'full'), t.key).toContain('@keyframes zk-decor-drift');
+    }
+  });
+});
+
 describe('and turning it off still costs nothing', () => {
   it('— «off» writes no CSS at all, ornament included', () => {
     for (const t of SYSTEM_THEMES) expect(css(t.key, 'off')).toBe('');
@@ -177,6 +368,27 @@ describe('and turning it off still costs nothing', () => {
     for (const f of readdirSync(DECOR_DIR).filter((n) => n.endsWith('.webp'))) {
       const kb = statSync(join(DECOR_DIR, f)).size / 1024;
       expect(kb, `${f} صار ${Math.round(kb)} KB`).toBeLessThan(140);
+    }
+  });
+
+  it('and every one of them carries its coverage in the ALPHA channel', () => {
+    /*
+     * The bug a browser found and nothing else could: a grey mask with no
+     * alpha channel is, to `mask`, a rectangle in which every pixel is
+     * covered — a solid primary-coloured square across the whole door.
+     * Luminance masking would need `mask-mode`, which Safari does not have.
+     *
+     * Read from the file header rather than decoded: a lossy WebP with
+     * alpha is a VP8X chunk with bit 4 of its flags set; a lossless one
+     * says so in the first bits of its VP8L stream.
+     */
+    for (const f of readdirSync(DECOR_DIR).filter((n) => n.endsWith('.webp'))) {
+      const buf = readFileSync(join(DECOR_DIR, f));
+      const kind = buf.subarray(12, 16).toString('ascii');
+      let hasAlpha = false;
+      if (kind === 'VP8X') hasAlpha = (buf[20] & 0x10) !== 0;
+      else if (kind === 'VP8L') hasAlpha = (buf[24] & 0x10) !== 0;
+      expect(hasAlpha, `${f} (${kind}) بلا قناة شفافية`).toBe(true);
     }
   });
 
