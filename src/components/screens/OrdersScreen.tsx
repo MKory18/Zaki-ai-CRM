@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { SavedViews } from '@/components/ui/SavedViews';
 import { EMPTY_ORDER_FILTERS, orderFiltersFromQuery, orderFiltersToQuery } from '@/lib/order-filters';
 import { DismissButton } from '@/components/ui/DismissButton';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
@@ -593,7 +593,13 @@ export function OrdersScreen() {
               onChange={setProductId}
               anyOption={{ value: 'all', label: 'كل المنتجات' }}
               placeholder="ابحث عن منتج…"
-              className="min-w-[200px]"
+              /*
+                ONE CELL OF THE GRID, AND NO WIDER. It carried `min-w-[200px]`, but the six cells of this row are
+                (width − 40) ÷ 6 — 177px at a 1180px window and 190px at the width of a desk with the menu open — so
+                the box was wider than its own cell and ran UNDER «كل المحافظات», which is the one beside it
+                («الطلبات الفلاتر داخلين ببعضص»). `min-w-0` lets the cell decide, as the four dropdowns beside it do.
+              */
+              className="min-w-0"
             />
 
             <Select value={regionId} onChange={(e) => setRegionId(e.target.value)} aria-label="فلتر المحافظة" className="text-xs py-2">
@@ -689,7 +695,16 @@ export function OrdersScreen() {
             in the order somebody reads them — who, what, where it stands,
             how much — and never runs off the edge. */}
         <Card>
-          <CardContent className="p-0">
+          {/*
+            A PLAIN BOX, NOT `CardContent className="p-0"`.
+
+            `CardContent` is `clsx('p-6', className)`, so that call carried BOTH `p-6` and `p-0` — and when two
+            utilities set the same property the one LATER in the stylesheet wins, which is `p-6`. The padding this list
+            asked to drop was never dropped: twenty-four pixels on each side of every row, which on a phone is
+            48 of 358 and is most of what the row had left for its words once the checkbox, the picture and the money
+            had taken theirs («نسخة الهاتف بالطلبات كله داخل ببعضو»).
+          */}
+          <div>
             <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b border-[var(--sys-border)] bg-[var(--sys-surface)] text-xs text-[var(--sys-muted-foreground)]">
               <input
                 type="checkbox"
@@ -787,7 +802,16 @@ export function OrdersScreen() {
                       selected.has(order.id) ? 'bg-[var(--sys-primary-soft)]' : 'hover:bg-[var(--sys-surface)]'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
+                    {/*
+                      A LINE THAT WRAPS, NOT A FIXED ROW OF FOUR THINGS.
+
+                      Checkbox, picture, words, money-and-buttons. On a desk all four fit and the words take what is
+                      left. On a phone they did not: the money-and-buttons column refuses to shrink, so the words were
+                      left about 40px beside it and every line of them crushed or ran under the next («نسخة الهاتف
+                      بالطلبات كله داخل ببعضو»). So the line may WRAP — the words keep a floor of 180px, and what cannot
+                      fit beside them goes to a second line instead of taking their room. From `lg` it never wraps.
+                    */}
+                    <div className="flex flex-wrap lg:flex-nowrap items-start gap-3">
                       <span onClick={(e) => e.stopPropagation()} className="pt-1 shrink-0">
                         <input
                           type="checkbox"
@@ -804,10 +828,10 @@ export function OrdersScreen() {
                         size="md"
                       />
 
-                      <div className="min-w-0 flex-1 space-y-1">
-                        {/* Line 1 — which order, and where it stands. */}
+                      <div className="min-w-[180px] flex-1 space-y-1">
+                        {/* Line 1 — which order, and where it stands. The number never breaks at its hyphens. */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-bold text-[var(--sys-heading)] text-xs" dir="ltr">{order.orderNumber}</span>
+                          <span className="font-bold text-[var(--sys-heading)] text-xs shrink-0 whitespace-nowrap" dir="ltr">{order.orderNumber}</span>
                           <OrderStateBadge state={order.state} />
                           {/* where it ended up, in the owner's words — sent by the server */}
                           {order.outcome && (
@@ -826,43 +850,53 @@ export function OrdersScreen() {
                             </span>
                           )}
                           {order.trackingNumber && (
-                            <span className="text-xs font-mono text-[var(--sys-muted)]" dir="ltr">
+                            <span className="text-xs font-mono text-[var(--sys-muted)] shrink-0 whitespace-nowrap" dir="ltr">
                               {order.trackingNumber}
                             </span>
                           )}
                         </div>
 
+                        {/*
+                          Lines 2, 3 and 4 — EACH FACT IN ITS OWN BOX, with a gap between boxes instead of a « · »
+                          typed between pieces of one string.
+
+                          A name, a number and a place written into one paragraph are ONE bidirectional run: the
+                          number is left-to-right inside a right-to-left line, so it was drawn flush against the name
+                          with its separator on the far side of it («محمد احسن937881204»), and «Sheet import · 20
+                          أكتوبر 2026» shuffled its Latin and Arabic halves. A box per fact cannot mix with its
+                          neighbour, `dir="auto"` gives each one the direction of its own first letter, and a line that
+                          is too long WRAPS between boxes where `truncate` used to cut it off silently.
+                        */}
                         {/* Line 2 — who it goes to. */}
-                        <p className="text-sm text-[var(--sys-heading)] truncate">
-                          {order.customer?.fullName}
+                        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm text-[var(--sys-heading)]">
+                          <span dir="auto">{order.customer?.fullName}</span>
                           <span className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
-                            {' · '}{order.customer?.rawPhone || order.customer?.phone}
+                            {order.customer?.rawPhone || order.customer?.phone}
                           </span>
-                          <span className="text-xs text-[var(--sys-muted)]">
-                            {' · '}{order.region?.name ?? order.customer?.city ?? '—'}
+                          <span className="text-xs text-[var(--sys-muted)]" dir="auto">
+                            {order.region?.name ?? order.customer?.city ?? '—'}
                           </span>
                         </p>
 
                         {/* Line 3 — what is in it. */}
-                        <p className="text-xs text-[var(--sys-muted-foreground)] truncate">
-                          {order.productNameSnapshot || order.product?.name}
-                          <span className="text-[var(--sys-muted)]">
-                            {' × '}{order.quantity}
-                            {order.offer?.name ? ` · ${order.offer.name}` : ''}
-                          </span>
+                        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-[var(--sys-muted-foreground)]">
+                          <span dir="auto" className="break-words">{order.productNameSnapshot || order.product?.name}</span>
+                          <span className="text-[var(--sys-muted)] whitespace-nowrap">× {order.quantity}</span>
+                          {order.offer?.name && (
+                            <span className="text-[var(--sys-muted)]" dir="auto">{order.offer.name}</span>
+                          )}
                         </p>
 
                         {/* Line 4 — where it came from and when. */}
-                        <p className="text-xs text-[var(--sys-muted)] truncate">
-                          {order.source || '—'}
-                          {order.moderator?.name ? ` · ${order.moderator.name}` : ''}
-                          {' · '}
-                          {arDateTime(order.createdAt)}
+                        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-[var(--sys-muted)]">
+                          <span dir="auto">{order.source || '—'}</span>
+                          {order.moderator?.name && <span dir="auto">{order.moderator.name}</span>}
+                          <span className="whitespace-nowrap">{arDateTime(order.createdAt)}</span>
                         </p>
                       </div>
 
-                      {/* The money and the two things you do with a row. */}
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      {/* The money and the two things you do with a row. On a phone it is the second line, at the end. */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0 ms-auto">
                         <Money
                           value={order.totalAmount}
                           currency={currency.code || undefined}
@@ -984,7 +1018,7 @@ export function OrdersScreen() {
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
