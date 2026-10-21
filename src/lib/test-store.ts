@@ -40,6 +40,24 @@
  *
  *     where: { companyId, ...realStoresOnly() }
  *
+ * ON A MODEL THAT HAS THAT RELATION, AND ONLY THERE. A model with a `storeId`
+ * column and no `store` relation — `CourierStatement` is one — is rejected
+ * by Prisma at RUNTIME («Unknown argument `store`»), and neither the
+ * type-checker (a spread is never checked for excess properties) nor a
+ * mocked test can see it: `staleStatements` spread this into exactly such a
+ * model and took GET /api/growth/intelligence down. For a model like that,
+ * ask the stores first and filter on their ids:
+ *
+ *     const real = await tx.store.findMany({
+ *       where: { companyId, ...realStoresHere() },
+ *       select: { id: true },
+ *     });
+ *     where: { companyId, storeId: { in: real.map((s) => s.id) } }
+ *
+ * `a-bench-is-not-the-business.test.ts` Ⅳ checks every use of this file's
+ * three spellings against the generated data model, so the next one fails
+ * in CI instead of on a screen.
+ *
  * A FUNCTION, NOT A CONSTANT, for the reason `leftWarehouseWhere()` is one:
  * a module-level object spread into a query is shared mutable state, and one
  * caller editing it changes the rule for every other caller for the life of

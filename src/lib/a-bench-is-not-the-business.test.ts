@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { Prisma } from '@prisma/client';
 import { stripComments } from './guard-source';
 import { benchExcludedAr, benchOnly, realStoresHere, realStoresOnly } from './test-store';
+import { staleStatements } from './intelligence';
+
+/*
+ * `intelligence.ts` imports `db` for a TYPE; the mock keeps the import from
+ * building a Prisma client. Hoisted above the imports by vitest.
+ */
+vi.mock('./db', () => ({ db: {} }));
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -31,6 +39,13 @@ import { benchExcludedAr, benchOnly, realStoresHere, realStoresOnly } from './te
  * `intelligence.ts` listed every OPEN courier statement in the company, so
  * an unclosed bench statement was raised as a finding about the business —
  * in the one screen built to tell the owner what is wrong.
+ *
+ * AND THE FIRST FIX WAS ITSELF WRONG, which is what Ⅳ is for. It spread
+ * `realStoresOnly()` into `CourierStatement` — a model with a `storeId`
+ * column and no `store` relation — so Prisma refused it at runtime and the
+ * whole intelligence screen stopped answering. The type-check passed (a
+ * spread is never checked for excess properties) and so did every test (they
+ * mock Prisma); it surfaced only when the dev server was run, 2026-10-21.
  *
  * ── AND TWO ARE NOT FIXABLE HERE, WHICH IS SAID RATHER THAN HIDDEN ──
  *
@@ -240,12 +255,19 @@ describe('Ⅰ · every company-wide money read is on one side or the other', () 
     ).toEqual([]);
   });
 
-  it('and the one real leak carries the filter', () => {
+  it('and the one real leak is asked about the REAL stores’ ids', () => {
     /*
      * `staleStatements` listed every OPEN statement in the company. Named
      * here rather than left to the sweep, because it is the ONE site the
      * sweep's two excuse-lists do not cover — so if the filter is removed,
      * this says which line and why rather than «something is unclassified».
+     *
+     * IT NO LONGER SPELLS THE FILTER `...realStoresOnly()`, and must not:
+     * `CourierStatement` has a `storeId` column and no `store` relation, and
+     * Prisma refuses the unknown key at runtime (Ⅳ). So the stores are asked
+     * first — `realStoresHere()`, the same `isTest: false` from the same
+     * file — and the statements are asked about THEIR ids. Ⅳ runs the
+     * function itself; this is the cheap tripwire that names the line.
      */
     /*
      * COMMENTS STRIPPED, THEN WHITESPACE COLLAPSED — and the second half
@@ -264,8 +286,20 @@ describe('Ⅰ · every company-wide money read is on one side or the other', () 
      * between the two lines.
      */
     const src = stripComments(readFileSync(join(SRC, 'lib/intelligence.ts'), 'utf8')).replace(/\s+/g, ' ');
-    expect(src, 'كشوفُ المنصّةِ عادت تُرفَعُ كمشكلةٍ في العمل').toMatch(
-      /courierStatement\.findMany\(\{[\s\S]{0,160}?realStoresOnly\(\)/
+    // Just the one function, so a failure prints a screenful and not the file.
+    const from = src.indexOf('function staleStatements');
+    const body = src.slice(from, src.indexOf(' export ', from + 1));
+    // The stores are asked first, and only the real ones …
+    expect(body, 'staleStatements لم تعد تسأل عن المتاجرِ الحقيقيّةِ أوّلاً').toMatch(
+      /tx\.store\.findMany\(\{ where: \{ companyId: scope\.companyId, \.\.\.realStoresHere\(\) \}/
+    );
+    // … and the statements are asked about THOSE ids, not about a relation
+    // the model does not have.
+    expect(body, 'كشوفُ المنصّةِ عادت تُرفَعُ كمشكلةٍ في العمل').toMatch(
+      /courierStatement\.findMany\(\{ where: \{[^}]*storeId: \{ in: realStores\.map/
+    );
+    expect(body, 'staleStatements عادت تضعُ `store` في where على نموذجٍ بلا علاقة store').not.toContain(
+      'realStoresOnly'
     );
   });
 
@@ -370,5 +404,456 @@ describe('Ⅲ · the mark is on the store, and a bench cannot be a shopfront', (
       })
       .some((sql) => /stores_test_bench_is_not_public/.test(sql) && /CHECK/.test(sql));
     expect(found, 'لا قيدَ في قاعدةِ البياناتِ يَمنعُ منصّةَ تجريبٍ معروضةً للناس').toBe(true);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ⅳ · A STORE FILTER IS ONLY EVER WRITTEN ON A MODEL THAT HAS A STORE.
+ *
+ * The bug, 2026-10-21: `staleStatements` spread `realStoresOnly()` —
+ * `{ store: { isTest: false } }` — into a `courierStatement` where. That
+ * model has a `storeId` column and NO `store` relation, so Prisma threw
+ * «Unknown argument `store`» and GET /api/growth/intelligence stopped
+ * answering.
+ *
+ * WHY NOTHING SAW IT. TypeScript never checks a spread for excess
+ * properties, and the mock every other test hands to Prisma accepts any
+ * object at all. The one thing that knows what a `where` may contain is the
+ * generated data model — `Prisma.dmmf`, the very structure Prisma validates
+ * against when the query runs — so that is what is asked here.
+ *
+ * TWO LAYERS, because each fails in a different way:
+ *
+ *   · a SWEEP of the source: every place the filter is written must land on
+ *     a model that has what the filter needs. It catches the NEXT site, in a
+ *     file nobody tests.
+ *   · the function RUN against a `tx` that refuses an unknown key the way
+ *     Prisma does. It catches the bug in the shape it actually had.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+type Model = (typeof Prisma.dmmf.datamodel.models)[number];
+
+const MODELS = Prisma.dmmf.datamodel.models;
+const modelNamed = (name: string): Model | undefined => MODELS.find((m) => m.name === name);
+
+const must = (name: string): Model => {
+  const m = modelNamed(name);
+  if (!m) throw new Error(`«${name}» ليس نموذجاً في البياناتِ المولَّدة — هل نُفِّذ prisma generate؟`);
+  return m;
+};
+
+/** `db.courierStatement` → `CourierStatement`: Prisma lower-cases the first letter and nothing else. */
+const modelOfDelegate = (delegate: string) => modelNamed(delegate.charAt(0).toUpperCase() + delegate.slice(1));
+
+/** What a store filter needs from the model it lands on. */
+type Needs = 'store' | 'isTest';
+
+const hasWhatItNeeds = (m: Model, needs: Needs) =>
+  needs === 'store'
+    ? m.fields.some((f) => f.name === 'store' && f.kind === 'object' && f.type === 'Store')
+    : m.fields.some((f) => f.name === 'isTest' && f.kind === 'scalar');
+
+/**
+ * THE THREE WAYS `test-store.ts` IS SPELLED, AND WHAT EACH ONE NEEDS.
+ *
+ * `store: realStoresHere()` is the same filter as the spread, written with
+ * the key by hand (`growth/bench` does it) — a guard that knew only one
+ * spelling would be passed by the other. `...realStoresHere()` is the
+ * odd one out: it puts `isTest` ITSELF into the where, so it belongs on the
+ * Store and nowhere else.
+ */
+const STORE_FILTERS: { spelling: string; re: RegExp; needs: Needs }[] = [
+  { spelling: '...realStoresOnly() · ...benchOnly()', re: /\.\.\.\s*(?:realStoresOnly|benchOnly)\s*\(\s*\)/g, needs: 'store' },
+  { spelling: 'store: realStoresHere()', re: /\bstore\s*:\s*(?:realStoresHere\s*\(\s*\)|\{\s*isTest\b)/g, needs: 'store' },
+  { spelling: '...realStoresHere()', re: /\.\.\.\s*realStoresHere\s*\(\s*\)/g, needs: 'isTest' },
+];
+
+const PRISMA_METHODS = new Set([
+  'findMany', 'findFirst', 'findFirstOrThrow', 'findUnique', 'findUniqueOrThrow',
+  'count', 'aggregate', 'groupBy', 'create', 'createMany', 'update', 'updateMany',
+  'upsert', 'delete', 'deleteMany',
+]);
+
+/** Keys that wrap a filter without changing WHICH MODEL it filters. */
+const WRAPS_A_FILTER = new Set(['where', 'select', 'include', '_count', 'AND', 'OR', 'NOT', 'some', 'every', 'none', 'is', 'isNot']);
+
+/**
+ * THE PRISMA CALL AROUND A POSITION, AND THE KEYS BETWEEN THEM.
+ *
+ * Walks BACKWARDS out of the object the filter sits in, through every `{`
+ * `[` `(` that encloses it, noting the `key:` each one opened with, until it
+ * reaches the `(` of a `<db>.<model>.<method>(` call. The keys are the path
+ * from the call's argument down to the filter — `where`, `OR`, a relation's
+ * name — and the path is what says WHICH MODEL the filter is on:
+ * `orderItem.findMany({ where: { order: { …HERE… } } })` filters an Order,
+ * and answering «OrderItem» there would call a correct query wrong.
+ *
+ * Null when it cannot tell, and «cannot tell» is a failure, not a pass: a
+ * guard that is quiet because it could not measure reads exactly like one
+ * that passed.
+ */
+function pathToCall(src: string, at: number): { delegate: string; keys: string[] } | null {
+  const closers: Record<string, string> = { '}': '{', ']': '[', ')': '(' };
+  const pending: string[] = [];
+  const keys: string[] = [];
+  for (let i = at - 1; i >= 0; i--) {
+    const c = src[i];
+    if (c in closers) {
+      pending.push(closers[c]);
+      continue;
+    }
+    if (c !== '{' && c !== '[' && c !== '(') continue;
+    if (pending.length) {
+      if (pending.pop() !== c) return null;
+      continue;
+    }
+    // `c` opens a group that ENCLOSES the position.
+    const before = src.slice(Math.max(0, i - 160), i);
+    if (c === '(') {
+      const call = /\.(\w+)\.(\w+)\s*$/.exec(before);
+      if (call && PRISMA_METHODS.has(call[2])) return { delegate: call[1], keys };
+      continue;
+    }
+    const key = /(\w+|'[^']*'|"[^"]*")\s*:\s*$/.exec(before);
+    if (key) keys.push(key[1].replace(/^['"]|['"]$/g, ''));
+  }
+  return null;
+}
+
+function modelAfter(path: { delegate: string; keys: string[] }): { model: Model } | { problem: string } {
+  let model = modelOfDelegate(path.delegate);
+  if (!model) return { problem: `«${path.delegate}» ليس نموذجاً في Prisma` };
+  for (const key of [...path.keys].reverse()) {
+    if (WRAPS_A_FILTER.has(key)) continue;
+    const field = model.fields.find((f) => f.name === key);
+    if (!field || field.kind !== 'object') return { problem: `${model.name}.${key} ليس علاقةً` };
+    const next = modelNamed(field.type);
+    if (!next) return { problem: `${field.type} ليس نموذجاً في Prisma` };
+    model = next;
+  }
+  return { model };
+}
+
+interface Use {
+  at: string;
+  spelling: string;
+  /** The Prisma model the filter lands on, or null when the source could not say. */
+  model: string | null;
+  /** Why the model cannot take this filter, or null when it can. */
+  problem: string | null;
+}
+
+/** Every place the store filter is written in `raw`, in source order, with the model it lands on. */
+function storeFilterUses(rel: string, raw: string): Use[] {
+  const src = stripComments(raw);
+  const found: { index: number; use: Use }[] = [];
+  for (const { spelling, re, needs } of STORE_FILTERS) {
+    for (const m of src.matchAll(re)) {
+      const index = m.index ?? 0;
+      const at = `${rel}:${src.slice(0, index).split('\n').length}`;
+      const path = pathToCall(src, index);
+      if (!path) {
+        found.push({
+          index,
+          use: { at, spelling, model: null, problem: 'ليس داخل نداءِ Prisma مباشر — اكتبْه داخل `where` النداءِ نفسِه' },
+        });
+        continue;
+      }
+      const landed = modelAfter(path);
+      if ('problem' in landed) {
+        found.push({ index, use: { at, spelling, model: null, problem: landed.problem } });
+        continue;
+      }
+      const ok = hasWhatItNeeds(landed.model, needs);
+      found.push({
+        index,
+        use: {
+          at,
+          spelling,
+          model: landed.model.name,
+          problem: ok
+            ? null
+            : needs === 'store'
+              ? `${landed.model.name} ليس له علاقةُ \`store\` — سيرفضُها Prisma وقتَ التشغيل («Unknown argument \`store\`»)`
+              : `${landed.model.name} ليس له حقلُ \`isTest\` — هذا الشكلُ للمتجر نفسِه فقط`,
+        },
+      });
+    }
+  }
+  return found.sort((a, b) => a.index - b.index).map((f) => f.use);
+}
+
+/** Every `.ts` and `.tsx` under `src`, tests excluded — a shop page can query too. */
+function sourceFiles(d: string, out: string[] = []): string[] {
+  for (const n of readdirSync(d)) {
+    const f = join(d, n);
+    if (statSync(f).isDirectory()) sourceFiles(f, out);
+    else if (/\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n)) out.push(f);
+  }
+  return out;
+}
+
+const COMBINATORS = new Set(['AND', 'OR', 'NOT']);
+const RELATION_WRAPPERS = ['some', 'every', 'none', 'is', 'isNot'];
+
+/**
+ * WHAT PRISMA CHECKS FIRST AND A MOCK NEVER DOES: that every key of a
+ * `where` is a field of the model it filters, and — through a relation — of
+ * the model on the other side. The message is Prisma's own, so a failure
+ * here reads like the one that was on the dashboard.
+ */
+function assertWhereFits(modelName: string, where: unknown, path = `${modelName}.where`): void {
+  const model = must(modelName);
+  for (const [key, value] of Object.entries(where as Record<string, unknown>)) {
+    if (value === undefined) continue;
+    if (COMBINATORS.has(key)) {
+      for (const part of [value].flat()) assertWhereFits(modelName, part, path);
+      continue;
+    }
+    const field = model.fields.find((f) => f.name === key);
+    if (!field) throw new Error(`Unknown argument \`${key}\` in ${path}. ${model.name} has no field «${key}».`);
+    if (field.kind !== 'object' || value === null || typeof value !== 'object') continue;
+    const inner = value as Record<string, unknown>;
+    const wrapped = RELATION_WRAPPERS.filter((w) => w in inner);
+    if (wrapped.length) for (const w of wrapped) assertWhereFits(field.type, inner[w], `${path}.${key}.${w}`);
+    else assertWhereFits(field.type, inner, `${path}.${key}`);
+  }
+}
+
+type Where = Record<string, unknown>;
+
+/** The rows a `where` of plain equalities and `{ in: […] }` keeps. Anything else it cannot read, and says so. */
+function keeps(where: Where, row: object): boolean {
+  return Object.entries(where).every(([key, want]) => {
+    const have = (row as Where)[key];
+    if (want !== null && typeof want === 'object') {
+      if ('in' in want) return (want as { in: unknown[] }).in.includes(have);
+      throw new Error(`the fake tx cannot read a filter on «${key}»`);
+    }
+    return have === want;
+  });
+}
+
+interface FakeStore {
+  id: string;
+  companyId: string;
+  isTest: boolean;
+}
+interface FakeStatement {
+  companyId: string;
+  storeId: string;
+  status: string;
+  createdAt: Date;
+}
+
+/**
+ * A `tx` that answers like the database and REFUSES like Prisma: a `where`
+ * with a key the model does not have throws before any row is looked at.
+ * The mock `intelligence.test.ts` uses cannot do that — which is how the
+ * first version of this fix shipped.
+ */
+function fakeTx(stores: FakeStore[], statements: FakeStatement[]) {
+  const findStores = vi.fn(async ({ where }: { where: Where }) => {
+    assertWhereFits('Store', where);
+    return stores.filter((s) => keeps(where, s)).map((s) => ({ id: s.id }));
+  });
+  const findStatements = vi.fn(async ({ where }: { where: Where }) => {
+    assertWhereFits('CourierStatement', where);
+    return statements.filter((s) => keeps(where, s)).map((s) => ({ createdAt: s.createdAt }));
+  });
+  const tx = { store: { findMany: findStores }, courierStatement: { findMany: findStatements } };
+  return { tx: tx as never, findStores, findStatements };
+}
+
+describe('Ⅳ · a store filter is only written on a model that has a store', () => {
+  // `lib/test-store.ts` DEFINES the filters; its own bodies are not uses.
+  const uses = sourceFiles(SRC)
+    .map((f) => ({ f, rel: relative(SRC, f).split(/[\\/]/).join('/') }))
+    .filter(({ rel }) => rel !== 'lib/test-store.ts')
+    .map(({ f, rel }) => ({ rel, raw: readFileSync(f, 'utf8') }))
+    .filter(({ raw }) => /realStores|benchOnly|isTest/.test(raw))
+    .flatMap(({ rel, raw }) => storeFilterUses(rel, raw));
+
+  it('reads the data model Prisma itself validates against', () => {
+    expect(MODELS.length, 'نموذجُ البياناتِ المولَّد شبهُ فارغ — هل نُفِّذ prisma generate؟').toBeGreaterThan(50);
+    for (const name of ['Product', 'Order', 'Customer']) {
+      expect(hasWhatItNeeds(must(name), 'store'), `${name} فقد علاقةَ store`).toBe(true);
+    }
+    expect(hasWhatItNeeds(must('Store'), 'isTest'), 'Store فقد حقلَ isTest').toBe(true);
+  });
+
+  it('and the premise of the fix still holds: a statement has a storeId and no store', () => {
+    /*
+     * The id list in `staleStatements` exists because of this one fact. If a
+     * migration ever gives `CourierStatement` the relation, the list becomes
+     * needless — and THIS fails, so the comment above that function does not
+     * quietly turn into a lie.
+     */
+    const statement = must('CourierStatement');
+    expect(statement.fields.some((f) => f.name === 'storeId' && f.kind === 'scalar')).toBe(true);
+    expect(
+      hasWhatItNeeds(statement, 'store'),
+      'CourierStatement صار له علاقةُ store — فقائمةُ المعرّفات في staleStatements بلا حاجة: بسِّطوها واكتبوا ...realStoresOnly() وحدِّثوا هذا الاختبار'
+    ).toBe(false);
+  });
+
+  it('and every use in the source lands on a model that has what the filter needs', () => {
+    const bad = uses.filter((u) => u.problem);
+    expect(
+      bad,
+      `فلترُ المنصّةِ مكتوبٌ على نموذجٍ لا يقبلُه — Prisma سيرفضُه وقتَ التشغيل ولن يراه الـtypecheck:\n${bad
+        .map((u) => `  ${u.at}  ${u.spelling}\n    ${u.problem}`)
+        .join('\n')}`
+    ).toEqual([]);
+  });
+
+  it('and the sweep can SEE the sites it guards — a sweep that counts nothing proves nothing', () => {
+    const seen = new Set(uses.map((u) => u.at.split(':')[0]));
+    for (const file of [
+      'app/api/v1/products/route.ts',
+      'app/api/v1/customers/lookup/route.ts',
+      'lib/v1/order-intake.ts',
+      'app/api/growth/bench/route.ts',
+    ]) {
+      expect(seen.has(file), `المسحُ لم يَعُدْ يرى مواضعَ الفلترِ في ${file}`).toBe(true);
+    }
+    const products = uses.filter((u) => u.at.startsWith('app/api/v1/products/route.ts'));
+    expect(products.map((u) => u.model), 'المسحُ أخطأ في النموذجِ الذي يقعُ عليه الفلتر').toEqual(['Product']);
+  });
+
+  it('and would have caught the filter that took the screen down', () => {
+    /*
+     * THE MUTATION, KEPT: the old body of `staleStatements`, in the shape it
+     * had on main. This does not read the repository — it is the guard's
+     * proof that it fails on the code it was written for, and it stays true
+     * however the live function is later changed.
+     */
+    const old = `
+      export async function staleStatements(tx: Tx, scope: Scope) {
+        const open = await tx.courierStatement.findMany({
+          where: { companyId: scope.companyId, status: 'OPEN', ...realStoresOnly() },
+          select: { createdAt: true },
+        });
+      }`;
+    const [use, ...rest] = storeFilterUses('lib/intelligence.ts', old);
+    expect(rest).toEqual([]);
+    expect(use.model).toBe('CourierStatement');
+    expect(use.problem, 'المسحُ لم يرَ العطبَ الذي أسقطَ الشاشة').toMatch(/CourierStatement/);
+  });
+
+  it('and reads a relation, an OR and a nested object the way Prisma does', () => {
+    const fine = `
+      await db.product.findMany({ where: { companyId, status: 'ACTIVE', ...realStoresOnly() } });
+      await db.orderItem.findMany({ where: { order: { companyId, ...realStoresOnly() } } });
+      await db.order.groupBy({ by: ['productId'], where: { companyId, OR: [{ storeId: null }, { store: realStoresHere() }] } });
+      await db.store.findMany({ where: { companyId, ...realStoresHere() } });
+      await db.customer.findMany({ where: { AND: [{ companyId }, { ...benchOnly() }] } });
+    `;
+    // `orderItem` has no store, but its `order` does — a naive reader would
+    // call the second line wrong.
+    expect(storeFilterUses('fixture.ts', fine).map((u) => [u.model, u.problem])).toEqual([
+      ['Product', null],
+      ['Order', null],
+      ['Order', null],
+      ['Store', null],
+      ['Customer', null],
+    ]);
+
+    const wrong = `
+      await db.courierStatement.findMany({ where: { companyId, ...benchOnly() } });
+      await tx.statementLine.count({ where: { statement: { companyId, ...realStoresOnly() } } });
+      await db.order.findMany({ where: { companyId, ...realStoresHere() } });
+      await db.orderItem.findMany({ where: { order: { companyId }, ...realStoresOnly() } });
+      const scope = (companyId: string) => ({ companyId, ...realStoresOnly() });
+    `;
+    const found = storeFilterUses('fixture.ts', wrong);
+    expect(found.map((u) => u.model)).toEqual(['CourierStatement', 'CourierStatement', 'Order', 'OrderItem', null]);
+    expect(found.every((u) => u.problem), 'خمسةٌ خاطئة — كلُّها يجب أن تُرفَض').toBe(true);
+  });
+
+  it('and the fake is as strict as the thing it stands for', () => {
+    // The exact failure of 2026-10-21 …
+    expect(() =>
+      assertWhereFits('CourierStatement', { companyId: 'c', status: 'OPEN', ...realStoresOnly() })
+    ).toThrow(/Unknown argument `store`/);
+    // … and the shapes that are fine.
+    expect(() => assertWhereFits('CourierStatement', { companyId: 'c', storeId: { in: ['s'] } })).not.toThrow();
+    expect(() => assertWhereFits('Product', { companyId: 'c', ...realStoresOnly() })).not.toThrow();
+    expect(() => assertWhereFits('OrderItem', { order: { companyId: 'c', ...realStoresOnly() } })).not.toThrow();
+    expect(() => assertWhereFits('Order', { OR: [{ storeId: null }, { store: realStoresHere() }] })).not.toThrow();
+  });
+});
+
+describe('Ⅳ · staleStatements, run against a tx that refuses like Prisma', () => {
+  const now = new Date('2026-10-21T12:00:00Z');
+  const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000);
+  const scope = { companyId: 'c1', storeId: 'real-1', minorUnit: 3, currency: 'JOD' };
+  const stores: FakeStore[] = [
+    { id: 'real-1', companyId: 'c1', isTest: false },
+    { id: 'real-2', companyId: 'c1', isTest: false },
+    { id: 'bench-1', companyId: 'c1', isTest: true },
+    { id: 'other-1', companyId: 'c2', isTest: false },
+  ];
+  /*
+   * 'OPEN' is what the finder asks for today. Whether any statement ever
+   * carries that value is a separate question (BACKLOG_P2 RV70) and this fix
+   * does not touch it.
+   */
+  const stale = (storeId: string, days = 30, companyId = 'c1'): FakeStatement => ({
+    companyId,
+    storeId,
+    status: 'OPEN',
+    createdAt: daysAgo(days),
+  });
+
+  it('asks Prisma only for fields the data model has — the question the old code failed', async () => {
+    const { tx, findStores, findStatements } = fakeTx(stores, [stale('real-1')]);
+
+    // The fake throws «Unknown argument» on a key the model lacks, as Prisma did.
+    await expect(staleStatements(tx, scope, now)).resolves.toHaveLength(1);
+
+    const sent = findStatements.mock.calls[0][0].where;
+    expect(Object.keys(sent).sort(), 'كشوفُ المنصّةِ تسألُ بمفتاحٍ لا يعرفُه النموذج').toEqual(['companyId', 'status', 'storeId']);
+    expect(sent.storeId).toEqual({ in: ['real-1', 'real-2'] });
+    expect(findStores.mock.calls[0][0].where).toEqual({ companyId: 'c1', isTest: false });
+  });
+
+  it('a bench’s statement, open for a month, is not a finding about the business', async () => {
+    const { tx } = fakeTx(stores, [stale('bench-1', 30), stale('bench-1', 45), stale('bench-1', 60)]);
+    expect(await staleStatements(tx, scope, now)).toEqual([]);
+  });
+
+  it('and a bench does not swell the count of the real ones', async () => {
+    // Three bench statements would make it an ALARM (≥ 3). One real one is a WATCH.
+    const { tx } = fakeTx(stores, [stale('real-2', 20), stale('bench-1', 30), stale('bench-1', 31), stale('bench-1', 32)]);
+    const [finding, ...rest] = await staleStatements(tx, scope, now);
+    expect(rest).toEqual([]);
+    expect(finding.metric).toBe(1);
+    expect(finding.severity).toBe('WATCH');
+  });
+
+  it('and it still reads the whole company, not only the store on the screen', async () => {
+    const { tx } = fakeTx(stores, [stale('real-1', 20), stale('real-2', 25)]);
+    const [finding] = await staleStatements(tx, scope, now);
+    expect(finding.metric, 'الكشفان في متجرَين حقيقيَّين — يُعدّان معاً').toBe(2);
+  });
+
+  it('and another company’s statements are never counted', async () => {
+    const { tx } = fakeTx(stores, [stale('other-1', 40, 'c2')]);
+    expect(await staleStatements(tx, scope, now)).toEqual([]);
+  });
+
+  it('and a company with no real store does not even ask the statements table', async () => {
+    const onlyBench: FakeStore[] = [{ id: 'bench-1', companyId: 'c1', isTest: true }];
+    const { tx, findStatements } = fakeTx(onlyBench, [stale('bench-1')]);
+    expect(await staleStatements(tx, scope, now)).toEqual([]);
+    expect(findStatements).not.toHaveBeenCalled();
+  });
+
+  it('and fourteen days is where «old» starts', async () => {
+    expect(await staleStatements(fakeTx(stores, [stale('real-1', 13)]).tx, scope, now)).toEqual([]);
+    expect(await staleStatements(fakeTx(stores, [stale('real-1', 14)]).tx, scope, now)).toHaveLength(1);
   });
 });
