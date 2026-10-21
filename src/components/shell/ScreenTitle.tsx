@@ -4,6 +4,7 @@ import React from 'react';
 import { activePath } from '@/lib/active-route';
 import { usePathname } from 'next/navigation';
 import { ALL_ROUTES } from '@/lib/route-registry';
+import { GuideButton } from './ScreenGuide';
 
 /**
  * THE SCREEN SAYS ITS OWN NAME — AND SAYS THE MENU'S NAME FOR IT.
@@ -51,7 +52,11 @@ export function ScreenTitle({ note, children }: { note?: React.ReactNode; childr
   return (
     <header className="mb-3" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-[var(--sys-heading)]">{route.label}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-lg font-bold text-[var(--sys-heading)]">{route.label}</h1>
+          {/* Draws nothing unless this screen has a guide. See ScreenGuide.tsx. */}
+          <GuideButton />
+        </div>
         {children}
       </div>
       {note && <p className="mt-0.5 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{note}</p>}
