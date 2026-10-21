@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
 import { arDate } from '@/lib/format';
 import Link from 'next/link';
@@ -16,7 +15,9 @@ import { ProductOffers } from '@/components/products/ProductOffers';
 import { ProductStock } from '@/components/products/ProductStock';
 import { ProductAttributes } from '@/components/products/ProductAttributes';
 import { ProductHeadline } from '@/components/products/ProductHeadline';
-import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpCircleLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiStarLine, RiPencilLine } from '@remixicon/react';
+import { ProductPerformance } from '@/components/products/ProductPerformance';
+import { ProductRecentOrders } from '@/components/products/ProductRecentOrders';
+import { RiArrowDownSLine, RiArrowRightLine, RiArrowUpSLine, RiBuilding4Line, RiDeleteBinLine, RiImageAddLine, RiStarLine, RiPencilLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -34,7 +35,6 @@ export function ProductDetailScreen() {
 
   const [product, setProduct] = useState<any>(null);
   const [currencyCode, setCurrencyCode] = useState('USD');
-  const [analytics, setAnalytics] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +42,19 @@ export function ProductDetailScreen() {
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Whether a first answer has been drawn: after it, a reload happens UNDER the page instead of replacing it. */
+  const drawn = useRef(false);
 
+  /*
+   * A RELOAD DOES NOT TAKE THE PAGE AWAY.
+   *
+   * Every action here — an upload, a deleted picture, a new main picture, a saved edit — ends in `loadProduct()`, and it
+   * began with `setLoading(true)`, which swaps the whole page for a spinner: the height collapses, the scroll position is
+   * lost, and every card below the gallery (stock, offers, attributes, orders) is unmounted and asks its own door again.
+   * Deleting a picture jumped you to the top of the page and re-read everything. Only the FIRST read shows the spinner.
+   */
   const loadProduct = async () => {
-    setLoading(true);
+    if (!drawn.current) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/products/${productId}`);
@@ -52,7 +62,7 @@ export function ProductDetailScreen() {
       if (!res.ok) throw new Error(data.error);
       setProduct(data.product);
       setCurrencyCode(data.currencyCode || 'USD');
-      setAnalytics(data.analytics);
+      drawn.current = true;
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -157,7 +167,8 @@ export function ProductDetailScreen() {
             <div className="flex items-center space-x-2 rtl:space-x-reverse mt-1.5">
               <span className="font-mono text-xs font-bold text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] px-2 py-0.5 rounded-lg">{product.sku}</span>
               <Badge variant={productStatusTone(product.status)}>{productStatusAr(product.status)}</Badge>
-              <span className="text-xs text-[var(--sys-muted)]">{images.length} صورة</span>
+              {/* The picture count is said once, in the gallery's own heading — «0 صورة» up here and an empty gallery
+                  under it were one fact written twice. */}
             </div>
             {/* The two numbers this page is opened for. They are also in
                 the panel far below, from the same endpoint — see
@@ -183,11 +194,8 @@ export function ProductDetailScreen() {
                 <RiPencilLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
                 تعديل المنتج
               </Button>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
-              <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
-                <RiImageAddLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
-                رفع صور جديدة
-              </Button>
+              {/* «رفع صور جديدة» was here AND the gallery asked for the main picture in words: one door for pictures,
+                  and it is the gallery's own (the button in its heading, and the empty gallery itself). */}
             </div>
           )}
 
@@ -205,7 +213,25 @@ export function ProductDetailScreen() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Gallery */}
           <Card className="lg:col-span-2">
-            <CardHeader title="معرض صور المنتج" subtitle="الصورة الرئيسية كبيرة + صور إضافية — اضغط للتكبير" />
+            <CardHeader
+              title="معرض صور المنتج"
+              subtitle={
+                images.length > 0
+                  ? `${images.length} صورة — الصورة الرئيسية كبيرة + صور إضافية — اضغط للتكبير`
+                  : 'لا صور بعد'
+              }
+              action={
+                canManage && (
+                  <>
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
+                    <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
+                      <RiImageAddLine className="w-4 h-4 ml-1.5 rtl:ml-0 rtl:mr-1.5" />
+                      رفع صور
+                    </Button>
+                  </>
+                )
+              }
+            />
             <CardContent className="space-y-4">
               {/* Primary large */}
               {/*
@@ -215,19 +241,25 @@ export function ProductDetailScreen() {
                   0.97 sink to buttons — so the one control the subtitle names
                   was the one control that did not answer a press.
               */}
+              {/*
+                  AND WITH NO PICTURE THE BIG BOX IS THE UPLOAD: it said «ارفع الصورة الرئيسية» in words and offered
+                  nothing to press, while «رفع صور جديدة» sat in another part of the page. Both of them were one request.
+              */}
               <button
                 type="button"
-                disabled={!primary}
-                aria-label="كبّر الصورة الرئيسية"
-                className="relative block w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] cursor-zoom-in disabled:cursor-default"
-                onClick={() => primary && setLightbox(primary.url)}
+                disabled={!primary && !canManage}
+                aria-label={primary ? 'كبّر الصورة الرئيسية' : canManage ? 'ارفع الصورة الرئيسية' : 'لا توجد صور'}
+                className={`relative block w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] disabled:cursor-default ${
+                  primary ? 'cursor-zoom-in' : 'cursor-pointer'
+                }`}
+                onClick={() => (primary ? setLightbox(primary.url) : fileInputRef.current?.click())}
               >
                 {primary ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={primary.url} alt={primary.altText || product.name} className="w-full h-full object-contain" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[var(--sys-border-strong)] text-sm">
-                    لا توجد صور — ارفع الصورة الرئيسية
+                  <div className="w-full h-full flex items-center justify-center text-[var(--sys-muted-foreground)] text-sm">
+                    {canManage ? 'لا توجد صور — اضغط هنا لرفع الصورة الرئيسية' : 'لا توجد صور'}
                   </div>
                 )}
                 {primary && (
@@ -238,8 +270,12 @@ export function ProductDetailScreen() {
                 )}
               </button>
 
-              {/* Thumbnails */}
-              {images.length > 1 && (
+              {/*
+                  Thumbnails — FROM THE FIRST PICTURE ON. They were drawn only for a SECOND picture, and the buttons to
+                  make a picture the main one, move it or delete it live on the thumbnails: so a product with exactly one
+                  picture had no way to delete it or to put another in front of it.
+              */}
+              {images.length > 0 && (
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {images.map((img: any, idx: number) => (
                     <div
@@ -315,40 +351,19 @@ export function ProductDetailScreen() {
               <CardHeader title="وصف المنتج وسعره" />
               <CardContent className="text-xs space-y-2">
                 <p className="text-[var(--sys-foreground)]">{product.description || '—'}</p>
-                <div className="pt-2 border-t border-[var(--sys-border)] grid grid-cols-2 gap-2 text-center">
+                {/* The base price, alone: «متوسط تكلفة الوحدة» was here as well as in the headline above and in the
+                    stock card below — three copies of one figure in three spellings («كلفة» / «تكلفة»). */}
+                <div className="pt-2 border-t border-[var(--sys-border)] grid grid-cols-1 gap-2 text-center">
                   <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
                     <span className="text-[var(--sys-muted)] block">السعر الأساسي</span>
                     <Money value={product.basePrice} className="font-bold text-[var(--sys-heading)]" />
-                  </div>
-                  <div className="bg-[var(--sys-surface)] p-2 rounded-lg">
-                    <span className="text-[var(--sys-muted)] block">متوسط تكلفة الوحدة</span>
-                    <Money value={analytics?.avgCostPerUnit} className="font-bold text-[var(--sys-heading)]" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader title="أداء المبيعات" subtitle="الطلبات الموصّلة فقط" />
-              <CardContent className="grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <span className="text-[var(--sys-primary)] block">الإيراد</span>
-                  <Money value={analytics?.revenue} className="font-black text-[var(--sys-primary)]" />
-                </div>
-                <div className="bg-[var(--sys-destructive-soft)] p-2.5 rounded-lg">
-                  <span className="text-[var(--sys-destructive)] block">صافي الربح</span>
-                  <Money value={analytics?.netProfit} className="font-black text-[var(--sys-destructive)]" />
-                </div>
-                <div className="bg-[var(--sys-surface)] p-2.5 rounded-lg">
-                  <span className="text-[var(--sys-muted)] block">إجمالي الطلبات</span>
-                  <span className="font-bold text-[var(--sys-heading)]">{analytics?.totalOrders}</span>
-                </div>
-                <div className="bg-[var(--sys-success-soft)] p-2.5 rounded-lg">
-                  <span className="text-[var(--sys-success)] block">موصّل</span>
-                  <span className="font-bold text-[var(--sys-success)]">{analytics?.deliveredOrders}</span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* What it sold — from the server's own count (see ProductPerformance for why the old card was blank). */}
+            <ProductPerformance productId={productId} />
 
             {/*
               ── «المخزون» WAS HERE, TWICE OVER ──
@@ -436,41 +451,8 @@ export function ProductDetailScreen() {
           currency={currencyCode}
         />
 
-        {/* Recent Orders */}
-        <Card>
-          <CardHeader
-            title={<span className="flex items-center space-x-2 rtl:space-x-reverse"><RiArrowUpCircleLine className="w-4 h-4 text-[var(--sys-destructive)]" /><span>أحدث الطلبات على هذا المنتج</span></span>}
-          />
-          <CardContent className="p-0 overflow-x-auto">
-                        <Rows
-              rows={(product.orders ?? [])}
-              keyOf={(o: any) => o.id}
-              columns={[
-                { key: 'c0', label: "الطلب", primary: true,
-                  render: (o: any) => (o.orderNumber) },
-                { key: 'c1', label: "العميل", primary: true,
-                  render: (o: any) => (
-                  <>{o.customer?.fullName} <span className="text-[var(--sys-muted)]">— {o.customer?.city}</span></>
-                ) },
-                { key: 'c2', label: "المبلغ",
-                  render: (o: any) => (
-                  <><Money value={o.totalAmount} className="font-bold" /></>
-                ) },
-                { key: 'c3', label: "الحالة",
-                  render: (o: any) => (
-                  <><OrderStatusBadge status={o.status} /></>
-                ) },
-                { key: 'c4', label: "المودريتور",
-                  render: (o: any) => (o.moderator?.name || '—') },
-                { key: 'c5', label: "التاريخ",
-                  render: (o: any) => arDate(o.createdAt) },
-              ]}
-              empty={
-                <EmptyState title="لا طلبات على هذا المنتج بعد" why="آخرُ طلباته تظهر هنا. فراغُها يعني أنّ لا أحد طلبه — أو أنّه لم يُنشر بعد." />
-              }
-            />
-          </CardContent>
-        </Card>
+        {/* The latest orders on this product — from its own door (this card read `product.orders`, which was never sent). */}
+        <ProductRecentOrders productId={productId} />
       </div>
 
       {/* Lightbox */}
