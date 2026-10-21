@@ -61,6 +61,9 @@ describe('every screen that fetches says how it stays true', () => {
       const fetches = /\bapiJson\(|\bapiFetch\(/.test(src);
       if (!fetches) continue;
       if (src.includes('useLiveRefresh')) continue;
+      // A screen that reads its list through `usePagedList` stays true by it: the hook IS the shared refresh
+      // (asserted below, so this line cannot become a loophole).
+      if (src.includes('usePagedList')) continue;
       if (EXEMPT[file]) continue;
       silent.push(file);
     }
@@ -69,6 +72,13 @@ describe('every screen that fetches says how it stays true', () => {
       'شاشاتٌ بتجيب بيانات وما بتتحدّث لمّا ترجعلها — استعمل useLiveRefresh أو ' +
         `سمّيها بـEXEMPT ومعها السبب:\n${silent.join('\n')}`
     ).toEqual([]);
+  });
+
+  it('and the paged-list hook, which screens use INSTEAD of naming the refresh, really does refresh', () => {
+    const hook = stripComments(readFileSync(join(process.cwd(), 'src', 'hooks', 'usePagedList.ts'), 'utf8'));
+    expect(hook).toContain('useLiveRefresh(');
+    // …on the page the reader is ON — coming back must not send them to page one.
+    expect(hook).toMatch(/useLiveRefresh\(\(\) => loadRef\.current\(pageRef\.current\)/);
   });
 
   it('and the exemption list names no screen that has since adopted it', () => {

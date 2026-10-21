@@ -15,7 +15,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db, requireContext, requirePermission, can, assertOrderAccess } = vi.hoisted(() => ({
   db: {
-    order: { findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    order: { findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
+    user: { findMany: vi.fn() },
     orderNote: { create: vi.fn() },
     orderStatusLog: { create: vi.fn() },
     orderActivity: { create: vi.fn() },
@@ -106,8 +107,15 @@ beforeEach(() => {
   db.order.updateMany.mockResolvedValue({ count: 1 });
   db.order.update.mockResolvedValue(order('POSTPONED'));
   db.order.findMany.mockResolvedValue([]);
+  // The postponed list is read in pages now: a total, the numbers beside its options, and who holds them.
+  db.order.count.mockResolvedValue(0);
+  db.order.groupBy.mockResolvedValue([]);
+  db.user.findMany.mockResolvedValue([]);
   db.orderItem.findMany.mockResolvedValue([]);
 });
+
+/** The list's door takes a request since it learned to read pages; the claims below are about WHO it asks for. */
+const listPostponed = () => postponedRoute.GET(new Request('http://localhost/api/confirmation/postponed'));
 
 describe('where «تأجيل» lands', () => {
   it('puts an order being worked into POSTPONED, not somewhere else', async () => {
@@ -163,7 +171,7 @@ describe('where «تأجيل» lands', () => {
 
 describe('the postponed screen', () => {
   it('asks for everything waiting on a date, not only one of the two states', async () => {
-    await postponedRoute.GET();
+    await listPostponed();
     expect(db.order.findMany.mock.calls[0][0].where.confirmationStatus).toEqual({
       in: ['POSTPONED', 'FOLLOW_UP_REQUIRED'],
     });
@@ -171,7 +179,7 @@ describe('the postponed screen', () => {
 
   it('shows an agent only her own', async () => {
     can.mockReturnValue(false); // not a supervisor
-    await postponedRoute.GET();
+    await listPostponed();
     expect(db.order.findMany.mock.calls[0][0].where.claimedById).toBe('u1');
   });
 });

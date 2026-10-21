@@ -537,7 +537,12 @@ describe('Ⅲ · SLA remaining — held, and mostly not built', () => {
      * shows a remaining count takes it from the endpoint.
      */
     const route = stripComments(repoFile('src/app/api/confirmation/postponed/route.ts'));
-    expect(route).toMatch(/const daysRemaining = due \? Math\.ceil\(/);
+    // 21/10: the figure moved out of the route into `daysRemainingOf`, because the list's
+    // «متأخر» filter and the «المتبقي» column it cuts by must read ONE definition of a day.
+    // It is still the SERVER that computes it — a ceil, in a server-safe module the screen
+    // imports only for labels.
+    expect(route).toMatch(/const daysRemaining = daysRemainingOf\(due, now\)/);
+    expect(stripComments(repoFile('src/lib/postponed-filters.ts'))).toMatch(/Math\.ceil\(\(new Date\(due\)\.getTime\(\) - now\.getTime\(\)\) \/ DAY\)/);
     for (const screen of [
       'src/components/screens/ChangeRequestsScreen.tsx',
       'src/components/screens/JobsScreen.tsx',
