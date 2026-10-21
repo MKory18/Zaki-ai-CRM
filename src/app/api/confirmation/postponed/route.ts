@@ -6,65 +6,99 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { POSTPONE_LEAD_DAYS } from '@/lib/confirmation-queue';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { readLimit, readPage } from '@/lib/numeric-input';
+import { actionableOf, daysRemainingOf, postponedFilters } from '@/lib/postponed-filters';
+import { postponedFacts, postponedScope, readPostponedPage } from '@/lib/postponed-list';
 
 /**
  * GET /api/confirmation/postponed — orders waiting on a date, with that
  * date, days remaining, preferred time, reason and postpone count.
  * Only rows due within the lead days are actionable, and the server says
  * which: the UI does not compute the window.
+ *
+ * READ IN PAGES, 25 TO A PAGE, WITH WHAT THE READER CHOSE.
+ *
+ * «الطلبات المؤجلة — اعملو صفحات + فلاتر + بحث». This used to be the first three
+ * hundred rows in date order, whole: past the three-hundredth the list simply
+ * stopped, a supervisor looking for «who was postponed twice» scrolled and
+ * counted by eye, and there was nothing to type into.
+ *
+ *   ?page= ?limit=            25 a page, 100 at most (`readPage`, `readLimit`)
+ *   ?when=now|overdue|soon|week|later   the moment — by the days the column prints
+ *   ?kind=postponed|followup  promised to the customer, or needs a call
+ *   ?times=once|many          how often it has been postponed
+ *   ?agent=<id>|none          whose hands — a supervisor's question; an agent's
+ *                             list is her own and a value here is not obeyed
+ *   ?q=                       order number, reference, waybill, name, phone
+ *
+ * An unknown value is a 400 in Arabic, never a quiet «everything». Every filter
+ * is ANDed onto the scope — company, store and, for an agent, her own claim —
+ * so none can widen what the person may see; and `facts` (the numbers beside
+ * the options) are asked of that scope alone, not of the filtered list.
  */
-export async function GET() {
+/** What the page's `select` reads — the fields this route itself uses; the rest ride along. */
+type PostponedRow = {
+  postponedUntil: Date | null;
+  nextFollowUpAt: Date | null;
+  customer: { id: string; fullName: string; phone: string; city: string } | null;
+} & Record<string, unknown>;
+
+export async function GET(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
     await requirePermission('confirmation.work').catch(async () => requirePermission('confirmation.supervise'));
 
     const supervisor = can(user, 'confirmation.supervise');
     const now = new Date();
-    const leadEnd = new Date(now.getTime() + POSTPONE_LEAD_DAYS * 24 * 60 * 60 * 1000);
+    const params = new URL(req.url).searchParams;
 
-    const rows = await db.order.findMany({
-      where: {
-        companyId,
-        storeId,
-        // Everything waiting on a date, not only the POSTPONED state.
-        //
-        // Pressing «تأجيل» on an order that had not been called yet used to
-        // set FOLLOW_UP_REQUIRED, and this screen asked for POSTPONED only —
-        // so the order the agent had just postponed never appeared on the
-        // postponed screen. To her, "I will get back to this on Thursday" is
-        // one idea; which of the two states the workflow recorded is not
-        // something she should have to know.
-        confirmationStatus: { in: ['POSTPONED', 'FOLLOW_UP_REQUIRED'] },
-        ...(supervisor ? {} : { claimedById: user.id }),
-      },
-      orderBy: [{ postponedUntil: 'asc' }, { nextFollowUpAt: 'asc' }],
-      take: 300,
-      select: {
-        id: true, orderNumber: true, merchantRef: true, totalAmount: true, currency: true,
-        postponedUntil: true, postponePreferredTime: true, postponeCount: true,
-        nextFollowUpAt: true, followUpReason: true, claimedById: true,
-        customer: { select: { id: true, fullName: true, phone: true, city: true } },
-        claimer: { select: { id: true, name: true } },
-      },
-    });
+    const parsed = postponedFilters(params, { supervisor, now, leadDays: POSTPONE_LEAD_DAYS });
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorAr: parsed.errorAr }, { status: 400 });
 
-    const orders = rows.map((o) => {
+    const scope = postponedScope({ companyId, storeId, ownOnly: supervisor ? undefined : user.id });
+    const [page, facts] = await Promise.all([
+      readPostponedPage<PostponedRow>(db, {
+        scope,
+        clauses: parsed.clauses,
+        page: readPage(params),
+        limit: readLimit(params, 25, 100),
+        select: {
+          id: true, orderNumber: true, merchantRef: true, totalAmount: true, currency: true,
+          postponedUntil: true, postponePreferredTime: true, postponeCount: true,
+          nextFollowUpAt: true, followUpReason: true, claimedById: true,
+          customer: { select: { id: true, fullName: true, phone: true, city: true } },
+          claimer: { select: { id: true, name: true } },
+        },
+      }),
+      postponedFacts(db, { scope, supervisor, now, leadDays: POSTPONE_LEAD_DAYS }),
+    ]);
+
+    const orders = page.rows.map((o) => {
       const due = o.postponedUntil ?? o.nextFollowUpAt;
-      const daysRemaining = due ? Math.ceil((new Date(due).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)) : null;
+      const daysRemaining = daysRemainingOf(due, now);
       return {
         ...o,
         dueAt: due,
         daysRemaining,
         // Actionable only inside the lead window (overdue counts as actionable).
-        actionable: !!due && new Date(due) <= leadEnd,
+        actionable: actionableOf(daysRemaining, POSTPONE_LEAD_DAYS),
       };
     });
 
     // Contact details left the building; the tally is the person's, not
-    // this screen's. See noteCustomersHandedOut.
+    // this screen's. See noteCustomersHandedOut. Only the page that was sent.
     await noteCustomersHandedOut({ companyId, storeId, user, where: 'الطلبات المؤجّلة', rows: orders });
 
-    return NextResponse.json({ leadDays: POSTPONE_LEAD_DAYS, count: orders.length, orders });
+    return NextResponse.json({
+      leadDays: POSTPONE_LEAD_DAYS,
+      // How many match what was chosen — the pager's «من 312». It used to be the length of the
+      // three-hundred-row page, which stopped being the number of postponed orders at 300.
+      count: page.total,
+      orders,
+      pagination: { total: page.total, page: page.page, limit: page.limit, totalPages: page.totalPages },
+      facts,
+      applied: parsed.applied,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

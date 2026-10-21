@@ -1,18 +1,29 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiInboxUnarchiveLine, RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Pager } from '@/components/ui/Pager';
+import { ListToolbar, type ToolbarFilter } from '@/components/ui/ListToolbar';
 import { arDate } from '@/lib/format';
-import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
+import { KINDS, KIND_AR, TIMES, TIMES_AR, WHENS, whenLabel } from '@/lib/postponed-filters';
+import type { PostponedFacts } from '@/lib/postponed-list';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
  * preferred time, reason and postpone count. Only rows the server marks
  * actionable (due within the lead days) can be worked on.
+ *
+ * Read in pages of 25, with a search box and four dropdowns that are always on
+ * the screen: the moment, the kind, how often, and — for a supervisor — whose
+ * hands. «الطلبات المؤجلة — اعملو صفحات + فلاتر + بحث». The kit is shared with
+ * the other lists (`usePagedList`, `ListToolbar`, `Pager`); what is this
+ * screen's own is the words and the numbers beside them, which the server
+ * counts (`facts`) so that «متأخر (3)» is a promise that three rows will appear.
  */
 
 interface Row {
@@ -30,34 +41,50 @@ interface Row {
   claimer: { id: string; name: string } | null;
 }
 
+interface Extra {
+  leadDays: number;
+  facts: PostponedFacts;
+}
+
+/** Module-level, so the hook's loader keeps one identity — see `usePagedList`. */
+const read = (body: unknown): PagedRead<Row, Extra> => {
+  const b = body as { orders: Row[]; pagination: Paging; leadDays: number; facts: PostponedFacts };
+  return { rows: b.orders, pagination: b.pagination, extra: { leadDays: b.leadDays, facts: b.facts } };
+};
+
+/** The chosen value is always in the box: a stale choice the counts no longer hold still shows, so the box never says «كل» over a narrowed list. */
+const withChosen = (value: string, options: { value: string; label: string }[]) =>
+  value === 'all' || options.some((o) => o.value === value) ? options : [...options, { value, label: `${value} (0)` }];
+
 export function ConfirmationPostponedScreen() {
-  const [data, setData] = useState<{ leadDays: number; orders: Row[] } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [when, setWhen] = useState('all');
+  const [kind, setKind] = useState('all');
+  const [times, setTimes] = useState('all');
+  const [agent, setAgent] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Named, because handing an order to the pool has to reload the list it
-  // just left — an inline effect body cannot be called a second time.
-  //
-  // Declared ABOVE `toQueue`, which calls it. The other way round, `toQueue`
-  // closed over a `const` that was still in its temporal dead zone at the
-  // point of the reference, and React Compiler would not reorder the two to
-  // find out whether that was safe — it gave up on the whole component
-  // ("Compilation Skipped: existing memoization could not be preserved"),
-  // so every row of this screen lost memoization to a declaration order
-  // that was never meaningful.
-  const load = useCallback(
-    () =>
-      apiJson<{ leadDays: number; orders: Row[] }>('/api/confirmation/postponed')
-        .then(setData)
-        .catch((e) => setError(e instanceof Error ? e.message : 'تعذر التحميل')),
-    []
-  );
+  const list = usePagedList<Row, Extra>({
+    url: '/api/confirmation/postponed',
+    params: { q: search.trim() || undefined, when, kind, times, agent },
+    read,
+  });
 
-  /** Hands it to the pool, still postponed. The list reloads without it. */
+  const activeCount = [when, kind, times, agent].filter((v) => v !== 'all').length + (search.trim() ? 1 : 0);
+  const reset = () => {
+    setSearch('');
+    setWhen('all');
+    setKind('all');
+    setTimes('all');
+    setAgent('all');
+  };
+
+  /** Hands it to the pool, still postponed. The list reloads — on the page the reader is on. */
   const toQueue = async (o: Row) => {
     setBusyId(o.id);
-    setError(null);
+    setActionError(null);
     setDone(null);
     try {
       await apiJson('/api/confirmation/postponed', {
@@ -66,20 +93,21 @@ export function ConfirmationPostponedScreen() {
         body: JSON.stringify({ orderId: o.id }),
       });
       setDone(`${o.orderNumber} في الطابور — ما زال مؤجَّلاً، وأوّل من يسحب يراه كذلك`);
-      await load();
+      await list.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذّرت الإعادة إلى الطابور');
+      setActionError(e instanceof Error ? e.message : 'تعذّرت الإعادة إلى الطابور');
     } finally {
       setBusyId(null);
     }
   };
 
-  useLiveRefresh(load);
+  const { extra, rows, pagination } = list;
 
-  if (error) {
-    return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>;
-  }
-  if (!data) {
+  // Nothing to draw until the first answer: the error alone if it failed, the spinner otherwise.
+  if (!extra) {
+    if (list.error) {
+      return <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{list.error}</p>;
+    }
     return (
       <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
         <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
@@ -87,15 +115,78 @@ export function ConfirmationPostponedScreen() {
     );
   }
 
+  const { leadDays, facts } = extra;
+  const filters: ToolbarFilter[] = [
+    {
+      key: 'when',
+      label: 'الموعد',
+      value: when,
+      onChange: setWhen,
+      options: withChosen(when, [
+        { value: 'all', label: `كل المواعيد (${facts.total})` },
+        ...WHENS.map((w) => ({ value: w, label: `${whenLabel(w, leadDays)} (${facts.whens[w]})` })),
+      ]),
+    },
+    {
+      key: 'kind',
+      label: 'النوع',
+      value: kind,
+      onChange: setKind,
+      options: withChosen(kind, [
+        { value: 'all', label: `كل الأنواع (${facts.total})` },
+        ...KINDS.map((k) => ({ value: k, label: `${KIND_AR[k]} (${facts.kinds[k]})` })),
+      ]),
+    },
+    {
+      key: 'times',
+      label: 'مرات التأجيل',
+      value: times,
+      onChange: setTimes,
+      options: withChosen(times, [
+        { value: 'all', label: 'أيّ عدد' },
+        ...TIMES.map((t) => ({ value: t, label: `${TIMES_AR[t]} (${facts.times[t]})` })),
+      ]),
+    },
+    // Whose hands is a supervisor's question; an agent's list is her own and the server sends no agents.
+    ...(facts.agents
+      ? [
+          {
+            key: 'agent',
+            label: 'الموظف',
+            value: agent,
+            onChange: setAgent,
+            options: withChosen(agent, [
+              { value: 'all', label: 'كل الموظفين' },
+              ...facts.agents.map((a) => ({ value: a.id, label: `${a.name} (${a.count})` })),
+            ]),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="max-w-5xl space-y-3">
       <ScreenTitle />
 
       <p className="text-sm text-[var(--sys-muted-foreground)]">
-        القابل للعمل عليه: المستحق خلال {data.leadDays} يوم أو المتأخر. الباقي للعرض فقط —
+        القابل للعمل عليه: المستحق خلال {leadDays} يوم أو المتأخر. الباقي للعرض فقط —
         وما حان موعدُه يمكن إعادتُه إلى الطابور ليسحبه أوّلُ من يفرغ، ويبقى مؤجَّلاً كما هو.
       </p>
 
+      <ListToolbar
+        search={search}
+        onSearch={setSearch}
+        placeholder="بحث برقم الطلب أو المرجع أو اسم العميل أو هاتفه…"
+        filters={filters}
+        activeCount={activeCount}
+        onReset={reset}
+      />
+
+      {(actionError || list.error) && (
+        <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">
+          {actionError ?? list.error}
+        </p>
+      )}
       {done && (
         <p className="rounded-lg border border-[var(--sys-success)]/40 bg-[var(--sys-success-soft)] p-2.5 text-sm text-[var(--sys-success)]">
           {done}
@@ -107,7 +198,7 @@ export function ConfirmationPostponedScreen() {
             a table on a desk and a card in a hand — and the card leads
             with what somebody scans for: the order, and who it is for. */}
         <Rows
-          rows={data.orders}
+          rows={rows}
           keyOf={(o) => o.id}
           alert={(o) => o.daysRemaining !== null && o.daysRemaining < 0}
           columns={[
@@ -200,13 +291,33 @@ export function ConfirmationPostponedScreen() {
             { key: 'agent', label: 'الموظف', hideOnPhone: true, render: (o) => o.claimer?.name ?? '—' },
           ]}
           empty={
-            <EmptyState
-              title="لا طلبات مؤجلة"
-              why="التأجيل يضع الطلب هنا حتى موعده. فراغُ القائمة يعني أنّ لا طلبَ أُجِّل، أو أنّ كلّ ما أُجِّل حلّ موعدُه وعاد إلى الطابور."
-            />
+            activeCount > 0 ? (
+              <EmptyState
+                title="لا طلبات بهذه الشروط"
+                why="ما من طلبٍ مؤجَّل يطابق البحثَ والفلاتر المختارة معاً."
+                action={{ label: 'امسح الفلاتر', onClick: reset }}
+              />
+            ) : (
+              <EmptyState
+                title="لا طلبات مؤجلة"
+                why="التأجيل يضع الطلب هنا حتى موعده. فراغُ القائمة يعني أنّ لا طلبَ أُجِّل، أو أنّ كلّ ما أُجِّل حلّ موعدُه وعاد إلى الطابور."
+              />
+            )
           }
         />
       </div>
+
+      {pagination.total > 0 && (
+        <Pager
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          shown={rows.length}
+          noun="طلب"
+          loading={list.loading}
+          onPage={list.goTo}
+        />
+      )}
     </div>
   );
 }
