@@ -12,7 +12,7 @@ import { Watermark } from './Watermark';
 import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { BulkProvider } from './BulkBar';
-import { RoadStrip } from './RoadStrip';
+import { HubTabs } from './HubTabs';
 import { ScreenGuideProvider } from './ScreenGuide';
 import { StoreCurrencyProvider } from '@/context/StoreCurrency';
 
@@ -73,9 +73,11 @@ export function Shell({
         {/* Room for whatever owns the bottom strip: the navigation at its
             fixed height, or a bulk bar at whatever height it wrapped to. */}
         <main className="w-full flex-1 p-4 pb-[calc(var(--bulk-h,4.5rem)+env(safe-area-inset-bottom))] md:p-6 md:pb-6">
-          {/* «الشحن · الخطوة 2 من 5» and the stop after it — drawn only on
-              the nine screens that are stops of a road. See next-stop.ts. */}
-          <RoadStrip />
+          {/* The other screens of this screen's errand, as pills — the menu
+              holds ONE line per group, and this is where its screens went.
+              On a road (الشحن, المال) the pills carry the step number and the
+              «التالي» link too. See HubTabs and next-stop.ts. */}
+          <HubTabs groups={groups} />
           {children}
         </main>
       </div>

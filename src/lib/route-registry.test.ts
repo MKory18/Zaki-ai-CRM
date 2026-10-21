@@ -16,7 +16,7 @@ function userWith(keys: string[], role = 'MODERATOR') {
 }
 
 describe('navigation contract', () => {
-  it('has the ten groups in contract order', () => {
+  it('has the eleven groups in contract order', () => {
     // «واجهة المتجر» is the store section: how the shop looks and what it
     // says, as against /settings, which is how the system runs.
     //
@@ -24,13 +24,18 @@ describe('navigation contract', () => {
     // joined the settings it configures, «التشغيل» became «الشحن» (it is
     // one parcel's road, not «operations»), and «النمو» became
     // «النمو والذكاء». See `the-menu-follows-the-work.test.ts` for why.
+    //
+    // Eleven and not ten from the day the two inboxes became «المحادثات»:
+    // a conversation that arrives is not a growth question. The MENU does
+    // not draw eleven headings, though — it draws fifteen lines, because a
+    // group is one line (`NavGroup.hub`); see `the-menu-is-one-line-a-group`.
     expect(NAV.map((g) => g.label)).toEqual([
       'الرئيسية', 'مركز التأكيد', 'الشحن', 'المخزون', 'المال',
-      'الرقابة', 'النمو والذكاء', 'واجهة المتجر', 'الإعدادات', 'الإدارة',
+      'الرقابة', 'النمو والذكاء', 'المحادثات', 'واجهة المتجر', 'الإعدادات', 'الإدارة',
     ]);
   });
 
-  it('lists 54 unique routes', () => {
+  it('lists 55 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
@@ -59,9 +64,13 @@ describe('navigation contract', () => {
     // to its panel permanently. A registry entry is a place in the menu,
     // and nine places in the menu for one shop is what the owner called
     // «معجّق … بتضيع».
+    //
+    // 55 when `/settings` joined — the page of cards that the menu's ONE
+    // settings line opens, where twelve entries stood. The other fifty-four
+    // are exactly the ones that were here, at the same addresses.
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(54);
-    expect(new Set(paths).size).toBe(54);
+    expect(paths).toHaveLength(55);
+    expect(new Set(paths).size).toBe(55);
   });
 
   it('the store section is its own group, and reads as one', () => {

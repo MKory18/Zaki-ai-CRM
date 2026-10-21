@@ -31,11 +31,33 @@ Rules:
 - Creating a country provisions its default wallet and makes it appear
   in delivery fees and commission rules automatically.
 
-## Navigation — ten groups
+## Navigation — eleven groups, drawn as fifteen lines
 
 The registry (`src/lib/route-registry.ts`) is the one list, and this section
 is its contract: a screen not listed does not exist, and a screen listed
 must exist at the exact path, in the exact group.
+
+**Revised again 2026-10-21 (night), on the owner's word** («الموقع كثييير
+معجوق … دمج القوائم بذكاء»): the MENU spends one line per group, not one per
+screen. This changes how the registry is DRAWN and nothing it CONTAINS — every
+screen below keeps its path, its permissions, its title, its guide and its
+notification link, so the guard, the palette, the roads and the phone bar read
+what they always read. `NavGroup.hub` says how a group is drawn:
+
+- `tabs` — the group is ONE sidebar line (its `icon` and name) that opens the
+  first screen the person may open; above every screen of the group a strip of
+  pills (`HubTabs`) lists the others — only the ones this person may open, in
+  the order they arranged them. On a road the pills carry the step and the
+  «التالي» link. A group with one screen left to a person takes that
+  screen's own name.
+- `cards` — one line that opens a page of cards (the group's first route:
+  `/settings`); every other screen of the group carries a «← الإعدادات» link
+  back to it. Every settings screen sits on exactly one card.
+- `loose` — no heading, no folding: each screen its own line (الرئيسية and
+  واجهة المتجر).
+
+Fifteen lines: the four of الرئيسية, one each for التأكيد, الشحن, المخزون, المال,
+الرقابة, النمو والذكاء, المحادثات, the two of واجهة المتجر, الإعدادات, الإدارة.
 
 **Revised 2026-10-21, on the owner's word** («حاسو معجوق وصعب … الخطوة
 يتودي للثانية»). No address moved — only the grouping, the order inside two
@@ -49,7 +71,7 @@ Two things the earlier text did not say:
   menu, never a rule: every screen still opens on its own permission, in any
   order, and the number belongs to the screen, not to its row.
 - **Operations sit with the work; configuration sits in settings.** The
-  WhatsApp inbox is in النمو والذكاء and its setup is in الإعدادات. The model
+  WhatsApp inbox is in المحادثات and its setup is in الإعدادات. The model
   follows the same rule: the assistant, the intelligence centre and the
   bench are work; the provider, the key, the local server and the house
   prompts are setup.
@@ -109,13 +131,18 @@ take it in (by statement or by hand), match, close the day.
 القائمة السوداء           /control/blacklist
 ```
 
-**7. النمو والذكاء** — was «النمو».
+**7. النمو والذكاء** — was «النمو». A hub of tabs.
 ```
 لوحة الأداء               /growth/performance
 الحملات                  /growth/campaigns
 المساعد الذكي             /assistant
 مركز الذكاء               /growth/intelligence
 منصّة التجريب             /growth/bench
+```
+
+**7ب. المحادثات** — the two inboxes, a group of their own since the menu was
+folded: somebody who wrote to us is not a growth question. A hub of tabs.
+```
 صندوق الواتساب            /growth/whatsapp/inbox
 طلبات تلجرام              /growth/telegram/orders
 ```
@@ -130,8 +157,13 @@ and their old addresses redirect to the tab that holds them.
 `/store` lists every shop on one card each. The old
 `/store/single-product` address redirects to `/store` permanently.
 
-**9. الإعدادات** — how the system RUNS.
+**9. الإعدادات** — how the system RUNS. A hub of cards: ONE menu line that
+opens `/settings`, a page of eight cards (البلدان والمتاجر · الشحن · العمولات ·
+القنوات والتتبّع · واتساب وتلجرام · الذكاء الاصطناعي · التطبيقات · النظام),
+each linking only to the screens the person may open. `/settings` is also
+where an ad platform's OAuth round trip lands (`/settings?connect=…`).
 ```
+الإعدادات                 /settings           (the front door; the union of the permissions below)
 البلدان والمتاجر والمحافظ  /settings/geo
 شركات الشحن وأجورها        /settings/couriers  (a courier and its fees are one screen)
 العمولات                  /settings/commission
@@ -165,8 +197,8 @@ and their old addresses redirect to the tab that holds them.
   2026-10-21 they were a group of their own with two entries; what the old
   rule protected was the ONCE, and that holds.)
 - Countries, stores and wallets live together in `/settings/geo` only.
-- WhatsApp, Telegram and the AI: the operational screens in النمو والذكاء,
-  the configuration in الإعدادات. Never both in one place.
+- WhatsApp, Telegram and the AI: the operational screens in النمو والذكاء /
+  المحادثات, the configuration in الإعدادات. Never both in one place.
 
 ## Role visibility — enforced at the API, 403 not hidden
 

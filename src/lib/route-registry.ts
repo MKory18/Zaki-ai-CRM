@@ -60,10 +60,40 @@ export interface RouteDef {
   step?: number;
 }
 
+/**
+ * HOW A GROUP IS DRAWN, AND WHY IT IS NOT FIFTY-FOUR LINES.
+ *
+ * `hub` is a statement about the MENU and never about the routes. Every
+ * route below stays in this registry with its own path, permissions, title,
+ * guide and notification link — so the page guard, the palette, the road and
+ * the phone bar still read the same screens they always did, and no address
+ * moved. What changes is how many LINES the sidebar spends on them. The
+ * owner, 21/10: «الموقع كثييير معجوق … دمج القوائم بذكاء».
+ *
+ *   'tabs'  — the whole group is ONE line (its `icon`, its `label`). It opens
+ *             the first screen this person may open, and above every screen
+ *             of the group a strip of pills lists the others. The strip is
+ *             drawn from the same visible, arranged routes the sidebar gets,
+ *             so a screen somebody may not open is not a pill, and their own
+ *             order and hiding apply to it.
+ *   'cards' — one line that opens a page of cards (the group's first route),
+ *             and every other screen of the group carries a «← label» link
+ *             back to it. For a group of a dozen, where a strip of pills
+ *             would only move the clutter one row up.
+ *   'loose' — no heading and no folding: each route is its own line. For
+ *             what is used all day and should never be a second click.
+ *
+ * A group with no `hub` is drawn as it always was — a heading that folds.
+ */
+export type GroupHub = 'tabs' | 'cards' | 'loose';
+
 export interface NavGroup {
   key: string;
   label: string;
   routes: RouteDef[];
+  /** The line this group is drawn as when it is a hub of tabs or cards. A NAME, like `RouteDef.icon`. */
+  icon?: string;
+  hub?: GroupHub;
 }
 
 const r = (
@@ -80,6 +110,7 @@ export const NAV: NavGroup[] = [
   {
     key: 'main',
     label: 'الرئيسية',
+    hub: 'loose',
     routes: [
       r('/dashboard', 'لوحة التحكم', 'LayoutDashboard', ['dashboard.view']),
       r('/orders', 'الطلبات', 'ShoppingCart', ['orders.view']),
@@ -90,6 +121,8 @@ export const NAV: NavGroup[] = [
   {
     key: 'confirmation',
     label: 'مركز التأكيد',
+    icon: 'ClipboardList',
+    hub: 'tabs',
     routes: [
       // Moderators never hold confirmation.pull / .supervise — pulling is not their job.
       r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.pull', 'confirmation.supervise']),
@@ -109,6 +142,8 @@ export const NAV: NavGroup[] = [
     // road can be read off the menu. The owner, 21/10: «كل خطوة بتودّي
     // للي بعدها».
     label: 'الشحن',
+    icon: 'Truck',
+    hub: 'tabs',
     routes: [
       r('/ops/preparation', 'التجهيز', 'PackageCheck', ['ops.prepare'], 1),
       r('/ops/shipments/new', 'إنشاء شحنة', 'Truck', ['ops.ship'], 2),
@@ -120,6 +155,8 @@ export const NAV: NavGroup[] = [
   {
     key: 'inventory',
     label: 'المخزون',
+    icon: 'Boxes',
+    hub: 'tabs',
     // Stock has one home: what you have, the two doors it comes in through,
     // and the history. Production used to sit beside "Products" as if it were
     // a different subject; it is the door for the goods you make.
@@ -133,6 +170,8 @@ export const NAV: NavGroup[] = [
   {
     key: 'finance',
     label: 'المال',
+    icon: 'Wallet',
+    hub: 'tabs',
     // The first four are ONE errand, in the order it is usually walked: see
     // what each courier is holding, take it in (by statement or by hand),
     // match the statement against the orders, close the day. They sat as
@@ -153,6 +192,8 @@ export const NAV: NavGroup[] = [
   {
     key: 'control',
     label: 'الرقابة',
+    icon: 'ShieldCheck',
+    hub: 'tabs',
     routes: [
       r('/control/change-requests', 'طلبات التعديل', 'FilePen', ['control.change_requests']),
       r('/control/discount-alerts', 'تنبيهات الخصم', 'BadgePercent', ['control.discount_alerts']),
@@ -170,6 +211,8 @@ export const NAV: NavGroup[] = [
     // bench are most of what stands here, and a group named for one of
     // its three subjects made people look for the other two elsewhere.
     label: 'النمو والذكاء',
+    icon: 'Gauge',
+    hub: 'tabs',
     routes: [
       r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
       r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view']),
@@ -206,6 +249,18 @@ export const NAV: NavGroup[] = [
        * should I do next», and both are read by the person who decides it.
        */
       r('/growth/bench', 'منصّة التجريب', 'FlaskConical', ['growth.intelligence']),
+    ],
+  },
+  {
+    // The two inboxes, as a group of their own. They sat at the bottom of
+    // النمو, and a conversation that arrives is not a growth question: it is
+    // somebody who wrote to us. Their SETUP is in the settings, as before —
+    // an operation sits with the work and its configuration with the rest.
+    key: 'chats',
+    label: 'المحادثات',
+    icon: 'MessageCircle',
+    hub: 'tabs',
+    routes: [
       r('/growth/whatsapp/inbox', 'صندوق الواتساب', 'MessageCircle', ['whatsapp.view']),
       r('/growth/telegram/orders', 'طلبات تلجرام', 'Send', ['telegram.view']),
     ],
@@ -220,6 +275,7 @@ export const NAV: NavGroup[] = [
     // system RUNS lives there. No field appears in both.
     key: 'storefront',
     label: 'واجهة المتجر',
+    hub: 'loose',
     routes: [
       /**
        * TWO ENTRIES, WHERE TEN STOOD.
@@ -254,7 +310,23 @@ export const NAV: NavGroup[] = [
   {
     key: 'settings',
     label: 'الإعدادات',
+    icon: 'Settings',
+    hub: 'cards',
     routes: [
+      /**
+       * THE FRONT DOOR OF TWELVE SCREENS.
+       *
+       * Twelve entries under one heading is twelve lines in a menu that is
+       * read all day, and a strip of twelve pills above every settings
+       * screen would be the same clutter moved up a row. So the menu holds
+       * ONE line, and this page is what it opens: eight cards, each naming
+       * what it holds and linking to the screens a person may open — and a
+       * card with nothing they may open is not drawn.
+       *
+       * Its permissions are the union of the screens it fronts: whoever may
+       * open any one of them may open the door to it, and nobody else.
+       */
+      r('/settings', 'الإعدادات', 'Settings', ['geo.view', 'settings.view', 'whatsapp.manage', 'telegram.manage', 'apps.view']),
       r('/settings/geo', 'البلدان والمتاجر', 'Globe', ['geo.view']),
 
       /**
@@ -305,6 +377,8 @@ export const NAV: NavGroup[] = [
   {
     key: 'admin',
     label: 'الإدارة',
+    icon: 'UserCog',
+    hub: 'tabs',
     routes: [
       r('/admin/users', 'الموظفين', 'UserCog', ['users.view']),
       r('/admin/permissions', 'الصلاحيات', 'ShieldCheck', ['roles.view']),

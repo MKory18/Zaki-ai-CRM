@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { isActiveRoute } from '@/lib/active-route';
+import { isActiveGroup, isActiveRoute } from '@/lib/active-route';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavGroup } from '@/lib/route-registry';
 import { mobileNav } from '@/lib/mobile-nav';
+import { hubHref, hubLabel, isHub } from '@/lib/hub';
 import { iconFor } from './icons';
 import { RiCloseLine, RiLogoutBoxLine, RiMoreLine } from '@remixicon/react';
 import { useBulkActive } from './BulkBar';
@@ -22,6 +23,11 @@ import { signOut } from '@/lib/sign-out';
  * already is, and "المزيد" opens the rest. Which four depends on the
  * person: an agent gets her queue, a packer gets preparation. Nobody's
  * phone opens on somebody else's job.
+ *
+ * «المزيد» draws the same fifteen lines the sidebar does, not fifty screens:
+ * a group that is a hub is ONE line here too, and its screens are the pills
+ * above whichever of them is open (HubTabs, which is not `md:`-only — a strip
+ * that scrolls sideways is a phone's own shape).
  *
  * Two details that are not decoration:
  *
@@ -67,6 +73,11 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
    */
   const drawnPaths = primary.map((r) => r.path);
   const active = (path: string) => isActiveRoute(pathname, path, drawnPaths);
+  /** Every path this person's menu holds — what «which line is lit» needs to know to answer once. */
+  const menuPaths = groups.flatMap((g) => g.routes.map((r) => r.path));
+  /** What a line of the sheet looks like lit and unlit — the rest of its classes sit on the line itself, beside `TAP`. */
+  const sheetTone = (on: boolean) =>
+    on ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-foreground)]';
 
   if (primary.length === 0 || yielding) return null;
 
@@ -92,11 +103,34 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
             </div>
 
             <div className="p-2">
-              {rest.map((group) => (
-                <section key={group.key} className="mb-2">
-                  <h3 className="px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)]">
-                    {group.label}
-                  </h3>
+              {rest.map((group) => {
+                /*
+                 * A HUB IS ONE LINE HERE TOO.
+                 *
+                 * The sheet was the same fifty screens under ten headings the
+                 * sidebar used to be — «كثييير معجوق», on the smallest
+                 * screen. It leads to the first screen this person may open
+                 * in the group, from the WHOLE group (the bar may already
+                 * hold that screen, and the line is still the way into the
+                 * group); the rest are the pills above it.
+                 */
+                if (isHub(group)) {
+                  const whole = groups.find((g) => g.key === group.key) ?? group;
+                  const on = isActiveGroup(pathname, whole.routes.map((r) => r.path), menuPaths);
+                  const GroupIcon = iconFor(whole.icon ?? whole.routes[0]?.icon ?? '');
+                  return (
+                    <ul key={group.key}>
+                      <li>
+                        <Link href={hubHref(whole)} className={`${TAP} flex items-center gap-3 rounded-lg px-2 text-sm ${sheetTone(on)}`}>
+                          <GroupIcon className="h-4 w-4 shrink-0" />
+                          {hubLabel(whole)}
+                        </Link>
+                      </li>
+                    </ul>
+                  );
+                }
+
+                const lines = (
                   <ul>
                     {group.routes.map((route) => {
                       const Icon = iconFor(route.icon);
@@ -104,11 +138,7 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                         <li key={route.path}>
                           <Link
                             href={route.path}
-                            className={`${TAP} flex items-center gap-3 rounded-lg px-2 text-sm ${
-                              active(route.path)
-                                ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]'
-                                : 'text-[var(--sys-foreground)]'
-                            }`}
+                            className={`${TAP} flex items-center gap-3 rounded-lg px-2 text-sm ${sheetTone(active(route.path))}`}
                           >
                             <Icon className="h-4 w-4 shrink-0" />
                             {route.step ? `${route.step}. ` : ''}
@@ -118,8 +148,20 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
                       );
                     })}
                   </ul>
-                </section>
-              ))}
+                );
+
+                // A loose group is its screens with no heading, as in the sidebar.
+                if (group.hub === 'loose') return <div key={group.key}>{lines}</div>;
+
+                return (
+                  <section key={group.key} className="mb-2">
+                    <h3 className="px-2 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)]">
+                      {group.label}
+                    </h3>
+                    {lines}
+                  </section>
+                );
+              })}
             </div>
 
             {/*

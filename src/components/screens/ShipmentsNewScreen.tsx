@@ -327,7 +327,7 @@ export function ShipmentsNewScreen() {
             THE LABELS ARE PRINTED ON THE NEXT SCREEN, AND NOTHING SAID SO.
             «تم إنشاء الدفعة X» ended there; printing lives on the batches
             screen, so the person went back to the menu and looked for it.
-            The road strip above already names the next stop — this is the
+            The pills above already name the next stop — this is the
             same step, at the place the eye is when it has just worked.
           */}
           {labelsStep && (

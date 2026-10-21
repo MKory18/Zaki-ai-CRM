@@ -103,6 +103,7 @@ export const GUIDED_PATHS: readonly string[] = [
   '/growth/whatsapp/inbox',
   '/growth/telegram/orders',
   // الإعدادات
+  '/settings',
   '/settings/geo',
   '/settings/couriers',
   '/settings/commission',
