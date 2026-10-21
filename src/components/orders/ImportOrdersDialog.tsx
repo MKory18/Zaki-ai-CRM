@@ -191,6 +191,20 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
               <RiDownload2Line className="w-4 h-4" aria-hidden />
               حمّل النموذج
             </button>
+            {/*
+              WHAT THE MODEL FILE IS, SAID WHERE IT IS DOWNLOADED.
+
+              «لما اعمل استثيراد طلبات ما في ملف مرجعي نموذج» — THE OWNER, 21/10. The file existed behind a button that said only
+              «حمّل النموذج», and its example row did not import. It now carries rows made from THIS store (its own products at
+              their prices, a phone its country accepts, one of its own regions), and this line says so, names the four columns
+              that must be filled — the same four `IMPORT_COLUMNS` marks required, held equal by a test — and says the one
+              thing that is not obvious: a price cell left empty becomes a price of ZERO at the order door (an open finding,
+              `an-import-row-reaches-the-door.test.ts`), so the price is to be written every time.
+            */}
+            <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
+              في النموذج صفوف مثال من منتجات متجرك بأسعارها، وبرقم هاتف من بلدك — عدّلها أو امسحها واكتب طلباتك مكانها. المطلوب: اسم العميل،
+              الهاتف، العنوان، المنتج (باسمه كما في كتالوجك). واكتب السعر دائماً: الخانة الفارغة تُنشئ طلباً بسعر صفر.
+            </p>
             <label className="block cursor-pointer rounded-lg border-2 border-dashed border-[var(--sys-border)] p-6 text-center hover:border-[var(--sys-primary)]">
               <input
                 type="file"

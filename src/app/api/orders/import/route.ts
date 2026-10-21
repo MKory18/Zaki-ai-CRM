@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { getPermissionScope, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { activeBlock } from '@/lib/blacklist';
-import { importTemplateCsv, isImportable, parseOrderSheet, IMPORT_COLUMNS } from '@/lib/order-import';
+import { importTemplateCsv, isImportable, parseOrderSheet, sampleRows, IMPORT_COLUMNS } from '@/lib/order-import';
+import { samplePhoneFor } from '@/lib/phone-rules';
 import { matchProduct } from '@/lib/order-parser';
 
 /**
@@ -30,14 +31,59 @@ const MAX_BYTES = 4 * 1024 * 1024;
 /** A phone that ordered inside this window is «already has one», not history. */
 const RECENT_DAYS = 30;
 
+/**
+ * THE TEMPLATE, WITH EXAMPLE ROWS MADE FROM THIS STORE.
+ *
+ * `lib/order-import.ts` says why: the model file's one example row was Syrian, named a product no store has and left the price
+ * empty (which stores a free order). The rows are now this store's own active products at their own prices, a phone number this
+ * country's rule accepts and one of this country's own regions — so what a person copies is a row that imports.
+ *
+ * AND ONLY FOR SOMEBODY WHO MAY SEE THE CATALOGUE. `orders.create` is what opens this door; `products.view` is what lets a role see
+ * product names and prices, and a role with the first and not the second (or with a grant that covers only some categories) must
+ * not learn a price from a model file. For them the file is the header alone, exactly as for a store with nothing to give.
+ */
 export async function GET() {
   try {
-    await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('orders.create');
-    return new NextResponse(importTemplateCsv(), {
+
+    const scope = getPermissionScope(user, 'products.view');
+    // The list reads OWN as company-wide for products; a grant by CATEGORY or by SPECIFIC product sees only part of the catalogue.
+    const wholeCatalogue = scope !== null && scope.scope !== 'CATEGORY' && scope.scope !== 'SPECIFIC';
+
+    const products = wholeCatalogue
+      ? await db.product.findMany({
+          where: { companyId, ...(storeId ? { storeId } : {}), status: 'ACTIVE', basePrice: { gt: 0 } },
+          select: { name: true, basePrice: true },
+          // A dozen, in a fixed order, so a name the sample refuses (a formula, a line break) still leaves three.
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          take: 12,
+        })
+      : [];
+
+    const region = products.length
+      ? await db.region.findFirst({
+          where: { countryId: country.id, isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+          select: { name: true },
+        })
+      : null;
+
+    const csv = importTemplateCsv(
+      sampleRows({
+        phone: samplePhoneFor(country.code),
+        region: region?.name ?? null,
+        minorUnit: country.minorUnit,
+        products: products.map((p) => ({ name: p.name, price: p.basePrice })),
+      })
+    );
+
+    return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': 'attachment; filename="orders-template.csv"',
+        // Made from THIS store's catalogue: never to be kept and handed to the next person.
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {

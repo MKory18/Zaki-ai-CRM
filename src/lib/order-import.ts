@@ -2,6 +2,7 @@ import { looksLikeXlsx, readXlsxRows } from './xlsx-reader';
 import { splitCsvLine } from './settlement';
 import { normalizePhoneNumber } from './phone';
 import { readTypedFigure } from './numeric-input';
+import { roundMinor } from './money';
 
 /**
  * A SHEET OF ORDERS SOMEBODY TYPED SOMEWHERE ELSE.
@@ -285,15 +286,94 @@ export function isImportable(row: ParsedRow): boolean {
 }
 
 /**
- * THE TEMPLATE, BUILT FROM THE SAME LIST THE PARSER READS.
+ * THE TEMPLATE, BUILT FROM THE SAME LIST THE PARSER READS — AND ITS EXAMPLE ROWS FROM THE STORE THAT DOWNLOADS IT.
  *
  * A template written by hand is a template that stops matching the parser
  * the first time a column is added — and the person following it has no way
  * to know. The BOM is there because Excel opens a UTF-8 CSV as mojibake
  * without it, and an Arabic header row is the first thing they see.
+ *
+ * THE OWNER, 21/10: «لما اعمل استثيراد طلبات ما في ملف مرجعي نموذج». The model file existed and was no use as a model: its one
+ * example row was Syrian whoever downloaded it — a phone the rule of a Jordanian store refuses, a city that store does not
+ * serve, and a product («كريم مرطّب») that no store has — so the model's own row came back «فيه نقص». And its price cell was
+ * EMPTY, which `POST /api/orders` stores as a price of ZERO (the open finding recorded in `an-import-row-reaches-the-door.test.ts`):
+ * following the template to the letter made a free order. An example that fails or that gives goods away teaches the wrong thing
+ * about the one file a person copies.
+ *
+ * So the example rows are made from what the downloading store really has: its own products at their own prices, a phone number
+ * its country's rule accepts, and one of its own regions. With no product to give (an empty catalogue, or a caller who may not see
+ * the whole one) there is NO example row, and the file is the header alone: nothing can be imported into a store with no product anyway,
+ * and an invented example is exactly the defect.
  */
-export function importTemplateCsv(): string {
-  const header = IMPORT_COLUMNS.map((c) => (c.required ? `${c.ar} *` : c.ar)).join(',');
-  const example = ['أحمد محمد', '0999123456', '', 'حمص — شارع الحضارة', 'حمص', 'كريم مرطّب', '2', '', 'يفضّل التسليم مساءً'].join(',');
-  return `\uFEFF${header}\n${example}\n`;
+export interface TemplateRow {
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerCity: string;
+  productName: string;
+  quantity: number;
+  sellingPrice: number;
+  notes: string;
+}
+
+/** Three examples read better than one, and more is a catalogue. */
+export const TEMPLATE_EXAMPLES = 3;
+
+/** Made-up people and places — fictional, and the same for everybody: the file is a model, not a record. */
+const EXAMPLE_NAMES = ['أحمد محمد', 'سارة علي', 'خالد يوسف'] as const;
+const EXAMPLE_ADDRESSES = ['الحيّ — الشارع — رقم البناء', 'الحيّ — الشارع — رقم البناء — الطابق', 'قرب المعلم المعروف — الحيّ — الشارع'] as const;
+const EXAMPLE_NOTES = ['يفضّل التسليم مساءً', '', 'الاتصال قبل الوصول'] as const;
+/** One, two, one — so the sheet shows that the price is for the whole line. */
+const EXAMPLE_QUANTITIES = [1, 2, 1] as const;
+
+/** A name that Excel would run as a formula (it starts with = + - @ or a control character), or that a line-based reader would split. */
+const UNSAFE_NAME = /^[=+\-@\t\r]|[\n\r]/;
+
+/**
+ * The example rows for one store.
+ *
+ *   · a product is used only if it has a real price (a price of zero is the free-order trap) and a name that is a plain name:
+ *     one that starts with `=`, `+`, `-` or `@` is a formula to Excel, and one with a line break would split the row;
+ *   · the PRICE of a row is for the whole line, as the «السعر» column means: the product's price times the row's quantity,
+ *     rounded to the currency's own minor unit;
+ *   · the phone is the country's sample, with the last digit moved on per row so no two examples are «the same number twice».
+ */
+export function sampleRows(input: {
+  /** A number the store's country accepts — `samplePhoneFor(country.code)`. */
+  phone: string;
+  /** One of the store's own regions, if it has any. */
+  region: string | null;
+  /** The currency's decimal places, to round a line price by. */
+  minorUnit: number;
+  products: ReadonlyArray<{ name: string; price: number }>;
+}): TemplateRow[] {
+  const usable = input.products.filter((p) => p.name.trim() !== '' && !UNSAFE_NAME.test(p.name) && Number.isFinite(p.price) && p.price > 0);
+  return usable.slice(0, TEMPLATE_EXAMPLES).map((p, i) => {
+    const quantity = EXAMPLE_QUANTITIES[i];
+    return {
+      customerName: EXAMPLE_NAMES[i],
+      customerPhone: input.phone.slice(0, -1) + String((Number(input.phone.slice(-1)) + i) % 10),
+      customerAddress: EXAMPLE_ADDRESSES[i],
+      customerCity: input.region ?? '',
+      productName: p.name.trim(),
+      quantity,
+      sellingPrice: roundMinor(p.price * quantity, input.minorUnit),
+      notes: EXAMPLE_NOTES[i],
+    };
+  });
+}
+
+/** One CSV cell: quoted when it holds a comma, a quote or a line break, with a quote doubled — the reader (`splitCsvLine`) undoes exactly this. */
+const csvCell = (v: string) => (/[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+export function importTemplateCsv(rows: readonly TemplateRow[] = []): string {
+  const header = IMPORT_COLUMNS.map((c) => csvCell(c.required ? `${c.ar} *` : c.ar)).join(',');
+  const lines = rows.map((r) =>
+    IMPORT_COLUMNS.map((c) => {
+      // Every column the parser reads has a cell, in the parser's own order; one this row does not carry (the alternative phone) is empty.
+      const v = (r as unknown as Record<string, string | number | undefined>)[c.key];
+      return csvCell(v === undefined ? '' : String(v));
+    }).join(',')
+  );
+  return `﻿${[header, ...lines].join('\n')}\n`;
 }

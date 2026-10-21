@@ -6,6 +6,7 @@ import {
   isImportable,
   mapHeader,
   parseOrderSheet,
+  sampleRows,
 } from './order-import';
 
 /**
@@ -149,9 +150,16 @@ describe('the template', () => {
     expect(importTemplateCsv().charCodeAt(0)).toBe(0xfeff);
   });
 
-  /** The parser must accept its own template — the loop that closes the loop. */
+  /**
+   * The parser must accept its own template — the loop that closes the loop.
+   *
+   * 22/10: the template's example rows are made from the store that downloads it (`sampleRows`), so this reads a template made
+   * for one: before, it read a hand-written Syrian row that no other store could import. `the-import-model-is-a-model.test.ts`
+   * holds the rest — the rows against a real catalogue, a real country, and the real door.
+   */
   it('and the parser reads it back without a single complaint', () => {
-    const out = parseOrderSheet(importTemplateCsv());
+    const csv = importTemplateCsv(sampleRows({ phone: '0791234567', region: 'عمّان', minorUnit: 3, products: [{ name: 'كريم مرطّب', price: 12.5 }] }));
+    const out = parseOrderSheet(csv);
     expect(out.error).toBeUndefined();
     expect(out.missingRequired, 'النموذج نفسه ينقصه عمودٌ مطلوب').toEqual([]);
     expect(out.rows).toHaveLength(1);

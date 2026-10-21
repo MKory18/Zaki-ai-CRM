@@ -54,6 +54,14 @@ export interface PhoneRule {
   countryName: string;
   /** Shown as the field placeholder. */
   example: string;
+  /**
+   * A REAL number of this shape — one the rule above accepts — for a sample row to carry.
+   *
+   * `example` is a placeholder («07XXXXXXXX») and says what a number looks like; a spreadsheet's sample row needs one that
+   * passes. The model file used to carry a Syrian number whatever the store, which is a number the rule of a Jordanian store
+   * refuses — so the template's own example came back «فيه نقص».
+   */
+  sample: string;
 }
 
 export const PHONE_RULES: Record<string, PhoneRule> = {
@@ -63,6 +71,7 @@ export const PHONE_RULES: Record<string, PhoneRule> = {
     national: /^(?:9\d{8}|(?:11|21|31|33|41|43|51|52|53)\d{6,7})$/,
     countryName: 'سوري',
     example: '09XXXXXXXX',
+    sample: '0991234567',
   },
   // Mobile 7[7-9]XXXXXXX, landlines 2/3/5/6 + 7 digits.
   JO: {
@@ -70,30 +79,35 @@ export const PHONE_RULES: Record<string, PhoneRule> = {
     national: /^(?:7[7-9]\d{7}|[23568]\d{7})$/,
     countryName: 'أردني',
     example: '07XXXXXXXX',
+    sample: '0791234567',
   },
   SA: {
     dialCode: '966',
     national: /^(?:5\d{8}|1\d{7,8})$/,
     countryName: 'سعودي',
     example: '05XXXXXXXX',
+    sample: '0512345678',
   },
   AE: {
     dialCode: '971',
     national: /^(?:5[024568]\d{7}|[234679]\d{7})$/,
     countryName: 'إماراتي',
     example: '05XXXXXXXX',
+    sample: '0501234567',
   },
   EG: {
     dialCode: '20',
     national: /^(?:1[0125]\d{8}|[23]\d{7,8}|\d{2}\d{6,7})$/,
     countryName: 'مصري',
     example: '01XXXXXXXXX',
+    sample: '01012345678',
   },
   IQ: {
     dialCode: '964',
     national: /^(?:7[3-9]\d{8}|[1-6]\d{7,8})$/,
     countryName: 'عراقي',
     example: '07XXXXXXXXX',
+    sample: '07712345678',
   },
 };
 
@@ -118,6 +132,14 @@ export function nationalDigits(raw: string, dialCode?: string): string {
 export function ruleFor(countryCode: string | null | undefined): PhoneRule | null {
   if (!countryCode) return null;
   return PHONE_RULES[countryCode.trim().toUpperCase()] ?? null;
+}
+
+/**
+ * A number a sample row can carry for this country: the rule's own `sample`, and for a country with no rule a nine-digit number,
+ * which the permissive 7–15 digit check accepts.
+ */
+export function samplePhoneFor(countryCode: string | null | undefined): string {
+  return ruleFor(countryCode)?.sample ?? '0123456789';
 }
 
 /**
