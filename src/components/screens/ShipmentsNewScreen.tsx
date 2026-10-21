@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAsk } from '@/components/ui/Confirm';
 import { apiJson } from '@/lib/api-client';
 import { CustomerHistoryButton } from '@/components/orders/CustomerHistory';
@@ -14,6 +15,8 @@ import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { useMayOpen } from '@/hooks/useMayOpen';
+import { printLabelsStep } from '@/lib/next-step';
 
 /**
  * /ops/shipments/new — pick a courier, filter, review each row's COD and its
@@ -44,6 +47,7 @@ interface Row {
 export function ShipmentsNewScreen() {
   const ask = useAsk();
   const toast = useToast();
+  const mayOpen = useMayOpen();
   const confirm = useConfirm();
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
@@ -272,6 +276,7 @@ export function ShipmentsNewScreen() {
   };
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
+  const labelsStep = printLabelsStep(mayOpen);
 
   return (
     <div className="max-w-5xl space-y-3">
@@ -315,7 +320,26 @@ export function ShipmentsNewScreen() {
       </div>
 
       {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
-      {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
+      {done && (
+        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">
+          {done}
+          {/*
+            THE LABELS ARE PRINTED ON THE NEXT SCREEN, AND NOTHING SAID SO.
+            «تم إنشاء الدفعة X» ended there; printing lives on the batches
+            screen, so the person went back to the menu and looked for it.
+            The road strip above already names the next stop — this is the
+            same step, at the place the eye is when it has just worked.
+          */}
+          {labelsStep && (
+            <>
+              {' — '}
+              <Link href={labelsStep.href} className="font-bold underline">
+                {labelsStep.label}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
 
       {exceptions.length > 0 && (
         <section className="bg-[var(--sys-card)] border border-[var(--sys-destructive-border)] rounded-lg p-4">
