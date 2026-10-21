@@ -519,7 +519,7 @@ export function DashboardScreen() {
                 ) : undefined
               }
             />
-            <ul className="divide-y divide-[var(--sys-border)]/60">
+            <ul className="divide-y divide-[var(--sys-border)]">
               {analytics.outcomes.outcomes.map((r: { key: string; label: string; count: number; closed: boolean }) => (
                 <li key={r.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <span className="flex items-center gap-2">
