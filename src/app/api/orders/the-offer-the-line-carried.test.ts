@@ -56,11 +56,13 @@ describe('the door reads the offer each line carried', () => {
     expect(src).toMatch(/findMany\(\{\s*where: \{ id: \{ in: lineOfferIds \}, companyId \}/);
   });
 
-  it('and the gift reaches the line, per unit of it', () => {
-    // An offer giving one free with each unit gives three on a line of
-    // three — the same reading the storefront door uses.
+  it('and the gift reaches the line, ONE PER BUNDLE — through `giftUnits`, the one rule', () => {
+    // 22/10 — this pinned «per unit of the line» (`freeFor(line) * line.quantity`): an offer giving one free gave three on a
+    // line of three, so a typed «3 + 1» was stored 3 + 3. The gift is one per bundle, as the storefront door counts it
+    // (`offer.freeQuantity × count`); `offer-gift.test.ts` holds the two equal.
     const src = door();
-    expect(src).toMatch(/freeQuantity: freeFor\(line\) \* line\.quantity/);
+    expect(src).toMatch(/freeQuantity: giftOf\(line\)/);
+    expect(src, 'عاد الضربُ بعددِ القطع').not.toMatch(/freeFor|freeQuantity[^;]*\*\s*line\.quantity/);
   });
 
   it('and the gift is costed, because a free unit is free to the CUSTOMER only', () => {
@@ -71,7 +73,7 @@ describe('the door reads the offer each line carried', () => {
      */
     const src = door();
     const cost = src.slice(src.indexOf('estimatedCostOfGoods'));
-    expect(cost.slice(0, 400), 'التكلفة بتتجاهل الهديّة').toContain('freeFor(l)');
+    expect(cost.slice(0, 400), 'التكلفة بتتجاهل الهديّة').toContain('giftOf(l)');
   });
 
   it('and ANY line that includes delivery makes the whole order include it', () => {

@@ -22,6 +22,7 @@ import { requirePermission, getPermissionScope, can } from '@/lib/authorization'
 import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { giftUnits } from '@/lib/offer-gift';
 
 export async function GET(req: Request) {
   try {
@@ -406,7 +407,8 @@ export async function POST(req: Request) {
         ? (
             await db.offer.findMany({
               where: { id: { in: lineOfferIds }, companyId },
-              select: { id: true, discount: true, deliveryIncluded: true, freeQuantity: true },
+              // `quantity` too: the gift is per BUNDLE, and a bundle is as many units as the offer says.
+              select: { id: true, quantity: true, discount: true, deliveryIncluded: true, freeQuantity: true },
             })
           ).map((o) => [o.id, o])
         : []
@@ -426,9 +428,17 @@ export async function POST(req: Request) {
       storeId,
       offer?.deliveryIncluded === true || anyLineIncludesDelivery ? true : offer?.deliveryIncluded
     );
-    /** The free units this line's offer gives, per unit of it. */
-    const freeFor = (line: { offerId?: string | null }) =>
-      (line.offerId ? offersById.get(line.offerId)?.freeQuantity : 0) ?? 0;
+    /**
+     * THE FREE UNITS THIS LINE CARRIES — ONE GIFT PER BUNDLE, AS THE OFFER SAYS.
+     *
+     * This read «per unit of the line»: `freeQuantity × line.quantity`. But a line that carries an offer has the
+     * offer's own quantity (the order dialog sets `quantity: offer.quantity` when the offer is picked), so «3 + 1»
+     * came out as 3 + **3**: six units reserved, deducted and costed for a bundle whose name says four. The
+     * storefront door counts bundles (`offer.freeQuantity × count`), which is why a landing-page order for the same
+     * offer carried 3 + 1 and the same offer typed by a moderator carried 3 + 3. `giftUnits` is the one rule.
+     */
+    const giftOf = (line: { offerId?: string | null; quantity: number }) =>
+      giftUnits(line.offerId ? offersById.get(line.offerId) : null, line.quantity);
 
     // ONE COD function, used by every screen and service (contract PART 5).
     // It takes the whole order at once, so a discount spread over several
@@ -496,7 +506,7 @@ export async function POST(req: Request) {
       requestedLines
         .reduce(
           (sum, l) =>
-            sum + (costByProduct.get(l.productId)?.average || 0) * (l.quantity + freeFor(l) * l.quantity),
+            sum + (costByProduct.get(l.productId)?.average || 0) * (l.quantity + giftOf(l)),
           0
         )
         .toFixed(2)
@@ -636,11 +646,13 @@ export async function POST(req: Request) {
            * already. The column was simply never filled by this door, so
            * a gift promised on the screen left the building unrecorded.
            *
-           * Per unit of the line, like the storefront door
-           * (`public-order.ts:152`): an offer giving one free with each
-           * unit gives three on a line of three.
+           * One gift per BUNDLE, like the storefront door
+           * (`public-order.ts:152`, `offer.freeQuantity × count`): «3 + 1»
+           * is four units on the line, whichever door wrote it. This comment
+           * used to say «per unit of the line … three on a line of three»,
+           * which is what made a typed «3 + 1» three plus three.
            */
-          freeQuantity: freeFor(line) * line.quantity,
+          freeQuantity: giftOf(line),
           // The same reading as `codLines` above, and for the same reason:
           // `unitPrice` is zod-validated money by the time it is here, so a
           // `|| 0` could only ever have replaced a real zero with zero.

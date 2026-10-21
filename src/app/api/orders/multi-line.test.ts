@@ -239,7 +239,8 @@ describe('an order can hold more than one product', () => {
      * the line. The gift must reach the line and the delivery flag must
      * reach the order.
      */
-    const bundle = { id: 'offer-bundle-0002', deliveryIncluded: true, discount: 0, freeQuantity: 1 };
+    // «3 + 1»: `quantity` 3, `freeQuantity` 1 — the shape the offers table really holds (this fixture had no `quantity`).
+    const bundle = { id: 'offer-bundle-0002', quantity: 3, deliveryIncluded: true, discount: 0, freeQuantity: 1 };
     db.offer.findMany.mockResolvedValue([bundle]);
 
     await post(body({
@@ -247,9 +248,108 @@ describe('an order can hold more than one product', () => {
     }));
 
     const { order, lines } = written();
-    expect(lines[0].freeQuantity, 'الهديّة ما وصلت السطر').toBe(3);
+    // 22/10: this expected 3 — «per unit of the line» — and pinned a typed «3 + 1» as 3 + 3. The gift is one per bundle.
+    expect(lines[0].freeQuantity, 'الهديّة ما وصلت السطر — أو وصلت ثلاثاً بدل واحدة').toBe(1);
     expect(order.priceIncludesDelivery, 'العرض شامل التوصيل والطلب ما بيعرف').toBe(true);
     expect(order.offerId, 'الطلب ما بيعرف أيّ عرض باعه').toBe(bundle.id);
+  });
+});
+
+/**
+ * THE GIFT IS A REAL UNIT, AND IT IS ONE PER BUNDLE — WHICHEVER DOOR WROTE THE LINE.
+ *
+ * The owner, 22/10: «الهدية مش وهمي… لازم ينحسب سعرو على التكلفة وينخصم من الستوك… هي من نفس صنف المنتج قطعة زيادة».
+ * Everything downstream already read `quantity + freeQuantity` (the reservation, the deduction at delivery, the return, the
+ * ready-to-ship guard) and the cost of goods already counted the gift — but this door wrote the gift as
+ * `freeQuantity × line.quantity`, per PIECE, and the order dialog sets a picked offer's line to the offer's own quantity: a
+ * moderator who typed «3 + 1» stored 3 + 3, and the landing page's «3 + 1» stored 3 + 1. Six units off the shelf and in the
+ * cost for a bundle called four.
+ */
+describe('the gift is one per bundle', () => {
+  const offer = (over: Record<string, unknown> = {}) => ({
+    id: 'offer-three-plus-one', quantity: 3, freeQuantity: 1, deliveryIncluded: false, discount: 0, ...over,
+  });
+  const line = (o: { id: string }, quantity: number) => ({ productId: CREAM.id, offerId: o.id, quantity, unitPrice: 20 * quantity });
+
+  it('— «3 + 1» typed by a moderator is 3 + 1: four units on the line, and the cost counts four', async () => {
+    const o = offer();
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 3)] }));
+    const { order, lines } = written();
+    expect([lines[0].quantity, lines[0].freeQuantity]).toEqual([3, 1]);
+    // CREAM is on the shelf at 5 a unit: the estimate is the cost of FOUR units — the gift is bought with money.
+    expect(order.estimatedCostOfGoods).toBe(20);
+  });
+
+  it('and two bundles are 6 + 2, costed as eight', async () => {
+    const o = offer();
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 6)] }));
+    const { order, lines } = written();
+    expect([lines[0].quantity, lines[0].freeQuantity]).toEqual([6, 2]);
+    expect(order.estimatedCostOfGoods).toBe(40);
+  });
+
+  it('and a line that is not a whole number of bundles earns the gifts of the whole bundles in it', async () => {
+    const o = offer();
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 7)] }));
+    expect(written().lines[0].freeQuantity).toBe(2);
+  });
+
+  it('and a line shorter than one bundle earns none — the customer did not buy the offer', async () => {
+    const o = offer();
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 2)] }));
+    expect(written().lines[0].freeQuantity).toBe(0);
+  });
+
+  it('and «1 + 1» is a gift per piece only because a bundle IS one piece: two pieces, two gifts', async () => {
+    const o = offer({ id: 'offer-one-plus-one', quantity: 1, freeQuantity: 1 });
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 2)] }));
+    const { order, lines } = written();
+    expect([lines[0].quantity, lines[0].freeQuantity]).toEqual([2, 2]);
+    expect(order.estimatedCostOfGoods).toBe(20);
+  });
+
+  it('and two lines carry the gift of their OWN offers — never the first offer of the order', async () => {
+    const a = offer();
+    const b = offer({ id: 'offer-two-plus-two', quantity: 2, freeQuantity: 2 });
+    db.offer.findMany.mockResolvedValue([a, b]);
+    await post(body({ items: [line(a, 3), { productId: DROPS.id, offerId: b.id, quantity: 4, unitPrice: 80 }] }));
+    const { order, lines } = written();
+    expect(lines.map((l: { quantity: number; freeQuantity: number }) => [l.quantity, l.freeQuantity])).toEqual([[3, 1], [4, 4]]);
+    // CREAM at 5 a unit, four of them; DROPS at 7 a unit, eight of them.
+    expect(order.estimatedCostOfGoods).toBe(76);
+  });
+
+  it('and the gift costs the customer nothing — the order is worth the same with the gift as without it', async () => {
+    const withGift = offer();
+    db.offer.findMany.mockResolvedValue([withGift]);
+    await post(body({ items: [line(withGift, 3)] }));
+    const total = written().order.totalAmount;
+    db.order.create.mockClear();
+    db.orderItem.createMany.mockClear();
+    const noGift = offer({ id: 'offer-three-no-gift', freeQuantity: 0 });
+    db.offer.findMany.mockResolvedValue([noGift]);
+    await post(body({ items: [line(noGift, 3)] }));
+    expect(total).toBeGreaterThan(0);
+    expect(written().order.totalAmount, 'الهديّةُ دخلت ثمنَ الطلب').toBe(total);
+  });
+
+  it('and a line with no offer, or with an offer that is not in this company, carries no gift at all', async () => {
+    db.offer.findMany.mockResolvedValue([]);
+    await post(body({ items: [{ productId: CREAM.id, offerId: 'somebody-elses', quantity: 3, unitPrice: 60 }, { productId: DROPS.id, quantity: 1, unitPrice: 20 }] }));
+    expect(written().lines.map((l: { freeQuantity: number }) => l.freeQuantity)).toEqual([0, 0]);
+  });
+
+  it('and the offers are asked for with their `quantity` — a bundle is as many units as the offer says', async () => {
+    const o = offer();
+    db.offer.findMany.mockResolvedValue([o]);
+    await post(body({ items: [line(o, 3)] }));
+    const [asked] = db.offer.findMany.mock.calls[0] as unknown as [{ select: Record<string, boolean> }];
+    expect(asked.select).toMatchObject({ quantity: true, freeQuantity: true });
   });
 });
 
