@@ -298,5 +298,22 @@ export function visibleNav(user: SessionUser, can: PermissionCheck): NavGroup[] 
  */
 export function landingRoute(user: SessionUser, can: PermissionCheck): string {
   const first = visibleNav(user, can)[0]?.routes[0];
-  return first?.path ?? '/no-access';
+  return first?.path ?? NO_ACCESS;
 }
+
+/**
+ * WHERE A PERSON WITH NOTHING TO OPEN IS SENT — AND THAT IT IS A PAGE.
+ *
+ * `landingRoute` returned the string `'/no-access'` for years and nothing
+ * answered at that address, so the one case it was written for — somebody
+ * whose menu is empty — would have been met by a 404. It could not happen
+ * in practice (the profile has no permission and every ACTIVE user opens
+ * it), which is exactly why nobody noticed: a fallback that is never taken
+ * is a fallback nobody tests.
+ *
+ * It is a constant now so the page, the redirect and the claim that the
+ * page exists all say the same word. The page itself sends a person who
+ * HAS something to open back to it — so «تحديث» after the manager grants a
+ * role takes them in, and the two can never send each other round a loop.
+ */
+export const NO_ACCESS = '/no-access';
