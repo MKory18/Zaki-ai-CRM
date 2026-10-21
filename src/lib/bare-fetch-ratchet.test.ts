@@ -101,7 +101,12 @@ const DEBT = new Map<string, number>([
   ['src/components/screens/users/UserCommissionCurrency.tsx', 1],
   ['src/components/screens/users/UserSalary.tsx', 1],
   ['src/components/screens/users/UserShift.tsx', 1],
-  ['src/components/settings/ThemePicker.tsx', 1],
+  /*
+   * 1 → 0: the theme save went through `apiFetch`, which carries the
+   * 15-second timeout. A save that never answers used to leave every
+   * swatch disabled for ever.
+   */
+  ['src/components/settings/ThemePicker.tsx', 0],
   ['src/components/settings/TrackingPixelsSection.tsx', 1],
   ['src/components/shell/CommandPalette.tsx', 1],
   ['src/components/shell/MyWork.tsx', 1],

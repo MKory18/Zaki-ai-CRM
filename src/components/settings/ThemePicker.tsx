@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api-client';
 import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, THEME_CHOICES, sanitizeTheme, themeByKey } from '@/lib/system-themes';
 import { DECOR_LEVELS, readDecor, setDecor, type DecorLevel } from '@/lib/theme-decoration';
 import { RiCheckLine, RiPaletteLine } from '@remixicon/react';
@@ -23,13 +25,38 @@ import { RiCheckLine, RiPaletteLine } from '@remixicon/react';
  * screen will look like, and a named square answers a different one.
  */
 
-/** The frame the server rendered the theme onto. */
+/**
+ * ── SWITCHING THE ATTRIBUTE STOPPED BEING ENOUGH ──
+ *
+ * The owner, 21/10: «الثيم بيعلق».
+ *
+ * It was not a hang. Nine of the eleven themes simply never arrived: you
+ * pressed a swatch, the swatches went disabled for the length of a save,
+ * came back — and the colours were the old ones.
+ *
+ * The reason is the palette split. `system.css` carries the DEFAULT and
+ * «تلقائي» and nothing else, because eleven palettes in the first-load
+ * stylesheet is ten kilobytes of colours nine people in ten never see.
+ * Every other palette is written into the document by `SystemFrame`, as
+ * one rule for the one theme the SERVER rendered.
+ *
+ * So setting the attribute to a theme the page carries no rule for finds
+ * nothing. The frame goes on inheriting `:root`, which still holds the
+ * theme it was rendered with. Only «غرفة العمليات» and «تلقائي» ever
+ * changed live — and even they left the body, the card shapes, the
+ * decoration and the `theme-color` meta on the old one.
+ *
+ * This still runs: it is instant for those two and harmless for the
+ * rest. What makes the other nine arrive is the refresh below, which
+ * asks the server to render the page with its new colours.
+ */
 function applyNow(key: string) {
   const frame = document.querySelector('[data-sys-theme]');
   if (frame) frame.setAttribute('data-sys-theme', key);
 }
 
 export function ThemePicker({ initial }: { initial: string | null | undefined }) {
+  const router = useRouter();
   const [chosen, setChosen] = useState(() => sanitizeTheme(initial));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -41,12 +68,33 @@ export function ThemePicker({ initial }: { initial: string | null | undefined })
     setBusy(true);
     setFailed(false);
     try {
-      const res = await fetch('/api/profile/theme', {
+      /*
+       * `apiFetch` and not a bare `fetch`: it carries the 15-second
+       * timeout every other call in the product has. Without one, a
+       * request that never answers leaves every swatch disabled for
+       * ever — which is the «بيعلق» the owner would have seen on a bad
+       * connection, on top of the colours not arriving.
+       */
+      const res = await apiFetch('/api/profile/theme', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme: key }),
       });
       if (!res.ok) throw new Error();
+      /*
+       * ── AND THIS IS WHAT MAKES THE COLOURS ARRIVE ──
+       *
+       * The palette for the chosen theme is written by the SERVER, into
+       * the document, for the theme the person was rendered with. The row
+       * has just changed, so asking for the page again is asking for the
+       * new palette — the body, the card shapes, the decoration and the
+       * status-bar colour with it.
+       *
+       * `router.refresh()` and not `location.reload()`: it re-renders the
+       * server components and keeps the scroll, the open dialogs and
+       * everything else the person had in hand.
+       */
+      router.refresh();
     } catch {
       setFailed(true);
     } finally {
@@ -167,6 +215,7 @@ const DECOR_AR: Record<DecorLevel, { ar: string; note: string }> = {
 };
 
 function DecorationLevel() {
+  const router = useRouter();
   const [level, setLevel] = useState<DecorLevel>('light');
   // Read after mount: the cookie is the browser's, and the server has
   // already used it to paint. Reading it in render would differ between
@@ -176,7 +225,18 @@ function DecorationLevel() {
   const choose = (next: DecorLevel) => {
     setLevel(next);
     setDecor(next);
-    window.location.reload();
+    /*
+     * The same refresh the palette uses, for the same reason: the
+     * ambient CSS is written into the document by the server for the
+     * level this browser's cookie asked for, so the new level arrives
+     * with the next render.
+     *
+     * It was `window.location.reload()` — a full reload of a heavy
+     * dashboard, throwing away the scroll and anything open, for a
+     * setting somebody changes about twice. `router.refresh()` re-renders
+     * the server components and keeps the rest.
+     */
+    router.refresh();
   };
 
   return (
