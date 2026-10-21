@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, regionCreateSchema } from '@/lib/geo-schemas';
+import { regionBlockers, regionUse } from '@/lib/geo-removal';
 
 /**
  *   GET  /api/geo/countries/:id/regions  (geo.view)
  *   POST /api/geo/countries/:id/regions  (geo.manage)
+ *
+ * The GET also says, for a person who holds `geo.manage`, why each city may
+ * NOT be deleted (`usage[regionId]`, empty = it may) — so the screen draws
+ * the delete control only where the DELETE would be accepted. Somebody who
+ * may only look gets `usage: null`: the counts are of orders and courier fees.
+ * The route that deletes is `[regionId]/route.ts`.
  */
 
 async function companyCountry(id: string, companyId: string) {
@@ -18,7 +25,7 @@ async function companyCountry(id: string, companyId: string) {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId } = await requireCompanyTenant();
     await requirePermission('geo.view');
     if (!(await companyCountry(id, companyId))) return NextResponse.json({ error: 'البلد غير موجود' }, { status: 404 });
 
@@ -26,7 +33,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       where: { countryId: id },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
-    return NextResponse.json({ regions });
+    const used = can(user, 'geo.manage') ? await regionUse(db, regions.map((r) => r.id)) : null;
+    const usage = used ? Object.fromEntries(regions.map((r) => [r.id, regionBlockers(used.get(r.id))])) : null;
+    return NextResponse.json({ regions, usage });
   } catch (error) {
     return apiErrorResponse(error);
   }

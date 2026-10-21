@@ -4,11 +4,17 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
-import { firstIssue, storeUpdateSchema } from '@/lib/geo-schemas';
+import { firstIssue, storeDeleteSchema, storeUpdateSchema } from '@/lib/geo-schemas';
+import { standingStoreId } from '@/lib/geo-context';
+import { blockersSentence, storeBlockers } from '@/lib/geo-removal';
 import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { refusalToOpen } from '@/lib/storefront-rules';
 
-/** PATCH /api/geo/stores/:id (geo.manage). countryId is immutable; no DELETE. */
+/**
+ *   PATCH  /api/geo/stores/:id (geo.manage). countryId is immutable.
+ *   DELETE /api/geo/stores/:id (geo.manage). Only a store with nothing entered
+ *          on it, and only with its name typed — see `geo-removal.ts`.
+ */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -79,6 +85,75 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       newData: store,
     });
     return NextResponse.json({ store });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+/**
+ * Delete a store — the owner's «بدي زر لحذف المتجر اذا ما كان مدخل عليه اشي».
+ *
+ * Three keys, in this order, and every one is a refusal rather than a warning:
+ *
+ *   1. the permission (`geo.manage`) and the tenant — as every route here;
+ *   2. the store's own name, typed — a finger that meant the pause button
+ *      beside it cannot also type a name;
+ *   3. NOTHING ENTERED ON IT, asked INSIDE the transaction that deletes, at
+ *      the strictest isolation, so an order that arrives between the question
+ *      and the delete makes this fail instead of vanishing with the shop.
+ *      What «nothing entered» means is written once, in `geo-removal.ts`; the
+ *      settings screen asks the same function to draw its button.
+ *
+ * What goes with the store is only what the person did not enter as
+ * business: the three skeleton pages it was created with while they are still
+ * the skeleton, the system's notifications about it, and its look. Orders,
+ * customers, products, wallets and the rest stop it (409, with the list and
+ * the counts) — an order is never deleted to make room for this.
+ */
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { user, companyId } = await requireCompanyTenant();
+    await requirePermission('geo.manage');
+
+    const parsed = storeDeleteSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: firstIssue(parsed.error), code: 'CONFIRM_REQUIRED' }, { status: 400 });
+
+    const store = await db.store.findFirst({ where: { id, companyId } });
+    if (!store) return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
+
+    if (parsed.data.confirm.trim() !== store.name.trim()) {
+      return NextResponse.json({ error: 'الاسم غير مطابق — اكتب اسم المتجر كما هو', code: 'CONFIRM_MISMATCH' }, { status: 400 });
+    }
+
+    const standing = await standingStoreId(user.id);
+    const refused = await db.$transaction(
+      async (tx) => {
+        const why = (await storeBlockers(tx, [store], { companyId, selectedStoreId: standing })).get(id) ?? [];
+        if (why.length > 0) return why;
+        await tx.store.delete({ where: { id } });
+        return null;
+      },
+      // Twenty-six counts, one after another on the one connection a transaction has: the default five seconds is a guess about the tables.
+      { isolationLevel: 'Serializable', timeout: 20_000 }
+    );
+    if (refused) {
+      return NextResponse.json(
+        { error: blockersSentence('المتجر', refused), code: 'STORE_IN_USE', blockers: refused },
+        { status: 409 }
+      );
+    }
+
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'STORE_DELETED',
+      entity: 'Store',
+      entityId: id,
+      previousData: store,
+      newData: null,
+    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     return apiErrorResponse(error);
   }

@@ -1,23 +1,30 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
+import type { Blocker } from '@/lib/geo-removal';
 import { currencyLabel } from '@/lib/currencies';
 import { CurrencyPicker, currencyChoiceReady, type CurrencyChoice } from '@/components/ui/CurrencyPicker';
 import { StorefrontSettings } from '@/components/settings/StorefrontSettings';
 import { StoreIdentityCard } from '@/components/settings/StoreIdentityCard';
 import { storeTypeLabel } from '@/lib/store-types';
-import { RiAddCircleLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiCloseLine, RiDeleteBinLine, RiEarthLine, RiLoader4Line, RiStore2Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
  * /settings/geo — countries, their stores and their regions in one screen.
  * Everything a store inherits (currency, minor unit, work hours, weekend
  * days, order prefix, negative stock) is set here on the country, never on
- * the store. Nothing is deleted: countries deactivate, stores pause.
+ * the store. Countries deactivate and stores pause; a store with nothing
+ * entered on it, and a city nothing names, may be deleted — the screen says
+ * which, and why not, beside each one (see `geo-removal.ts`).
  */
 
 interface StoreRow {
@@ -50,6 +57,13 @@ const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربع�
 
 export function GeoSettingsScreen() {
   const toast = useToast();
+  const ask = useAsk();
+  const router = useRouter();
+  const { currentUser } = useApp();
+  /** UX only — the DELETE routes ask the server again. */
+  const mayManage = userCan(currentUser, 'geo.manage');
+  /** Why each store may NOT be deleted (empty = it may). Null: not asked, or the asking failed. */
+  const [blockers, setBlockers] = useState<Record<string, Blocker[]> | null>(null);
   const [countries, setCountries] = useState<CountryRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openCountry, setOpenCountry] = useState<string | null>(null);
@@ -63,7 +77,17 @@ export function GeoSettingsScreen() {
     } catch (e: any) {
       setError(e?.message || 'تعذر تحميل البلدان');
     }
-  }, []);
+    // Only for somebody who may press the button. A failure here costs the
+    // delete controls, not the screen: no button is drawn on a guess.
+    if (mayManage) {
+      try {
+        const res = await apiJson<{ stores: Record<string, { blockers: Blocker[] }> }>('/api/geo/stores/usage');
+        setBlockers(Object.fromEntries(Object.entries(res.stores).map(([id, s]) => [id, s.blockers])));
+      } catch {
+        setBlockers(null);
+      }
+    }
+  }, [mayManage]);
 
   useLiveRefresh(load);
 
@@ -97,6 +121,37 @@ export function GeoSettingsScreen() {
       await load();
     } catch (e: any) {
       toast.failed(e?.message || 'تعذر الحفظ');
+    }
+  };
+
+  /**
+   * Delete a store: its name typed, then the route's own refusal if anything
+   * arrived since the screen drew its button. After it goes, the page is
+   * refreshed from the server too — the header's store switcher is drawn
+   * there and would otherwise still offer it.
+   */
+  const deleteStore = async (s: StoreRow) => {
+    const typed = await ask({
+      title: `حذف المتجر «${s.name}»؟`,
+      body: 'يُحذف نهائياً مع هويّته (الشعار والألوان والنصوص) وصفحاته المسوّدة. ما عليه طلب ولا منتج ولا عميل. لا يمكن التراجع.',
+      tone: 'danger',
+      confirmLabel: 'احذف المتجر',
+      input: { label: 'اكتب اسم المتجر للتأكيد', placeholder: s.name, required: true },
+    });
+    if (typed === null) return;
+    try {
+      await apiJson(`/api/geo/stores/${s.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: typed }),
+      });
+      toast.done(`حُذف المتجر «${s.name}»`);
+      await load();
+      router.refresh();
+    } catch (e: any) {
+      toast.failed(e?.message || 'تعذّر حذف المتجر');
+      // Whatever the refusal says, the screen's own picture of it was old.
+      await load();
     }
   };
 
@@ -207,7 +262,7 @@ export function GeoSettingsScreen() {
                 البلد مفعّل
               </label>
               <div className="md:col-span-2">
-                <Regions countryId={c.id} />
+                <Regions countryId={c.id} onChanged={load} />
               </div>
             </div>
           )}
@@ -215,7 +270,7 @@ export function GeoSettingsScreen() {
           <ul className="divide-y divide-[var(--sys-border)]">
             {c.stores.map((s) => (
               <React.Fragment key={s.id}>
-              <li className="flex items-center gap-3 p-4">
+              <li className="flex flex-wrap items-center gap-3 p-4">
                 <span className="w-8 h-8 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center overflow-hidden">
                   {s.logo ? (
                     <img src={s.logo} alt="" className="h-full w-full object-contain" />
@@ -260,6 +315,15 @@ export function GeoSettingsScreen() {
                 >
                   {s.status === 'ACTIVE' ? 'إيقاف مؤقت' : 'تفعيل'}
                 </button>
+                {/* On a line of its own under the row. In the name's column it
+                    was a strip one word wide on a phone — the two buttons
+                    already leave it little — and a third button in the row
+                    would have squeezed the name out. */}
+                {mayManage && blockers?.[s.id] && (
+                  <div className="w-full">
+                    <StoreRemoval blockers={blockers[s.id]} onDelete={() => deleteStore(s)} />
+                  </div>
+                )}
               </li>
               {/* Directly under its own store. It used to render after the
                   LAST store of the country, and nothing ever opened it: the
@@ -302,16 +366,55 @@ export function GeoSettingsScreen() {
   );
 }
 
-function Regions({ countryId }: { countryId: string }) {
+/**
+ * UNDER A STORE'S NAME: WHETHER IT MAY GO, AND WHY NOT — BEFORE ANY CLICK.
+ *
+ * A store with nothing entered on it gets the delete control; one with
+ * something gets the reason instead, as a sentence, so the owner never has to
+ * press a button to learn it is refused. Nothing at all until the answer
+ * arrives: a button drawn on a guess is a button that may be wrong.
+ */
+const SHOWN = 3;
+
+function StoreRemoval({ blockers, onDelete }: { blockers: Blocker[] | undefined; onDelete: () => void }) {
+  if (!blockers) return null;
+  if (blockers.length > 0) {
+    const first = blockers.slice(0, SHOWN).map((b) => b.text).join(' · ');
+    const rest = blockers.length - SHOWN;
+    return (
+      <p className="text-xs text-[var(--sys-muted-foreground)]">
+        لا يُحذف — {first}
+        {rest > 0 ? ` و${rest} غيرها` : ''}
+      </p>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onDelete}
+      className="min-h-11 md:min-h-0 inline-flex items-center gap-1.5 text-xs text-[var(--sys-destructive)] hover:underline"
+    >
+      <RiDeleteBinLine className="w-4 h-4" /> حذف المتجر — لا شيء مُدخَل عليه
+    </button>
+  );
+}
+
+function Regions({ countryId, onChanged }: { countryId: string; onChanged?: () => void }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [regions, setRegions] = useState<{ id: string; name: string }[] | null>(null);
+  /** Why each city may NOT be deleted; empty = it may. Null: this person may only look. */
+  const [usage, setUsage] = useState<Record<string, Blocker[]> | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await apiJson<{ regions: { id: string; name: string }[] }>(`/api/geo/countries/${countryId}/regions`);
+      const res = await apiJson<{ regions: { id: string; name: string }[]; usage?: Record<string, Blocker[]> | null }>(
+        `/api/geo/countries/${countryId}/regions`
+      );
       setRegions(res.regions);
+      setUsage(res.usage ?? null);
     } catch (e: any) {
       setError(e?.message || 'تعذر تحميل المحافظات');
     }
@@ -337,22 +440,64 @@ function Regions({ countryId }: { countryId: string }) {
     }
   };
 
+  const remove = async (r: { id: string; name: string }) => {
+    const sure = await confirm({
+      title: `حذف المحافظة «${r.name}»؟`,
+      body: 'ما عليها طلب ولا أجرة توصيل، فتُحذف من القائمة نهائياً.',
+      tone: 'danger',
+      confirmLabel: 'احذف',
+    });
+    if (!sure) return;
+    try {
+      await apiJson(`/api/geo/countries/${countryId}/regions/${r.id}`, { method: 'DELETE' });
+      toast.done(`حُذفت المحافظة «${r.name}»`);
+    } catch (e: any) {
+      toast.failed(e?.message || 'تعذّر الحذف');
+    }
+    // Either way the picture of which cities may go was old, and so is the
+    // country's own count of them.
+    await load();
+    onChanged?.();
+  };
+
   return (
     <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3">
       <p className="text-xs font-medium text-[var(--sys-foreground)] mb-2">المحافظات</p>
       {error && <p className="text-xs text-[var(--sys-destructive)] mb-2">{error}</p>}
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {(regions ?? []).map((r) => (
-          <span key={r.id} className="px-2.5 py-1 rounded-md bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)]">
-            {r.name}
-          </span>
-        ))}
+        {(regions ?? []).map((r) => {
+          const why = usage?.[r.id];
+          return (
+            <span
+              key={r.id}
+              title={why && why.length > 0 ? `لا تُحذف — ${why.map((b) => b.text).join(' · ')}` : undefined}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[var(--sys-surface)] border border-[var(--sys-border)] text-xs text-[var(--sys-foreground)]"
+            >
+              {r.name}
+              {why && why.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => remove(r)}
+                  aria-label={`حذف المحافظة ${r.name}`}
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 inline-flex items-center justify-center text-[var(--sys-muted-foreground)] hover:text-[var(--sys-destructive)]"
+                >
+                  <RiCloseLine className="w-4 h-4" />
+                </button>
+              )}
+            </span>
+          );
+        })}
         {regions?.length === 0 && (
           <span className="text-xs text-[var(--sys-muted-foreground)]">
             لا محافظاتٍ لهذا البلد — وبلا محافظةٍ لا تُحسب أجرةُ توصيلٍ ولا يُقاس أداءُ منطقة. أضِفها من الحقل أدناه.
           </span>
         )}
       </div>
+      {usage && (
+        <p className="text-xs text-[var(--sys-muted-foreground)] mb-3">
+          تظهر علامة الحذف على المحافظة التي لا طلب عليها ولا أجرة توصيل — وحدها تُحذف.
+        </p>
+      )}
       <form onSubmit={add} className="flex gap-2">
         <input
           value={name}

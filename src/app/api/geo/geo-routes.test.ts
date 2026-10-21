@@ -63,11 +63,22 @@ beforeEach(() => {
   db.userStoreAccess.findMany.mockResolvedValue([]); // no narrowing: every store of the country
 });
 
-describe('no hard delete for countries and stores', () => {
-  it('country and store routes expose no DELETE handler', () => {
-    for (const mod of [countriesRoute, countryRoute, storesRoute, storeRoute]) {
+describe('no hard delete for countries, and for a store only while nothing is entered on it', () => {
+  it('country routes and the stores collection expose no DELETE handler', () => {
+    for (const mod of [countriesRoute, countryRoute, storesRoute]) {
       expect((mod as Record<string, unknown>).DELETE).toBeUndefined();
     }
+  });
+
+  /*
+   * ON PURPOSE, 21/10 — the owner: «بدي زر لحذف المتجر اذا ما كان مدخل عليه
+   * اشي». This claim used to say a STORE had no DELETE either. It has one now,
+   * and every way it may refuse is held in `the-empty-store-may-go.test.ts`:
+   * the permission, the tenant, the typed name, and one negative per table
+   * that can point at a store. Countries stay deactivate-only.
+   */
+  it('the single-store route has one, and it is the guarded one', () => {
+    expect(typeof (storeRoute as Record<string, unknown>).DELETE).toBe('function');
   });
 
   it('a store cannot be moved to another country (countryId is rejected on PATCH)', async () => {

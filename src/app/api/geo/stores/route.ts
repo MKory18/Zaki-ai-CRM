@@ -12,7 +12,9 @@ import { seedPagesFor } from '@/lib/store-pages';
  *   POST /api/geo/stores             (geo.manage)
  *
  * A store cannot exist outside a country: countryId is required and must
- * belong to the session company. There is no DELETE — status=PAUSED.
+ * belong to the session company. A store is paused with status=PAUSED; one
+ * with nothing entered on it may be deleted (DELETE /api/geo/stores/:id, and
+ * `GET /api/geo/stores/usage` says which).
  */
 
 export async function GET(req: Request) {
