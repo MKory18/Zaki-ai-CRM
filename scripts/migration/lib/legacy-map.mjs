@@ -141,6 +141,36 @@ export function checkOrderPrices(order, lines, tableFee = null) {
   return issues;
 }
 
+// ─────────────────────────── sheet orders ───────────────────────────
+
+/**
+ * The order's lines, priced so they add up to what the door asks for.
+ *
+ * A sheet gives one total per order. One line takes all of it. Several lines
+ * share it in proportion to their list value (basePrice × quantity), the
+ * remainder on the largest so the parts sum to the total exactly — the
+ * delivery-inclusive reading of the manual door, where a line's price is
+ * what the customer pays for that line.
+ *
+ * @template {{ basePrice: number, quantity: number }} L
+ * @param {number} total
+ * @param {L[]} lines
+ * @param {number} minorUnit
+ * @returns {Array<L & { lineTotal: number, unitPrice: number }>}
+ */
+export function priceLines(total, lines, minorUnit) {
+  const values = lines.map((l) => Math.max(0, l.basePrice) * l.quantity);
+  const sum = values.reduce((a, b) => a + b, 0);
+  const totals = values.map((v) => roundMinor(sum > 0 ? (v / sum) * total : total / lines.length, minorUnit));
+  const drift = roundMinor(total - totals.reduce((a, b) => a + b, 0), minorUnit);
+  if (drift !== 0) {
+    let largest = 0;
+    for (let i = 1; i < values.length; i++) if (values[i] > values[largest]) largest = i;
+    totals[largest] = roundMinor(totals[largest] + drift, minorUnit);
+  }
+  return lines.map((l, i) => ({ ...l, lineTotal: totals[i], unitPrice: roundMinor(totals[i] / l.quantity, 3) }));
+}
+
 // ─── PORT of src/lib/money.ts — roundMinor + allocateDiscount ───
 
 export function roundMinor(value, minorUnit) {
