@@ -23,6 +23,9 @@ const { db, requireContext, requirePermission, noteCustomersHandedOut } = vi.hoi
     orderChangeRequest: { findMany: vi.fn() },
     orderActivity: { findMany: vi.fn() },
     deliveryFee: { findMany: vi.fn() },
+    // The list is read lean first — every parcel the question matches — and the names beside the dropdowns come with it.
+    deliveryProvider: { findMany: vi.fn() },
+    region: { findMany: vi.fn() },
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
@@ -82,6 +85,8 @@ beforeEach(() => {
   db.orderChangeRequest.findMany.mockResolvedValue([]);
   db.orderActivity.findMany.mockResolvedValue([]);
   db.deliveryFee.findMany.mockResolvedValue([{ deliveryProviderId: 'p1', regionId: 'r1', lateThresholdDays: 3 }]);
+  db.deliveryProvider.findMany.mockResolvedValue([{ id: 'p1', name: 'أبو علي' }]);
+  db.region.findMany.mockResolvedValue([{ id: 'r1', name: 'دمشق' }]);
   noteCustomersHandedOut.mockResolvedValue(undefined);
 });
 
@@ -112,9 +117,11 @@ describe('«الكل» and «غير جاهز» — the filters that reach an ord
 
     expect(res.status).toBe(200);
     expect(body.count).toBe(3);
-    // The database's own order, kept — the screen sorts, not the route.
+    // 21/10: the ROUTE sorts now — worst first, the oldest shipped first within that — because the page is cut from the
+    // sorted list and the screen no longer holds the whole of it. Two parcels owed money (rank 6) come before one that
+    // needs nothing (rank 7), each group in the database's own order.
     expect(body.orders.map((o: { orderNumber: string }) => o.orderNumber)).toEqual([
-      'SY-2026-0001', 'SY-2026-0099', 'SY-2026-0002',
+      'SY-2026-0001', 'SY-2026-0002', 'SY-2026-0099',
     ]);
   });
 
@@ -148,8 +155,8 @@ describe('«الكل» and «غير جاهز» — the filters that reach an ord
 
     const res = await GET(get('?status=NOT_READY'));
     expect(res.status).toBe(200);
-    // And it really is the NOT_READY filter that was asked of the database.
-    expect(db.order.findMany.mock.calls[0][0].where.shippingStatus).toBe('NOT_READY');
+    // And it really is the NOT_READY filter that was asked of the database — as its own clause of the question.
+    expect(db.order.findMany.mock.calls[0][0].where.AND).toEqual([{ shippingStatus: 'NOT_READY' }]);
   });
 
   it('never sends the lines or the return receipt to the browser', async () => {

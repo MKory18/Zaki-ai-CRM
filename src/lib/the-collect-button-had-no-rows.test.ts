@@ -111,7 +111,10 @@ describe('the default load fetches what the collect chip is made of', () => {
   });
 
   it('and «الكل» still means all', () => {
-    expect(door()).toMatch(/status === 'all'\s*\?\s*\{\}/);
+    // 21/10: the screen sends `every` — `all` is «no filter» to the list hook, which would have dropped it — and the old
+    // word `all` still means exactly that, read one level down. Either way the door asks for no state at all.
+    expect(door()).toMatch(/status === 'every'\s*\?\s*null/);
+    expect(stripComments(repoFile('src/lib/tracking-filters.ts'))).toMatch(/status === 'all' \? EVERY_STATUS : status/);
   });
 
   it('and the filter says what it fetches', () => {

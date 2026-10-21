@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import { RiArrowGoBackLine, RiSearchLine } from '@remixicon/react';
 import { Button } from './Button';
 import { Select } from './Input';
@@ -32,6 +32,12 @@ import { Select } from './Input';
  * (`searchDir` — a waybill is Latin, and in a right-to-left box «123-ABC» reads
  * back to front). A screen that asks for none of them gets exactly the markup
  * it always had.
+ *
+ * And one for a screen whose field must be a REAL label (`searchLabel`): a
+ * `<label htmlFor>` is clickable and widens the hit area of the box, which on a
+ * phone is the difference between a tap that lands and one that does nothing;
+ * an `aria-label` is announced and is neither. The shipment follow-up holds that
+ * bar in a test, so its box is drawn with the word «بحث» above it.
  *
  * Every class below is one the customers screen already carried, so the
  * stylesheet does not grow by a byte for the fifth list.
@@ -69,6 +75,7 @@ export function ListToolbar({
   searchExtra,
   searchAutoFocus,
   searchDir,
+  searchLabel,
 }: {
   search: string;
   onSearch: (value: string) => void;
@@ -84,20 +91,42 @@ export function ListToolbar({
   searchAutoFocus?: boolean;
   /** `ltr` for a box that takes codes. Unset, the box follows the page. */
   searchDir?: 'ltr' | 'rtl';
+  /** A visible label above the box, wired to it as a real `<label htmlFor>`. Unset, the box is named by its placeholder. */
+  searchLabel?: string;
 }) {
+  const searchId = useId();
+  const icon = <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />;
+  const input = (
+    <input
+      type="text"
+      id={searchLabel ? searchId : undefined}
+      aria-label={searchLabel ? undefined : placeholder}
+      placeholder={placeholder}
+      value={search}
+      onChange={(e) => onSearch(e.target.value)}
+      autoFocus={searchAutoFocus}
+      dir={searchDir}
+      className="h-11 md:h-auto w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 md:py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
+    />
+  );
   const box = (
     <div className={searchExtra ? 'relative max-w-md flex-1' : 'relative max-w-md'}>
-      <RiSearchLine className="absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--sys-muted)]" />
-      <input
-        type="text"
-        aria-label={placeholder}
-        placeholder={placeholder}
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        autoFocus={searchAutoFocus}
-        dir={searchDir}
-        className="h-11 md:h-auto w-full pl-9 pr-4 rtl:pl-4 rtl:pr-9 md:py-2 text-xs bg-[var(--sys-card)] border border-[var(--sys-border-input)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--sys-primary)]/30 focus:border-[var(--sys-primary)] shadow-raised"
-      />
+      {searchLabel ? (
+        <>
+          <label htmlFor={searchId} className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">
+            {searchLabel}
+          </label>
+          <div className="relative">
+            {icon}
+            {input}
+          </div>
+        </>
+      ) : (
+        <>
+          {icon}
+          {input}
+        </>
+      )}
     </div>
   );
 

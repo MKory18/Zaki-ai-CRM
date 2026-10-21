@@ -6,18 +6,31 @@ import { ruleFor } from '@/lib/phone-rules';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { transitStatus } from '@/lib/transit';
-import { normalizePhoneNumber } from '@/lib/phone';
 import { expectedAmountFor, SETTLEMENT_ORDER_SELECT } from '@/lib/settlement';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
-import { typed } from '@/lib/text-search';
+import { readLimit, readPage } from '@/lib/numeric-input';
+import { searchWhere, trackingFilters } from '@/lib/tracking-filters';
+import { readTrackingList } from '@/lib/tracking-list';
 
 /**
- * GET /api/ops/tracking?q=&status=
+ * GET /api/ops/tracking?q=&status=&task=&courier=&region=&age=&page=&limit=
  *
  * Search by order number, merchant reference, courier barcode, customer name
  * or phone. Days in transit and the late flag are computed here against the
  * region's own threshold — the screen never counts days itself. Collection
  * status is returned as its own field, never merged into delivery status.
+ *
+ * «متابعة الشحن — صفحات + فلاتر + بحث». The list is read in pages of 25 (100 at
+ * most), worst first, and the seven chips, the «late» badge and the numbers
+ * beside the dropdowns are counted over EVERY parcel the question matches — not
+ * over the first two hundred, which is all the screen could hold. See
+ * `lib/tracking-list.ts` for how, and `lib/tracking-filters.ts` for the words.
+ *
+ *   ?status=   nothing: what is moving plus what arrived and is still owed · a state · `every` (or the old `all`)
+ *   ?task=     one of the seven chips          ?courier= ?region=   an id, or `none`
+ *   ?age=      fresh|few|week|old, by the shipping date
+ *
+ * An unknown value is a 400 in Arabic, never a quiet «everything».
  */
 const IN_FLIGHT = ['SHIPPED', 'OUT_FOR_DELIVERY', 'READY_FOR_PICKUP', 'FAILED_DELIVERY', 'RETURN_REQUESTED'];
 
@@ -37,83 +50,89 @@ export async function GET(req: Request) {
     await requirePermission('ops.track');
 
     const q = new URL(req.url).searchParams;
-    const term = q.get('q')?.trim();
-    const status = q.get('status')?.trim();
+    const now = new Date();
+    const parsed = trackingFilters(q);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorAr: parsed.errorAr }, { status: 400 });
+    const { status, task, courier, region, age, q: term } = parsed.applied;
 
-    const orders = await db.order.findMany({
-      where: {
-        companyId,
-        storeId,
-        /*
-         * ── AND THE DEFAULT CARRIES WHAT IS WAITING TO BE COLLECTED ──
-         *
-         * The owner, 21/10: «التحصيل لازم اقدر اعمل تحصيل... افرض ما
-         * عندي كشف، لازمني آلية للمطابقة واغلاق الطلب وتحصيله».
-         *
-         * That mechanism already exists: `POST /api/ops/tracking/collect`
-         * settles an order by hand, «for both there is no statement to
-         * import», and the «استلمت منه» button on this screen calls it.
-         *
-         * Nobody could find it. This screen's own task list declares the
-         * condition COLLECT — «بانتظار التحصيل: سُلّمت ولم تُسوَّ» — and
-         * builds its chip from the rows it was given. The default load
-         * asked for IN_FLIGHT only, and a delivered order is not in
-         * flight. So the chip's rows were never fetched, the chip never
-         * drew, and the one door that collects without a statement sat
-         * behind a filter nobody knew to change.
-         *
-         * «all» still means all. What changed is that the default is now
-         * the screen's own job description: what is moving, PLUS what has
-         * arrived and whose money is still out there.
-         */
-        ...(status === 'all'
-          ? {}
-          : status
-            ? { shippingStatus: status }
-            : {
-                OR: [
-                  { shippingStatus: { in: IN_FLIGHT } },
-                  {
-                    shippingStatus: { in: AWAITING_COLLECTION },
-                    settlementStatus: { not: 'SETTLED' },
-                  },
-                ],
-              }),
-        ...(term
-          ? {
+    /*
+     * ── AND THE DEFAULT CARRIES WHAT IS WAITING TO BE COLLECTED ──
+     *
+     * The owner, 21/10: «التحصيل لازم اقدر اعمل تحصيل... افرض ما
+     * عندي كشف، لازمني آلية للمطابقة واغلاق الطلب وتحصيله».
+     *
+     * That mechanism already exists: `POST /api/ops/tracking/collect`
+     * settles an order by hand, «for both there is no statement to
+     * import», and the «استلمت منه» button on this screen calls it.
+     *
+     * Nobody could find it. This screen's own task list declares the
+     * condition COLLECT — «بانتظار التحصيل: سُلّمت ولم تُسوَّ» — and
+     * builds its chip from the rows it was given. The default load
+     * asked for IN_FLIGHT only, and a delivered order is not in
+     * flight. So the chip's rows were never fetched, the chip never
+     * drew, and the one door that collects without a statement sat
+     * behind a filter nobody knew to change.
+     *
+     * «all» still means all. What changed is that the default is now
+     * the screen's own job description: what is moving, PLUS what has
+     * arrived and whose money is still out there.
+     */
+    // The state and the search are each their OWN clause, ANDed: a search typed from the default view used to replace the
+    // default's `OR` with its own, and quietly looked at every state.
+    const statusClause =
+      status === 'every'
+        ? null
+        : status !== 'default'
+          ? { shippingStatus: status }
+          : {
               OR: [
-                { orderNumber: typed(term) },
-                { merchantRef: typed(term) },
-                { trackingNumber: typed(term) },
-                { customer: { fullName: typed(term) } },
-                { customer: { phone: typed(normalizePhoneNumber(term) || term) } },
+                { shippingStatus: { in: IN_FLIGHT } },
+                {
+                  shippingStatus: { in: AWAITING_COLLECTION },
+                  settlementStatus: { not: 'SETTLED' },
+                },
               ],
-            }
-          : {}),
-      },
-      // Oldest in transit first — the ones waiting longest are the work.
-      // Nulls last so a shipment with no date does not head the queue.
-      orderBy: [{ shippedAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
-      take: 200,
-      select: {
-        id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
-        // The order may be dead while its parcel is still moving — see
-        // src/lib/tracking-alert.ts for why that is the one thing this
-        // screen was not saying.
-        confirmationStatus: true, updatedAt: true,
-        // Everything the settlement rule reads, in one spread — including
-        // the delivered lines and the return receipt, which this screen does
-        // not show and cannot compute `expectedCollection` without.
-        ...SETTLEMENT_ORDER_SELECT,
-        settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
-        deliveryFailureReason: true, currency: true, regionId: true,
-        deliveryProviderId: true,
-        customer: { select: { fullName: true, phone: true, city: true } },
-        region: { select: { id: true, name: true } },
-        deliveryProvider: { select: { id: true, name: true, kind: true } },
-        _count: { select: { deliveryAttempts: true, notes: true } },
-      },
+            };
+
+    // Every parcel the question matches is read lean and judged (the chips, the badge, the dropdowns' numbers, the
+    // order); only the page's own parcels are read in full, below.
+    const list = await readTrackingList(db, {
+      where: { companyId, storeId, AND: [...(statusClause ? [statusClause] : []), ...(term ? [searchWhere(term)] : [])] },
+      now,
+      task,
+      courier,
+      region,
+      age,
+      page: readPage(q),
+      limit: readLimit(q, 25, 100),
     });
+
+    const found = list.ids.length
+      ? await db.order.findMany({
+          where: { id: { in: list.ids }, companyId, storeId },
+          select: {
+            id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
+            // The order may be dead while its parcel is still moving — see
+            // src/lib/tracking-alert.ts for why that is the one thing this
+            // screen was not saying.
+            confirmationStatus: true, updatedAt: true,
+            // Everything the settlement rule reads, in one spread — including
+            // the delivered lines and the return receipt, which this screen does
+            // not show and cannot compute `expectedCollection` without.
+            ...SETTLEMENT_ORDER_SELECT,
+            settlementStatus: true, shippedAt: true, outForDeliveryAt: true,
+            deliveryFailureReason: true, currency: true, regionId: true,
+            deliveryProviderId: true,
+            customer: { select: { fullName: true, phone: true, city: true } },
+            region: { select: { id: true, name: true } },
+            deliveryProvider: { select: { id: true, name: true, kind: true } },
+            _count: { select: { deliveryAttempts: true, notes: true } },
+          },
+    })
+      : [];
+    // The database answers a set; the page is a SEQUENCE — worst first — and it is the list's, not the database's.
+    const byId = new Map(found.map((o) => [o.id, o]));
+    const orders = list.ids.flatMap((id) => byId.get(id) ?? []);
 
     /**
      * THE TWO THINGS THAT MAKE CHASING A PARCEL POINTLESS OR WRONG.
@@ -271,7 +290,18 @@ export async function GET(req: Request) {
     return NextResponse.json({
       // wa.me needs the number in full international form, and the rows
       // carry it in local form. The country is known here, not in the browser.
-      dialCode: ruleFor(country.code)?.dialCode ?? null, count: rows.length, orders: rows, lateCount: rows.filter((r) => r.late).length });
+      dialCode: ruleFor(country.code)?.dialCode ?? null,
+      // What is ON this page — a different fact from how many there are (`pagination.total`).
+      count: rows.length,
+      orders: rows,
+      // Over everything the list holds, not the page: the badge says how many parcels are late, not how many of these 25.
+      lateCount: list.facts.lateCount,
+      pagination: { total: list.total, page: list.page, limit: list.limit, totalPages: list.totalPages },
+      facts: list.facts,
+      applied: parsed.applied,
+      // The bound was reached: this is the first of a bigger list, and the screen says so rather than look whole.
+      capped: list.capped,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

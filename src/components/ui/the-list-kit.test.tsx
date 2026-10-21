@@ -192,6 +192,25 @@ describe('the toolbar', () => {
       expect(screen.getByRole('button', { name: 'امسح' })).toBeTruthy();
     });
 
+    it('and a screen that wants a REAL label gets one — a `<label htmlFor>` the thumb can hit, and no aria-label competing with it', () => {
+      bare({ searchLabel: 'بحث' });
+      const box = screen.getByLabelText('بحث') as HTMLInputElement;
+      expect(box.tagName).toBe('INPUT');
+      expect(box.id).toBeTruthy();
+      const label = document.querySelector(`label[for="${box.id}"]`);
+      expect(label, 'لا تسميةَ تُشيرُ إلى الحقل').toBeTruthy();
+      expect(label!.textContent).toBe('بحث');
+      expect(box.getAttribute('aria-label')).toBeNull();
+    });
+
+    it('and one that does not is named by its placeholder alone, as every list was — no label, no id', () => {
+      bare();
+      const box = screen.getByRole('textbox', { name: 'بحث' }) as HTMLInputElement;
+      expect(box.getAttribute('aria-label')).toBe('بحث');
+      expect(box.id).toBe('');
+      expect(document.querySelector('label')).toBeNull();
+    });
+
     it('and the box and its button share one row — the button is not on a line of its own', () => {
       bare({ searchExtra: <button type="button">امسح</button> });
       const row = screen.getByRole('button', { name: 'امسح' }).parentElement!;
