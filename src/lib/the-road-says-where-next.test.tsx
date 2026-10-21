@@ -12,19 +12,27 @@ import React from 'react';
  * `step`), and until now that was all they did: a person on stop 2 was
  * told nothing about stop 3 and had to go back to the menu to find it.
  *
- * Every screen that is a stop now says «الشحن · الخطوة 2 من 5» and offers
- * the next one — derived from the registry, so a stop added or moved
- * changes nine screens without anyone touching one of them.
+ * Every screen that is a stop now says where it stands — «3. دفعات الشحن»,
+ * one pill among five — and offers the next one, derived from the registry,
+ * so a stop added or moved changes nine screens without anyone touching one
+ * of them.
+ *
+ * ── 21/10, LATER: THE ROAD MOVED INTO THE PILLS ──
+ *
+ * It used to be a line of its own above the screen: «الشحن · الخطوة 2 من 5»
+ * and a link. The menu then folded each group into ONE line (`NavGroup.hub`)
+ * and the group's screens became a strip of pills above whichever is open —
+ * and a strip that already shows all five stops, numbered, with the one you
+ * are on lit, made the extra line say the same thing twice. So the pills
+ * carry the numbers and the «التالي», and the one-line strip is gone.
  * ═══════════════════════════════════════════════════════════════════════
  */
 
 const here = { path: '/ops/preparation' };
-const user: { current: any } = { current: null };
 
 vi.mock('next/navigation', () => ({ usePathname: () => here.path }));
-vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: user.current }) }));
 
-import { RoadStrip } from '@/components/shell/RoadStrip';
+import { HubTabs } from '@/components/shell/HubTabs';
 import { roadPosition } from './next-stop';
 import { ALL_ROUTES, NAV, findRoute } from './route-registry';
 import { dashboardFiles, repoFile, stripComments } from './guard-source';
@@ -33,14 +41,22 @@ const everything = () => true;
 const nothing = () => false;
 const only = (...paths: string[]) => (r: { path: string }) => paths.includes(r.path);
 
-/** A signed-in user holding exactly these permissions. */
-const holding = (...permissions: string[]) => ({
-  id: 'u1', role: 'WAREHOUSE', status: 'ACTIVE', permissions,
-});
+/**
+ * The menu a person holding exactly these permissions would be handed: every
+ * group, stripped of the screens they may not open, empty groups dropped —
+ * which is what `visibleNav` does, written out here so the test does not
+ * import the server's permission machinery.
+ */
+const menuFor = (...permissions: string[]) =>
+  NAV.map((g) => ({
+    ...g,
+    routes: g.routes.filter((r) => r.permissions === null || r.permissions.some((p) => permissions.includes(p))),
+  })).filter((g) => g.routes.length > 0);
+
+const SHIPPING = ['ops.prepare', 'ops.ship', 'ops.track', 'ops.returns'];
 
 beforeEach(() => {
   here.path = '/ops/preparation';
-  user.current = holding('ops.prepare', 'ops.ship', 'ops.track', 'ops.returns');
 });
 afterEach(() => cleanup());
 
@@ -114,39 +130,59 @@ describe('the next stop is the IMMEDIATE one, or nothing', () => {
 });
 
 describe('what the screen draws', () => {
-  it('— «الخطوة 1 من 5» and a link to the next stop, on the first stop', () => {
-    render(<RoadStrip />);
-    const nav = screen.getByRole('navigation', { name: 'مسار العمل' });
-    expect(nav.textContent).toContain('الشحن');
-    expect(nav.textContent).toMatch(/الخطوة\s*1\s*من\s*5/);
-    const link = screen.getByRole('link', { name: /التالي: إنشاء شحنة/ });
-    expect(link.getAttribute('href')).toBe('/ops/shipments/new');
+  it('— the shipping road as five numbered pills, the one you are on lit, and a link to the next', () => {
+    render(<HubTabs groups={menuFor(...SHIPPING)} />);
+    const nav = screen.getByRole('navigation', { name: 'أقسام الشحن' });
+    for (const label of ['1. التجهيز', '2. إنشاء شحنة', '3. دفعات الشحن', '4. متابعة الشحن', '5. المرتجعات']) {
+      expect(nav.textContent, label).toContain(label);
+    }
+    const lit = nav.querySelector('[aria-current="page"]');
+    expect(lit?.textContent).toBe('1. التجهيز');
+    const next = screen.getByRole('link', { name: /التالي: إنشاء شحنة/ });
+    expect(next.getAttribute('href')).toBe('/ops/shipments/new');
   });
 
-  it('and on the last stop it says where you are and offers nothing', () => {
+  it('and on the last stop it says where you are and offers nothing after it', () => {
     here.path = '/ops/returns';
-    render(<RoadStrip />);
-    expect(screen.getByRole('navigation', { name: 'مسار العمل' }).textContent).toMatch(/الخطوة\s*5\s*من\s*5/);
-    expect(screen.queryByRole('link')).toBeNull();
+    render(<HubTabs groups={menuFor(...SHIPPING)} />);
+    const nav = screen.getByRole('navigation', { name: 'أقسام الشحن' });
+    expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe('5. المرتجعات');
+    expect(screen.queryByRole('link', { name: /التالي/ })).toBeNull();
   });
 
-  it('and a person without the next stop’s permission is shown no link to it', () => {
-    user.current = holding('ops.prepare');
-    render(<RoadStrip />);
-    expect(screen.getByRole('navigation', { name: 'مسار العمل' })).toBeTruthy();
-    expect(screen.queryByRole('link'), 'رابط لشاشة ما يفتحها').toBeNull();
+  it('and a person who may open stop 1 and stop 5 is shown two pills and no «next» — the next stop is the immediate one', () => {
+    render(<HubTabs groups={menuFor('ops.prepare', 'ops.returns')} />);
+    const nav = screen.getByRole('navigation', { name: 'أقسام الشحن' });
+    expect(nav.textContent).toContain('1. التجهيز');
+    expect(nav.textContent).toContain('5. المرتجعات');
+    expect(nav.textContent).not.toContain('إنشاء شحنة');
+    expect(screen.queryByRole('link', { name: /التالي/ }), 'رابط لشاشة ما يفتحها').toBeNull();
   });
 
-  it('and a screen that is not a stop gets no strip', () => {
-    here.path = '/orders';
-    const { container } = render(<RoadStrip />);
+  it('and one screen left to this person is not a strip at all — there is nobody to navigate to', () => {
+    const { container } = render(<HubTabs groups={menuFor('ops.prepare')} />);
     expect(container.innerHTML).toBe('');
   });
 
-  it('and nobody signed in is offered no link', () => {
-    user.current = null;
-    render(<RoadStrip />);
-    expect(screen.queryByRole('link')).toBeNull();
+  it('and the courier’s money is the same shape: four numbered pills, then the ones that are not steps', () => {
+    here.path = '/finance/matching';
+    render(
+      <HubTabs
+        groups={menuFor('settlement.view', 'settlement.review', 'settlement.upload', 'finance.cashbox', 'finance.view')}
+      />
+    );
+    const nav = screen.getByRole('navigation', { name: 'أقسام المال' });
+    expect(nav.textContent).toContain('3. المطابقة');
+    // Wallets, transfers and profit are where the money ends up — not stops, so no number.
+    expect(nav.textContent).toContain('المحافظ والحركات');
+    expect(nav.textContent).not.toMatch(/\d\. المحافظ/);
+    expect(screen.getByRole('link', { name: /التالي: الإغلاق اليومي/ })).toBeTruthy();
+  });
+
+  it('and a screen that is not in a hub gets no strip', () => {
+    here.path = '/orders';
+    const { container } = render(<HubTabs groups={menuFor('orders.view', ...SHIPPING)} />);
+    expect(container.innerHTML).toBe('');
   });
 
   it('and «next» points the way the rest of the product points', () => {
@@ -155,19 +191,19 @@ describe('what the screen draws', () => {
      * `icon-mirror`. The arrow that LOOKS left on this screen is therefore
      * the RIGHT one, flipped — and the left one, flipped, points backwards.
      * `icons.test.ts` insists on the class; this insists on which arrow,
-     * which that test cannot know.
+     * which that test cannot know. «Back» to a hub's front door is the
+     * opposite arrow, for the same reason.
      */
-    const src = stripComments(repoFile('src/components/shell/RoadStrip.tsx'));
-    expect(src).toContain('RiArrowRightLine');
-    expect(src, 'السهم اليسار + الانعكاس = يشير للخلف').not.toContain('RiArrowLeftLine');
+    const src = stripComments(repoFile('src/components/shell/HubTabs.tsx'));
     expect(src).toMatch(/RiArrowRightLine[^>]*icon-mirror/);
+    expect(src).toMatch(/RiArrowLeftLine[^>]*icon-mirror/);
   });
 });
 
 describe('and it is wired once, in the shell, not nine times', () => {
   it('— the shell draws it above every screen', () => {
     const shell = stripComments(repoFile('src/components/shell/Shell.tsx'));
-    const at = shell.indexOf('<RoadStrip />');
+    const at = shell.indexOf('<HubTabs');
     expect(at, 'الشريط غير موصول بالإطار').toBeGreaterThan(-1);
     // Above the screen, inside <main>.
     expect(at).toBeGreaterThan(shell.indexOf('<main'));
@@ -182,14 +218,25 @@ describe('and it is wired once, in the shell, not nine times', () => {
      * exists to avoid. Nine stops, one component, one caller.
      */
     const drawn = dashboardFiles('.tsx')
-      .filter((f) => /<RoadStrip\b/.test(stripComments(f.src)))
+      .filter((f) => /<HubTabs\b/.test(stripComments(f.src)))
       .map((f) => f.rel);
     expect(drawn).toEqual(['/src/components/shell/Shell.tsx']);
+  });
+
+  it('and the one-line road strip it replaced is gone, not left to say the same thing twice', () => {
+    expect(() => repoFile('src/components/shell/RoadStrip.tsx')).toThrow();
   });
 
   it('and there ARE nine stops for that one place to cover', () => {
     // Pinned so the claim above is not satisfied by a road that vanished.
     expect(ALL_ROUTES.filter((r) => r.step !== undefined)).toHaveLength(9);
+  });
+
+  it('and every group that has numbered stops is a hub of tabs — or its road would be drawn nowhere', () => {
+    for (const g of NAV) {
+      const stops = g.routes.filter((r) => r.step !== undefined);
+      if (stops.length > 0) expect(g.hub, `${g.key} فيه محطّات بلا شريط`).toBe('tabs');
+    }
   });
 
   it('and the strip’s steps are the registry’s, so it can never disagree with the menu', () => {

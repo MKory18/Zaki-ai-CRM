@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNotifications } from './NotificationsProvider';
 import clsx from 'clsx';
-import type { NavGroup } from '@/lib/route-registry';
+import type { NavGroup, RouteDef } from '@/lib/route-registry';
+import { hubHref, hubLabel, isHub } from '@/lib/hub';
 import { iconFor } from './icons';
 import { RiArrowDownSLine, RiDraggable, RiListSettingsLine, RiSideBarLine, RiTreeLine } from '@remixicon/react';
 import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail';
@@ -16,14 +17,22 @@ const OPEN_GROUPS_KEY = 'osm.sidebar.open';
 const PINNED_KEY = 'osm.sidebar.pinned';
 
 /**
- * The ten contract groups, RTL. The server already removed every route this
+ * The contract groups, RTL. The server already removed every route this
  * user may not open (visibleNav) — nothing here decides access.
  *
- * The groups collapse. Fifty screens in one scroll means hunting for the one
- * you want; folded, the sidebar shows ten headings and you open the one you
- * are working in. The group holding the current page always opens itself, so
- * you are never looking at a closed list that contains where you are, and
- * what you leave open is remembered on this browser.
+ * FIFTEEN LINES, NOT FIFTY-FOUR. A group with a `hub` is ONE line here — its
+ * own icon and name, the unread of everything inside it added up, lit when
+ * the person is anywhere in it — and its screens are the pills above
+ * whichever is open (HubTabs). A `loose` group is its screens as lines with
+ * no heading. The owner, 21/10: «الموقع كثييير معجوق».
+ *
+ * A group with no `hub` still folds, as it always did: fifty screens in one
+ * scroll means hunting for the one you want, so the sidebar shows headings
+ * and you open the one you are working in. The group holding the current
+ * page always opens itself, so you are never looking at a closed list that
+ * contains where you are, and what you leave open is remembered on this
+ * browser. The real registry has none today; the fold stays for a group that
+ * is added without one, and for the tests that hold it.
  */
 export function Sidebar({
   groups,
@@ -161,6 +170,136 @@ export function Sidebar({
     setOpen((prev) => (prev.size === 1 && prev.has(activeGroup) ? prev : new Set([activeGroup])));
   }, [activeGroup, pinned]);
 
+  /** One screen's line — shared by a folding group and a loose one. */
+  const routeLine = (route: RouteDef) => {
+    const isActive = isActiveRoute(pathname, route.path, drawnPaths);
+    // Line at rest, filled on the one you are on. Four items of
+    // the same shape, one of them slightly brighter, is a
+    // difference people miss; a filled glyph is not.
+    const Icon = iconFor(route.icon, isActive);
+    return (
+      <Link
+        key={route.path}
+        href={route.path}
+        onClick={onClose}
+        // Folded, the label is not drawn, so the name has to
+        // come from somewhere: `title` for the eye, `aria-label`
+        // for anything reading the screen aloud. Both only when
+        // folded — a tooltip repeating a label you can already
+        // read is noise.
+        title={rail ? route.label : undefined}
+        aria-label={rail ? route.label : undefined}
+        className={clsx(
+          'rail-center flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
+          isActive
+            ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
+            : 'text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-primary-soft)]'
+        )}
+      >
+        <span className="rail-center flex items-center gap-3">
+          {/* No box behind the glyph. It measured 1.07:1 against
+              the surface it sat on — not a container, a smudge —
+              and the difference it was trying to make is already
+              made twice over: the icon fills when you are on the
+              row, and the row itself is a filled bar. */}
+          <span className="w-8 h-8 flex items-center justify-center shrink-0">
+            <Icon className="w-[18px] h-[18px]" />
+          </span>
+          {/*
+            THE STOP'S NUMBER, WHEN THE GROUP IS A ROAD.
+
+            «3. دفعات الشحن»: a plain prefix in the label's own
+            colour, so it needs no new class and cannot fall
+            below the contrast the label already has — on the
+            lit row it would have been the one text on the
+            accent that was NOT `primary-foreground`. See
+            `RouteDef.step` for why it belongs to the screen and
+            not to its place in the list. Folded to a rail the
+            label is not drawn, and the number goes with it.
+          */}
+          <span className="rail-hide">
+            {route.step ? `${route.step}. ` : ''}
+            {route.label}
+          </span>
+        </span>
+
+        {/*
+          HOW MANY UNREAD ARE ABOUT THIS SCREEN.
+
+          Every notification already carries the route it is
+          about, so this is that column grouped — not a second
+          counter to invent and keep in step with the bell. It
+          shows on the rail too, where the label does not: a
+          number is the only thing a folded menu can say.
+        */}
+        {byRoute[route.path] ? (
+          <span
+            /* One badge, not two. A tinted chip carrying the
+               accent as its text reads on the row you stand on
+               and on the rows you do not — and the pair is
+               already guarded for contrast. Painting a wash of
+               `primary-foreground` for the active row would
+               have been a second style to keep legible. */
+            className="min-w-5 rounded-full bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-center text-xs font-bold tabular-nums text-[var(--sys-primary)]"
+            aria-label={`${byRoute[route.path]} إشعار غير مقروء`}
+          >
+            {byRoute[route.path]}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
+
+  /**
+   * A HUB IS ONE LINE.
+   *
+   * The group's own icon and name, the unread of every screen in it added up,
+   * and lit when the person is anywhere inside it — the same single answer
+   * (`isActiveGroup`) the folding groups open by, so one line is lit for any
+   * page, never two and never none. It leads to the first screen this person
+   * may open; the rest are the pills above that screen (see HubTabs).
+   *
+   * Folded to a rail the label is not drawn, so the name comes from `title`
+   * and `aria-label`, and the unread number — the only thing a folded menu
+   * can say — still shows.
+   */
+  const hubLine = (group: NavGroup) => {
+    const isActive = isActiveGroup(pathname, group.routes.map((r) => r.path), drawnPaths);
+    const Icon = iconFor(group.icon ?? group.routes[0]?.icon ?? '', isActive);
+    const label = hubLabel(group);
+    const unread = group.routes.reduce((sum, r) => sum + (byRoute[r.path] ?? 0), 0);
+    return (
+      <Link
+        key={group.key}
+        href={hubHref(group)}
+        onClick={onClose}
+        title={rail ? label : undefined}
+        aria-label={rail ? label : undefined}
+        className={clsx(
+          'rail-center flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
+          isActive
+            ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
+            : 'text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-primary-soft)]'
+        )}
+      >
+        <span className="rail-center flex items-center gap-3">
+          <span className="w-8 h-8 flex items-center justify-center shrink-0">
+            <Icon className="w-[18px] h-[18px]" />
+          </span>
+          <span className="rail-hide">{label}</span>
+        </span>
+        {unread ? (
+          <span
+            className="min-w-5 rounded-full bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-center text-xs font-bold tabular-nums text-[var(--sys-primary)]"
+            aria-label={`${unread} إشعار غير مقروء`}
+          >
+            {unread}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
+
   return (
     <>
       {mobileOpen && <div className="fixed inset-0 z-40 bg-[var(--sys-background)]/60 md:hidden" onClick={onClose} />}
@@ -244,6 +383,16 @@ export function Sidebar({
 
         <nav className="flex-1 overflow-y-auto sidebar-scroll py-3 space-y-0.5">
           {groups.map((group) => {
+            // A hub is one line, a loose group is its lines with no heading
+            // — neither folds, so neither has an open/shut state to keep.
+            if (isHub(group)) return hubLine(group);
+            if (group.hub === 'loose') {
+              return (
+                <div key={group.key} className="pb-1">
+                  {group.routes.map(routeLine)}
+                </div>
+              );
+            }
             // Folded, a collapsed group is a heading that is not drawn at
             // all — so the rail would show nothing. Everything is open.
             const isOpen = rail || pinned || open.has(group.key) || activeGroup === group.key;
@@ -270,84 +419,7 @@ export function Sidebar({
                   />
                 </button>
               )}
-              {isOpen && group.routes.map((route) => {
-                const isActive = isActiveRoute(pathname, route.path, drawnPaths);
-                // Line at rest, filled on the one you are on. Four items of
-                // the same shape, one of them slightly brighter, is a
-                // difference people miss; a filled glyph is not.
-                const Icon = iconFor(route.icon, isActive);
-                return (
-                  <Link
-                    key={route.path}
-                    href={route.path}
-                    onClick={onClose}
-                    // Folded, the label is not drawn, so the name has to
-                    // come from somewhere: `title` for the eye, `aria-label`
-                    // for anything reading the screen aloud. Both only when
-                    // folded — a tooltip repeating a label you can already
-                    // read is noise.
-                    title={rail ? route.label : undefined}
-                    aria-label={rail ? route.label : undefined}
-                    className={clsx(
-                      'rail-center flex items-center justify-between mx-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors group',
-                      isActive
-                        ? 'bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)]'
-                        : 'text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] hover:bg-[var(--sys-primary-soft)]'
-                    )}
-                  >
-                    <span className="rail-center flex items-center gap-3">
-                      {/* No box behind the glyph. It measured 1.07:1 against
-                          the surface it sat on — not a container, a smudge —
-                          and the difference it was trying to make is already
-                          made twice over: the icon fills when you are on the
-                          row, and the row itself is a filled bar. */}
-                      <span className="w-8 h-8 flex items-center justify-center shrink-0">
-                        <Icon className="w-[18px] h-[18px]" />
-                      </span>
-                      {/*
-                        THE STOP'S NUMBER, WHEN THE GROUP IS A ROAD.
-
-                        «3. دفعات الشحن»: a plain prefix in the label's own
-                        colour, so it needs no new class and cannot fall
-                        below the contrast the label already has — on the
-                        lit row it would have been the one text on the
-                        accent that was NOT `primary-foreground`. See
-                        `RouteDef.step` for why it belongs to the screen and
-                        not to its place in the list. Folded to a rail the
-                        label is not drawn, and the number goes with it.
-                      */}
-                      <span className="rail-hide">
-                        {route.step ? `${route.step}. ` : ''}
-                        {route.label}
-                      </span>
-                    </span>
-
-                    {/*
-                      HOW MANY UNREAD ARE ABOUT THIS SCREEN.
-
-                      Every notification already carries the route it is
-                      about, so this is that column grouped — not a second
-                      counter to invent and keep in step with the bell. It
-                      shows on the rail too, where the label does not: a
-                      number is the only thing a folded menu can say.
-                    */}
-                    {byRoute[route.path] ? (
-                      <span
-                        /* One badge, not two. A tinted chip carrying the
-                           accent as its text reads on the row you stand on
-                           and on the rows you do not — and the pair is
-                           already guarded for contrast. Painting a wash of
-                           `primary-foreground` for the active row would
-                           have been a second style to keep legible. */
-                        className="min-w-5 rounded-full bg-[var(--sys-primary-soft)] px-1.5 py-0.5 text-center text-xs font-bold tabular-nums text-[var(--sys-primary)]"
-                        aria-label={`${byRoute[route.path]} إشعار غير مقروء`}
-                      >
-                        {byRoute[route.path]}
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
+              {isOpen && group.routes.map(routeLine)}
             </div>
             );
           })}
@@ -378,13 +450,17 @@ export function Sidebar({
         {/* Show everything at once, or fold it back. Fifty screens in one
             scroll is a hunt; ten headings is a menu. Whichever you prefer is
             remembered on this browser. */}
-        <button
-          onClick={togglePinned}
-          className="rail-hide shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-border)] text-xs text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] transition-colors"
-        >
-          {pinned ? <RiListSettingsLine className="w-4 h-4" /> : <RiTreeLine className="w-4 h-4" />}
-          {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}
-        </button>
+        {/* Only when something folds: with every group a line, «show
+            everything» would be a button that does nothing. */}
+        {groups.some((g) => !g.hub) && (
+          <button
+            onClick={togglePinned}
+            className="rail-hide shrink-0 flex items-center gap-2 px-5 py-3 border-t border-[var(--sys-border)] text-xs text-[var(--sys-sidebar-foreground)] hover:text-[var(--sys-heading)] transition-colors"
+          >
+            {pinned ? <RiListSettingsLine className="w-4 h-4" /> : <RiTreeLine className="w-4 h-4" />}
+            {pinned ? 'اطوِ القوائم' : 'اعرض كل القوائم'}
+          </button>
+        )}
       </aside>
     </>
   );

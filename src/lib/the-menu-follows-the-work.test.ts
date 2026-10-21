@@ -145,9 +145,8 @@ describe('operations sit with the work, and configuration sits in settings', () 
 
   it('and the WhatsApp and Telegram pairing is the same shape: inbox here, setup there', () => {
     // The pairing the contract already had, which the AI was the exception to.
-    expect(pathsOf('growth')).toEqual(
-      expect.arrayContaining(['/growth/whatsapp/inbox', '/growth/telegram/orders'])
-    );
+    // The inboxes are their own group, «المحادثات», since the menu was folded.
+    expect(pathsOf('chats')).toEqual(['/growth/whatsapp/inbox', '/growth/telegram/orders']);
     expect(pathsOf('settings')).toEqual(expect.arrayContaining(['/settings/whatsapp', '/settings/telegram']));
   });
 
@@ -159,11 +158,12 @@ describe('operations sit with the work, and configuration sits in settings', () 
     }
   });
 
-  it('and the only things in settings that are NOT /settings/… are the three that arrived', () => {
-    // Pinned by name so a fourth cannot drift in unnoticed: settings is the
-    // group that grows by one «while we're here» at a time.
+  it('and the only things in settings that are NOT /settings/… are the front door and the three that arrived', () => {
+    // Pinned by name so a fifth cannot drift in unnoticed: settings is the
+    // group that grows by one «while we're here» at a time. The front door is
+    // `/settings` itself — the page of cards the menu's one line opens.
     const arrived = pathsOf('settings').filter((p) => !p.startsWith('/settings/'));
-    expect(arrived).toEqual(['/apps/store', '/apps/installed', '/admin/jobs']);
+    expect(arrived).toEqual(['/settings', '/apps/store', '/apps/installed', '/admin/jobs']);
   });
 
   it('and the schedule is no longer filed with the staff', () => {
@@ -198,14 +198,18 @@ describe('two entries, one root, and nobody guessing which is which', () => {
 });
 
 describe('nothing was moved that a link, a bookmark or a saved layout points at', () => {
-  it('— every one of the 54 screens is still there, once, at its own address', () => {
+  it('— every one of the 54 screens is still there, once, at its own address — and the front door is the 55th', () => {
     const paths = ALL_ROUTES.map((r) => r.path);
-    expect(paths).toHaveLength(54);
-    expect(new Set(paths).size).toBe(54);
+    expect(paths).toHaveLength(55);
+    expect(new Set(paths).size).toBe(55);
+    // The settings stand behind ONE menu line now; not one of them moved.
+    for (const path of ['/settings/geo', '/settings/couriers', '/settings/tracking', '/apps/store', '/admin/jobs']) {
+      expect(paths, path).toContain(path);
+    }
   });
 
-  it('and the ten groups are the whole menu, with none left empty', () => {
-    expect(NAV).toHaveLength(10);
+  it('and the eleven groups are the whole menu, with none left empty', () => {
+    expect(NAV).toHaveLength(11);
     for (const g of NAV) expect(g.routes.length, g.key).toBeGreaterThan(0);
   });
 
