@@ -3553,11 +3553,20 @@ model AdAccount {
   /// four ad accounts cannot tell act_ numbers apart.
   accountName    String?   @map("account_name")
   /// The access token, encrypted. Never leaves the server.
-  tokenEncrypted String    @map("token_encrypted") @db.Text
+  ///
+  /// NULL FOR A MANUAL ACCOUNT, AND ONLY THEN: «ادخال يدوي بالكامل». A seller
+  /// who does not want to connect anything still has an ad account — a name
+  /// to group campaigns under and a platform to count them by — and a
+  /// column that demanded a token would have forced the lie «connected».
+  /// The pairing is held by the database, not by a hope: see the CHECK on
+  /// `status` below, which exists only in the migration (Prisma has no
+  /// syntax for it).
+  tokenEncrypted String?   @map("token_encrypted") @db.Text
   /// Last four characters, so the seller knows which token this is.
   tokenHint      String?   @map("token_hint")
-  /// CONNECTED | ERROR — a token that stopped working says so here rather
-  /// than failing silently every night.
+  /// CONNECTED | ERROR | MANUAL — a token that stopped working says so here
+  /// rather than failing silently every night; MANUAL has no token, no
+  /// platform call and no sync, by CHECK ("status" = 'MANUAL') = (token IS NULL).
   status         String    @default("CONNECTED")
   /// Why it stopped, in the platform's own words, for the screen to show.
   lastError      String?   @map("last_error") @db.Text
