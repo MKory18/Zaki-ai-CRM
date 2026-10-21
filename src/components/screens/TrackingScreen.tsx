@@ -1,7 +1,7 @@
 'use client';
 
 import { lateLabel } from '@/lib/transit';
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { ContactButtons } from '@/components/orders/ContactButtons';
@@ -12,28 +12,32 @@ import { WriteOffDialog } from '@/components/screens/tracking/WriteOffDialog';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { Rows, type RowTone } from '@/components/ui/Rows';
-import { Input, Select } from '@/components/ui/Input';
-import { RiAlertLine, RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiSearchLine, RiTimerLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiChat1Line, RiCheckLine, RiCloseLine, RiEBike2Line, RiEyeLine, RiHandCoinLine, RiLoader4Line, RiTimerLine, RiTruckLine } from '@remixicon/react';
 import { ALERT_AR, ALERT_CONFIRM_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HealthChip } from '@/components/ui/HealthChip';
-import {
-  MATCHES,
-  URGENCY,
-  byUrgency,
-  canCollect,
-  trackingUrgency,
-  type ConditionKey,
-} from '@/lib/tracking-priority';
+import { URGENCY, canCollect, trackingUrgency, type ConditionKey } from '@/lib/tracking-priority';
 import { Money } from '@/components/ui/Money';
-import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { Pager } from '@/components/ui/Pager';
+import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
+import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
+import { AGES, AGE_AR } from '@/lib/age-piles';
+import { EVERY_STATUS, TASKS } from '@/lib/tracking-filters';
+import type { TrackingListFacts } from '@/lib/tracking-list';
 
 /**
  * /ops/tracking — search by order, reference, barcode, customer or phone.
  * Days in transit and the late flag come from the API against each region's
  * own threshold. Collection status is its own column, never merged with the
  * delivery status.
+ *
+ * «متابعة الشحن — صفحات + فلاتر + بحث». The list is read in pages of 25 through the
+ * list kit, worst first. The chips, the «late» badge and the numbers beside the
+ * dropdowns are the SERVER'S, counted over every parcel the search and the state
+ * match — this screen used to count them over the two hundred rows it happened to
+ * hold, sort them itself and draw them all. A chip is a question put to the server
+ * (`task`), not a filter over what the browser has.
  */
 
 interface Row {
@@ -71,6 +75,20 @@ interface Row {
   /** Cancelled while the parcel moves, or changed after it left. */
   alert?: { kind: TrackingAlertKind; at: string; acknowledged: boolean } | null;
 }
+
+interface Extra {
+  facts: TrackingListFacts;
+  lateCount: number;
+  dialCode: string | null;
+  /** The read hit its bound: this is the first of a bigger list. */
+  capped: boolean;
+}
+
+/** Module-level, so the hook's loader keeps one identity — see `usePagedList`. */
+const read = (body: unknown): PagedRead<Row, Extra> => {
+  const b = body as { orders: Row[]; pagination: Paging; facts: TrackingListFacts; lateCount: number; dialCode?: string | null; capped?: boolean };
+  return { rows: b.orders, pagination: b.pagination, extra: { facts: b.facts, lateCount: b.lateCount, dialCode: b.dialCode ?? null, capped: !!b.capped } };
+};
 
 /**
  * THE TWO THINGS THAT MAKE CHASING A PARCEL POINTLESS OR WRONG.
@@ -162,8 +180,11 @@ export function TrackingScreen() {
    * every parcel in the store.
    */
   const [term, setTerm] = useState(useSearchParams().get('order') ?? '');
+  /** Nothing is the screen's own job description: what is moving, plus what arrived and is still owed. */
   const [status, setStatus] = useState('');
-  const [data, setData] = useState<{ orders: Row[]; lateCount: number; dialCode?: string | null } | null>(null);
+  const [courier, setCourier] = useState('all');
+  const [region, setRegion] = useState('all');
+  const [age, setAge] = useState('all');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [transferFor, setTransferFor] = useState<Row | null>(null);
@@ -205,7 +226,7 @@ export function TrackingScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: o.id, kind: o.alert.kind }),
       });
-      await load();
+      await list.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تسجيل الإقرار');
     } finally {
@@ -245,7 +266,7 @@ export function TrackingScreen() {
       });
       setDone(`أُضيفت الملاحظة إلى ${row.orderNumber}`);
       setError(null);
-      await load();
+      await list.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر حفظ الملاحظة');
     } finally {
@@ -279,7 +300,7 @@ export function TrackingScreen() {
         body: JSON.stringify({ orderId: o.id, outcome }),
       });
       setDone(res.message);
-      await load();
+      await list.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر التسجيل');
     } finally {
@@ -287,18 +308,20 @@ export function TrackingScreen() {
     }
   };
 
-  const load = useCallback(async () => {
-    const q = new URLSearchParams();
-    if (term.trim()) q.set('q', term.trim());
-    if (status) q.set('status', status);
-    try {
-      setData(await apiJson(`/api/ops/tracking?${q}`));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر التحميل');
-    }
-  }, [term, status]);
-
-  useLiveRefresh(load, { key: `${term}·${status}` });
+  /*
+   * ── PAGES, AND WHAT WAS CHOSEN ──
+   *
+   * A page turn keeps the choices; a new CHOICE (the chip, a dropdown, a word) starts at page one, because page
+   * seven of a different question is not where the reader was; coming back to the screen reloads the page the
+   * agent is ON. The choices that are «nothing» — an empty state, `all` — are not sent: the door's default is the
+   * screen's job description.
+   */
+  const list = usePagedList<Row, Extra>({
+    url: '/api/ops/tracking',
+    params: { q: term.trim() || undefined, status, task, courier, region, age },
+    read,
+  });
+  const { extra, rows, pagination } = list;
 
   /**
    * THE WORK WAITING, FROM ONE DEFINITION OF EACH CONDITION.
@@ -327,7 +350,7 @@ export function TrackingScreen() {
    */
   const contactFor = (o: Row) => ({
     phone: o.customer.phone,
-    countryCode: data?.dialCode ?? null,
+    countryCode: extra?.dialCode ?? null,
     // The strip was here and recorded nothing: a call placed from this
     // screen left no line in the contact log, so the next agent read «no
     // attempts» on an order somebody had already rung twice.
@@ -343,20 +366,90 @@ export function TrackingScreen() {
     },
   });
 
-  const all = data?.orders ?? [];
-  const tasks = (['CANCELLED', 'CHANGED', 'FAILED', 'RETURNING', 'LATE', 'NO_BARCODE', 'COLLECT'] as ConditionKey[])
-    .map((key) => ({ key, rows: all.filter(MATCHES[key]) }))
-    .filter((t) => t.rows.length > 0);
+  /*
+   * The chips are the SERVER'S counts, over everything the search and the state match; a chip nobody is in is not
+   * drawn (seven greyed-out targets is most of a phone screen saying "nothing here").
+   */
+  const facts = extra?.facts;
+  const tasks = facts ? TASKS.map((key) => ({ key, count: facts.tasks[key] })).filter((t) => t.count > 0) : [];
 
-  // A filter on a condition that no longer holds for any row is a dead end:
-  // its chip is gone, so the list reads as empty with nothing highlighted to
-  // press back out of. Acknowledging the last alert does exactly that.
-  const openTask: TaskFilter = task !== 'all' && !tasks.some((t) => t.key === task) ? 'all' : task;
+  // A filter on a condition that no longer holds for any parcel is a dead end: its chip is gone, so the list reads as
+  // empty with nothing highlighted to press back out of. Acknowledging the last alert does exactly that — so the
+  // question is asked without the chip, and the chip is put back at «الكل».
+  const openTask: TaskFilter = task !== 'all' && facts && !tasks.some((t) => t.key === task) ? 'all' : task;
+  if (openTask !== task) setTask(openTask);
 
-  // Worst first, longest-waiting within that — see `byUrgency` for why the
-  // API's oldest-first order is kept as the tiebreak rather than dropped.
-  const visible = (openTask === 'all' ? all : all.filter(MATCHES[openTask])).slice().sort(byUrgency);
+  // The rows are the page: already filtered by the chip, and worst first, by the server — see `byUrgency` for why
+  // the oldest-shipped-first order is kept as the tiebreak.
+  const visible = rows;
   const collectable = visible.filter(canCollect);
+
+  /** What narrows the list beyond the state it opens on: the word, the dropdowns, the chip. */
+  const narrowing = [courier, region, age].filter((v) => v !== 'all').length + (term.trim() ? 1 : 0) + (task !== 'all' ? 1 : 0);
+  const activeCount = narrowing + (status !== '' ? 1 : 0);
+  /** A new question starts a new selection: the boxes ticked were on a page that is not on screen any more. */
+  const choose = (set: (v: string) => void) => (v: string) => {
+    set(v);
+    setSelected({});
+  };
+  const reset = () => {
+    setTerm('');
+    setStatus('');
+    setCourier('all');
+    setRegion('all');
+    setAge('all');
+    setTask('all');
+    setSelected({});
+  };
+  const filters: ToolbarFilter[] = [
+    {
+      key: 'status',
+      label: 'الحالة',
+      value: status,
+      onChange: choose(setStatus),
+      // THE DEFAULT SAYS WHAT IT ACTUALLY FETCHES. It used to say «قيد الشحن» and ask the door for in-flight only, so
+      // «بانتظار التحصيل» — the chip below, and the «استلمت منه» button behind it — never had a single row to draw.
+      options: [
+        { value: '', label: 'قيد الشحن وبانتظار التحصيل' },
+        ...Object.entries(STATUS_LABEL).map(([k, v]) => ({ value: k, label: v })),
+        { value: EVERY_STATUS, label: 'الكل' },
+      ],
+    },
+    ...(facts
+      ? [
+          {
+            key: 'courier',
+            label: 'جهة الشحن',
+            value: courier,
+            onChange: choose(setCourier),
+            options: withChosen(courier, [
+              { value: 'all', label: 'كل الجهات' },
+              ...facts.couriers.map((c) => ({ value: c.id, label: `${c.name} (${c.count})` })),
+            ]),
+          },
+          {
+            key: 'region',
+            label: 'المحافظة',
+            value: region,
+            onChange: choose(setRegion),
+            options: withChosen(region, [
+              { value: 'all', label: 'كل المحافظات' },
+              ...facts.regions.map((r) => ({ value: r.id, label: `${r.name} (${r.count})` })),
+            ]),
+          },
+          {
+            key: 'age',
+            label: 'مدّة الشحن',
+            value: age,
+            onChange: choose(setAge),
+            options: [
+              { value: 'all', label: 'أيّ مدّة' },
+              ...AGES.map((a) => ({ value: a, label: `${AGE_AR[a]} (${facts.ages[a]})` })),
+            ],
+          },
+        ]
+      : []),
+  ];
   const chosen = collectable.filter((o) => selected[o.id]);
   /*
    * THE SERVER'S FIGURE, which was in the row all along and unread.
@@ -393,76 +486,32 @@ export function TrackingScreen() {
     <div className="max-w-6xl space-y-3">
       <ScreenTitle />
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void load();
-        }}
-        className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end"
-      >
-        {/*
-          THE SYSTEM'S OWN FIELDS, AND THIS IS A PHONE DEFECT.
+      {/* Drawn from the first moment, with or without the numbers: the box is how a parcel is found. */}
+      <ListToolbar
+        search={term}
+        onSearch={choose(setTerm)}
+        placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
+        searchLabel="بحث"
+        filters={filters}
+        activeCount={activeCount}
+        onReset={reset}
+      />
 
-          Both of these were hand-rolled, and both named a border and no
-          BACKGROUND — so the browser used its own, white, whatever theme
-          the person was in. `ReturnsScreen` carries the same lesson in
-          writing after the same thing happened there.
+      {extra && extra.lateCount > 0 && (
+        <p className="flex w-fit items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 h-10">
+          <RiTimerLine className="w-4 h-4" /> {extra.lateCount} شحنة متأخرة
+        </p>
+      )}
 
-          The half that matters on a phone is the other one: neither named
-          a focus style, and system.css styles `:focus-visible` only — on
-          purpose, so a mouse click does not leave a ring behind. A field
-          TAPPED with a thumb raises `:focus` and not `:focus-visible`, so
-          the warehouse hand searching a waybill on a phone tapped the box
-          and NOTHING happened on screen. «إذا كانت بيضا فتكون أزرق».
-
-          `Input` and `Select` bring both — `--sys-card` and the primary
-          ring at 25% — and bring the label and its `htmlFor` with them,
-          which the hand-rolled `<span>` above each field was not.
-        */}
-        <div className="flex-1 min-w-[220px]">
-          <div className="relative">
-            <RiSearchLine className="w-4 h-4 text-[var(--sys-muted)] absolute end-3 top-[2.3rem] md:top-[2.1rem] z-10" />
-            <Input
-              label="بحث"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder="رقم الطلب، المرجع، الباركود، اسم العميل أو الهاتف"
-              className="pe-9 ps-3"
-            />
-          </div>
-        </div>
-        <Select
-          label="الحالة"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-auto"
-        >
-          {/*
-            THE DEFAULT SAYS WHAT IT ACTUALLY FETCHES.
-            It used to say «قيد الشحن» and ask the door for in-flight only,
-            so «بانتظار التحصيل» — the chip below, and the «استلمت منه»
-            button behind it — never had a single row to draw. The door now
-            sends what is moving PLUS what arrived and was not settled, and
-            this label is that sentence.
-          */}
-          <option value="">قيد الشحن وبانتظار التحصيل</option>
-          {Object.entries(STATUS_LABEL).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-          <option value="all">الكل</option>
-        </Select>
-        <button type="submit" className="h-11 md:h-10 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-medium">بحث</button>
-        {data && data.lateCount > 0 && (
-          <span className="flex items-center gap-1 text-xs text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg px-3 h-10">
-            <RiTimerLine className="w-4 h-4" /> {data.lateCount} شحنة متأخرة
-          </span>
-        )}
-      </form>
-
-      {error && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>}
+      {(error || list.error) && <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error ?? list.error}</p>}
+      {extra?.capped && (
+        <p className="text-sm text-[var(--sys-warning)] bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 rounded-lg p-3">
+          القائمة أكبر مما تقرؤه الشاشة في طلبٍ واحد — هذه أقدم 20000 شحنة. ضيّق البحث أو اختر حالةً أو جهةً أو محافظةً.
+        </p>
+      )}
       {done && <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">{done}</p>}
 
-      {data && all.length > 0 && (
+      {facts && facts.total > 0 && (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => { setTask('all'); setSelected({}); }}
@@ -470,7 +519,7 @@ export function TrackingScreen() {
               openTask === 'all' ? 'bg-[var(--sys-heading)] text-[var(--sys-primary-foreground)] border-[var(--sys-heading)]' : 'border-[var(--sys-border)] text-[var(--sys-muted-foreground)]'
             }`}
           >
-            الكل {all.length}
+            الكل {facts?.total}
           </button>
           {tasks.map((t) => (
             <button
@@ -483,7 +532,7 @@ export function TrackingScreen() {
                   : TASK_TONE[URGENCY[t.key].tone]
               }`}
             >
-              {URGENCY[t.key].label} {t.rows.length}
+              {URGENCY[t.key].label} {t.count}
             </button>
           ))}
         </div>
@@ -521,7 +570,7 @@ export function TrackingScreen() {
         </div>
       )}
 
-      {!data ? (
+      {!extra ? (
         <div className="flex items-center justify-center gap-2 text-[var(--sys-muted-foreground)] text-sm py-16">
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
@@ -957,6 +1006,21 @@ export function TrackingScreen() {
         />
       )}
 
+      {pagination.totalPages > 1 && (
+        <Pager
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          shown={rows.length}
+          noun="شحنة"
+          loading={list.loading}
+          onPage={(page) => {
+            setSelected({});
+            list.goTo(page);
+          }}
+        />
+      )}
+
       {collecting && chosen.length > 0 && (
         <CollectDialog
           orders={chosen}
@@ -966,7 +1030,7 @@ export function TrackingScreen() {
             setSelected({});
             setDone(message);
             setError(null);
-            await load();
+            await list.reload();
           }}
         />
       )}
@@ -979,7 +1043,7 @@ export function TrackingScreen() {
             setDeliverFor(null);
             setDone(message);
             setError(null);
-            await load();
+            await list.reload();
           }}
         />
       )}
@@ -992,7 +1056,7 @@ export function TrackingScreen() {
             setWriteOffFor(null);
             setDone(message);
             setError(null);
-            await load();
+            await list.reload();
           }}
         />
       )}
@@ -1005,7 +1069,7 @@ export function TrackingScreen() {
             setTransferFor(null);
             setDone(message);
             setError(null);
-            await load();
+            await list.reload();
           }}
         />
       )}

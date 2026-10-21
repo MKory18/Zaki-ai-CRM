@@ -32,6 +32,9 @@ const { db, requireContext, requirePermission, noteCustomersHandedOut } = vi.hoi
     orderChangeRequest: { findMany: vi.fn() },
     orderActivity: { findMany: vi.fn() },
     deliveryFee: { findMany: vi.fn() },
+    // The list is read lean first — every parcel the question matches — and the names beside the dropdowns come with it.
+    deliveryProvider: { findMany: vi.fn() },
+    region: { findMany: vi.fn() },
   },
   requireContext: vi.fn(),
   requirePermission: vi.fn(),
@@ -87,6 +90,8 @@ beforeEach(() => {
   db.orderStatusLog.findMany.mockResolvedValue([]);
   db.orderChangeRequest.findMany.mockResolvedValue([]);
   db.orderActivity.findMany.mockResolvedValue([]);
+  db.deliveryProvider.findMany.mockResolvedValue([{ id: 'p1', name: 'أبو علي' }]);
+  db.region.findMany.mockResolvedValue([{ id: 'r1', name: 'دمشق' }]);
   noteCustomersHandedOut.mockResolvedValue(undefined);
 });
 

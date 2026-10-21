@@ -71,8 +71,27 @@ function parcel(id: string, tracking: string, alert: unknown) {
 
 const AT = '2026-10-01T00:00:00.000Z';
 
+/** The door's whole answer — the page, its numbers, what was applied. */
+const answer = (orders: unknown[]) => ({
+  count: orders.length,
+  orders,
+  lateCount: 0,
+  dialCode: '+962',
+  pagination: { total: orders.length, page: 1, limit: 25, totalPages: 1 },
+  facts: {
+    total: orders.length,
+    tasks: { CANCELLED: 0, CHANGED: 0, FAILED: 0, RETURNING: 0, LATE: 0, NO_BARCODE: 0, COLLECT: 0 },
+    lateCount: 0,
+    couriers: [],
+    regions: [],
+    ages: { fresh: 0, few: 0, week: 0, old: 0 },
+  },
+  applied: { status: 'default', task: null, courier: null, region: null, age: null, q: null },
+  capped: false,
+});
+
 async function show(parcels: unknown[]) {
-  apiJson.mockResolvedValue({ orders: parcels, lateCount: 0, dialCode: '+962' });
+  apiJson.mockResolvedValue(answer(parcels));
   render(<TrackingScreen />);
   await waitFor(() => expect(screen.getAllByText('TRK-A').length).toBeGreaterThan(0));
 }

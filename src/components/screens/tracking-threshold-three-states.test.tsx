@@ -86,8 +86,27 @@ function row(lateThresholdDays: number | null, over: Record<string, unknown> = {
   };
 }
 
+/** The door's whole answer — the page, its numbers, what was applied. */
+const answer = (orders: unknown[]) => ({
+  count: orders.length,
+  orders,
+  lateCount: 0,
+  dialCode: '+962',
+  pagination: { total: orders.length, page: 1, limit: 25, totalPages: 1 },
+  facts: {
+    total: orders.length,
+    tasks: { CANCELLED: 0, CHANGED: 0, FAILED: 0, RETURNING: 0, LATE: 0, NO_BARCODE: 0, COLLECT: 0 },
+    lateCount: 0,
+    couriers: [],
+    regions: [],
+    ages: { fresh: 0, few: 0, week: 0, old: 0 },
+  },
+  applied: { status: 'default', task: null, courier: null, region: null, age: null, q: null },
+  capped: false,
+});
+
 async function show(lateThresholdDays: number | null, over?: Record<string, unknown>) {
-  apiJson.mockResolvedValue({ orders: [row(lateThresholdDays, over)], lateCount: 0, dialCode: '+962' });
+  apiJson.mockResolvedValue(answer([row(lateThresholdDays, over)]));
   render(<TrackingScreen />);
   await waitFor(() => expect(screen.getAllByText('TRK-1').length).toBeGreaterThan(0));
 }
