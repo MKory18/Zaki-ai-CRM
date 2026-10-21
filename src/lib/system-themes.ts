@@ -571,6 +571,75 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'shadow-overlay': '0 10px 15px -3px rgb(0 0 0 / 0.72), 0 4px 6px -4px rgb(0 0 0 / 0.54)',
     },
   },
+  /*
+   * ══════════════════════════════════════════════════════════════════════
+   * «ساحل النيون» — THE ONE THEME WITH PHOTOGRAPHS.
+   *
+   * The owner, 21/10: «ثيم جي تي ايه بصور حقيقية». It already had two
+   * neon palettes (`cyber`, `city90`), so a twelfth that was only a third
+   * palette would have been a duplicate: what it adds is the picture — a
+   * beachfront of low art-deco hotels at the blue hour, on the door, behind
+   * an empty list and across the header of the menu. See PHOTOGRAPHIC in
+   * theme-decoration.ts, which is where that rule is changed on purpose and
+   * why the pictures cannot cost a word of readability.
+   *
+   * The colours are the pictures', measured rather than guessed: the sky at
+   * the top of all three is a teal-navy (#092B39 – #09415A) and the neon is
+   * an aqua (#4DD9DB average) beside a rose (#E0316E – #EB4079). So:
+   *   • the ground is that teal-navy, darker than the sky;
+   *   • the accent is the aqua. The rose stays in the pictures and in two
+   *     chart series, because as an accent it would be `city90`'s pink and a
+   *     step from the red that means «late, or money lost»;
+   *   • text on the accent is the dark of the ground, never white, like every
+   *     other dark theme here.
+   * Every pair is held by the same tests as the other eleven.
+   * ══════════════════════════════════════════════════════════════════════
+   */
+  {
+    key: 'neon-coast',
+    ar: 'ساحل النيون',
+    note: 'ساحلٌ بعد الغروب — نيونٌ سماويٌّ وورديّ، وصورةٌ حقيقيّةٌ على الباب.',
+    dark: true,
+    vars: {
+      background: '#061C28',
+      card: '#0B2737',
+      surface: '#113447',
+      'surface-strong': '#1A4559',
+      border: '#20506A',
+      'border-strong': '#5E8FA6',
+      heading: '#EAF7F8',
+      foreground: '#EAF7F8',
+      'muted-foreground': '#A6C8D4',
+      'border-input': '#7FA7B8',
+      muted: '#7FA7B8',
+      primary: '#4DD9DB',
+      'primary-foreground': '#05222E',
+      'primary-hover': '#7FE8E6',
+      'primary-soft': '#0C3C4A',
+      focus: '#7FE8E6',
+      warning: '#EAA23A',
+      'warning-soft': '#2A2A20',
+      destructive: '#F0625C',
+      'destructive-soft': '#2B1B26',
+      'destructive-border': '#5F3140',
+      success: '#4FC27C',
+      'success-soft': '#0E3430',
+      'chart-1': '#4DD9DB',
+      'chart-2': '#E75FA6',
+      'chart-3': '#8E94F0',
+      'chart-4': '#6FB0E0',
+      'chart-5': '#C9A8F0',
+      'chart-6': '#93AEC0',
+      sidebar: '#07202D',
+      'sidebar-foreground': '#A6C8D4',
+      'scrollbar': '#20506A',
+      'scrollbar-hover': '#5E8FA6',
+      'sidebar-scrollbar': '#20506A',
+      'sidebar-scrollbar-hover': '#5E8FA6',
+      'shadow-raised': '0 1px 2px rgb(0 0 0 / 0.66), 0 1px 3px rgb(0 0 0 / 0.44)',
+      'shadow-overlay': '0 10px 15px -3px rgb(0 0 0 / 0.76), 0 4px 6px -4px rgb(0 0 0 / 0.56)',
+    },
+  },
   {
     key: 'epic',
     ar: 'ملحمة',

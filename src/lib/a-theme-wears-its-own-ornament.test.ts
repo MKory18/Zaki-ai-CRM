@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { COMPOSED, PIECES, decorCss } from './theme-decoration';
+import { COMPOSED, PHOTOGRAPHIC, PIECES, decorCss, photographsOf } from './theme-decoration';
 import { AUTO_DARK, AUTO_LIGHT, AUTO_THEME, SYSTEM_THEMES, themeByKey } from './system-themes';
 import { repoFile, stripComments } from './guard-source';
 
@@ -42,7 +42,22 @@ const css = (key: string, level: 'off' | 'light' | 'full' = 'light') =>
 
 /** The files a theme owns: one mask, or the three drawings of a composed one. */
 const filesOf = (key: string): string[] =>
-  COMPOSED[key] ? PIECES.map((piece) => `${key}.${piece}.webp`) : [`${key}.webp`];
+  PHOTOGRAPHIC[key]
+    ? photographsOf(key)
+    : COMPOSED[key]
+      ? PIECES.map((piece) => `${key}.${piece}.webp`)
+      : [`${key}.webp`];
+
+/**
+ * THE PICTURES ARE NOT MASKS, AND THIS FILE IS ABOUT MASKS.
+ *
+ * One theme wears photographs (21/10, on purpose — see PHOTOGRAPHIC in theme-decoration.ts). They are opaque,
+ * they have no alpha channel and they are not painted from `--sys-primary`, so every claim below that is
+ * about the properties of a mask looks at `maskFiles()` and not at the whole folder, and the claims for the
+ * pictures are in a-photographic-theme-keeps-its-text-readable.test.ts.
+ */
+const PHOTOS = new Set(SYSTEM_THEMES.flatMap((t) => photographsOf(t.key)));
+const maskFiles = (): string[] => readdirSync(DECOR_DIR).filter((n) => n.endsWith('.webp') && !PHOTOS.has(n));
 
 describe('every theme has an ornament, and it is on the disk', () => {
   it('— the files are exactly the ones the themes own, no more and no fewer', () => {
@@ -89,7 +104,7 @@ describe('and it is a mask, so it carries no colour of its own', () => {
      * difference between «every rule» and «one rule» is not watching
      * anything.
      */
-    for (const t of SYSTEM_THEMES) {
+    for (const t of SYSTEM_THEMES.filter((x) => !PHOTOGRAPHIC[x.key])) {
       const out = css(t.key, 'full');
       const std = out.match(/(?<!-)\bmask(?:-size)?:/g)?.length ?? 0;
       const webkit = out.match(/-webkit-mask(?:-size)?:/g)?.length ?? 0;
@@ -213,7 +228,7 @@ describe('a composed theme wears three drawings, each in its own place', () => {
 
   it('and the door’s own circuit-wave banner is taken out from under it — for these themes only', () => {
     for (const k of KEYS) expect(css(k), k).toContain('.zk-door-banner{display:none}');
-    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key])) {
+    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key] && !PHOTOGRAPHIC[x.key])) {
       expect(css(t.key, 'full'), `${t.key} خبّى البنر`).not.toContain('zk-door-banner');
     }
     const stage = stripComments(repoFile('src/components/shell/BrandStage.tsx'));
@@ -338,8 +353,8 @@ describe('and it turns, but only where turning can be seen and is wanted', () =>
     }
   });
 
-  it('and the other nine still drift, exactly as they did', () => {
-    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key])) {
+  it('and the other eight still drift, exactly as they did', () => {
+    for (const t of SYSTEM_THEMES.filter((x) => !COMPOSED[x.key] && !PHOTOGRAPHIC[x.key])) {
       expect(css(t.key, 'full'), t.key).toContain('@keyframes zk-decor-drift');
     }
   });
@@ -382,7 +397,7 @@ describe('and turning it off still costs nothing', () => {
      * alpha is a VP8X chunk with bit 4 of its flags set; a lossless one
      * says so in the first bits of its VP8L stream.
      */
-    for (const f of readdirSync(DECOR_DIR).filter((n) => n.endsWith('.webp'))) {
+    for (const f of maskFiles()) {
       const buf = readFileSync(join(DECOR_DIR, f));
       const kind = buf.subarray(12, 16).toString('ascii');
       let hasAlpha = false;
@@ -402,7 +417,7 @@ describe('and turning it off still costs nothing', () => {
      * is that the file is small for its pixel count: a greyscale mask of
      * 768² lands far under what a colour photo of that size needs.
      */
-    for (const f of readdirSync(DECOR_DIR).filter((n) => n.endsWith('.webp'))) {
+    for (const f of maskFiles()) {
       const buf = readFileSync(join(DECOR_DIR, f));
       expect(buf.subarray(0, 4).toString('ascii'), `${f} مش WEBP`).toBe('RIFF');
       expect(buf.subarray(8, 12).toString('ascii')).toBe('WEBP');

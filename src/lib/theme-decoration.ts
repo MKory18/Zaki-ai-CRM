@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════
  * DECORATION, AND THE THREE PLACES IT IS ALLOWED.
  *
- * Eleven themes, and eight of them are MOODS — neon, gold, parchment,
+ * Twelve themes, and nine of them are MOODS — neon, gold, parchment,
  * a sky with no moon. A mood that is nothing but thirty-four hexes is a
  * recoloured spreadsheet, so each theme may put an ambient touch on the
  * screen. And then the rule that matters:
@@ -132,6 +132,27 @@ export function decorCss(theme: SystemTheme, level: DecorLevel, chosenKey?: stri
    * The same two guards as the drift, for the same two reasons: reduced
    * motion removes it outright, and a hidden tab pauses it.
    */
+  if (PHOTOGRAPHIC[theme.key] && chosenKey !== AUTO_THEME) {
+    /*
+     * ── A PHOTOGRAPH DOES NOT DRIFT; THE DOOR ZOOMS ──
+     *
+     * The drift below moves the whole layer by up to 2%: a glow that wanders,
+     * which shows a seam of page along one edge for half of every cycle. Fine
+     * for a wash, wrong for a picture. So the door scales — 6% over seventy
+     * seconds, from its centre, a transform that cannot uncover an edge — and
+     * the other two places stand still.
+     *
+     * Same two guards as every animation here: reduced motion removes it
+     * outright, and a hidden tab pauses it.
+     */
+    return (
+      wash +
+      `@keyframes zk-decor-zoom{to{transform:scale(1.06)}}` +
+      `.${DECOR_CLASS}-door.${DECOR_CLASS}-full{animation:zk-decor-zoom 70s ease-in-out infinite alternate;will-change:transform}` +
+      `[data-decor-hidden] .${DECOR_CLASS}-door.${DECOR_CLASS}-full{animation-play-state:paused}` +
+      `@media (prefers-reduced-motion: reduce){.${DECOR_CLASS}-door.${DECOR_CLASS}-full{animation:none}}`
+    );
+  }
   if (COMPOSED[theme.key] && chosenKey !== AUTO_THEME) {
     return (
       wash +
@@ -269,6 +290,128 @@ export const COMPOSED: Record<string, Composition> = {
 /** The three drawings of a composed theme, by the name the file carries. */
 export const PIECES = ['rosette', 'corner', 'skyline'] as const;
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * A THEME THAT WEARS PHOTOGRAPHS — THE ONE PLACE «MASKS ONLY» IS BROKEN,
+ * AND WHAT HOLDS IN ITS PLACE.
+ *
+ * The rule above — shape only, never colour — was written for a reason that
+ * still stands: «a decoration with a hex of its own is a twelfth palette
+ * nobody measured», because a full-colour picture carries greens and golds
+ * that no palette test ever looks at. The owner, 21/10, asked for exactly
+ * that anyway, for one theme: «ثيم جي تي ايه بصور حقيقية» — and decided where
+ * («بالأماكن التلاتة بس»). So `neon-coast`, and ONLY it, wears three real
+ * photographs of a beachfront at the blue hour, and what the rule protected
+ * is protected another way:
+ *
+ *   • THE LIST IS CLOSED. `PHOTOGRAPHIC` below has one key, and
+ *     a-photographic-theme-keeps-its-text-readable.test.ts fails if a second
+ *     appears without somebody editing that claim on purpose.
+ *   • THE THREE PLACES ARE THE SAME THREE. Nothing here is drawn by another
+ *     component, and never behind a table, a form, an order, a figure of
+ *     money or a stock count — the sweep in a-theme-is-not-a-mood-swing.test.ts
+ *     still runs over every screen that draws any of this.
+ *   • THE TEXT DOES NOT DEPEND ON THE PICTURE. A picture can be replaced by
+ *     anybody, and the numbers beside it nudged by anybody reading them as
+ *     taste, so — like the door's own banner — every number below is held by
+ *     a test that composites PURE WHITE, the worst picture there could be,
+ *     through the same numbers and asks whether the dimmest text still clears
+ *     4.5:1. The picture is mood; the colour under the words is the page's.
+ *
+ * ── WHAT EACH PLACE DOES ──
+ *
+ *   door     the wide picture, or the portrait one on a phone (a browser asks
+ *            for only the one that matches, so nobody downloads both), under a
+ *            veil of the page's own colour. The door's text column becomes a
+ *            panel of that colour at `panel` — and that panel, not the picture,
+ *            is what every word of the sign-in page is read against. Without
+ *            it the paragraph under the card lands on lit windows on a phone.
+ *   empty    the same picture at `empty` opacity behind the empty list's
+ *            sentence, faded to nothing at its edges by a mask.
+ *   sidebar  the 5:1 strip across the header of the menu, under a veil that is
+ *            heaviest where the wordmark is. In a right-to-left layout that is
+ *            the right-hand side, and the strip was shot with its calm sea on
+ *            the right for that reason.
+ *
+ * ── AND WHAT IT COSTS ──
+ *
+ * The stylesheet nothing, like every other ornament: written by `SystemFrame`
+ * for the one theme rendered. Each picture is under 100 KB and a person is sent
+ * one of the two door pictures, not both. At «full» the door zooms — very
+ * slowly, from its centre, so no edge is ever uncovered — and the other two
+ * stand still: a layer that DRIFTS shows a seam of page along one side, which
+ * is fine for a wash and wrong for a photograph.
+ *
+ * `color-mix()` is how the veil is made from the theme's own tokens, so no
+ * hex is written here. A browser too old to know it drops the whole
+ * declaration, and what it then shows is the plain wash — a door with no
+ * picture, never a picture with no veil.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export interface Photographs {
+  /** The wide door picture, and the portrait one a phone is given instead. */
+  door: string;
+  doorTall: string;
+  /** The 5:1 strip across the header of the menu. */
+  strip: string;
+  /** Page colour laid over the door's text column, 0–1. What every word of the sign-in page is read against. */
+  panel: number;
+  /** Page colour over the whole door picture at the top, the middle and the bottom — mood, not safety. */
+  veil: readonly [number, number, number];
+  /** How much of an empty list is picture: its opacity. */
+  empty: number;
+  /** Sidebar colour over the strip where the wordmark is, and where only the picture shows. */
+  header: readonly [number, number];
+}
+
+export const PHOTOGRAPHIC: Record<string, Photographs> = {
+  'neon-coast': {
+    door: 'neon-coast.door.webp',
+    doorTall: 'neon-coast.door-tall.webp',
+    strip: 'neon-coast.strip.webp',
+    panel: 0.8,
+    veil: [0.55, 0.2, 0.55],
+    empty: 0.14,
+    header: [0.82, 0.25],
+  },
+};
+
+/** Every file a photographic theme owns, by the name it carries on the disk. */
+export function photographsOf(key: string): string[] {
+  const p = PHOTOGRAPHIC[key];
+  return p ? [p.door, p.doorTall, p.strip] : [];
+}
+
+function photographic(p: Photographs): string {
+  const D = DECOR_CLASS;
+  const url = (file: string) => `url(/brand/decor/${file})`;
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  // The theme's own colour, as much of it as is asked for: no hex of its own.
+  const mix = (token: string, n: number) => `color-mix(in srgb,var(--sys-${token}) ${pct(n)},transparent)`;
+  const door = (file: string) =>
+    `background:linear-gradient(180deg,${mix('background', p.veil[0])} 0%,${mix('background', p.veil[1])} 45%,` +
+    `${mix('background', p.veil[2])} 100%),${url(file)} center bottom/cover no-repeat`;
+  const fade = 'radial-gradient(ellipse at center,black 38%,transparent 80%)';
+  return (
+    // The door brings its own picture; take the circuit wave out from under it.
+    `.zk-door-banner{display:none}` +
+    // ── the door: the wide picture, or the portrait one when the window is taller than it is wide ──
+    `.${D}-door{${door(p.door)}}` +
+    `@media (orientation:portrait){.${D}-door{${door(p.doorTall)}}}` +
+    // The text column is a panel of the page's own colour — see the header above for why it is the panel
+    // that carries the words, and the claims for what it guarantees.
+    `.zk-door-column{background:${mix('background', p.panel)};-webkit-backdrop-filter:blur(10px);` +
+    `backdrop-filter:blur(10px);border-radius:1.25rem;padding:1rem}` +
+    // ── an empty list: the same picture, faint, faded out at its edges ──
+    `.${D}-empty{background:${url(p.door)} center 72%/cover no-repeat;opacity:${p.empty};` +
+    `-webkit-mask:${fade};mask:${fade}}` +
+    `@media (orientation:portrait){.${D}-empty{background-image:${url(p.doorTall)}}}` +
+    // ── the header of the menu: heaviest veil on the right, where the wordmark is ──
+    `.${D}-sidebar{background:linear-gradient(to left,${mix('sidebar', p.header[0])} 0%,` +
+    `${mix('sidebar', p.header[0])} 55%,${mix('sidebar', p.header[1])} 100%),${url(p.strip)} right center/cover no-repeat}`
+  );
+}
+
 function composed(key: string, c: Composition): string {
   const D = DECOR_CLASS;
   const url = (piece: string) => `url(/brand/decor/${key}.${piece}.webp)`;
@@ -306,6 +449,7 @@ function composed(key: string, c: Composition): string {
  * mask leaves behind. Hence `background-color` only inside this rule.
  */
 function ornament(key: string): string {
+  if (PHOTOGRAPHIC[key]) return photographic(PHOTOGRAPHIC[key]);
   if (COMPOSED[key]) return composed(key, COMPOSED[key]);
   const ink = DECOR_INK[key];
   if (!ink) return '';

@@ -36,7 +36,7 @@ export function SystemFrame({
    * ── THE PALETTE OF THE ONE THEME THIS PERSON CHOSE ──
    *
    * `system.css` carries the default and «تلقائي» and nothing else, so
-   * eleven palettes do not ship to everybody for the sake of the one they
+   * twelve palettes do not ship to everybody for the sake of the one they
    * picked. See `SHEET_THEMES`. This is in the same HTML response as the
    * markup it paints, so the first paint is already right: no script, no
    * flash, and no second request.
