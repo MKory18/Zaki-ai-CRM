@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -18,13 +18,34 @@ import { join } from 'node:path';
 
 const PKG = join(process.cwd(), 'packages', 'zaki-ui');
 
+/**
+ * THE CLAIM IS ABOUT CONTENT, AND THE TREE IS LEFT AS FOUND — see `zaki-ui-tokens.test.ts` for why (RV50): the build writes LF, a
+ * Windows checkout has CRLF, and a byte comparison is then red on every such machine; and the bytes that were there are written back.
+ */
+const lf = (text: string) => text.replace(/\r\n/g, '\n');
+const SVG = join(PKG, 'icons.svg');
+const INDEX = join(PKG, 'icons.json');
+/** The bytes as this file found them — taken when it loads, before any test has run. */
+const ORIGINAL = [readFileSync(SVG), readFileSync(INDEX)];
+
+afterAll(() => {
+  expect(Buffer.compare(readFileSync(SVG), ORIGINAL[0]), 'icons.svg: a test left it changed').toBe(0);
+  expect(Buffer.compare(readFileSync(INDEX), ORIGINAL[1]), 'icons.json: a test left it changed').toBe(0);
+});
+
 function regenerate() {
-  const before = readFileSync(join(PKG, 'icons.svg'), 'utf8');
-  const beforeIndex = readFileSync(join(PKG, 'icons.json'), 'utf8');
-  execFileSync(process.execPath, [join(PKG, 'scripts', 'build-icons.mjs')], { cwd: process.cwd(), stdio: 'pipe' });
-  expect(readFileSync(join(PKG, 'icons.svg'), 'utf8')).toBe(before);
-  expect(readFileSync(join(PKG, 'icons.json'), 'utf8')).toBe(beforeIndex);
-  return { svg: before, index: JSON.parse(beforeIndex) };
+  const before = [readFileSync(SVG), readFileSync(INDEX)];
+  try {
+    execFileSync(process.execPath, [join(PKG, 'scripts', 'build-icons.mjs')], { cwd: process.cwd(), stdio: 'pipe' });
+    const svg = lf(before[0].toString('utf8'));
+    const index = lf(before[1].toString('utf8'));
+    expect(lf(readFileSync(SVG, 'utf8'))).toBe(svg);
+    expect(lf(readFileSync(INDEX, 'utf8'))).toBe(index);
+    return { svg, index: JSON.parse(index) };
+  } finally {
+    writeFileSync(SVG, before[0]);
+    writeFileSync(INDEX, before[1]);
+  }
 }
 
 describe('the icon sprite', () => {
@@ -32,6 +53,12 @@ describe('the icon sprite', () => {
     const { svg, index } = regenerate();
     expect(svg.length).toBeGreaterThan(5000);
     expect(index.count).toBeGreaterThanOrEqual(40);
+  });
+
+  it('and leaves both files exactly as it found them — byte for byte, whatever the checkout’s line endings', () => {
+    regenerate();
+    expect(Buffer.compare(readFileSync(SVG), ORIGINAL[0]), 'icons.svg').toBe(0);
+    expect(Buffer.compare(readFileSync(INDEX), ORIGINAL[1]), 'icons.json').toBe(0);
   });
 
   it('carries every icon the owner named, in its five groups', () => {
