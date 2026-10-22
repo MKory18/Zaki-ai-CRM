@@ -39,6 +39,26 @@ export function normalizeArabic(text: string): string {
     .toLowerCase();
 }
 
+/**
+ * THE FORM A PRODUCT NAME IS COMPARED IN: THE SPELLING FOLDED, AND THE DIGITS LATIN.
+ *
+ * A catalogue holds «صوبة القدس 4 شعلات» in Latin digits and «فيتامين د ٥٠٠٠» in Arabic-Indic ones, and whoever types an order
+ * types whichever their keyboard has — on an Arabic keypad, «٤». `normalizeArabic` folds the LETTERS only, so «صوبة القدس ٤ شعلات»
+ * was a different string from the catalogue's «صوبة القدس 4 شعلات»: the exact-substring signal (the strongest one, +60) never fired, a
+ * one-digit token is shorter than the matcher's three-letter floor so it counted for nothing, and the stove with TWO burners and the
+ * stove with FOUR tied at the same score — the first one in the list won, in silence.
+ *
+ * Measured on this catalogue's own two names (22/10): «صوبة القدس ٤ شعلات» scored 36 against BOTH, and the one that came first in the
+ * list won — the 2-burner, when it came first. Typed with a Latin 4 it scores 96 against the right one, in either order, and so does
+ * the Arabic-digit query now.
+ *
+ * This is for COMPARING. It is not applied to what is shown or stored, and `normalizeArabic` itself is not changed: it is also what
+ * slugs and the storefront's search are built from, and a name's digits are not this change's to rewrite there.
+ */
+export function foldForMatch(text: string): string {
+  return normalizeArabic(toLatinDigits(text));
+}
+
 /*
  * THE DIGITS THIS PARSER READS — LATIN, ARABIC-INDIC (٠-٩) AND PERSIAN (۰-۹).
  *
@@ -150,13 +170,13 @@ export function matchProduct(
 ): { id: string; name: string; score: number } | null {
   if (!query || products.length === 0) return null;
 
-  const q = normalizeArabic(query);
+  const q = foldForMatch(query);
   const qTokens = q.split(/[\s(),\-_]+/).filter((t) => t.length > 2);
 
   let best: { id: string; name: string; score: number } | null = null;
 
   for (const p of products) {
-    const name = normalizeArabic(p.name);
+    const name = foldForMatch(p.name);
     const nameTokens = new Set(name.split(/[\s(),\-_]+/).filter((t) => t.length > 2));
 
     let score = 0;
@@ -171,7 +191,7 @@ export function matchProduct(
     }
 
     // SKU match
-    if (normalizeArabic(p.sku).includes(q)) score += 50;
+    if (foldForMatch(p.sku).includes(q)) score += 50;
 
     if (!best || score > best.score) {
       best = { id: p.id, name: p.name, score };

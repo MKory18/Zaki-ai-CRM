@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { RiApps2Line, RiCloseLine, RiSearchLine } from '@remixicon/react';
-import { normalizeArabic } from '@/lib/order-parser';
+import { foldForMatch } from '@/lib/order-parser';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 
 /**
@@ -50,10 +50,10 @@ export const PICKER_LIMIT = 50;
  * catalogue, not nothing.
  */
 export function matchProducts(products: PickableProduct[], query: string): PickableProduct[] {
-  const q = normalizeArabic(query.trim());
+  const q = foldForMatch(query.trim());
   if (!q) return products.slice(0, PICKER_LIMIT);
   return products
-    .filter((p) => normalizeArabic(p.name).includes(q) || normalizeArabic(p.sku ?? '').includes(q))
+    .filter((p) => foldForMatch(p.name).includes(q) || foldForMatch(p.sku ?? '').includes(q))
     .slice(0, PICKER_LIMIT);
 }
 
