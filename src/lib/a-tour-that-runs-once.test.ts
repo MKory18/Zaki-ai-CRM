@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { stripComments } from './guard-source';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -74,6 +75,23 @@ describe('the door that writes it', () => {
 
   it('uses the api door for errors, not bare NextResponse.json', () => {
     expect(route).toMatch(/apiErrorResponse/);
+  });
+
+  it('every step names a data-tour anchor that a real element carries', () => {
+    const tour = readFileSync(join(root, 'src/components/shell/FirstRunTour.tsx'), 'utf8');
+    const anchors = [...tour.matchAll(/anchor: '([a-z]+)'/g)].map((m) => m[1]);
+    expect(anchors.length, 'الجولة بلا خطوات').toBeGreaterThanOrEqual(4);
+    expect(anchors.length, 'أكثر من ست خطوات تُقصّر الجولة').toBeLessThanOrEqual(6);
+    const hosts = [
+      'src/components/shell/Sidebar.tsx',
+      'src/components/shell/Header.tsx',
+      'src/components/shell/ScreenGuide.tsx',
+    ].map((f) => stripComments(readFileSync(join(root, f), 'utf8'))).join('\n');
+    for (const a of anchors) {
+      expect(hosts, `الخطوة «${a}» بتشير لعنصر مش موجود`).toMatch(
+        new RegExp(`data-tour=["'{]${a}["'}]|'data-tour': '${a}'|data-tour="${a}"`)
+      );
+    }
   });
 
   it('the session carries the fact to the client', () => {
