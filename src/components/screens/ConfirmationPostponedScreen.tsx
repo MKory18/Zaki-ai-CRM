@@ -7,7 +7,7 @@ import { RiInboxUnarchiveLine, RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Pager } from '@/components/ui/Pager';
-import { ListToolbar, type ToolbarFilter } from '@/components/ui/ListToolbar';
+import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
 import { arDate } from '@/lib/format';
 import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
 import { KINDS, KIND_AR, TIMES, TIMES_AR, WHENS, whenLabel } from '@/lib/postponed-filters';
@@ -51,10 +51,6 @@ const read = (body: unknown): PagedRead<Row, Extra> => {
   const b = body as { orders: Row[]; pagination: Paging; leadDays: number; facts: PostponedFacts };
   return { rows: b.orders, pagination: b.pagination, extra: { leadDays: b.leadDays, facts: b.facts } };
 };
-
-/** The chosen value is always in the box: a stale choice the counts no longer hold still shows, so the box never says «كل» over a narrowed list. */
-const withChosen = (value: string, options: { value: string; label: string }[]) =>
-  value === 'all' || options.some((o) => o.value === value) ? options : [...options, { value, label: `${value} (0)` }];
 
 export function ConfirmationPostponedScreen() {
   const [search, setSearch] = useState('');

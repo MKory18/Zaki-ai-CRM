@@ -5,7 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
-import { CHANNEL_KINDS } from '../route';
+import { CHANNEL_KINDS } from '@/lib/order-channel-kinds';
 import { zodMessage } from '@/lib/zod-message';
 import { count } from '@/lib/numeric-input';
 

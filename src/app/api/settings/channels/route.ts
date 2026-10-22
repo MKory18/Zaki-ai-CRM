@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { count } from '@/lib/numeric-input';
+import { CHANNEL_KINDS } from '@/lib/order-channel-kinds';
 
 /**
  * ORDER CHANNELS — where the shop's orders come from.
@@ -19,24 +20,6 @@ import { count } from '@/lib/numeric-input';
  * is a settings decision, because the numbers are counted per channel and
  * renaming one silently moves history between rows.
  */
-
-export const CHANNEL_KINDS = [
-  'LANDING_PAGE', 'FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WHATSAPP',
-  'TELEGRAM', 'PHONE', 'SHEET', 'WEBSITE', 'OTHER',
-] as const;
-
-export const CHANNEL_KIND_AR: Record<string, string> = {
-  LANDING_PAGE: 'صفحة هبوط',
-  FACEBOOK: 'فيسبوك',
-  INSTAGRAM: 'إنستغرام',
-  TIKTOK: 'تيكتوك',
-  WHATSAPP: 'واتساب',
-  TELEGRAM: 'تلجرام',
-  PHONE: 'هاتف',
-  SHEET: 'شيت',
-  WEBSITE: 'الموقع',
-  OTHER: 'أخرى',
-};
 
 /*
  * `count()`, NOT `z.coerce.number()` — AND THE REASON IS NOT THIS FIELD.
