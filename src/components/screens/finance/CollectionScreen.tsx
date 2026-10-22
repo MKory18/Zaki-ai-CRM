@@ -206,7 +206,7 @@ export function CollectionScreen() {
       ) : rows.length === 0 ? (
         <EmptyState
           icon={RiFileExcel2Line}
-          title="لا كشوف مستوردة"
+          title="لا توجد كشوف مستوردة بعد."
           why="لم تُستورد أوراق التحصيل بعد. استورد كشف شركة الشحن ليبدأ مطابقة ما حُصّل بما استُحق."
         />
       ) : (

@@ -199,7 +199,7 @@ export function MatchingScreen() {
       ) : matches.length === 0 ? (
         <EmptyState
           icon={RiScales3Line}
-          title="لم تُشغَّل المطابقة على هذا الكشف"
+          title="لم تُشغَّل المطابقة على هذا الكشف بعد"
           why="الكشف مستورد لكن لم يُقابَل بأي طلب بعد. ابدأ المطابقة لترى من دفع ومن بقي عليه."
         />
       ) : (
