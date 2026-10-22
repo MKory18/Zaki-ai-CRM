@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countersFromOrders } from '../../scripts/migration/lib/customer-counters.mjs';
+import { countersFromOrders, placeholderPhones } from '../../scripts/migration/lib/customer-counters.mjs';
 
 /**
  * The counters a customer row carries, read back from their orders exactly as
@@ -47,5 +47,27 @@ describe('a customer\'s counters from their orders', () => {
 
   it('no orders, no dates — never an invented one', () => {
     expect(countersFromOrders([])).toMatchObject({ totalOrders: 0, firstOrderDate: null, lastOrderDate: null });
+  });
+});
+
+describe('a phone written for many different people', () => {
+  it('is found when ten or more names stand on it', () => {
+    const entries = Array.from({ length: 12 }, (_, k) => ({ phone: '900000090', name: `زبون ${k}` }));
+    expect([...placeholderPhones(entries)]).toEqual(['900000090']);
+  });
+
+  it('a real repeat customer with a few spellings of one name is NOT a placeholder', () => {
+    const entries = [
+      { phone: '997000045', name: 'محمد علي منصور' },
+      { phone: '997000045', name: 'محمد علي منصور.' },
+      { phone: '997000045', name: 'محمد' },
+      { phone: '997000045', name: 'محمد  علي منصور' }, // same name, extra space
+    ];
+    expect(placeholderPhones(entries).size).toBe(0);
+  });
+
+  it('ignores empty names and missing phones', () => {
+    const entries = [...Array.from({ length: 20 }, () => ({ phone: '933000001', name: '' })), { phone: null, name: 'x' }];
+    expect(placeholderPhones(entries).size).toBe(0);
   });
 });

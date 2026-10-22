@@ -3,7 +3,9 @@
 // their counters recomputed from their orders (lib/customer-counters.mjs), and
 // the customers the legacy import brought in WITHOUT a single order are
 // removed — the owner's ruling (22/10): the customer list is people who
-// ordered, one row each, with how many times they ordered.
+// ordered, one row each, with how many times they ordered. A phone written
+// for many different people (placeholderPhones) stays one customer, named
+// «رقم غير معروف».
 //
 // A customer is removed only when ALL hold: no order, no WhatsApp
 // conversation, no note, and their phone is one the legacy dump holds (so
@@ -15,7 +17,7 @@
 import { PrismaClient } from '@prisma/client';
 import { loadDump, tuples } from './lib/dump.mjs';
 import { normPhone } from './lib/legacy-map.mjs';
-import { countersFromOrders } from './lib/customer-counters.mjs';
+import { countersFromOrders, placeholderPhones, PLACEHOLDER_NAME } from './lib/customer-counters.mjs';
 
 const prisma = new PrismaClient();
 const DRY_RUN = !process.argv.includes('--apply');
@@ -54,6 +56,15 @@ async function main() {
     select: { id: true, phone: true },
   });
   const removable = empty.filter((c) => legacyPhones.has(c.phone));
+
+  // ── 3. a phone written for many different people ──
+  const placeholders = placeholderPhones([...tuples(dump, 'addresses')].map((a) => ({ phone: normPhone(a.phone), name: a.full_name })));
+  const toRename = await prisma.customer.findMany({
+    where: { companyId, storeId, phone: { in: [...placeholders] }, fullName: { not: PLACEHOLDER_NAME } },
+    select: { id: true, phone: true, _count: { select: { orders: true } } },
+  });
+  for (const c of toRename) log(`placeholder phone ${c.phone.slice(0, 3)}****${c.phone.slice(-2)} on ${c._count.orders} orders → renamed «${PLACEHOLDER_NAME}»`);
+  if (!toRename.length) log('placeholder phones to rename: 0');
   log(`customers with no order, no conversation, no note: ${empty.length} · of them from the legacy dump (would be removed): ${removable.length} · kept (added here): ${empty.length - removable.length}`);
   const before = await prisma.customer.count({ where: { companyId, storeId } });
   log(`customers now: ${before} · after: ${before - removable.length}`);
@@ -76,6 +87,9 @@ async function main() {
     removed += r.count;
   }
   log(`customers removed: ${removed}`);
+
+  for (const c of toRename) await prisma.customer.update({ where: { id: c.id }, data: { fullName: PLACEHOLDER_NAME } });
+  log(`placeholder customers renamed: ${toRename.length}`);
 
   // ── verify ──
   const after = await prisma.customer.count({ where: { companyId, storeId } });

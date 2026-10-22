@@ -49,3 +49,27 @@ export function countersFromOrders(orders) {
     lastOrderDate: last,
   };
 }
+
+/**
+ * Phones that are not a person: one number written for many different
+ * names (the legacy «0900…90» stood on 232 orders under 221 names across 9
+ * governorates). A real repeat customer carries one name, or a handful of
+ * spellings of it — the next most-named legacy phone has 3. Such a phone
+ * stays ONE customer (a phone is the identity here) but is named for what it
+ * is, so it never reads as a customer who ordered 232 times.
+ *
+ * @param {Array<{ phone: string|null, name: string|null }>} entries  normalized phone + the name written with it
+ * @param {number} [minNames]
+ */
+export function placeholderPhones(entries, minNames = 10) {
+  const names = new Map();
+  for (const e of entries) {
+    if (!e.phone) continue;
+    const set = names.get(e.phone) || names.set(e.phone, new Set()).get(e.phone);
+    const n = (e.name || '').trim().replace(/\s+/g, ' ');
+    if (n) set.add(n);
+  }
+  return new Set([...names].filter(([, s]) => s.size >= minNames).map(([p]) => p));
+}
+
+export const PLACEHOLDER_NAME = 'رقم غير معروف';
