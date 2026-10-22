@@ -180,6 +180,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       companyName: user.company?.name,
       commissionRate: user.commissionRate,
       systemTheme: user.systemTheme,
+      /** Whether the one-time tour already ran for this person. */
+      tourDoneAt: user.tourDoneAt ? user.tourDoneAt.toISOString() : null,
       /** The base their role opens on. Their own choice above wins over it. */
       roleTheme: user.roleRef?.systemTheme ?? null,
       permissions: Object.keys(effective.grants),
