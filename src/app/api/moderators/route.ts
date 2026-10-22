@@ -168,6 +168,12 @@ export async function POST(req: Request) {
         commissionRate: rate,
         passwordHash: pwdHash,
         status: 'ACTIVE',
+        /*
+         * «ليل» is the first look a NEW member of staff opens on — the
+         * owner's Phase 3 brief. The column already existed; only the
+         * creation path writes the default, and the picker overwrites it.
+         */
+        systemTheme: 'layl',
       },
     });
 

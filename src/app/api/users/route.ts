@@ -122,6 +122,13 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
           status: 'ACTIVE',
           assignedById: admin.id,
           assignedAt: new Date(),
+          /*
+           * «ليل» is the first look a NEW member of staff opens on — the
+           * owner's Phase 3 brief. Written explicitly so whoever picks
+           * another theme from the picker simply overwrites it; the column
+           * itself already existed, so no migration rides along.
+           */
+          systemTheme: 'layl',
           // No fallback: the schema's own `.default(0)` already turned
           // «nothing typed» into zero, so a `?? 0` here could never fire.
           commissionRate,
