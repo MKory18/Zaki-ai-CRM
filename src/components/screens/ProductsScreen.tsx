@@ -12,7 +12,7 @@ import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
-import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFolderTransferLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { CategoryPicker } from '@/components/products/CategoryPicker';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -22,6 +22,7 @@ import { HealthChip } from '@/components/ui/HealthChip';
 import type { CatalogueReadiness, ProductGrade } from '@/lib/product-grade';
 import { PRODUCT_STATUS_AR, productStatusAr, productStatusTone } from '@/lib/product-status';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
+import { CategoriseDialog, type CategoriseResult } from '@/components/products/CategoriseDialog';
 import { apiJson } from '@/lib/api-client';
 import type { ProductStats } from '@/lib/product-stats';
 
@@ -133,6 +134,22 @@ export function ProductsScreen() {
   /** Show only the products with no category — the backlog, one click away. */
   const [onlyUnfiled, setOnlyUnfiled] = useState(false);
   const uncategorised = products.filter((p) => !p.categoryId).length;
+  /** The dialog that sorts them. */
+  const [categoriseOpen, setCategoriseOpen] = useState(false);
+  const handleCategorised = (r: CategoriseResult) => {
+    setCategoriseOpen(false);
+    void loadProducts();
+    void tell({
+      title: r.filed > 0 ? `رُتِّب ${count(r.filed)} منتجاً` : 'لم يُرتَّب أيّ منتج',
+      body:
+        [
+          r.created.length > 0 ? `أُنشئ: ${r.created.join('، ')}.` : '',
+          r.skipped > 0 ? `${count(r.skipped)} لم يُنقَل — صُنِّف قبل الضغط أو لا تملك تعديله.` : '',
+        ]
+          .filter((line) => line !== '')
+          .join('\n') || undefined,
+    });
+  };
 
   const filteredProducts = products.filter((p) => {
     if (onlyUnfiled && p.categoryId) return false;
@@ -442,6 +459,21 @@ export function ProductsScreen() {
                 >
                   <RiFoldersLine className="w-4 h-4" aria-hidden />
                   {onlyUnfiled ? 'أظهِر الكلّ' : `${uncategorised} منتجاً بلا تصنيف`}
+                </button>
+                {/*
+                  AND THE SORTING, ONE PRESS AWAY.
+                  «انتا صنف افضل» — THE OWNER, 22/10. Each of the products with no
+                  category is offered the shelf its name points at, in a dialog
+                  where he changes what he disagrees with; nothing is written
+                  until he presses «طبّق» there.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setCategoriseOpen(true)}
+                  className="ms-2 min-h-11 md:min-h-0 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-[var(--sys-border)] text-[var(--sys-muted-foreground)] hover:border-[var(--sys-warning)] hover:text-[var(--sys-warning)]"
+                >
+                  <RiFolderTransferLine className="w-4 h-4" aria-hidden />
+                  رتّبها لي
                 </button>
                 <span className="ms-2 text-xs text-[var(--sys-muted)]">
                   التصنيف يحدّد من يرى المنتج، وكيف تُجمَّع تقاريره، وما يستطيع المساعد الإجابة عنه.
@@ -833,6 +865,16 @@ export function ProductsScreen() {
         than copied, so the two screens cannot drift into two different
         ideas of what a product is.
       */}
+      {categoriseOpen && (
+        <CategoriseDialog
+          products={products
+            .filter((p) => !p.categoryId)
+            .map((p) => ({ id: p.id, label: productName(p, locale), name: p.name, nameEn: p.nameEn, sku: p.sku }))}
+          onClose={() => setCategoriseOpen(false)}
+          onDone={handleCategorised}
+        />
+      )}
+
       <ProductEditDialog
         product={editProduct}
         open={editOpen}
