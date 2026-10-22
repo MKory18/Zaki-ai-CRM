@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { repoFile } from './guard-source';
 
@@ -21,14 +21,35 @@ import { repoFile } from './guard-source';
 
 const PKG = join(process.cwd(), 'packages', 'zaki-ui');
 
+/**
+ * THE CLAIM IS ABOUT CONTENT, AND THE TREE IS LEFT AS FOUND.
+ *
+ * The generator writes LF; a Windows checkout (`core.autocrlf=true`) has CRLF on disk. Compared byte for byte, the two disagree on
+ * every such machine and the test is red for a reason that has nothing to do with a token (RV50) — so the comparison is of the text
+ * with line endings made LF. And because the generator would turn a CRLF checkout into LF, the bytes that were there are written back
+ * afterwards: a test that only READS must not leave a modified file for the next `git status` to explain.
+ */
+const lf = (text: string) => text.replace(/\r\n/g, '\n');
+const FILES = ['tokens.css', 'tokens.json'].map((name) => join(PKG, name));
+/** The bytes as this file found them — taken when it loads, before any test has run. */
+const ORIGINAL = FILES.map((file) => readFileSync(file));
+
+afterAll(() => {
+  FILES.forEach((file, i) => expect(Buffer.compare(readFileSync(file), ORIGINAL[i]), `${file}: a test left it changed`).toBe(0));
+});
+
 function regenerate(): { css: string; json: string } {
-  const before = { css: readFileSync(join(PKG, 'tokens.css'), 'utf8'), json: readFileSync(join(PKG, 'tokens.json'), 'utf8') };
-  execFileSync(process.execPath, [join(PKG, 'scripts', 'build-tokens.mjs')], { cwd: process.cwd(), stdio: 'pipe' });
-  const after = { css: readFileSync(join(PKG, 'tokens.css'), 'utf8'), json: readFileSync(join(PKG, 'tokens.json'), 'utf8') };
-  // The generator is idempotent, so this leaves the tree as it found it.
-  expect(before.css).toBe(after.css);
-  expect(before.json).toBe(after.json);
-  return after;
+  const before = FILES.map((file) => readFileSync(file));
+  try {
+    execFileSync(process.execPath, [join(PKG, 'scripts', 'build-tokens.mjs')], { cwd: process.cwd(), stdio: 'pipe' });
+    const after = FILES.map((file) => readFileSync(file, 'utf8'));
+    // The generator is idempotent: what it writes is what is already there.
+    expect(lf(after[0])).toBe(lf(before[0].toString('utf8')));
+    expect(lf(after[1])).toBe(lf(before[1].toString('utf8')));
+    return { css: lf(after[0]), json: lf(after[1]) };
+  } finally {
+    FILES.forEach((file, i) => writeFileSync(file, before[i]));
+  }
 }
 
 describe('tokens.css and tokens.json are generated, not maintained', () => {
@@ -36,6 +57,11 @@ describe('tokens.css and tokens.json are generated, not maintained', () => {
     const { css, json } = regenerate();
     expect(css.length).toBeGreaterThan(1000);
     expect(json.length).toBeGreaterThan(1000);
+  });
+
+  it('and leaves both files exactly as it found them — byte for byte, whatever the checkout’s line endings', () => {
+    regenerate();
+    FILES.forEach((file, i) => expect(Buffer.compare(readFileSync(file), ORIGINAL[i]), file).toBe(0));
   });
 
   it('and the two carry the same names and the same values', () => {

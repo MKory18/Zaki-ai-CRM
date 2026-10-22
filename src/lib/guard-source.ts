@@ -229,7 +229,14 @@ export function shopperFiles(ext: '.ts' | '.tsx' | 'both' = '.tsx'): GuardFile[]
   return out;
 }
 
-/** A file in the repo, by its repo-relative path with or without the leading slash. */
+/**
+ * A file in the repo, by its repo-relative path with or without the leading slash — WITH LF LINE ENDINGS WHATEVER THE CHECKOUT HAS.
+ *
+ * On a Windows machine `core.autocrlf=true` makes the working tree CRLF, and a guard that cuts the source at `\n` (`indexOf('  {\n')`,
+ * `split(/\n  \{\n/)`) then cuts nothing and either fails or, worse, passes over an empty list (RV50). CI is Linux and sees LF, so the
+ * two disagreed about whether a guard was green. Every guard reads through here, so the one place that reads is the one place that
+ * says what a line break is.
+ */
 export function repoFile(rel: string): string {
-  return readFileSync(join(process.cwd(), rel.replace(/^\//, '')), 'utf8');
+  return readFileSync(join(process.cwd(), rel.replace(/^\//, '')), 'utf8').replace(/\r\n/g, '\n');
 }

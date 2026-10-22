@@ -329,9 +329,12 @@ function paletteOf(palettes, key) {
   return found;
 }
 
+/** The palettes are parsed with a pattern that cuts at `\n`; a CRLF checkout (Windows, `core.autocrlf=true`) would find no palette at all. */
+const lf = (text) => text.replace(/\r\n/g, '\n');
+
 export function build() {
   const css = readFileSync(SYSTEM_CSS, 'utf8');
-  const palettes = registryPalettes(readFileSync(SYSTEM_THEMES_TS, 'utf8'));
+  const palettes = registryPalettes(lf(readFileSync(SYSTEM_THEMES_TS, 'utf8')));
   const unmapped = new Set();
 
   const themes = {};
