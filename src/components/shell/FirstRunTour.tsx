@@ -188,7 +188,7 @@ export function FirstRunTour() {
           role="dialog"
           aria-label="الجولة الأولى"
           style={{ top: place(rect).top, left: place(rect).left }}
-          className="fixed z-[61] w-[320px] rounded-xl border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-[var(--sys-shadow-raised)]"
+          className="fixed z-[61] w-[320px] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised"
         >
           <div className="flex items-start gap-3">
             <current.icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sys-primary)]" aria-hidden />
@@ -203,7 +203,7 @@ export function FirstRunTour() {
             <button
               type="button"
               onClick={skip}
-              className="h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs font-medium text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
+              className="h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] text-xs font-medium text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]"
             >
               تخطّي
             </button>
@@ -211,10 +211,10 @@ export function FirstRunTour() {
               type="button"
               onClick={next}
               disabled={busy}
-              className="inline-flex h-10 items-center gap-1 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
+              className="inline-flex h-11 md:h-10 items-center gap-1 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
             >
               {step + 1 < plan.length ? 'التالي' : 'خلصت'}
-              <RiArrowLeftLine className="h-4 w-4" aria-hidden />
+              <RiArrowLeftLine className="icon-mirror h-4 w-4" aria-hidden />
             </button>
           </div>
 
@@ -224,7 +224,7 @@ export function FirstRunTour() {
                 type="checkbox"
                 checked={neverAgain}
                 onChange={(e) => setNeverAgain(e.target.checked)}
-                className="h-4 w-4 rounded border-[var(--sys-border)]"
+                className="h-4 w-4 rounded-sm border-[var(--sys-border)]"
               />
               ما بدي أشرح مرة ثانية
             </label>
