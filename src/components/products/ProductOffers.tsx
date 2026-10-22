@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { screenApi as crmApi } from '@/lib/screen-api';
+import { useConfirm } from '@/components/ui/Confirm';
 import { RiAddCircleLine, RiArrowDownSLine, RiArrowUpSLine, RiDeleteBinLine, RiDraggable, RiEyeOffLine, RiLoader4Line, RiMagicLine, RiPencilLine, RiPriceTag3Line, RiStarLine } from '@remixicon/react';
 import { moneyText } from '@/lib/money';
 import { minorUnitFor } from '@/lib/currencies';
@@ -113,6 +114,7 @@ export function ProductOffers({
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -194,7 +196,15 @@ export function ProductOffers({
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, name: string) {
+    // This one went straight through: a price tier somebody spent a minute on, gone by a slip of the thumb. The door either deletes
+    // it or — when an order was placed on it — retires it, and it says so afterwards; the question says both.
+    const ok = await confirm({
+      title: `حذف العرض «${name}»؟`,
+      body: 'إن كانت عليه طلبات يُوقَف بدل الحذف كي تبقى الطلبات مقروءة؛ وإلا يُحذف نهائياً.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -487,7 +497,7 @@ export function ProductOffers({
                       </button>
                       <button
                         aria-label="حذف" title="حذف"
-                        onClick={() => remove(o.id)}
+                        onClick={() => remove(o.id, o.name)}
                         disabled={busy}
                         className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 text-[var(--sys-destructive)] hover:bg-[var(--sys-destructive-soft)]"
                       >

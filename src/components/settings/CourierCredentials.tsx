@@ -8,6 +8,7 @@ import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
 import { RiCheckLine, RiCloseCircleLine, RiDeleteBinLine, RiKey2Line, RiLoader4Line, RiPlug2Line, RiShieldCheckLine, RiShieldFlashLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/Confirm';
 
 /**
  * Where a courier account is entered — and the only place it is.
@@ -48,6 +49,7 @@ const BLANK = {
 
 export function CourierCredentials({ providerId }: { providerId: string }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [status, setStatus] = useState<Status | null>(null);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; message: string } | null>(null);
@@ -88,6 +90,14 @@ export function CourierCredentials({ providerId }: { providerId: string }) {
   }
 
   async function clear() {
+    // What is deleted cannot be read back — the password goes in and never comes out (see the note at the top) — so it cannot be
+    // restored either: somebody has to type the account again. Asked first.
+    const ok = await confirm({
+      title: `حذف حساب «${status?.name ?? 'شركة الشحن'}»؟`,
+      body: 'تعود الشركة يدويّة: لا بوالص ولا تتبّع تلقائي إلى أن تُدخل الحساب من جديد. الحساب المحذوف لا يُسترجَع.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       await apiJson(`/api/delivery-providers/${providerId}/credentials`, { method: 'DELETE' });
