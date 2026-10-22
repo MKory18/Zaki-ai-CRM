@@ -111,10 +111,10 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
        * The tick for such a row is disabled above, so this is unreachable
        * through the screen — which is the reason it is three lines rather
        * than a dialog. What it buys is that there is no path, reachable or
-       * not, that turns an unreadable quantity into a quantity of one on
-       * its way to the order door.
+       * not, that turns an unreadable quantity into a quantity of one — or an
+       * empty price into a price of ZERO — on its way to the order door.
        */
-      if (!r.productId || r.quantity === null) {
+      if (!r.productId || r.quantity === null || r.sellingPrice === null) {
         bad.push({ line: r.line, why: 'صفٌّ ناقص — لا يُنشأ' });
         setProgress({ done: made + bad.length, total: chosen.length });
         continue;
@@ -132,7 +132,7 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
             // The id the server matched, never the name the sheet typed.
             productId: r.productId,
             quantity: r.quantity,
-            ...(r.sellingPrice !== null ? { sellingPrice: r.sellingPrice } : {}),
+            sellingPrice: r.sellingPrice,
             customerNotes: r.values.notes || undefined,
             source: 'استيراد ملفّ',
             /*
@@ -196,14 +196,14 @@ export function ImportOrdersDialog({ onClose, onDone }: { onClose: () => void; o
 
               «لما اعمل استثيراد طلبات ما في ملف مرجعي نموذج» — THE OWNER, 21/10. The file existed behind a button that said only
               «حمّل النموذج», and its example row did not import. It now carries rows made from THIS store (its own products at
-              their prices, a phone its country accepts, one of its own regions), and this line says so, names the four columns
-              that must be filled — the same four `IMPORT_COLUMNS` marks required, held equal by a test — and says the one
-              thing that is not obvious: a price cell left empty becomes a price of ZERO at the order door (an open finding,
-              `an-import-row-reaches-the-door.test.ts`), so the price is to be written every time.
+              their prices, a phone its country accepts, one of its own regions), and this line says so, names the five columns
+              that must be filled — the same five `IMPORT_COLUMNS` marks required, held equal by a test — and says the one
+              thing that is not obvious: a row whose price cell is empty is not imported (22/10, the owner's ruling «ارفض الصف»;
+              before it, an empty cell stored an order at a price of ZERO), so the price is to be written every time.
             */}
             <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
               في النموذج صفوف مثال من منتجات متجرك بأسعارها، وبرقم هاتف من بلدك — عدّلها أو امسحها واكتب طلباتك مكانها. المطلوب: اسم العميل،
-              الهاتف، العنوان، المنتج (باسمه كما في كتالوجك). واكتب السعر دائماً: الخانة الفارغة تُنشئ طلباً بسعر صفر.
+              الهاتف، العنوان، المنتج، السعر (المنتج باسمه كما في كتالوجك، والسعر للسطر كلّه). الصفّ الذي سعره فارغ لا يُستورَد.
             </p>
             <label className="block cursor-pointer rounded-lg border-2 border-dashed border-[var(--sys-border)] p-6 text-center hover:border-[var(--sys-primary)]">
               <input

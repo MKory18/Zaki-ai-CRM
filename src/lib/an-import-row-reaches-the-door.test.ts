@@ -255,42 +255,74 @@ describe('and a cell nobody can read never becomes an order at all', () => {
   });
 
   /**
-   * FOUND WHILE MEASURING THIS PATH, MEASURED, AND OPEN.
+   * THE FINDING THAT WAS OPEN HERE, CLOSED ON 22/10 BY THE OWNER'S RULING — «ارفض الصف».
    *
-   * An EMPTY price cell is legal — the column is `required: false` and the
-   * template this very parser generates ships an example row with the price
-   * blank. It was assumed to mean «charge the product's own price». It does
-   * not. The create door builds its line as
+   * Found while this path was first measured: an EMPTY price cell was legal (the column was `required: false`, and the template this
+   * very parser generated shipped an example row with the price blank), and was assumed to mean «charge the product's own price». It
+   * did not. The create door builds its line as
    *
    *     unitPrice: sellingPrice ?? 0
    *
-   * and reads `basePrice` nowhere, so a blank price cell stores an order at
-   * ZERO on a product whose catalogue price is 14. That is the same silent
-   * zero this whole change was about, reached by a different road: not a
-   * mis-read cell, an absent one.
+   * and reads `basePrice` nowhere, so a blank price cell stored an order at ZERO on a product whose catalogue price is 14 — the
+   * same silent zero this whole change was about, reached by an ABSENT cell instead of a mis-read one.
    *
-   * IT IS RECORDED AND NOT FIXED, because the fix is a ruling and not a
-   * line of code — make the price column required for an import, or have
-   * the import door fill the catalogue price it already loads, or have the
-   * create door fall back to `basePrice` — and the two files that would
-   * carry any of the three (`api/orders/import/route.ts`,
-   * `api/orders/route.ts`) are outside this change. The figures are asserted
-   * so that the day one of the three is chosen, this fails and the record
-   * has to go.
+   * It was recorded and not fixed, because the fix was a ruling: make the column required, or fill the catalogue price at the import
+   * door, or fall back to `basePrice` at the create door. The owner chose the first — the choice that changes nothing in how an order
+   * is created. So the empty cell is refused where it is read, and the three links below are the three places it could have got out:
+   * the reading door, the screen's tick, and the screen's own guard.
+   *
+   * THE ROW IS ASSERTED BEFORE THE STATUS, as in the rest of this file, and `order.create` is asserted never to have been called.
    */
-  it('AN OPEN FINDING: an empty price cell stores a free order, not the catalogue price', async () => {
+  it('an empty price cell is refused at the reading door, by name, and nothing is written', async () => {
     const read = await readSheet('2', '');
     const row = read.data.rows[0];
 
-    // The importer is right to let it through: an empty cell is not a
-    // mis-read one, and nothing here is guessing.
     expect(row.sellingPrice).toBeNull();
-    expect(row.problems, 'خليّةٌ فارغةٌ صارت مشكلة').toEqual([]);
+    expect(row.problems.map((p: any) => [p.field, p.kind, p.ar]), 'الخليّةُ الفارغةُ لم تُسمَّ').toEqual([
+      ['sellingPrice', 'MISSING', 'السعر مفقود'],
+    ]);
+    expect(row.importable, 'صفٌّ بلا سعرٍ يُعرَضُ للاستيراد').toBe(false);
+    expect(read.status, JSON.stringify(read.data)).toBe(200);
+    expect(db.order.create).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A FILE WITH NO PRICE COLUMN AT ALL is refused at the door, whole — with the column named — which is what «every row has an
+   * empty price» comes to. It used to import every row at ZERO.
+   */
+  it('and a file with no price column at all is refused whole, naming the price', async () => {
+    const csv = [
+      ['الاسم', 'الهاتف', 'العنوان', 'المنتج', 'الكمية'],
+      ['أحمد المغني', '0999123456', 'حمص', PRODUCT, '1'],
+    ]
+      .map((r) => r.join(','))
+      .join('\n');
+    const body = new FormData();
+    body.append('file', new File([csv], 'orders.csv', { type: 'text/csv' }));
+    const res = await IMPORT(new Request('http://localhost/api/orders/import', { method: 'POST', body }));
+    const data = (await res.json()) as any;
+    expect(data.missing, JSON.stringify(data)).toEqual(['السعر']);
+    expect(data.code).toBe('MISSING_COLUMNS');
+    expect(data.error).toContain('السعر');
+    expect(res.status).toBe(400);
+    expect(db.order.create).not.toHaveBeenCalled();
+  });
+
+  /**
+   * THE BOUNDARY, THROUGH THE WHOLE PATH: a price somebody typed is a price, «0» included. A deliberate free order (a sample, a
+   * gift) is the person's to make, the create door accepts it, and the ruling is about the cell nobody filled in. Held here so that
+   * «empty» and «zero» cannot be folded into one by a tidy-up.
+   */
+  it('while a typed zero is still a price — it reaches the order as the zero somebody wrote', async () => {
+    const read = await readSheet('2', '0');
+    const row = read.data.rows[0];
+    expect(row.sellingPrice).toBe(0);
+    expect(row.problems).toEqual([]);
     expect(row.importable).toBe(true);
 
     const body = bodyTheScreenPosts(row);
-    expect('sellingPrice' in body, 'الشاشةُ تُرسِلُ سعراً لم يُكتَب').toBe(false);
-
+    expect(body.sellingPrice, 'الشاشةُ أسقطَت الصفرَ المكتوب').toBe(0);
     await CREATE(
       new Request('http://localhost/api/orders', {
         method: 'POST',
@@ -298,13 +330,22 @@ describe('and a cell nobody can read never becomes an order at all', () => {
         body: JSON.stringify(body),
       })
     );
-
-    // AND THIS IS THE OPEN FIGURE. The catalogue says 14; the order says 0.
-    expect(stored().sellingPrice, 'الباب صار يَأخُذُ سعرَ المنتج — فالسجلُّ أعلاه لزِمَ حذفُه').toBe(0);
-    expect(stored().totalAmount).toBe(0);
+    expect(stored().sellingPrice).toBe(0);
     expect(stored().quantity).toBe(2);
-    const catalogue = db.product.findMany.mock.results[0]?.value;
-    expect(catalogue, 'الكتالوجُ لم يُقرأ').toBeTruthy();
+  });
+
+  /**
+   * THE SCREEN'S OWN GUARD, below the tick. The tick of an unfinished row is disabled, so the guard is unreachable through the
+   * screen — which is why it is three lines and not a dialog. What it buys is that there is NO path, reachable or not, that turns
+   * an unreadable quantity into a quantity of one or an empty price into a price of ZERO on its way to the order door. It is held
+   * in behaviour by `the-import-dialog-says-what-the-model-is.test.tsx` (a row the server calls importable but that has no price is
+   * not posted) and in shape here.
+   */
+  it('and the screen posts a price only when the sheet gave one — there is no «leave it out» branch left', () => {
+    const src = stripComments(repoFile('src/components/orders/ImportOrdersDialog.tsx'));
+    expect(src).toContain('if (!r.productId || r.quantity === null || r.sellingPrice === null) {');
+    expect(src, 'الشاشةُ ما زالت تحذف السعرَ الفارغَ من الطلب بدل أن ترفضه').not.toMatch(/\.\.\.\(r\.sellingPrice !== null \?/);
+    expect(src).toMatch(/sellingPrice: r\.sellingPrice,/);
   });
 
   it('and an unreadable quantity leaves the screen nothing to send', async () => {
@@ -315,6 +356,6 @@ describe('and a cell nobody can read never becomes an order at all', () => {
 
     // The screen refuses it rather than posting a quantity nobody typed.
     const src = stripComments(repoFile('src/components/orders/ImportOrdersDialog.tsx'));
-    expect(src).toContain('if (!r.productId || r.quantity === null) {');
+    expect(src).toContain('if (!r.productId || r.quantity === null || r.sellingPrice === null) {');
   });
 });

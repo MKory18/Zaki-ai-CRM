@@ -9,7 +9,8 @@ import { matchProduct } from './order-parser';
  *
  * The file existed and was no use as a model. Its one example row was Syrian whoever downloaded it: a phone the rule of a
  * Jordanian store refuses, a product no store has — so the model's own row came back «فيه نقص» — and its price cell was EMPTY,
- * which `POST /api/orders` stores as a price of ZERO. So what is held here is not «a file is returned» but that the example rows are
+ * which `POST /api/orders` stored as a price of ZERO (an empty price is a refused row now — 22/10, the owner's ruling «ارفض الصف»).
+ * So what is held here is not «a file is returned» but that the example rows are
  * rows the importer ACCEPTS, for the store that downloaded them, against its own catalogue, through the real door — and that
  * where there is nothing real to give, nothing is invented.
  * ═══════════════════════════════════════════════════════════════════════
@@ -118,7 +119,7 @@ describe('the example rows', () => {
     expect(two.map((r) => r.sellingPrice)).toEqual([3.33, 6.67]);
   });
 
-  it('and no price is empty or zero — an empty cell is a free order at the door', () => {
+  it('and no price is empty or zero — an empty cell is a refused row, and a zero is a free order', () => {
     for (const r of sampleRows(input())) expect(r.sellingPrice).toBeGreaterThan(0);
   });
 
