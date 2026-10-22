@@ -11,6 +11,7 @@ import { healthOf } from '@/lib/health';
 import type { ChannelScore } from '@/lib/channel-score';
 import type { Trust } from '@/lib/cod-vitals';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { CHANNEL_KIND_AR as KIND_AR } from '@/lib/order-channel-kinds';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -24,19 +25,6 @@ import { useLiveRefresh } from '@/hooks/useLiveRefresh';
  * A channel with orders is never deleted, only switched off: it leaves the
  * lists people pick from and stays in the numbers.
  */
-
-const KIND_AR: Record<string, string> = {
-  LANDING_PAGE: 'صفحة هبوط',
-  FACEBOOK: 'فيسبوك',
-  INSTAGRAM: 'إنستغرام',
-  TIKTOK: 'تيكتوك',
-  WHATSAPP: 'واتساب',
-  TELEGRAM: 'تلجرام',
-  PHONE: 'هاتف',
-  SHEET: 'شيت',
-  WEBSITE: 'الموقع',
-  OTHER: 'أخرى',
-};
 
 const KIND_TONE: Record<string, string> = {
   LANDING_PAGE: 'bg-[var(--sys-surface)] text-[var(--sys-muted-foreground)] border-[var(--sys-border)]',

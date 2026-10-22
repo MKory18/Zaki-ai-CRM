@@ -6,7 +6,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
 import { Pager } from '@/components/ui/Pager';
-import { ListToolbar, type ToolbarFilter } from '@/components/ui/ListToolbar';
+import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
 import { useToast } from '@/components/ui/Toast';
 import { useAsk, useTell } from '@/components/ui/Confirm';
 import { WinbackRuleDialog } from '@/components/confirmation/WinbackRuleDialog';
@@ -71,10 +71,6 @@ const read = (body: unknown): PagedRead<Row, Extra> => {
 
 const reasonAr = (code: string | null) => (code ? (REJECTION_REASON_AR[code] ?? code) : 'بلا سبب');
 const day = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : '—');
-
-/** The chosen value is always in the box: a stale choice the counts no longer hold still shows. */
-const withChosen = (value: string, options: { value: string; label: string }[]) =>
-  value === 'all' || options.some((o) => o.value === value) ? options : [...options, { value, label: `${value} (0)` }];
 
 export function WinbackScreen() {
   const toast = useToast();
