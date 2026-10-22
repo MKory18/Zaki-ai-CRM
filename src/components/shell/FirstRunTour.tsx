@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { apiJson } from '@/lib/api-client';
 import { RiArrowLeftLine, RiInformationLine, RiMenuLine, RiSearchLine, RiStore2Line } from '@remixicon/react';
@@ -102,35 +102,38 @@ export function FirstRunTour() {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [neverAgain, setNeverAgain] = useState(false);
   const [busy, setBusy] = useState(false);
-  /** The anchor of the CURRENT step, re-read whenever the step moves. */
-  const asked = useRef('');
+  /**
+   * The steps this screen can actually show: a step whose element is absent
+   * is dropped BEFORE the tour starts rather than skipped mid-walk. Deciding
+   * it up front is what keeps the counter honest — «خطوة 2 من 3» on a phone
+   * with no sidebar is true; «خطوة 2 من 4» with a step that never appears is
+   * a tour that lost a page.
+   */
+  const [plan, setPlan] = useState<TourStep[]>(STEPS);
 
-  // Opens at most once per mount, only for a user who has never dismissed it.
+  // Opens at most once per mount, only for a user who has never dismissed it,
+  // and plans only the steps whose elements are on THIS screen right now.
   useEffect(() => {
-    if (currentUser && !currentUser.tourDoneAt && !open) {
-      setStep(0);
-      setOpen(true);
-    }
-    // `open` is deliberately not a trigger: the effect must not re-open what
-    // the person just dismissed. It is read to keep the guard honest only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!currentUser || currentUser.tourDoneAt) return;
+    const here = STEPS.filter((s) => document.querySelector(`[data-tour="${s.anchor}"]`));
+    // Nothing to point at is nothing to say: no overlay at all rather than an
+    // overlay with no anchor, which would cover a screen and explain none of it.
+    if (here.length === 0) return;
+    setPlan(here);
+    setStep(0);
+    setOpen(true);
   }, [currentUser?.id, currentUser?.tourDoneAt]);
 
-  const current = STEPS[step];
+  const current = plan[step];
 
-  // Find the anchor of the current step — and skip past any step whose
-  // element is not on this screen at all. A tour that cannot point at the
-  // thing says nothing by standing there, so it moves on.
+  // Follow the anchor while the page moves under it. Measuring is a
+  // synchronisation with the DOM, not a second source of truth: the element
+  // owns where it is, the card only reads it.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !current) return;
     const el = document.querySelector(`[data-tour="${current.anchor}"]`);
-    if (!el) {
-      setStep((s) => (s + 1 < STEPS.length ? s + 1 : s));
-      if (step + 1 >= STEPS.length) setOpen(false);
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    setRect(r);
+    if (!el) return;
+    setRect(el.getBoundingClientRect());
     const onMove = () => setRect(el.getBoundingClientRect());
     window.addEventListener('resize', onMove);
     window.addEventListener('scroll', onMove, true);
@@ -138,7 +141,7 @@ export function FirstRunTour() {
       window.removeEventListener('resize', onMove);
       window.removeEventListener('scroll', onMove, true);
     };
-  }, [open, step, current.anchor]);
+  }, [open, step, current]);
 
   /** Writes the dismissal to the row, and never throws at the person. */
   const dismissForever = useCallback(async () => {
@@ -158,7 +161,7 @@ export function FirstRunTour() {
   }, [busy, refreshUser]);
 
   const next = () => {
-    if (step + 1 < STEPS.length) {
+    if (step + 1 < plan.length) {
       setStep(step + 1);
     } else {
       void dismissForever();
@@ -170,7 +173,7 @@ export function FirstRunTour() {
     else setOpen(false);
   };
 
-  if (!open || !currentUser || currentUser.tourDoneAt) return null;
+  if (!open || !current || !currentUser || currentUser.tourDoneAt) return null;
 
   return (
     <div dir="rtl" data-testid="first-run-tour">
@@ -193,7 +196,7 @@ export function FirstRunTour() {
           </div>
 
           <p className="mt-3 text-xs text-[var(--sys-muted-foreground)] tabular-nums">
-            خطوة {step + 1} من {STEPS.length}
+            خطوة {step + 1} من {plan.length}
           </p>
 
           <div className="mt-3 flex items-center justify-between gap-2">
@@ -210,7 +213,7 @@ export function FirstRunTour() {
               disabled={busy}
               className="inline-flex h-10 items-center gap-1 px-4 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-medium disabled:opacity-50"
             >
-              {step + 1 < STEPS.length ? 'التالي' : 'خلصت'}
+              {step + 1 < plan.length ? 'التالي' : 'خلصت'}
               <RiArrowLeftLine className="h-4 w-4" aria-hidden />
             </button>
           </div>

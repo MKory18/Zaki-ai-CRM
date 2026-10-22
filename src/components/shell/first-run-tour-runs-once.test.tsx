@@ -46,7 +46,6 @@ vi.mock('@/lib/api-client', () => ({
 }));
 
 import { FirstRunTour } from './FirstRunTour';
-import { apiJson } from '@/lib/api-client';
 
 /** The frame the tour anchors against: the four data-tour elements. */
 function Frame({ withGuide = true }: { withGuide?: boolean }) {
@@ -124,24 +123,35 @@ describe('«ما بدي أشرح مرة ثانية»', () => {
 });
 
 describe('a step whose element is not on the screen', () => {
-  it('is skipped, not drawn against nothing', () => {
-    // A phone folds the sidebar and a screen without a guide has no ⓘ:
-    // with only the chip present, the first step shown is the chip's.
-    render(<Frame withGuide={false} />);
-    // The sidebar anchor exists here, so the first step is step 1; step to
-    // the search, then remove nothing — instead render a frame missing the
-    // sidebar entirely to prove the skip.
-    cleanup();
+  it('is dropped from the plan, not drawn against nothing — and the count is honest', () => {
+    // A phone folds the sidebar and a screen without a guide has no ⓘ: the
+    // tour plans only what it can point at, and says «من 2» rather than
+    // walking a person to a step that will never appear.
     const Bare = () => (
       <div>
         <div data-tour="context">المتجر</div>
+        <button data-tour="search">ابحث</button>
         <FirstRunTour />
       </div>
     );
     render(<Bare />);
-    // sidebar absent → the tour moves on to the first element that IS there
     expect(screen.getByText(/المتجر والبلد/)).toBeTruthy();
-    expect(screen.getByText(/خطوة 2 من 4/)).toBeTruthy();
+    expect(screen.getByText(/خطوة 1 من 2/)).toBeTruthy();
+    fireEvent.click(screen.getByText('التالي'));
+    expect(screen.getByText(/يلاقي كل شي/)).toBeTruthy();
+    expect(screen.getByText(/خطوة 2 من 2/)).toBeTruthy();
+    // and it ends there — no dangling fourth step pointing at nothing
+    expect(screen.getByText('خلصت')).toBeTruthy();
+  });
+
+  it('and a screen with nothing to anchor to gets no overlay at all', () => {
+    render(
+      <div>
+        <p>شاشة بلا إطار</p>
+        <FirstRunTour />
+      </div>
+    );
+    expect(screen.queryByRole('dialog', { name: 'الجولة الأولى' })).toBeNull();
   });
 });
 
