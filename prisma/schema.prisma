@@ -270,6 +270,11 @@ model User {
   /// On the user rather than in browser storage: somebody who works from
   /// the counter and from a laptop chose once, not twice.
   systemTheme        String?   @map("system_theme")
+  /// Whether the one-time first-run tour was dismissed for good. Null = it
+  /// has not run (or was skipped without «ما بدي أشرح مرة ثانية»), so the
+  /// next sign-in opens it again. Like the theme, it is on the USER and not
+  /// in browser storage: one choice per person, not one per device.
+  tourDoneAt         DateTime? @map("tour_done_at")
   salaryAmount       Decimal?  @map("salary_amount") @db.Decimal(14, 3)
   salaryCurrency     String?   @map("salary_currency")
   shiftStart         String?   @map("shift_start") @db.VarChar(5)
