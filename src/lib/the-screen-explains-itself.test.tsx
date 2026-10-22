@@ -200,6 +200,27 @@ describe('every name a guide quotes is a name that is on a screen', () => {
     }
   });
 
+  /*
+   * THE TWO GUIDES WRITTEN ON 22/10 ARE HELD TO THEIR OWN SCREEN, not to the union above. The union is right for a guide that sends
+   * you to the next screen; these two send you nowhere, so every name they quote has to be on the screen they sit on. Measured when
+   * they were written: «لم يُحصَّل بعد» renamed to «المتبقي» in the dashboard's guide passed the union (other screens say
+   * «المتبقي»), and would have sent a person looking for a card that does not exist.
+   */
+  it.each(['/dashboard', '/settings/tracking'])('%s quotes only names that are on its own screen', (path) => {
+    const page = pageFileFor(path);
+    expect(page, `${path}: ما لقيت صفحة`).not.toBeNull();
+    const own = closure(page!).join('\n');
+    expect(own.length, `${path}: ما انقرأ شي`).toBeGreaterThan(5_000);
+    const g = GUIDE_TEXTS[path];
+    const quoted = [...g.steps, ...(g.watch ? [g.watch] : [])].flatMap((line) =>
+      [...line.matchAll(/«([^»]+)»/g)].map((m) => m[1].trim())
+    );
+    expect(quoted.length, `${path}: ما في أسماء مقتبسة`).toBeGreaterThan(5);
+    for (const q of quoted) {
+      expect(own.includes(q), `${path}: «${q}» مش على شاشتها هي`).toBe(true);
+    }
+  });
+
   it('and the check can fail — a name nobody wrote is refused', () => {
     // The corpus is a string; an invented name must not be found in it. If this
     // ever passes, the test above has stopped being able to tell.
@@ -218,7 +239,7 @@ describe('what is derived rather than written', () => {
   });
 
   it('and a screen without a guide, an address outside the menu, and no address at all, have none', () => {
-    expect(guideRoute('/dashboard')).toBeNull();
+    expect(guideRoute('/store')).toBeNull();
     expect(guideRoute('/nowhere')).toBeNull();
     expect(guideRoute('')).toBeNull();
     expect(guideRoute(null)).toBeNull();
@@ -266,9 +287,18 @@ describe('the ⓘ', () => {
   });
 
   it('and is not drawn where there is nothing behind it', () => {
-    here.path = '/dashboard';
+    here.path = '/nowhere';
     mountHeader('page');
     expect(button(), 'زر بلا شرح خلفه').toBeNull();
+  });
+
+  it('and IS drawn on the two screens that were left without one: the dashboard, and «بكسل التتبع والحملات» (22/10)', () => {
+    for (const path of ['/dashboard', '/settings/tracking']) {
+      cleanup();
+      here.path = path;
+      mountHeader(path === '/dashboard' ? 'page' : 'title');
+      expect(button(), `${path}: لا ⓘ`).toBeTruthy();
+    }
   });
 
   it('and is not drawn on the storefront’s screens, even though they use the same header', () => {
@@ -417,26 +447,24 @@ describe('the stop after this one', () => {
 
 describe('a screen cannot be added to the menu without explaining itself', () => {
   const storefront = NAV.find((g) => g.key === 'storefront')!.routes.map((r) => r.path);
-  /** Waiting on something else; the day that arrives, its entry is deleted from here. */
-  const WAITING: Record<string, string> = {
-    '/dashboard': 'قسم «شغلك اليوم» فيها دفعة لحالها، وشرحُها يُكتب معه',
-  };
-  /** Draws no title at all (neither PageHeader nor ScreenTitle), so there is nowhere to put the button. */
-  const NO_TITLE = ['/settings/tracking'];
 
-  it('— every screen of the menu has a guide, except the ones named here, and each exception says why', () => {
-    const exempt = new Set([...storefront, ...Object.keys(WAITING), ...NO_TITLE]);
-    const want = ALL_ROUTES.map((r) => r.path).filter((p) => !exempt.has(p)).sort();
-    expect([...GUIDED_PATHS].sort(), 'شاشة بلا شرح — اكتبه أو سمِّها استثناءً مع سببه').toEqual(want);
-    for (const [path, why] of Object.entries(WAITING)) expect(why.length, `${path}: بلا سبب`).toBeGreaterThan(10);
+  /**
+   * NO SCREEN IS EXCUSED ANY MORE. Two were, on 21/10 — the dashboard («شغلك اليوم» was not there yet) and `/settings/tracking`
+   * (it drew no title, so there was nowhere to hang the button) — and this list was where they waited. Both are written, so the only
+   * exemption left is the storefront's, which is another agent's. A screen added to the menu without a guide fails here.
+   */
+  it('— every screen of the menu has a guide, except the storefront’s', () => {
+    const want = ALL_ROUTES.map((r) => r.path).filter((p) => !storefront.includes(p)).sort();
+    expect([...GUIDED_PATHS].sort(), 'شاشة بلا شرح — اكتبه').toEqual(want);
   });
 
-  it('and a screen excused for having no title still has none — the day it gets one it needs its guide', () => {
-    for (const path of NO_TITLE) {
+  it('and every guided screen draws a title for the ⓘ to hang on — a guide on a screen with no title is a button nobody can reach', () => {
+    expect(GUIDED_PATHS.length, 'ما في شاشات').toBeGreaterThan(40);
+    for (const path of GUIDED_PATHS) {
       const page = pageFileFor(path);
       expect(page, `${path}: ما لقيت صفحة`).not.toBeNull();
       const source = closure(page!).join('\n');
-      expect(/<PageHeader\b|<ScreenTitle\b/.test(source), `${path}: صار له عنوان — اكتب شرحه`).toBe(false);
+      expect(/<PageHeader\b|<ScreenTitle\b/.test(source), `${path}: بلا عنوان — لا مكان للزر`).toBe(true);
     }
   });
 });

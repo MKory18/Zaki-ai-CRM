@@ -23,13 +23,23 @@ import type { GuideText } from './route-guide';
  * 4. Where the screen is a stop of a numbered road, the stop AFTER it is not
  *    written here: it is read from the menu's own order, so it cannot go stale.
  *
- * Not every screen has one. The dashboard waits for its own «شغلك اليوم»
- * section, and `/settings/tracking` draws no title at all (so there is nowhere
- * to put the button). A screen without a guide has no ⓘ — a button that opens
- * an empty promise is worse than no button.
+ * Every screen of the menu that is ours has one. The two that were left out waited for something: the dashboard for its own
+ * «شغلك اليوم» section (it is there now, and the guide's first step names it), and `/settings/tracking` for a title to hang the
+ * button on (the page draws one now). A screen without a guide still has no ⓘ — a button that opens an empty promise is worse than
+ * no button — and the storefront's screens are another agent's.
  */
 export const GUIDE_TEXTS: Record<string, GuideText> = {
   // ───────────────────────── الرئيسية ─────────────────────────
+  '/dashboard': {
+    steps: [
+      'اختر الفترة من الأزرار فوق: «اليوم» أو «7 أيام» أو «30 يوم» أو «هذا الشهر» أو «الكل» — كل الأرقام تتبدّل معها.',
+      'أول ما ترى «شغلك اليوم»: ما ينتظرك أنت بالذات. اضغط البطاقة لتفتح الشاشة التي فيها الشغل.',
+      'تحته «ما يحتاج تدخّلاً»: ما تعلّق الآن قبل أن تقرأ ما حدث.',
+      'بعدها الأرقام التي يُدار بها الدفع عند الاستلام: الربح والإيراد ونسب التأكيد والتوصيل و«نسبة الإرجاع» و«لم يُحصَّل بعد».',
+      'لطلب جديد بسرعة: «طلب سريع»، أو «إدخال بالذكاء الاصطناعي» وتلصق فيه رسالة الزبون كما وصلتك.',
+    ],
+    watch: 'كل رقم مالي يحسبه الخادم لا الشاشة؛ والربح يظهر «—» إذا كانت بيانات التكلفة ناقصة، والبطاقة تقول أيّ حقلٍ فاضٍ.',
+  },
   '/orders': {
     steps: [
       'ابحث برقم الطلب أو الاسم أو الهاتف، أو امسح بوليصة الطلب (QR أو باركود).',
@@ -422,6 +432,16 @@ export const GUIDE_TEXTS: Record<string, GuideText> = {
       'قناة عليها طلبات لا تُحذف بل تُعطَّل: تختفي من القوائم وتبقى في الأرقام؛ و«حذف — لا طلبات عليها» لغير المستعملة فقط.',
     ],
     watch: 'اسم واحد لكل قناة: كتابتها بثلاث صيغ تجعل الأرقام لا تُحسب لها.',
+  },
+  '/settings/tracking': {
+    steps: [
+      'اختر المنصّة من الأزرار فوق، اكتب رقم البكسل، وحدّد «أين يعمل»: كل صفحات البيع أو صفحات الهبوط فقط، ثم اضغط «أضف».',
+      'وحدّد على أي متجر يعمل: كل المتاجر، أو كل متاجر بلد (ومنها ما يُفتح لاحقاً)، أو متجراً واحداً.',
+      'لبكسل موجود: غيّر مكانه من القوائم، أو عطّله بلا حذف، أو «تعديل الاسم»، أو «حذف» إن لم تعد تحتاجه.',
+      'تحتها «التحويلات المخصّصة»: ما يُرسله الخادم بعد الطلب — عند الباب أو بعد أيام — حيث لا متصفّح يراقب.',
+      'وأسفلها «حسابات الإعلانات»: اربط حسابك ليأتي الإنفاق تلقائياً، أو أضفه يدوياً وأدخله بيدك في شاشة الحملات.',
+    ],
+    watch: 'حساب الإعلانات يتبع المتجر المختار من الأعلى؛ والأحداث التي توقّفت عن الوصول تشبه أسبوعاً هادئاً، فراقب أعداد المُرسَل لا غياب الأخطاء.',
   },
   '/settings/whatsapp': {
     steps: [

@@ -59,6 +59,7 @@ export interface GuideText {
  */
 export const GUIDED_PATHS: readonly string[] = [
   // الرئيسية
+  '/dashboard',
   '/orders',
   '/customers',
   '/products',
@@ -108,6 +109,7 @@ export const GUIDED_PATHS: readonly string[] = [
   '/settings/couriers',
   '/settings/commission',
   '/settings/channels',
+  '/settings/tracking',
   '/settings/whatsapp',
   '/settings/telegram',
   '/settings/ai',
