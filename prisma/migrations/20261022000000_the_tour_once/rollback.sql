@@ -1,9 +1,7 @@
--- ROLLBACK of 20261022000000_the_tour_once.
+-- THE TOUR THAT RUNS ONCE, AND ONLY ONCE — ROLLBACK
 --
--- The column was added nullable with no default and nothing reads it yet
--- once this branch's code is gone, so dropping it loses nothing but the
--- memory of who saw the tour — and re-running the forward migration gives
--- everybody the tour again, which is the correct meaning of "rollback"
--- for a one-time walkthrough.
+-- Reverses exactly what migration 20261022000000_the_tour_once added:
+-- drops the nullable tour_done_at column on users. Nothing else was added,
+-- so nothing else is removed. No data was rewritten on the way in.
 
-ALTER TABLE "users" DROP COLUMN IF EXISTS "tour_done_at";
+ALTER TABLE "users" DROP COLUMN "tour_done_at";
