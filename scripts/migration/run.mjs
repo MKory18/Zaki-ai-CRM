@@ -1039,8 +1039,13 @@ async function stepTarget(ctx, dump) {
   for (const s of rows(dump, 'shippings')) {
     let p = byName.get(s.name) || (PROVIDER_ALIASES[s.name] && byCode.get(PROVIDER_ALIASES[s.name])) || null;
     if (p) { plan.push(`${s.name} → existing «${p.name}» (${p.code})`); ctx.providerMap.set(s.id, p.id); continue; }
-    const code = `LEG-${s.id}`;
-    if (allCodes.has(code)) throw new Error(`provider code ${code} is taken in this company by another store's courier — refusing to guess`);
+    // `LEG-{legacy id}` — unless that code already names ANOTHER courier in
+    // the company (it was matched by name above if it were this one). On the
+    // Syria store an earlier setup gave «الو دليفيري» LEG-3, which is صالح's
+    // legacy id; the store's slug then keeps the code unique and readable.
+    let code = `LEG-${s.id}`;
+    if (allCodes.has(code)) code = `LEG-${s.id}-${store.slug}`;
+    if (allCodes.has(code)) throw new Error(`provider codes LEG-${s.id} and ${code} are both taken in this company — refusing to guess`);
     plan.push(`${s.name} → NEW on this store (${code})`);
     if (DRY_RUN) continue;
     p = await prisma.deliveryProvider.create({ data: { companyId: company.id, storeId: store.id, name: s.name, code, kind: 'COMPANY', isActive: true } });
