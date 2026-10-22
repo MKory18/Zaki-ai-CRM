@@ -30,6 +30,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/ops/returns' }));
 vi.mock('@/components/shell/ScreenTitle', () => ({ ScreenTitle: () => <h1>المرتجعات</h1> }));
 vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ failed: vi.fn(), done: vi.fn() }) }));
 vi.mock('@/components/orders/OrderNotesPeek', () => ({ OrderNotesPeek: () => null }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
 // A camera is not a thing jsdom has; what matters is what the screen does with the code it is handed.
 vi.mock('@/components/scan/ScanButton', () => ({
   ScanButton: (p: { onScan: (code: string) => unknown }) => {
@@ -400,10 +401,11 @@ describe('the pages', () => {
 });
 
 describe('when nothing is there', () => {
-  it('— an empty list with nothing chosen says what the desk is for', async () => {
+  it('— an empty list with nothing chosen says the task is done, in the desk’s own words', async () => {
     total = 0;
     await draw();
-    expect(screen.getByText('لا مرتجعات بانتظار الاستلام')).toBeTruthy();
+    expect(screen.getByText('تمّت المهمة!')).toBeTruthy();
+    expect(screen.getByText('المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة.')).toBeTruthy();
     expect(screen.queryByText('لا مرتجعات بهذه الشروط')).toBeNull();
   });
 

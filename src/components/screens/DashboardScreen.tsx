@@ -343,8 +343,10 @@ export function DashboardScreen() {
              «شغلك اليوم»: the counts the header chips hold, given room to say
              what each is for. It leads the page because the tiles below say
              how the month is going, and somebody who has just sat down needs
-             to know what to do first. Draws nothing for a person with no
-             kind of work, and nothing until the server has answered. */}
+             to know what to do first. It opens with «مهمّتك الجاية» — one
+             sentence and one button — and follows it with the grid. Draws
+             nothing for a person with no kind of work, and nothing until the
+             server has answered. */}
         <WorkToday />
 
         {/* ─── What needs a person, before what merely happened ───
