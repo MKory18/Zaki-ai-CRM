@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { createPasskey, passkeySupported } from '@/lib/passkey-browser';
+import { useConfirm } from '@/components/ui/Confirm';
 import { RiDeleteBinLine, RiFingerprintLine, RiLoader4Line } from '@remixicon/react';
 
 /**
@@ -26,6 +27,7 @@ interface Key {
 }
 
 export function PasskeySection() {
+  const confirm = useConfirm();
   const [keys, setKeys] = useState<Key[] | null>(null);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,7 +79,14 @@ export function PasskeySection() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, label: string) {
+    // A way to sign in, removed by one press. The device that holds the key still holds it, but this account stops accepting it.
+    const ok = await confirm({
+      title: `حذف «${label}»؟`,
+      body: 'لن تستطيع الدخول بها بعد الآن، وتحتاج تسجيلها من جديد لتعود.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await fetch(`/api/auth/passkey?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -124,7 +133,7 @@ export function PasskeySection() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => void remove(k.id)}
+                  onClick={() => void remove(k.id, k.label || 'المفتاح')}
                   disabled={busy}
                   title={`احذف ${k.label || 'المفتاح'}`}
                   aria-label={`احذف ${k.label || 'المفتاح'}`}

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { apiFetch, apiJson } from '@/lib/api-client';
+import { useConfirm } from '@/components/ui/Confirm';
 import { arDateTime } from '@/lib/format';
 import {
   RiAddLine,
@@ -58,6 +59,7 @@ const STATE_AR: Record<TokenRow['state'], string> = {
 };
 
 export function SystemTokensPanel() {
+  const confirm = useConfirm();
   const [shelf, setShelf] = useState<Shelf | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -101,7 +103,15 @@ export function SystemTokensPanel() {
   }, [name, chosen, load]);
 
   const revoke = useCallback(
-    async (id: string) => {
+    async (id: string, name: string) => {
+      // Stopping a key is not undone: the door sets `revokedAt` and nothing sets it back, so the system holding it is cut off at
+      // once and needs a new key. A system that has stopped calling in is a bad way to learn that.
+      const ok = await confirm({
+        title: `إيقاف المفتاح «${name}»؟`,
+        body: 'أيّ نظام يستعمله يتوقّف عن الاتصال فوراً. الإيقاف لا يُلغى: تحتاج مفتاحاً جديداً.',
+        tone: 'danger',
+      });
+      if (!ok) return;
       setError(null);
       try {
         const res = await apiFetch('/api/settings/system-tokens', {
@@ -114,7 +124,7 @@ export function SystemTokensPanel() {
         setError(e instanceof Error ? e.message : 'تعذر إيقاف المفتاح');
       }
     },
-    [load]
+    [load, confirm]
   );
 
   const copy = useCallback(async () => {
@@ -260,7 +270,7 @@ export function SystemTokensPanel() {
               </span>
               {t.state === 'ACTIVE' && (
                 <span className="ms-auto">
-                  <Button size="sm" variant="danger" onClick={() => revoke(t.id)}>
+                  <Button size="sm" variant="danger" onClick={() => revoke(t.id, t.name)}>
                     <RiStopCircleLine className="h-4 w-4" /> أوقفه
                   </Button>
                 </span>

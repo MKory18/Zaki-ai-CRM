@@ -12,6 +12,7 @@ import type { ChannelScore } from '@/lib/channel-score';
 import type { Trust } from '@/lib/cod-vitals';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { CHANNEL_KIND_AR as KIND_AR } from '@/lib/order-channel-kinds';
+import { useConfirm } from '@/components/ui/Confirm';
 
 /**
  * /settings/channels — where this shop's orders come from.
@@ -90,6 +91,7 @@ const INPUT =
 
 export function ChannelsScreen() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [channels, setChannels] = useState<Channel[] | null>(null);
   // The numbers arrive separately and may be refused outright — a channel
   // editor is useful to somebody without `analytics.view`, and the list must
@@ -159,6 +161,14 @@ export function ChannelsScreen() {
   }
 
   async function remove(channel: Channel) {
+    // The button is drawn only while nothing came through the channel, so what goes is the row and its name — and the screen's own
+    // «إيقاف» is the way to keep it without using it. Asked first, like every other delete in the product.
+    const ok = await confirm({
+      title: `حذف القناة «${channel.name}»؟`,
+      body: 'ما عليها أي طلب، فيُمحى سجلّها. إن أردتَ إبقاءها بلا استعمال فاضغط «إيقاف» بدل الحذف.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(channel.id);
     try {
       await apiJson(`/api/settings/channels/${channel.id}`, { method: 'DELETE' });
