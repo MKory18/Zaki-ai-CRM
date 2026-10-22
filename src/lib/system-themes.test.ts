@@ -66,7 +66,7 @@ describe('the palettes', () => {
     // Three were the product's own; eight are the owner's, from his PC
     // application; the twelfth, «ساحل النيون», is the one with photographs
     // (21/10). Every gate below runs over all twelve.
-    expect(SYSTEM_THEMES).toHaveLength(12);
+    expect(SYSTEM_THEMES).toHaveLength(13);
     expect(themeByKey(DEFAULT_THEME).key).toBe(DEFAULT_THEME);
   });
 

@@ -163,6 +163,23 @@ export const SHAPES: Record<string, Shape> = {
     mark: '<path d="M3 19a9 9 0 0 1 18 0" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 19V8M12 19L6.4 9.6M12 19l5.6-9.4M12 19L3.6 14.6M12 19l8.4-4.4" fill="none" stroke="currentColor" stroke-width="1.3"/>',
   },
 
+  /**
+   * «ليل» wears the OCTAGRAM — the eight-pointed star of the brief, drawn
+   * on a 24-grid as pure geometry: two squares, one upright and one turned
+   * 45°, their tips at the sixteen points the brief listed. It is the same
+   * seal `StarMark` spins, and the shape `KHATAM` strings along the two
+   * Islamic themes — one family of stars across the product.
+   */
+  layl: {
+    radius: '0.75rem',
+    border: '1px',
+    crown: 'none',
+    mark:
+      '<polygon points="2,7.8 7.8,2 16.2,2 22,7.8 22,16.2 16.2,22 7.8,22 2,16.2" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+      '<path d="M2 7.8L16.2 22M22 7.8L7.8 22M22 16.2L7.8 2M16.2 2L2 16.2" stroke="currentColor" stroke-width="1"/>' +
+      '<polygon points="12,8.4 13.6,10.4 16,12 13.6,13.6 12,16 10.4,13.6 8,12 10.4,10.4" fill="currentColor"/>',
+  },
+
   /** A shield, and a heavier edge. */
   epic: {
     radius: '0.25rem',

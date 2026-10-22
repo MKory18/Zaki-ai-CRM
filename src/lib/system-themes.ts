@@ -640,6 +640,74 @@ export const SYSTEM_THEMES: SystemTheme[] = [
       'shadow-overlay': '0 10px 15px -3px rgb(0 0 0 / 0.76), 0 4px 6px -4px rgb(0 0 0 / 0.56)',
     },
   },
+  /*
+   * ══════════════════════════════════════════════════════════════════════
+   * «ليل» — THE THIRTEENTH PALETTE, DARK, AND THE NEW STAFF'S FIRST LOOK.
+   *
+   * The owner's brief gave the hexes and this palette writes them exactly:
+   * bg #050F1F, surface #0D2140, line #21406D, text #F4ECDC, muted #A9B4C8,
+   * gold #E3B04B and #F6D27A, teal #36B5CC — with the sun's rose #E0457B
+   * and orange #F28C38, the cash green #5BD77A and the amber #F2B544.
+   *
+   * ONE DELIBERATE WALK, THE SAME WALK EVERY PALETTE HERE TOOK: the rose
+   * #E0457B measures 4.05:1 on the surface #0D2140 — under the 4.5:1 the
+   * destructive token is held to. So the ROLE takes #F24A85 (4.66:1), the
+   * same hue walked brighter, and the ORIGINAL stays where colour is mood:
+   * in the chart series, where 3:1 is the gate and 4.05 clears it.
+   *
+   * The teal carries the accent, the golds the moment — and text on either
+   * is the dark of the ground (#050F1F), 9.66:1 on the gold and 7.38:1 on
+   * the teal. A new staff member opens on this one: the creation paths in
+   * api/users and api/moderators write `layl` explicitly, and `layl` was
+   * deliberately placed in SHEET_THEMES so the FIRST paint already wears
+   * it rather than flashing the old default first.
+   * ══════════════════════════════════════════════════════════════════════
+   */
+  {
+    key: 'layl',
+    ar: 'ليل',
+    note: 'سماويٌّ عميقٌ وذهبٌ دافئ — الثيم الأول للموظف الجديد.',
+    dark: true,
+    vars: {
+      background: '#050F1F',
+      card: '#0D2140',
+      surface: '#16405E',
+      'surface-strong': '#1D4E72',
+      border: '#21406D',
+      'border-strong': '#4A6FA5',
+      heading: '#F4ECDC',
+      foreground: '#F4ECDC',
+      'muted-foreground': '#A2ADC3',
+      'border-input': '#A9B4C8',
+      muted: '#9BABC5',
+      primary: '#36B5CC',
+      'primary-foreground': '#04182B',
+      'primary-hover': '#60D0DE',
+      'primary-soft': '#0A2A38',
+      focus: '#60D0DE',
+      warning: '#F2B544',
+      'warning-soft': '#332A14',
+      destructive: '#F24A85',
+      'destructive-soft': '#2B1420',
+      'destructive-border': '#6B2340',
+      success: '#5BD77A',
+      'success-soft': '#0E3020',
+      'chart-1': '#36B5CC',
+      'chart-2': '#E0457B',
+      'chart-3': '#E3B04B',
+      'chart-4': '#F28C38',
+      'chart-5': '#7FA7C9',
+      'chart-6': '#F6D27A',
+      sidebar: '#0D2140',
+      'sidebar-foreground': '#A9B4C8',
+      'scrollbar': '#21406D',
+      'scrollbar-hover': '#4A6FA5',
+      'sidebar-scrollbar': '#21406D',
+      'sidebar-scrollbar-hover': '#4A6FA5',
+      'shadow-raised': '0 1px 2px rgb(0 0 0 / 0.62), 0 1px 3px rgb(0 0 0 / 0.42)',
+      'shadow-overlay': '0 10px 15px -3px rgb(0 0 0 / 0.75), 0 4px 6px -4px rgb(0 0 0 / 0.56)',
+    },
+  },
   {
     key: 'epic',
     ar: 'ملحمة',
