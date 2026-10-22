@@ -10,6 +10,7 @@ import { PickingAssistant } from '@/components/screens/ops/PickingAssistant';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
 /**
@@ -105,9 +106,11 @@ export function PreparationScreen() {
       {data.groups.length > 0 && <PickingAssistant />}
 
       {data.groups.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا توجد طلبات مؤكدة بانتظار التجهيز.
-        </p>
+        <EmptyState
+          icon={RiArchiveDrawerLine}
+          title="لا طلبات مؤكدة بانتظار التجهيز"
+          why="الطلب يظهر هنا بعد أن يُؤكَّد في مركز التأكيد. فراغ القائمة يعني أن لا شيء وصل إلى هذه المرحلة بعد."
+        />
       )}
 
       {data.groups.map((g) => (

@@ -4,9 +4,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiAlertLine, RiLoader4Line, RiLockLine } from '@remixicon/react';
+import { RiAlertLine, RiLoader4Line, RiLockLine, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Money } from '@/components/ui/Money';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -87,9 +88,12 @@ export function ClosingScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا توجد محافظ نشطة.
-        </p>
+        <EmptyState
+          icon={RiWallet3Line}
+          title="لا محافظ نشطة"
+          why="الجرد يُسجَّل على محفظة نشطة. أنشئ المحفظة أولاً من شاشة المحافظات، ويظهر جردُها هنا."
+          action={{ label: 'افتح المحافظات', href: '/finance/wallets' }}
+        />
       ) : (
         <div className="space-y-3">
           {rows.map((r) => (
