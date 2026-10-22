@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { apiJson } from '@/lib/api-client';
+import { useApp } from '@/context/AppContext';
+import { useMayOpen } from '@/hooks/useMayOpen';
+import { userCan } from '@/lib/can';
 import { Modal } from '@/components/ui/Modal';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import {
@@ -102,6 +106,14 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export function CollectionScreen() {
+  const { currentUser } = useApp();
+  const mayOpen = useMayOpen();
+  /*
+   * A COMPANY THAT SENDS NO STATEMENT HAS NOTHING TO IMPORT HERE — AND THE PAGE SAID NOTHING ABOUT IT.
+   * The way in is «يدوي — بلا كشف» on the matching screen, which needs two things the link must ask for
+   * before it is drawn: that screen, and the permission to follow a parcel it works from.
+   */
+  const pointsToManual = userCan(currentUser, 'ops.track') && mayOpen('/finance/matching');
   const [rows, setRows] = useState<StatementRow[] | null>(null);
   const [providers, setProviders] = useState<{ id: string; name: string }[]>([]);
   const [wallets, setWallets] = useState<{ id: string; name: string; currencyCode: string }[]>([]);
@@ -149,6 +161,16 @@ export function CollectionScreen() {
   return (
     <div className="max-w-6xl space-y-3">
       <ScreenTitle />
+
+      {pointsToManual && (
+        <p className="text-xs text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)] rounded-lg p-3">
+          لا كشف عند الشركة أو المندوب؟ لا حاجة لاستيراد شيء: سجّل التسليم والتحصيل يدوياً من{' '}
+          <Link href="/finance/matching?mode=manual" className="font-medium text-[var(--sys-primary)] hover:underline">
+            المطابقة ← يدوي — بلا كشف
+          </Link>
+          .
+        </p>
+      )}
 
       <ImportCard
         providers={providers}

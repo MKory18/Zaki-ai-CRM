@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -10,6 +13,8 @@ import { DifferencesByPerson } from '@/components/screens/finance/DifferencesByP
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { Money } from '@/components/ui/Money';
+import { Tabs } from '@/components/ui/Tabs';
+import { ManualMatching } from '@/components/screens/finance/ManualMatching';
 import { isApproved } from '@/lib/settlement-gates';
 
 /**
@@ -17,6 +22,12 @@ import { isApproved } from '@/lib/settlement-gates';
  * different amount, in the statement but not in the system, and delivered
  * here but absent from the statement. Nothing is edited here; a difference
  * is resolved on the order or by a reversing entry, never by overwriting.
+ *
+ * «يدوي — بلا كشف» is the other half of the word «مطابقة»: a courier or a company
+ * that sends no statement and no file is matched by a person naming the orders —
+ * see `ManualMatching`. It is a second tab beside the first, drawn only for somebody
+ * who can follow a parcel (`ops.track`), because the list it works from is that
+ * permission's. `?mode=manual` opens it, for the pointers that lead here.
  */
 
 interface Match {
@@ -51,6 +62,9 @@ const num = (v: string | number | null | undefined) => (v === null || v === unde
 
 export function MatchingScreen() {
   const toast = useToast();
+  const { currentUser } = useApp();
+  const mayManual = userCan(currentUser, 'ops.track');
+  const [mode, setMode] = useState<'statement' | 'manual'>(useSearchParams().get('mode') === 'manual' ? 'manual' : 'statement');
   const [statements, setStatements] = useState<StatementRow[] | null>(null);
   const [selected, setSelected] = useState<string>('');
   const [matches, setMatches] = useState<Match[] | null>(null);
@@ -101,9 +115,39 @@ export function MatchingScreen() {
       ? 'سجّل إيصال الاستلام أولاً'
       : 'إعادة تشغيل المطابقة';
 
+  /*
+   * THE CHOICE IS DRAWN BEFORE ANYTHING ELSE, SO IT NEEDS NO CLICK TO BE FOUND.
+   *
+   * «المطابقة اليدوية شو؟» — the owner could not tell that a company without a statement
+   * had a way here at all. Two named tabs at the top say it: with a statement, or without.
+   * Somebody who cannot follow a parcel sees neither the tabs nor the manual half, and the
+   * screen is exactly what it was.
+   */
+  const modeTabs = mayManual ? (
+    <Tabs
+      tabs={[
+        { key: 'statement', label: 'بكشف من الشركة' },
+        { key: 'manual', label: 'يدوي — بلا كشف' },
+      ]}
+      value={mode}
+      onChange={(k) => setMode(k === 'manual' ? 'manual' : 'statement')}
+    />
+  ) : null;
+
+  if (mayManual && mode === 'manual') {
+    return (
+      <div className="max-w-6xl space-y-3">
+        <ScreenTitle />
+        {modeTabs}
+        <ManualMatching />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl space-y-3">
       <ScreenTitle />
+      {modeTabs}
       <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 flex flex-wrap gap-3 items-end">
         <label className="flex-1 min-w-[220px]">
           <span className="block text-xs font-medium text-[var(--sys-foreground)] mb-1">الكشف</span>
