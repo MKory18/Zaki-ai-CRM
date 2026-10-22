@@ -43,7 +43,7 @@ export const IMPORT_COLUMNS: readonly ImportColumn[] = [
   { key: 'customerCity', ar: 'المدينة/المحافظة', required: false, aliases: ['المدينة', 'المحافظة', 'city', 'region', 'governorate'] },
   { key: 'productName', ar: 'المنتج', required: true, aliases: ['المنتج', 'اسمالمنتج', 'الصنف', 'product', 'productname', 'sku', 'item'] },
   { key: 'quantity', ar: 'الكمية', required: false, aliases: ['الكمية', 'العدد', 'quantity', 'qty'] },
-  { key: 'sellingPrice', ar: 'السعر', required: false, aliases: ['السعر', 'سعرالبيع', 'المبلغ', 'price', 'amount', 'total'] },
+  { key: 'sellingPrice', ar: 'السعر', required: true, aliases: ['السعر', 'سعرالبيع', 'المبلغ', 'price', 'amount', 'total'] },
   { key: 'notes', ar: 'ملاحظات', required: false, aliases: ['ملاحظات', 'ملاحظة', 'notes', 'note', 'comment'] },
 ];
 
@@ -96,11 +96,14 @@ export interface ParsedRow {
    */
   quantity: number | null;
   /**
-   * The price in the sheet, or `null` — and `null` means two different
-   * things that `problems` tells apart. With no `BAD_PRICE` beside it the
-   * cell was EMPTY and the product own price applies; with one, the cell
-   * held something this parser refused to guess at and the row cannot be
-   * imported at all.
+   * The price in the sheet — for the WHOLE line, as the «السعر» column means — or `null`, and `null` always carries a problem:
+   * `MISSING` when the cell was empty, `BAD_PRICE` when it held something this parser refused to guess at. Either way the row
+   * cannot be imported.
+   *
+   * 22/10, the owner's ruling («ارفض الصف»): an EMPTY price cell used to pass, with `null` and no problem, on the assumption that
+   * it meant «charge the product's own price». It never did: `POST /api/orders` builds its line as `unitPrice: sellingPrice ?? 0`
+   * and reads `basePrice` nowhere, so a blank cell stored an order at ZERO. The price column is required now, and a row without
+   * a price is refused by name — which is the one change that needs no change to how an order is created.
    */
   sellingPrice: number | null;
   problems: { field: string; kind: RowProblem; ar: string }[];
@@ -235,15 +238,10 @@ export function parseOrderSheet(content: string | Buffer | Uint8Array): ParsedIm
         field: 'sellingPrice',
         kind: 'BAD_PRICE',
         /**
-         * AND THE MESSAGE SAYS NOTHING ABOUT AN EMPTY CELL, which the first
-         * draft of it did: «or leave it empty to take the product's price».
-         * That was measured and it is FALSE. `POST /api/orders` builds its
-         * line with `unitPrice: sellingPrice ?? 0` and reads `basePrice`
-         * nowhere, so a blank price cell stores a price of 0 whatever the
-         * product costs in the catalogue. It is the same silent zero this file
-         * was fixed for, arriving by a different road, and it is recorded
-         * with its figures in `an-import-row-reaches-the-door.test.ts`
-         * rather than papered over by a sentence that is not true.
+         * AND THE MESSAGE SAYS NOTHING ABOUT LEAVING THE CELL EMPTY. The first draft of it said «or leave it empty to take the
+         * product's price», which was FALSE (an empty cell stored a price of 0 — see `sellingPrice` above), and an empty cell is
+         * not an answer any more: the price column is required, and an empty one is `MISSING` — «السعر مفقود» — from the loop
+         * over the required columns above.
          */
         ar: unreadablePrice
           ? `السعر «${rawPrice}» غير مقروء — اكتبه بالأرقام وحدها`
@@ -296,9 +294,9 @@ export function isImportable(row: ParsedRow): boolean {
  * THE OWNER, 21/10: «لما اعمل استثيراد طلبات ما في ملف مرجعي نموذج». The model file existed and was no use as a model: its one
  * example row was Syrian whoever downloaded it — a phone the rule of a Jordanian store refuses, a city that store does not
  * serve, and a product («كريم مرطّب») that no store has — so the model's own row came back «فيه نقص». And its price cell was
- * EMPTY, which `POST /api/orders` stores as a price of ZERO (the open finding recorded in `an-import-row-reaches-the-door.test.ts`):
- * following the template to the letter made a free order. An example that fails or that gives goods away teaches the wrong thing
- * about the one file a person copies.
+ * EMPTY, which `POST /api/orders` stored as a price of ZERO: following the template to the letter made a free order (the price
+ * column is required now, so an empty cell is a refused row — `an-import-row-reaches-the-door.test.ts`). An example that fails
+ * or that gives goods away teaches the wrong thing about the one file a person copies.
  *
  * So the example rows are made from what the downloading store really has: its own products at their own prices, a phone number
  * its country's rule accepts, and one of its own regions. With no product to give (an empty catalogue, or a caller who may not see

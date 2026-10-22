@@ -136,7 +136,7 @@ describe('the strip did not refuse — it rewrote, and the rewrite was imported'
 
   it('a hex quantity was sixteen units, and is now refused', () => {
     expect(asItWas.qty('0x10')).toBe(16);
-    const r = row('0x10', '');
+    const r = row('0x10', '12');
     expect(r.quantity).toBeNull();
     expect(kinds(r)).toContain('BAD_QUANTITY');
     expect(said(r, 'quantity')).toContain('0x10');
@@ -145,8 +145,8 @@ describe('the strip did not refuse — it rewrote, and the rewrite was imported'
   it('and the other two bases with it', () => {
     expect(asItWas.qty('0b11')).toBe(3);
     expect(asItWas.qty('0o17')).toBe(15);
-    expect(row('0b11', '').quantity).toBeNull();
-    expect(row('0o17', '').quantity).toBeNull();
+    expect(row('0b11', '12').quantity).toBeNull();
+    expect(row('0o17', '12').quantity).toBeNull();
   });
 
   /**
@@ -156,8 +156,8 @@ describe('the strip did not refuse — it rewrote, and the rewrite was imported'
    */
   it('and an Arabic quantity, which was refused outright, is now read', () => {
     expect(asItWas.qty('٣')).toBe('REFUSED');
-    expect(row('٣', '').quantity).toBe(3);
-    expect(kinds(row('٣', ''))).toEqual([]);
+    expect(row('٣', '12').quantity).toBe(3);
+    expect(kinds(row('٣', '12'))).toEqual([]);
   });
 });
 
@@ -181,20 +181,21 @@ describe('an unreadable cell refuses its ROW — not the file, and never silentl
   });
 
   /**
-   * THE DISTINCTION THE WHOLE RULING RESTS ON. An empty price cell is a real
-   * instruction — «charge the product's own price» — and it also produces
-   * `sellingPrice: null`. If an unreadable cell produced that same `null`
-   * and nothing else, the importer would still be guessing, one step later.
+   * THE DISTINCTION THE WHOLE RULING RESTS ON — and on 22/10 it moved. An empty price cell used to be «a real instruction: charge
+   * the product's own price» and passed with `sellingPrice: null` and no problem, while an unreadable one produced the same
+   * `null` plus a problem. The instruction never existed (the create door writes `sellingPrice ?? 0` and reads `basePrice`
+   * nowhere — `an-import-row-reaches-the-door.test.ts`), so the owner's ruling is «ارفض الصف»: BOTH are refused. They stay two
+   * refusals with two names, because the cure is different — fill the cell, or retype it — and the screen has to say which.
    */
-  it('and an unreadable price is never mistaken for an empty one', () => {
+  it('and an unreadable price is never mistaken for an empty one — both are refused, each by its own name', () => {
     const empty = row('1', '');
     const unreadable = row('1', '12abc');
     expect(empty.sellingPrice).toBeNull();
     expect(unreadable.sellingPrice).toBeNull();
-    // The same null, so the difference has to be carried somewhere else.
-    expect(empty.problems, 'خليّةٌ فارغةٌ صارت مشكلة').toEqual([]);
-    expect(isImportable(empty)).toBe(true);
-    expect(kinds(unreadable)).toEqual(['BAD_PRICE']);
+    expect(kinds(empty), 'خليّةٌ فارغةٌ لم تُرفَض أو سُمِّيت بغير اسمها').toEqual(['MISSING']);
+    expect(said(empty, 'sellingPrice')).toBe('السعر مفقود');
+    expect(isImportable(empty)).toBe(false);
+    expect(kinds(unreadable), 'خليّةٌ غيرُ مقروءةٍ سُمِّيت «مفقودة»').toEqual(['BAD_PRICE']);
     expect(isImportable(unreadable)).toBe(false);
   });
 
@@ -216,9 +217,9 @@ describe('an unreadable cell refuses its ROW — not the file, and never silentl
 
   /** A zero IS readable; it is simply not a quantity. The two words differ. */
   it('and a readable figure out of range says so in different words', () => {
-    expect(said(row('0', ''), 'quantity')).toContain('ليست عدداً صحيحاً');
-    expect(said(row('2.5', ''), 'quantity')).toContain('ليست عدداً صحيحاً');
-    expect(said(row('ثلاثة', ''), 'quantity')).toContain('غير مقروءة');
+    expect(said(row('0', '12'), 'quantity')).toContain('ليست عدداً صحيحاً');
+    expect(said(row('2.5', '12'), 'quantity')).toContain('ليست عدداً صحيحاً');
+    expect(said(row('ثلاثة', '12'), 'quantity')).toContain('غير مقروءة');
   });
 
   /** Every refusal names the cell, so the operator can find it in Excel. */

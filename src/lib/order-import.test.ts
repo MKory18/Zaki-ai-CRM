@@ -27,7 +27,7 @@ const door = () => stripComments(repoFile('src/app/api/orders/import/route.ts'))
 const dialog = () => stripComments(repoFile('src/components/orders/ImportOrdersDialog.tsx'));
 
 const sheet = (rows: string[][]) => rows.map((r) => r.join(',')).join('\n');
-const HEAD = ['الاسم', 'الهاتف', 'العنوان', 'المنتج', 'الكمية'];
+const HEAD = ['الاسم', 'الهاتف', 'العنوان', 'المنتج', 'الكمية', 'السعر'];
 
 describe('reading the file', () => {
   it('maps a header however the sheet spells it', () => {
@@ -54,6 +54,25 @@ describe('reading the file', () => {
     const out = parseOrderSheet(sheet([['الاسم', 'الهاتف'], ['أحمد', '0999']]));
     expect(out.missingRequired).toContain('العنوان');
     expect(out.missingRequired).toContain('المنتج');
+    expect(out.missingRequired).toContain('السعر');
+    expect(out.rows).toHaveLength(0);
+  });
+
+  /**
+   * A FILE WITH NO PRICE COLUMN IS REFUSED WHOLE — the price column is required (22/10, the owner's ruling «ارفض الصف»: a row
+   * without a price is not imported, and a file without the column is every row without one). Before, such a file imported
+   * every row at a price of ZERO, because the order door writes `sellingPrice ?? 0`.
+   *
+   * ITS OWN ASSERTION on a file where nothing else is missing, so the price is the only thing that can be named.
+   */
+  it('and a file with every column but the price is refused by naming the price', () => {
+    const out = parseOrderSheet(
+      sheet([
+        ['الاسم', 'الهاتف', 'العنوان', 'المنتج', 'الكمية'],
+        ['أحمد', '0999123456', 'حمص', 'كريم', '1'],
+      ])
+    );
+    expect(out.missingRequired, 'ملفٌّ بلا عمود السعر يمرّ').toEqual(['السعر']);
     expect(out.rows).toHaveLength(0);
   });
 
@@ -71,7 +90,7 @@ describe('what each row says about itself', () => {
    */
   it('reports a bad row instead of throwing the file away', () => {
     const out = parseOrderSheet(
-      sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '2'], ['', 'xx', '', 'كريم', '1']])
+      sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '2', '10'], ['', 'xx', '', 'كريم', '1', '10']])
     );
     expect(out.rows).toHaveLength(2);
     expect(isImportable(out.rows[0])).toBe(true);
@@ -80,26 +99,26 @@ describe('what each row says about itself', () => {
   });
 
   it('numbering rows the way the person sees them in their spreadsheet', () => {
-    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '1']]));
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '1', '10']]));
     expect(out.rows[0].line, 'الترقيم لا يطابق ما يراه في إكسل').toBe(2);
   });
 
   it('skips a wholly blank line rather than calling it a broken row', () => {
-    const out = parseOrderSheet(sheet([HEAD, ['', '', '', '', ''], ['أحمد', '0999123456', 'حمص', 'كريم', '1']]));
+    const out = parseOrderSheet(sheet([HEAD, ['', '', '', '', '', ''], ['أحمد', '0999123456', 'حمص', 'كريم', '1', '10']]));
     expect(out.rows).toHaveLength(1);
   });
 
   it('defaults a missing quantity to one, and refuses a nonsense one', () => {
-    const ok = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '']]));
+    const ok = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '', '10']]));
     expect(ok.rows[0].quantity).toBe(1);
     expect(ok.rows[0].problems).toHaveLength(0);
 
-    const bad = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '0']]));
+    const bad = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '0', '10']]));
     expect(bad.rows[0].problems.map((p) => p.kind)).toContain('BAD_QUANTITY');
   });
 
   it('and normalises the phone to the one form everything else matches on', () => {
-    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '+963 999 123456', 'حمص', 'كريم', '1']]));
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '+963 999 123456', 'حمص', 'كريم', '1', '10']]));
     expect(out.rows[0].phone).toBeTruthy();
     expect(out.rows[0].phone).not.toContain(' ');
   });
@@ -111,7 +130,7 @@ describe('what each row says about itself', () => {
    * deleting the phone check passed.
    */
   it('and a phone that is not a phone is said so, by name', () => {
-    const out = parseOrderSheet(sheet([HEAD, ['أحمد', 'ليس رقماً', 'حمص', 'كريم', '1']]));
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', 'ليس رقماً', 'حمص', 'كريم', '1', '10']]));
     const kinds = out.rows[0].problems.map((p) => p.kind);
     expect(kinds, 'الرقم غير الصالح يمرّ').toContain('BAD_PHONE');
     expect(kinds, 'اختلط بنقصٍ آخر').not.toContain('MISSING');
@@ -125,11 +144,71 @@ describe('what each row says about itself', () => {
    */
   it('points a duplicate at the line it duplicates, and lets it through', () => {
     const out = parseOrderSheet(
-      sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '1'], ['أحمد', '0999123456', 'حمص', 'كريم', '1']])
+      sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '1', '10'], ['أحمد', '0999123456', 'حمص', 'كريم', '1', '10']])
     );
     expect(out.rows[0].duplicateOfLine).toBeNull();
     expect(out.rows[1].duplicateOfLine).toBe(2);
     expect(isImportable(out.rows[1]), 'المكرَّر مرفوضٌ بدل أن يُعرض').toBe(true);
+  });
+});
+
+describe('the price: an empty cell is a refused row — «ارفض الصف» (THE OWNER, 22/10)', () => {
+  /**
+   * The price column was optional, and an empty cell passed with `sellingPrice: null` and no problem, on the assumption that it
+   * meant «charge the product's own price». It never did: `POST /api/orders` builds its line as `unitPrice: sellingPrice ?? 0`
+   * and reads `basePrice` nowhere, so a blank cell stored an order at ZERO. The owner chose to REFUSE the row over filling it from
+   * the catalogue — the one choice that changes nothing in how an order is created.
+   *
+   * ITS OWN ASSERTION, on a row where every other cell is good: the price is the only thing that can refuse it, and the one
+   * problem is the one named.
+   */
+  it('is MISSING, by name, and the row cannot be imported', () => {
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '2', '']]));
+    const row = out.rows[0];
+    expect(row.sellingPrice).toBeNull();
+    expect(row.problems.map((p) => [p.field, p.kind, p.ar])).toEqual([['sellingPrice', 'MISSING', 'السعر مفقود']]);
+    expect(isImportable(row), 'صفٌّ بلا سعر يُستورَد').toBe(false);
+  });
+
+  /** A cell of spaces is empty to the person looking at it, and `get()` trims it — so it is the same refusal. */
+  it('and a cell of spaces is empty too', () => {
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '2', '   ']]));
+    expect(out.rows[0].problems.map((p) => p.kind)).toEqual(['MISSING']);
+  });
+
+  /**
+   * ONLY THE ROW WITH THE EMPTY PRICE IS REFUSED — not the file. A hundred rows with two blank prices are ninety-eight orders
+   * somebody wants today.
+   */
+  it('and it refuses that row alone: the rows beside it are still importable', () => {
+    const out = parseOrderSheet(
+      sheet([
+        HEAD,
+        ['أحمد', '0999123451', 'حمص', 'كريم', '1', '10'],
+        ['سمير', '0999123452', 'حمص', 'كريم', '1', ''],
+        ['هند', '0999123453', 'حمص', 'كريم', '1', '10'],
+      ])
+    );
+    expect(out.error).toBeUndefined();
+    expect(out.rows.map((r) => isImportable(r))).toEqual([true, false, true]);
+  });
+
+  /**
+   * THE BOUNDARY: a price somebody TYPED is a price, whatever it is. «0» is a deliberate free order (a sample, a gift) and the
+   * order door accepts it (`min(0)`); the ruling is about the cell nobody filled in, and this is the claim that keeps «empty» and
+   * «zero» from being folded into one.
+   */
+  it('while a typed zero is still a price — empty and zero are two different cells', () => {
+    const out = parseOrderSheet(sheet([HEAD, ['أحمد', '0999123456', 'حمص', 'كريم', '1', '0']]));
+    expect(out.rows[0].sellingPrice).toBe(0);
+    expect(out.rows[0].problems).toEqual([]);
+    expect(isImportable(out.rows[0])).toBe(true);
+  });
+
+  it('and the price column is among the required ones, once', () => {
+    const price = IMPORT_COLUMNS.filter((c) => c.key === 'sellingPrice');
+    expect(price).toHaveLength(1);
+    expect(price[0].required, 'السعر لم يعد مطلوباً').toBe(true);
   });
 });
 
@@ -143,6 +222,8 @@ describe('the template', () => {
   it('marks which columns are required', () => {
     const csv = importTemplateCsv();
     for (const c of IMPORT_COLUMNS.filter((x) => x.required)) expect(csv).toContain(`${c.ar} *`);
+    // The price among them — named, not only reached through the loop above (22/10: an empty price is a refused row).
+    expect(csv, 'السعر غير موسوم بنجمة').toContain('السعر *');
   });
 
   /** Excel opens a UTF-8 CSV as mojibake without it. */
