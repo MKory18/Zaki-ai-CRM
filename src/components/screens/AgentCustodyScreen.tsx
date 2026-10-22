@@ -3,7 +3,7 @@
 import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { amount, arDateShort, type Currency } from '@/lib/format';
-import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiWallet3Line } from '@remixicon/react';
+import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiUserLocationLine, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
@@ -229,9 +229,11 @@ export function AgentCustodyScreen() {
       )}
 
       {agents.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا مندوبين لهذا المتجر — يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب».
-        </p>
+        <EmptyState
+          icon={RiUserLocationLine}
+          title="لا مندوبين لهذا المتجر"
+          why="المندوبون يُضافون من الإعدادات ← شركات الشحن بنوع «مندوب»، ثم يظهر عهدةُ كل واحد هنا."
+        />
       ) : (
         <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {agents.map(({ agent, totals }) => (

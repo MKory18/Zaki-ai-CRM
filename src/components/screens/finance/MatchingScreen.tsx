@@ -6,7 +6,7 @@ import { apiJson } from '@/lib/api-client';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
+import { RiGitBranchLine, RiLoader4Line, RiScales3Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DifferenceActions } from '@/components/screens/finance/DifferenceActions';
 import { DifferencesByPerson } from '@/components/screens/finance/DifferencesByPerson';
@@ -197,9 +197,11 @@ export function MatchingScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : matches.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لم تُشغَّل المطابقة على هذا الكشف بعد.
-        </p>
+        <EmptyState
+          icon={RiScales3Line}
+          title="لم تُشغَّل المطابقة على هذا الكشف"
+          why="الكشف مستورد لكن لم يُقابَل بأي طلب بعد. ابدأ المطابقة لترى من دفع ومن بقي عليه."
+        />
       ) : (
         <div className="space-y-3">
           {/* The sum of the answers given below it: who keeps arriving short. */}
