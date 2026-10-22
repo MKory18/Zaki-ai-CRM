@@ -9,6 +9,7 @@ import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLin
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { isManualAccount } from '@/lib/ads/manual';
 
 /**
@@ -92,6 +93,8 @@ export function CampaignsScreen() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [creating, setCreating] = useState(false);
+  // «+ أنشئ» in Ctrl+K arrives as `?new=campaign` and opens the form «حملة جديدة» opens.
+  useCreateIntent({ campaign: () => setCreating(true) });
   const [copied, setCopied] = useState<string | null>(null);
   const [pages, setPages] = useState<{ id: string; name: string }[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);

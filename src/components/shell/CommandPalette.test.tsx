@@ -484,3 +484,141 @@ describe('it is reachable without a keyboard', () => {
     expect(palette, 'لا مخرج من الصندوق على الهاتف').toMatch(/md:hidden[\s\S]{0,160}RiCloseLine/);
   });
 });
+
+/**
+ * «+ أنشئ» — THE FORMS THE SERVER TOLD THE BOX ABOUT, AND NOTHING THE BOX KEPT FOR ITSELF (22/10).
+ *
+ * Seven forms already exist, each behind a button. The box draws the rows that arrive in `may.create`, goes to the screen the form
+ * is on with the word in the address, and the screen opens the form. The list and the permissions are the server's
+ * (`palette-create.ts`, asked in its own test) — here, that the box draws what it is given, finds it by the words it is given, takes
+ * the person there, and invents nothing when it is given nothing.
+ */
+describe('«+ أنشئ»', () => {
+  const CREATE_ROWS = [
+    { key: 'order', label: 'إدخال طلب سريع', hint: 'الطلبات', icon: 'ShoppingCart', words: ['طلب', 'أنشئ', 'جديد'], href: '/orders?new=order' },
+    { key: 'import-orders', label: 'استيراد طلبات', hint: 'الطلبات — من ملف', icon: 'FileSpreadsheet', words: ['استورد', 'ملف', 'أنشئ'], href: '/orders?new=import-orders' },
+    { key: 'product', label: 'إضافة منتج', hint: 'المنتجات', icon: 'PackagePlus', words: ['منتج', 'صنف', 'أنشئ'], href: '/products?new=product' },
+  ];
+
+  function toldAbout(create?: unknown) {
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () =>
+        String(url).startsWith('/api/palette')
+          ? { ...SUMMARY, may: { ...SUMMARY.may, ...(create === undefined ? {} : { create }) } }
+          : { orders: [] },
+    }));
+  }
+
+  async function opened(props: Partial<React.ComponentProps<typeof CommandPalette>> = {}) {
+    open(props);
+    await act(async () => undefined);
+    await act(async () => undefined);
+  }
+
+  const before = (a: string, b: string) =>
+    !!(screen.getByText(a).compareDocumentPosition(screen.getByText(b)) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('leads the open box — the question people open it with — under its own heading, before the commands', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    expect(screen.queryByText('+ أنشئ'), 'ما في عنوان').toBeTruthy();
+    for (const row of CREATE_ROWS) expect(screen.queryByText(row.label), row.label).toBeTruthy();
+    expect(before('+ أنشئ', 'إضافة منتج')).toBe(true);
+    expect(before('إضافة منتج', 'أفعال'), 'الأوامر قبل النماذج').toBe(true);
+    expect(before('إضافة منتج', 'تسجيل الخروج')).toBe(true);
+  });
+
+  it('shows the screen each one is on, so two buttons with one verb are not confused', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    expect(screen.queryByText('الطلبات — من ملف')).toBeTruthy();
+    expect(screen.queryByText('المنتجات')).toBeTruthy();
+  });
+
+  it('draws NOTHING when it was told nothing — no heading, no guess', async () => {
+    toldAbout(); // an answer with no `create` at all (the shape before this existed)
+    await opened();
+    expect(screen.queryByText('+ أنشئ')).toBeNull();
+    toldAbout([]);
+    cleanup();
+    await opened();
+    expect(screen.queryByText('+ أنشئ'), 'عنوان لمجموعة فاضية').toBeNull();
+    expect(screen.queryByText('تسجيل الخروج'), 'الأوامر اختفت معه').toBeTruthy();
+  });
+
+  it('and when the summary itself failed, there are no forms either', async () => {
+    fetchMock.mockImplementation(async () => ({ ok: false, status: 500, json: async () => ({}) }));
+    await opened();
+    expect(screen.queryByText('+ أنشئ')).toBeNull();
+    expect(screen.queryByText('إضافة منتج')).toBeNull();
+  });
+
+  it('is found by its own name — a word that is in the NAME and in none of the words the server gave', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    await type('إضافة');
+    expect(screen.queryByText('إضافة منتج')).toBeTruthy();
+    expect(screen.queryByText('استيراد طلبات')).toBeNull();
+  });
+
+  it('…and by the other words the server gave it, which are not in its name', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    await type('ملف');
+    expect(screen.queryByText('استيراد طلبات')).toBeTruthy();
+    expect(screen.queryByText('إضافة منتج')).toBeNull();
+  });
+
+  it('…and the word «أنشئ» alone lists every form it was told about', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    await type('أنشئ');
+    for (const row of CREATE_ROWS) expect(screen.queryByText(row.label), row.label).toBeTruthy();
+  });
+
+  it('comes after the screens a typed word matches, and before the commands', async () => {
+    toldAbout([{ ...CREATE_ROWS[2], words: ['مرتجع'] }]);
+    await opened();
+    await type('مرتجع');
+    expect(before('المرتجعات', 'إضافة منتج'), 'النماذج قبل الشاشات').toBe(true);
+  });
+
+  it('…and before the commands that match the same word', async () => {
+    toldAbout([{ ...CREATE_ROWS[2], words: ['خروج'] }]);
+    await opened();
+    await type('خروج');
+    expect(screen.queryByText('تسجيل الخروج'), 'الأمر ما ظهر').toBeTruthy();
+    expect(before('إضافة منتج', 'تسجيل الخروج'), 'الأوامر قبل النماذج').toBe(true);
+  });
+
+  it('takes the person to the screen the form is on, with the word, and closes the box', async () => {
+    toldAbout(CREATE_ROWS);
+    const onClose = vi.fn();
+    await opened({ onClose });
+    await act(async () => {
+      fireEvent.click(screen.getByText('إضافة منتج'));
+    });
+    expect(push).toHaveBeenCalledWith('/products?new=product');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('and Enter does the same from the keyboard', async () => {
+    toldAbout(CREATE_ROWS);
+    await opened();
+    const box = await type('استورد');
+    await act(async () => {
+      fireEvent.keyDown(box, { key: 'Enter' });
+    });
+    expect(push).toHaveBeenCalledWith('/orders?new=import-orders');
+  });
+
+  it('and a row is a link, never a command: it carries an address and nothing to run', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/shell/CommandPalette.tsx'), 'utf8');
+    const asCreate = src.slice(src.indexOf('const asCreate'), src.indexOf('if (!term) return [...creatable'));
+    expect(asCreate).toContain("kind: 'create'");
+    expect(asCreate).toContain('href: c.href');
+    expect(asCreate, 'صفّ نموذجٍ ينفّذ شيئاً').not.toMatch(/run:/);
+  });
+});

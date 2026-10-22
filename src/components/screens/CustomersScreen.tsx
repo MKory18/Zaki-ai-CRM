@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { OrderStatusBadge } from '@/components/ui/Badge';
 import { useRegions } from '@/hooks/useRegions';
 import { useApp } from '@/context/AppContext';
+import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { format } from 'date-fns';
 import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiMapPinLine, RiSearchLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
@@ -86,6 +87,8 @@ export function CustomersScreen() {
 
   // Create modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  // «+ أنشئ» in Ctrl+K arrives as `?new=customer` and opens the form the «إضافة عميل» button opens.
+  useCreateIntent({ customer: () => setCreateModalOpen(true) });
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [altPhone, setAltPhone] = useState('');

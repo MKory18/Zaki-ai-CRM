@@ -35,7 +35,7 @@ import React from 'react';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams() }));
 vi.mock('next/link', () => ({
   default: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));

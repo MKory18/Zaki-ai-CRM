@@ -7,6 +7,7 @@ import { Select, Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { arDate, arDateTime } from '@/lib/format';
 import { userCan } from '@/lib/can';
 import { CreateUserModal } from './users/CreateUserModal';
@@ -71,6 +72,8 @@ export function UsersScreen() {
 
   // Create + manage modals
   const [createOpen, setCreateOpen] = useState(false);
+  // «+ أنشئ» in Ctrl+K arrives as `?new=user` and opens the form «موظف جديد» opens — for whom that button is drawn for.
+  useCreateIntent({ user: userCan(currentUser, 'users.create') ? () => setCreateOpen(true) : undefined });
   const confirm = useConfirm();
   const [manageUser, setManageUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);

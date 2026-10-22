@@ -22,13 +22,14 @@ import React from 'react';
  * ═══════════════════════════════════════════════════════════════════════
  */
 
-const { apiFetch, currentUser } = vi.hoisted(() => ({
+const { apiFetch, currentUser, nav } = vi.hoisted(() => ({
   apiFetch: vi.fn(),
   currentUser: { value: null as unknown },
+  nav: { params: new URLSearchParams() },
 }));
 
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => nav.params,
   usePathname: () => '/orders',
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
@@ -57,11 +58,15 @@ vi.mock('@/components/labels/openWaybills', () => ({
 }));
 // The heavy children are not what is under test, and each one drags in its
 // own context. They render as nothing; the buttons that OPEN them are the
-// subject.
-vi.mock('@/components/orders/CreateOrderModal', () => ({ CreateOrderModal: () => null }));
-vi.mock('@/components/orders/AiOrderModal', () => ({ AiOrderModal: () => null }));
+// subject — and, since 22/10, a marker where one is open, because the box (Ctrl+K) opens them too.
+vi.mock('@/components/orders/CreateOrderModal', () => ({
+  CreateOrderModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="form-order" /> : null),
+}));
+vi.mock('@/components/orders/AiOrderModal', () => ({
+  AiOrderModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="form-ai-order" /> : null),
+}));
 vi.mock('@/components/orders/OrderDetailModal', () => ({ OrderDetailModal: () => null }));
-vi.mock('@/components/orders/ImportOrdersDialog', () => ({ ImportOrdersDialog: () => null }));
+vi.mock('@/components/orders/ImportOrdersDialog', () => ({ ImportOrdersDialog: () => <div data-testid="form-import-orders" /> }));
 vi.mock('@/components/scan/ScanButton', () => ({ ScanButton: () => null }));
 vi.mock('@/components/ui/ProductPicker', () => ({ ProductPicker: () => null }));
 vi.mock('@/components/ui/SavedViews', () => ({ SavedViews: () => null }));
@@ -74,6 +79,12 @@ function signedInWith(...permissions: string[]) {
   currentUser.value = { id: 'u1', name: 'سارة', role: 'CONFIRMATION_AGENT', permissions, status: 'ACTIVE' };
 }
 
+/** The address bar and the router's view of it agree, the way they do when Next follows `history.replaceState`. */
+function visit(search: string) {
+  window.history.replaceState(null, '', `/orders${search}`);
+  nav.params = new URLSearchParams(search);
+}
+
 const BUTTONS = {
   'تصدير CSV': 'reports.export',
   'استيراد طلبات': 'orders.import',
@@ -83,6 +94,7 @@ const BUTTONS = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  visit('');
   apiFetch.mockResolvedValue({
     ok: true,
     json: async () => ({ orders: [], pagination: { page: 1, pages: 1, total: 0 } }),
@@ -137,5 +149,69 @@ describe('the buttons on «الطلبات»', () => {
     for (const label of Object.keys(BUTTONS)) {
       expect(screen.queryByText(label), `${label} مخفيّ عن SUPER_ADMIN`).not.toBeNull();
     }
+  });
+});
+
+/**
+ * «+ أنشئ» IN CTRL+K OPENS THE SAME THREE FORMS — FOR WHOEVER THE THREE BUTTONS ARE DRAWN FOR (22/10).
+ *
+ * The box goes to `/orders?new=order`, `?new=ai-order` or `?new=import-orders`. The screen opens the form its button opens and takes
+ * the word out of the address. It must not be a way around the buttons above: an address typed by hand for a form this account has
+ * no button for opens nothing — read off the rendered screen, both ways, for the same reason the tests above are.
+ */
+describe('the box (Ctrl+K) opens the forms the buttons open', () => {
+  const FORMS = {
+    order: { testid: 'form-order', permission: 'orders.create' },
+    'ai-order': { testid: 'form-ai-order', permission: 'orders.create' },
+    'import-orders': { testid: 'form-import-orders', permission: 'orders.import' },
+  } as const;
+  const openNow = () => Object.values(FORMS).filter((f) => screen.queryByTestId(f.testid)).map((f) => f.testid);
+
+  it('— each word opens its own form, and only that one, for someone who has its button', () => {
+    for (const [word, form] of Object.entries(FORMS)) {
+      cleanup();
+      signedInWith('orders.view', form.permission);
+      visit(`?new=${word}`);
+      render(<OrdersScreen />);
+      expect(openNow(), word).toEqual([form.testid]);
+    }
+  });
+
+  it('— and takes the word out of the address, so a refresh does not open it again', () => {
+    signedInWith('orders.view', 'orders.create');
+    visit('?state=POSTPONED&new=order');
+    render(<OrdersScreen />);
+    const rest = new URLSearchParams(window.location.search);
+    expect(rest.has('new')).toBe(false);
+    expect(rest.get('state')).toBe('POSTPONED');
+  });
+
+  it('— and opens nothing for someone who has no button for it, though the address says so', () => {
+    signedInWith('orders.view');
+    for (const word of Object.keys(FORMS)) {
+      cleanup();
+      visit(`?new=${word}`);
+      render(<OrdersScreen />);
+      expect(openNow(), `${word}: انفتح نموذجٌ بلا زرّ`).toEqual([]);
+      expect(window.location.search, `${word}: الكلمة بقيت بالعنوان`).toBe('');
+    }
+  });
+
+  it('— the import is behind its own key: «orders.create» alone does not open it, and «orders.import» alone does not open the others', () => {
+    signedInWith('orders.view', 'orders.create');
+    visit('?new=import-orders');
+    render(<OrdersScreen />);
+    expect(openNow()).toEqual([]);
+    cleanup();
+    signedInWith('orders.view', 'orders.import');
+    visit('?new=order');
+    render(<OrdersScreen />);
+    expect(openNow()).toEqual([]);
+  });
+
+  it('— and an address with no word opens nothing', () => {
+    signedInWith('orders.view', 'orders.create', 'orders.import');
+    render(<OrdersScreen />);
+    expect(openNow()).toEqual([]);
   });
 });

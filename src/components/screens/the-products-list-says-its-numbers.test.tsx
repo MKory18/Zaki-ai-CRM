@@ -22,7 +22,7 @@ import { stripComments } from '@/lib/guard-source';
  */
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams() }));
 vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
 vi.mock('@/context/AppContext', () => ({ useApp: () => ({ t: { products: 'المنتجات', loading: 'جارٍ التحميل…' }, locale: 'ar' }) }));
 vi.mock('@/context/StoreCurrency', () => ({ useStoreCurrency: () => ({ code: 'JOD', minorUnit: 3 }) }));
