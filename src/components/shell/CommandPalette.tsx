@@ -14,6 +14,7 @@ import { RAIL_EVENT, railed as storedRail, setRailed } from '@/lib/sidebar-rail'
 import { signOut } from '@/lib/sign-out';
 import { apiJson } from '@/lib/api-client';
 import type { PaletteFact } from '@/lib/palette-intel';
+import type { CreateRow } from '@/lib/create-intent';
 
 /**
  * ONE BOX FOR EVERYTHING.
@@ -61,6 +62,19 @@ import type { PaletteFact } from '@/lib/palette-intel';
  * across unchanged: everybody gets the screens and the actions — navigating
  * to a screen you already hold is not an exposure — and record lookup stays
  * exactly where it was.
+ *
+ * AND A FORM IS NOT A SCREEN UNDER A VERB EITHER — «+ أنشئ».
+ *
+ * Seven forms already exist, each behind a button on the screen it belongs
+ * to. The box lists them under their buttons' own names and goes to that
+ * screen with `?new=…`; the screen opens the form it already has
+ * (`useCreateIntent`). Nothing is built twice: the row is a link, and what
+ * the form does when it is saved is what it did when the button opened it.
+ *
+ * The rows are NOT a list in this file. They arrive in `may.create`, drawn
+ * by the server for THIS account (`palette-create.ts`) — the same reason as
+ * above: a palette that carries the list and hides the rows an account
+ * lacks has shipped the list to every account.
  */
 
 /**
@@ -76,6 +90,11 @@ interface PaletteMay {
   people: boolean;
   /** The store's numbers, or this desk's. Only the wording depends on it. */
   wide: boolean;
+  /**
+   * «+ أنشئ» — the forms this account may be taken to, already drawn. Optional because an older answer, or a failed one, has none:
+   * a box without them is a box without the group, never a box that guesses.
+   */
+  create?: CreateRow[];
 }
 
 /** What a command that acts rather than navigates is given to act with. */
@@ -224,7 +243,7 @@ interface Person {
 
 /** Same shape for all of them, so a row is a row and the list reads as one. */
 interface Row {
-  kind: 'count' | 'record' | 'person' | 'screen' | 'action';
+  kind: 'count' | 'record' | 'person' | 'screen' | 'action' | 'create';
   key: string;
   label: string;
   hint: string;
@@ -245,6 +264,7 @@ const GROUP_AR: Record<Row['kind'], string> = {
   person: 'الموظفون',
   screen: 'شاشات',
   action: 'أفعال',
+  create: '+ أنشئ',
 };
 
 /** Long enough that typing a barcode is one request, not eleven. */
@@ -440,7 +460,21 @@ export function CommandPalette({
 
     const offered = ACTIONS.filter((a) => !a.offered || a.offered({ canSwitchStore, may }));
 
-    if (!term) return offered.map(asRow);
+    /*
+     * «+ أنشئ» — FIRST IN THE OPEN BOX, because «what do I want to make» is the question people open it with, and after the screens
+     * when a word is typed, because by then the word is what they are looking for. A row is a link to the screen the form is on.
+     */
+    const creatable = may?.create ?? [];
+    const asCreate = (c: CreateRow): Row => ({
+      kind: 'create',
+      key: `n:${c.key}`,
+      label: c.label,
+      hint: c.hint,
+      icon: c.icon,
+      href: c.href,
+    });
+
+    if (!term) return [...creatable.map(asCreate), ...offered.map(asRow)];
 
     /*
      * THE COUNTERS FIRST, because they are the answer to the shortest
@@ -498,7 +532,11 @@ export function CommandPalette({
 
     const actions: Row[] = offered.map(asRow).filter((r) => r.label.toLowerCase().includes(term));
 
-    return [...counters, ...records, ...colleagues, ...screens, ...actions];
+    const creating: Row[] = creatable
+      .filter((c) => c.label.toLowerCase().includes(term) || c.words.some((w) => w.toLowerCase().includes(term)))
+      .map(asCreate);
+
+    return [...counters, ...records, ...colleagues, ...screens, ...creating, ...actions];
   }, [groups, hits, counts, people, query, folded, canSwitchStore, may, ctx]);
 
   const go = useCallback(

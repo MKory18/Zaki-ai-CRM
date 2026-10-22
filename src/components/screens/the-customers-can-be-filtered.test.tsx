@@ -323,3 +323,35 @@ describe('how it is written', () => {
     expect(src()).toContain('segmentCount(s, facts)');
   });
 });
+
+/**
+ * «+ أنشئ» IN CTRL+K OPENS THE FORM THE «إضافة عميل» BUTTON OPENS (22/10). The box goes to `/customers?new=customer`; the screen opens
+ * «إضافة عميل جديد» and takes the word out of the address.
+ */
+describe('the box (Ctrl+K) opens the create form', () => {
+  const visit = (search: string) => {
+    window.history.replaceState(null, '', `/customers${search}`);
+    nav.params = new URLSearchParams(search);
+  };
+
+  it('— `?new=customer` opens «إضافة عميل جديد», and the address is left clean', async () => {
+    visit('?new=customer');
+    render(<CustomersScreen />);
+    expect(await screen.findByText('إضافة عميل جديد')).toBeTruthy();
+    expect(window.location.search).toBe('');
+  });
+
+  it('— an address without the word shows no form', async () => {
+    visit('');
+    render(<CustomersScreen />);
+    await screen.findByLabelText('الفئة');
+    expect(screen.queryByText('إضافة عميل جديد')).toBeNull();
+  });
+
+  it('— and a word that belongs to another screen’s form opens nothing here', async () => {
+    visit('?new=product');
+    render(<CustomersScreen />);
+    await screen.findByLabelText('الفئة');
+    expect(screen.queryByText('إضافة عميل جديد')).toBeNull();
+  });
+});

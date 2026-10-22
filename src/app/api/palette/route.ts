@@ -3,6 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { requireContext } from '@/lib/geo-context';
 import { can, getPermissionScope } from '@/lib/authorization';
 import { manageableUsersWhere } from '@/lib/manageable-user';
+import { creatablesFor } from '@/lib/palette-create';
 import { paletteCounts, paletteSummary, readsTheWholeStore } from '@/lib/palette-intel';
 import { typed } from '@/lib/text-search';
 import { rateLimit } from '@/lib/rate-limit';
@@ -45,6 +46,11 @@ async function capabilities(user: Parameters<typeof readsTheWholeStore>[0]) {
     people: can(user, 'users.view'),
     /** The whole store's numbers, or this desk's. */
     wide: readsTheWholeStore(user),
+    /**
+     * «+ أنشئ» — the forms this account may be taken to, drawn here and not in the box: the screen must be one it may open AND the
+     * permission must be the one the form's own button is behind (`palette-create.ts`). The box carries no list of its own.
+     */
+    create: creatablesFor(user, can),
   };
 }
 

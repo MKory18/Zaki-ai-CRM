@@ -15,6 +15,7 @@ import { describeRefused, openWaybills, WaybillError } from '@/components/labels
 import { useTell } from '@/components/ui/Confirm';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { userCan } from '@/lib/can';
+import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { useRegions } from '@/hooks/useRegions';
 import { useProducts } from '@/hooks/useProducts';
 import { ProductPicker } from '@/components/ui/ProductPicker';
@@ -375,6 +376,15 @@ export function OrdersScreen() {
   const canExport = userCan(currentUser, 'reports.export');
   const canCreate = userCan(currentUser, 'orders.create');
   const canImport = userCan(currentUser, 'orders.import');
+  /*
+   * «+ أنشئ» IN CTRL+K ARRIVES AS `?new=…` AND OPENS THE SAME THREE FORMS THE THREE BUTTONS IN THE HEADER OPEN — for whoever those
+   * buttons are drawn for, and nobody else: a handler is passed only where its button is.
+   */
+  useCreateIntent({
+    order: canCreate ? () => setCreateModalOpen(true) : undefined,
+    'ai-order': canCreate ? () => setAiModalOpen(true) : undefined,
+    'import-orders': canImport ? () => setImporting(true) : undefined,
+  });
   /**
    * Only confirmed orders with a courier get a waybill — printing seals an
    * order. The ones that were ticked and cannot be printed are named, not

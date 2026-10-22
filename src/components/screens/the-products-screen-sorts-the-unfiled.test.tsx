@@ -16,8 +16,8 @@ import React from 'react';
  * ═══════════════════════════════════════════════════════════════════════
  */
 
-const { push, tell } = vi.hoisted(() => ({ push: vi.fn(), tell: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+const { push, tell, nav } = vi.hoisted(() => ({ push: vi.fn(), tell: vi.fn(), nav: { params: new URLSearchParams() } }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), useSearchParams: () => nav.params }));
 vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => <span>{children}</span> }));
 vi.mock('@/context/AppContext', () => ({ useApp: () => ({ t: { products: 'المنتجات', loading: 'جارٍ التحميل…' }, locale: 'ar' }) }));
 vi.mock('@/context/StoreCurrency', () => ({ useStoreCurrency: () => ({ code: 'JOD', minorUnit: 3 }) }));
@@ -39,7 +39,14 @@ let list: unknown[];
 let asked: Array<{ url: string; method: string; body?: string }>;
 let categoriseAnswer: unknown;
 
+/** The address bar and the router's view of it agree, the way they do when Next follows `history.replaceState`. */
+function visit(search: string) {
+  window.history.replaceState(null, '', `/products${search}`);
+  nav.params = new URLSearchParams(search);
+}
+
 beforeEach(() => {
+  visit('');
   tell.mockReset();
   list = [FILED, OVEN, CREAM];
   asked = [];
@@ -187,5 +194,29 @@ describe('when the dialog’s press has been answered', () => {
     // The shelf is on the row now.
     const dialogGone = within(document.body);
     expect(dialogGone.queryByLabelText('تصنيف محضر الطعام')).toBeNull();
+  });
+});
+
+/**
+ * «+ أنشئ» IN CTRL+K OPENS THE FORM THE «إضافة منتج» BUTTON OPENS (22/10). The box goes to `/products?new=product`; the screen opens
+ * «إضافة منتج جديد» and takes the word out of the address. A word that belongs to another screen's form opens nothing here.
+ */
+describe('the box (Ctrl+K) opens the create form', () => {
+  it('— `?new=product` opens «إضافة منتج جديد», and the address is left clean', async () => {
+    visit('?new=product');
+    await ready();
+    expect(screen.getByText('إضافة منتج جديد')).toBeTruthy();
+    expect(window.location.search).toBe('');
+  });
+
+  it('— an address without the word shows no form', async () => {
+    await ready();
+    expect(screen.queryByText('إضافة منتج جديد')).toBeNull();
+  });
+
+  it('— and a word that belongs to another screen’s form opens nothing here', async () => {
+    visit('?new=customer');
+    await ready();
+    expect(screen.queryByText('إضافة منتج جديد')).toBeNull();
   });
 });

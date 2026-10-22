@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { ProductThumb } from '@/components/ui/ProductThumb';
 import { useApp } from '@/context/AppContext';
+import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { productName } from '@/lib/product-name';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDeleteBinLine, RiFolderTransferLine, RiFoldersLine, RiImageAddLine, RiMedalLine, RiPencilLine, RiSearchLine, RiStarLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
@@ -49,6 +50,8 @@ export function ProductsScreen() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  // «+ أنشئ» in Ctrl+K arrives as `?new=product` and opens the form the «إضافة منتج» button opens.
+  useCreateIntent({ product: () => setCreateModalOpen(true) });
   /**
    * THE GRADE, FETCHED — NEVER COMPUTED HERE.
    *
