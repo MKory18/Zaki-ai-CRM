@@ -18,7 +18,13 @@
  *   • the MARK is a small faint glyph in the card's top-left corner — the
  *     corner furthest from the heading in RTL — at 7% of a colour that is
  *     already the card's border. It is a background, so it is behind
- *     everything, catches no click and is announced to nobody.
+ *     everything, catches no click and is announced to nobody;
+ *   • the FRIEZE (the two Islamic themes only) is a band of eight-point stars
+ *     and lozenges along the top edge, eight pixels tall — a BACKGROUND in
+ *     the card's own top padding (a card's header is 16px from the edge, a
+ *     full-bleed table's first row 12px), so it is beneath everything and
+ *     beside no figure. The crown is painted over it, which makes a doorway
+ *     of the middle.
  *
  * Illustrations — the sunset, the mountains, the planet — stay in the
  * three places decoration is allowed and on the welcome card. Those are
@@ -46,6 +52,13 @@ export const CARD_CLASS = 'zk-card';
 
 type Crown = 'none' | 'arch' | 'notch';
 
+/** A tile that repeats along the card's top edge: the inside of an SVG at `w`×`h`. Geometry only. */
+interface Frieze {
+  body: string;
+  w: number;
+  h: number;
+}
+
 interface Shape {
   /** The card's corner. The product's own is `0.5rem` (`rounded-lg`). */
   radius: string;
@@ -60,7 +73,26 @@ interface Shape {
    * blocker in the brief rather than a preference.
    */
   mark: string;
+  /** A band along the top edge, drawn in the theme's own accent. Absent for every theme but the two Islamic ones. */
+  frieze?: Frieze;
 }
+
+/**
+ * A KHATAM FRIEZE — AN EIGHT-POINT STAR AND A LOZENGE, ALTERNATING, STRUNG ON A HAIRLINE.
+ *
+ * The oldest border in the family of patterns the two Islamic themes borrow from, drawn as plain geometry: one polygon, one
+ * four-point diamond and a line, on a 24×8 tile that repeats along the top edge. Eight pixels is the whole height, so it sits inside
+ * the padding a card's first line already has — `CardHeader` is `py-4`, and the first row of a card with no padding is `py-3` — and
+ * never reaches a word or a figure.
+ */
+const KHATAM: Frieze = {
+  w: 24,
+  h: 8,
+  body:
+    '<path d="M0 4h24" stroke="currentColor" stroke-width="0.5"/>' +
+    '<polygon points="6.00,0.40 6.65,2.43 8.55,1.45 7.57,3.35 9.60,4.00 7.57,4.65 8.55,6.55 6.65,5.57 6.00,7.60 5.35,5.57 3.45,6.55 4.43,4.65 2.40,4.00 4.43,3.35 3.45,1.45 5.35,2.43" fill="currentColor"/>' +
+    '<path d="M18 0.9L21.2 4 18 7.1 14.8 4z" fill="currentColor"/>',
+};
 
 /**
  * The three that came with the product keep its own shape exactly: this is
@@ -87,6 +119,7 @@ export const SHAPES: Record<string, Shape> = {
     border: '1px',
     crown: 'arch',
     mark: '<path d="M16.5 4.5a8 8 0 1 0 0 15 9.5 9.5 0 0 1 0-15z" fill="currentColor"/>',
+    frieze: KHATAM,
   },
 
   /** The same arch, quieter — an eight-point seal instead of a crescent. */
@@ -95,6 +128,7 @@ export const SHAPES: Record<string, Shape> = {
     border: '1px',
     crown: 'arch',
     mark: '<path d="M12 3l2.6 4.1L19 5.6l-.6 4.7 4.1 1.7-4.1 1.7.6 4.7-4.4-1.5L12 21l-2.6-4.1-4.4 1.5.6-4.7L1.5 12l4.1-1.7-.6-4.7 4.4 1.5z" fill="currentColor"/>',
+    frieze: KHATAM,
   },
 
   /** A ringed planet. */
@@ -160,11 +194,24 @@ export function shapeOf(key: string): Shape {
  * not base64: an SVG this small is shorter as text, and it stays readable
  * in the markup, which matters for a thing nobody can see.
  */
-function markUrl(theme: SystemTheme, body: string): string {
+function tileUrl(color: string, w: number, h: number, opacity: string, body: string): string {
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ` +
-    `color="${theme.vars['border-strong']}" opacity="0.07">${body}</svg>`;
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" fill="none" ` +
+    `color="${color}" opacity="${opacity}">${body}</svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function markUrl(theme: SystemTheme, body: string): string {
+  return tileUrl(theme.vars['border-strong'], 24, 24, '0.07', body);
+}
+
+/**
+ * The frieze, in the theme's own ACCENT — the gold of one, the green of the other — and never in a colour that means something:
+ * a border colour would vanish on the card's own edge, and a warning colour along every card is a screen that is always warning.
+ * At 60%, so it reads as an edge that has been worked and not as a line that has been drawn.
+ */
+function friezeUrl(theme: SystemTheme, f: Frieze): string {
+  return tileUrl(theme.vars.primary, f.w, f.h, '0.6', f.body);
 }
 
 /**
@@ -177,14 +224,26 @@ export function shapeCss(theme: SystemTheme): string {
   const sel = `[data-sys-theme='${theme.key}'] .${CARD_CLASS}`;
   const parts: string[] = [];
 
+  // Layers of ONE background, the mark first: nothing here is a pseudo-element over the content.
+  const layers: { image: string; repeat: string; position: string; size: string }[] = [];
+  if (s.mark) {
+    // Top-LEFT: in RTL the heading starts at the right edge, so this is
+    // the corner furthest from the words and from any figure beside
+    // them. 22px, inset 10px — it touches nothing.
+    layers.push({ image: markUrl(theme, s.mark), repeat: 'no-repeat', position: 'left 10px top 10px', size: '22px 22px' });
+  }
+  if (s.frieze) {
+    // On the top edge, repeating along it, `h` tall: inside the padding, under the crown.
+    layers.push({ image: friezeUrl(theme, s.frieze), repeat: 'repeat-x', position: 'left 0 top 0', size: `auto ${s.frieze.h}px` });
+  }
+
   parts.push(
     `${sel}{position:relative;border-radius:${s.radius};border-width:${s.border}` +
-      (s.mark
-        ? `;background-image:${markUrl(theme, s.mark)};background-repeat:no-repeat;` +
-          // Top-LEFT: in RTL the heading starts at the right edge, so this is
-          // the corner furthest from the words and from any figure beside
-          // them. 22px, inset 10px — it touches nothing.
-          `background-position:left 10px top 10px;background-size:22px 22px`
+      (layers.length
+        ? `;background-image:${layers.map((l) => l.image).join(',')};` +
+          `background-repeat:${layers.map((l) => l.repeat).join(',')};` +
+          `background-position:${layers.map((l) => l.position).join(',')};` +
+          `background-size:${layers.map((l) => l.size).join(',')}`
         : '') +
       `}`
   );
