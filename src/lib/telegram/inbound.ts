@@ -15,7 +15,7 @@ import { db } from '../db';
 import { findOrCreateCustomer } from '../customer-identity';
 import { isBlocked } from '../blacklist';
 import { normalizePhoneNumber } from '../phone';
-import { matchProduct, normalizeArabic } from '../order-parser';
+import { resolveProductText } from './product-text';
 import { parseTelegramOrderMessage } from './parser';
 import { createTelegramOrder } from './order-creation';
 
@@ -229,23 +229,11 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
     where: { companyId, status: 'ACTIVE' },
     select: { id: true, name: true, nameEn: true, sku: true, basePrice: true, image: true },
   });
-  const q = normalizeArabic(productText);
-  const exact = products.find(
-    (p) => normalizeArabic(p.name) === q || (p.nameEn && normalizeArabic(p.nameEn) === q) || normalizeArabic(p.sku) === q
-  );
-  const contains = !exact ? products.filter((p) => normalizeArabic(p.name).includes(q) || q.includes(normalizeArabic(p.name))) : [];
-  let product = null;
-  if (exact) {
-    product = exact;
-  } else if (contains.length === 1) {
-    product = contains[0];
-  } else if (contains.length > 1) {
-    return review('AMBIGUOUS_PRODUCT');
-  } else {
-    const fuzzy = matchProduct(productText, products.map((p) => ({ id: p.id, name: p.name, sku: p.sku })));
-    if (!fuzzy) return review('PRODUCT_NOT_FOUND');
-    product = products.find((p) => p.id === fuzzy.id)!;
-  }
+  // The decision lives in `product-text.ts`, where it can be asked a question without a database behind it.
+  const resolved = resolveProductText(productText, products);
+  if (resolved.kind === 'ambiguous') return review('AMBIGUOUS_PRODUCT');
+  if (resolved.kind === 'none') return review('PRODUCT_NOT_FOUND');
+  const product = resolved.product;
 
   // ── Blacklist, company-wide ──
   // Held for review rather than dropped: a human should see that a blocked

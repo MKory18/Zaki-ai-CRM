@@ -84,7 +84,8 @@ describe('the one editor both screens go through', () => {
 
   it('and the spelling rule is the system’s one, not a second copy', () => {
     const src = stripComments(repoFile('src/components/ui/ProductPicker.tsx'));
-    expect(src).toMatch(/import \{ normalizeArabic \} from '@\/lib\/order-parser'/);
+    // One comparison form for every matcher an agent types into: spelling folded AND digits Latin (`foldForMatch`).
+    expect(src).toMatch(/import \{ foldForMatch \} from '@\/lib\/order-parser'/);
     // A second set of replace() calls here would be a second answer to
     // «how is أذن spelled», and the two would drift.
     expect(src, 'قاعدةُ إملاءٍ ثانية').not.toMatch(/replace\(\/\[أإآ/);
