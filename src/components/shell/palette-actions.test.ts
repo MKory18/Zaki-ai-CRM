@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { repoFile } from '@/lib/guard-source';
 import { ALL_ROUTES, canAccessRoute, visibleNav } from '@/lib/route-registry';
 import { ROLE_PERMISSIONS, type UserRole } from '@/types/auth';
 import type { SessionUser } from '@/types/auth';
@@ -26,8 +25,7 @@ import type { SessionUser } from '@/types/auth';
  * `canAccessRoute` the guard uses.
  */
 
-const root = process.cwd();
-const src = readFileSync(join(root, 'src/components/shell/CommandPalette.tsx'), 'utf8');
+const src = repoFile('src/components/shell/CommandPalette.tsx');
 
 /** The `href` of every entry in the ACTIONS list, read off the source. */
 function actionHrefs(): string[] {

@@ -36,6 +36,16 @@ const root = process.cwd();
  */
 const AWAITING_DECISION = ['/finance/closing'];
 
+/**
+ * A LINK TO A SCREEN WITH A QUERY, in a string or in a template.
+ *
+ * The value may be `${...}` and what is inside may be a CALL — `encodeURIComponent(phone)`. The first version of this pattern took
+ * `{` and `}` but not `(` and `)`, so every link whose value is built by a function was SKIPPED: the WhatsApp inbox's link to a
+ * customer, which the customers screen did not read, stayed dead with this guard green (RV72). A `${...}` is now one opaque token,
+ * whatever is inside it.
+ */
+const LINK = /["'`](\/[a-z][\w/-]*)\?([a-zA-Z](?:[\w=&.-]|\$\{[^}]*\})*)["'`]/g;
+
 function sourceFiles(): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
@@ -84,7 +94,7 @@ describe('a link that carries a filter reaches a screen that reads one', () => {
     if (file.includes('/api/')) continue;
     const lines = code(readFileSync(join(root, file), 'utf8')).split('\n');
     for (let i = 0; i < lines.length; i++) {
-      for (const m of lines[i].matchAll(/["'`](\/[a-z][\w/-]*)\?([a-zA-Z][\w=&${}.-]*)["'`]/g)) {
+      for (const m of lines[i].matchAll(LINK)) {
         const [, path, query] = m;
         if (path.startsWith('/api/')) continue;
         const page = pages.get(path);
@@ -100,6 +110,14 @@ describe('a link that carries a filter reaches a screen that reads one', () => {
     expect(found.length).toBeGreaterThan(8);
   });
 
+  /**
+   * THE FIVE THE OLD PATTERN COULD NOT SEE. Twenty-one links were found before the pattern learned to read a call inside `${…}`, and
+   * twenty-six after; a floor of twenty-four fails the day somebody narrows it again.
+   */
+  it('and finds the ones whose value is built by a call, not only those with a plain name', () => {
+    expect(found.length).toBeGreaterThanOrEqual(24);
+  });
+
   it('and none of them is dropped on arrival', () => {
     expect(dead, `روابطُ تحمل فلتراً لا تقرؤه الشاشة:\n${dead.join('\n')}`).toEqual([]);
   });
@@ -111,6 +129,37 @@ describe('a link that carries a filter reaches a screen that reads one', () => {
       expect(page, `${path}: لا صفحةَ له`).toBeTruthy();
       expect(readsAQuery(page!), `${path}: صار يقرأ الرابط — احذفه من قائمة الانتظار`).toBe(false);
     }
+  });
+});
+
+describe('the pattern that finds the links', () => {
+  const read = (text: string) => [...text.matchAll(LINK)].map((m) => `${m[1]}?${m[2]}`);
+
+  it('reads a link in a plain string', () => {
+    expect(read(`href="/orders?state=DELIVERED"`)).toEqual(['/orders?state=DELIVERED']);
+  });
+
+  it('and one whose value is a plain name in a template', () => {
+    expect(read('`/orders?state=${state}`')).toEqual(['/orders?state=${state}']);
+  });
+
+  it('and one whose value is built by a CALL — the case RV72 skipped', () => {
+    expect(read('`/customers?search=${encodeURIComponent(selected.customerPhone)}`')).toEqual([
+      '/customers?search=${encodeURIComponent(selected.customerPhone)}',
+    ]);
+  });
+
+  it('and several `${…}` in one query, with a call in each', () => {
+    expect(read('`/orders?a=${f(x)}&b=${g(y, z)}`')).toEqual(['/orders?a=${f(x)}&b=${g(y, z)}']);
+  });
+
+  it('but not a path with no query, and not a query that does not start with a name', () => {
+    expect(read('`/orders`')).toEqual([]);
+    expect(read('`/orders?${params}`')).toEqual([]);
+  });
+
+  it('and a link is cut at its closing quote — the text after it is not part of the query', () => {
+    expect(read('`/orders?x=1` + "/customers?y=2"')).toEqual(['/orders?x=1', '/customers?y=2']);
   });
 });
 
