@@ -153,7 +153,7 @@ export function BulkDoneMoment({
         <div
           data-phase={phase}
           className={
-            'm-3 w-full max-w-md overflow-hidden rounded-sheet border border-[var(--sys-border)] ' +
+            'm-3 w-full max-w-md overflow-hidden rounded-lg border border-[var(--sys-border)] ' +
             'bg-[var(--sys-card)] shadow-overlay transition ' +
             (phase === 'hold' ? 'opacity-100' : 'opacity-0')
           }
