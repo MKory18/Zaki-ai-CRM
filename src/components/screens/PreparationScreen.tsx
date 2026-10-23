@@ -42,7 +42,10 @@ interface Group {
 
 export function PreparationScreen() {
   const [data, setData] = useState<{ allowNegativeStock: boolean; totals: { products: number; orders: number; shortages: number }; groups: Group[] } | null>(null);
-  const [open, setOpen] = useState<Record<string, boolean>>({});
+  // Groups start OPEN: the screen has no action of its own, so a group closed
+  // by default was a click for nothing before the packer could read a line.
+  // Only the ones the person closes are remembered.
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   // A request waiting on an order is the one thing the packer must see
   // before the box is taped.
@@ -111,7 +114,7 @@ export function PreparationScreen() {
         data.groups.map((g) => (
         <section key={g.productId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <button
-            onClick={() => setOpen((o) => ({ ...o, [g.productId]: !o[g.productId] }))}
+            onClick={() => setClosed((c) => ({ ...c, [g.productId]: !c[g.productId] }))}
             className="w-full flex items-center gap-3 p-4 text-right hover:bg-[var(--sys-surface)]"
           >
             <span className="w-9 h-9 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
@@ -124,10 +127,10 @@ export function PreparationScreen() {
                 {g.shortage > 0 && <span className="text-[var(--sys-destructive)]"> · نقص {g.shortage}</span>}
               </span>
             </span>
-            {open[g.productId] ? <RiArrowDownSLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" /> : <RiArrowLeftSLine className="icon-mirror w-4 h-4 text-[var(--sys-muted-foreground)]" />}
+            {!closed[g.productId] ? <RiArrowDownSLine className="w-4 h-4 text-[var(--sys-muted-foreground)]" /> : <RiArrowLeftSLine className="icon-mirror w-4 h-4 text-[var(--sys-muted-foreground)]" />}
           </button>
 
-          {open[g.productId] && (
+          {!closed[g.productId] && (
             <div className="border-t border-[var(--sys-border)] p-3">
               {/* A packer reads this standing at a shelf. Six columns on a
                   phone is every cell wrapped to four lines; the same

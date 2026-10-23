@@ -73,7 +73,7 @@ describe('scripts/cleanup-inventory.json — the clean-up says what it did and p
 
   it('means «folded on a screen» by hide — every hide entry is a screen that draws «متقدم»', () => {
     const hides = entries.filter((e) => e.safeAction === 'hide');
-    expect(hides.length, 'الشاشات الثماني لازم تكون مسجّلة').toBe(8);
+    expect(hides.length, 'الشاشات السبع لازم تكون مسجّلة').toBe(7);
     for (const e of hides) {
       const [[file]] = cited(e.evidence);
       expect(file, `${e.location}: hide برّا الشاشات`).toMatch(/^src\/components\/screens\//);

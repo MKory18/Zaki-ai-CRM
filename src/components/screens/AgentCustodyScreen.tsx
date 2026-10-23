@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { NextStepButton } from '@/components/ui/NextStep';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { OrderLink } from '@/components/orders/OrderLink';
 
 /**
  * /finance/agents — what each agent is holding.
@@ -406,7 +407,7 @@ function Section({
             const stuck = o.shippingStatus === 'FAILED_DELIVERY' || o.shippingStatus === 'RETURN_REQUESTED';
             return (
               <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-xs">
-                <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
+                <OrderLink id={o.id} number={o.orderNumber} className="font-semibold text-[var(--sys-heading)]" />
                 {stuck && (
                   <span className="inline-flex items-center gap-1 text-[var(--sys-warning)]">
                     <RiAlertLine className="w-4 h-4" />

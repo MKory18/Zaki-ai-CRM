@@ -12,7 +12,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { productName } from '@/lib/product-name';
 import { ProductLinesEditor, goodsTotal, newLine, type DraftLine } from '@/components/orders/ProductLinesEditor';
 import { amount } from '@/lib/format';
-import { RiArchiveLine, RiCheckboxCircleLine, RiMagicLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
+import { RiArchiveLine, RiCheckboxCircleLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { useMayOpen } from '@/hooks/useMayOpen';
 import { openOrderStep } from '@/lib/next-step';
@@ -423,16 +423,11 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── Actions ─── */}
-        <div className="flex items-center justify-between pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-medium text-[var(--sys-muted-foreground)] hover:text-[var(--sys-foreground)] cursor-pointer flex items-center gap-1.5"
-          >
-            <RiMagicLine className="w-4 h-4" />
-            نص حر طويل؟ جرّب الإدخال بالذكاء الاصطناعي من الزر الأخضر
-          </button>
-
+        <div className="flex items-center justify-end pt-1">
+          {/* A text button here used to only CLOSE the modal while telling the
+              person to try «الإدخال بالذكاء» from «the green button» — which is
+              not green, and was one more way out beside «إلغاء». The AI entry
+              is its own button in the orders header. */}
           <div className="flex items-center gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
               إلغاء

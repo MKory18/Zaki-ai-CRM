@@ -2,10 +2,9 @@
 
 import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
 import { apiJson } from '@/lib/api-client';
 import { arDateTime } from '@/lib/format';
-import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiRefreshLine, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
+import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line, RiShieldCheckLine, RiTimerLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SystemTokensPanel } from '@/components/apps/SystemTokensPanel';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
@@ -167,9 +166,6 @@ export function InstalledAppsScreen() {
                 {label}
               </button>
             ))}
-            <Button size="sm" variant="outline" onClick={load}>
-              <RiRefreshLine className="h-4 w-4" /> تحديث
-            </Button>
           </div>
         </div>
 

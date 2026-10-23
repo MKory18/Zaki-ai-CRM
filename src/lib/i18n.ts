@@ -218,7 +218,9 @@ export const translations = {
     all: 'الكل',
     // Statuses
     NEW: 'جديد',
-    CONTACTING: 'جارٍ الاتصال',
+    // The same word every other screen uses for this state (`STATE_LABEL_AR.CLAIMED`);
+    // the dashboard tile alone said «جارٍ الاتصال» for it.
+    CONTACTING: 'قيد التأكيد',
     NO_ANSWER: 'لا يرد',
     CONFIRMED: 'مؤكد',
     POSTPONED: 'مؤجل',

@@ -15,13 +15,6 @@
   },
   {
     "kind": "secondary-control",
-    "location": "الموظفون /admin/users — زرّ «تحديث القائمة»",
-    "evidence": "src/components/screens/UsersScreen.tsx:194",
-    "safeAction": "hide",
-    "reason": "تحديث يدويّ مطويّ تحت «متقدم»؛ «موظف جديد» يبقى ظاهرًا لمن معه users.create."
-  },
-  {
-    "kind": "secondary-control",
     "location": "صفحة الموظف /admin/users/[id] — «أعِد ضبط التحقّق بخطوتين»",
     "evidence": "src/components/screens/UserDetailScreen.tsx:519",
     "safeAction": "hide",

@@ -16,6 +16,7 @@ import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList'
 import { ruleSentence, type WinbackRule } from '@/lib/winback';
 import { DEFAULT_VIEW, PERIODS, PERIOD_AR, VIEWS, VIEW_AR, type View } from '@/lib/winback-filters';
 import type { WinbackFacts } from '@/lib/winback-list';
+import { OrderLink } from '@/components/orders/OrderLink';
 
 /**
  * /confirmation/winback — the lost orders worth one more call.
@@ -268,9 +269,7 @@ export function WinbackScreen() {
             className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4 space-y-3"
           >
             <header className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-[var(--sys-heading)]" dir="ltr">
-                {r.orderNumber}
-              </span>
+              <OrderLink id={r.id} number={r.orderNumber} className="font-semibold text-[var(--sys-heading)]" />
               <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/30 text-[var(--sys-warning)]">
                 {reasonAr(r.rejectionReason)}
               </span>

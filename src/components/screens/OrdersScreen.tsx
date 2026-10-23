@@ -37,7 +37,7 @@ import { FILTERABLE_STATES, STATE_LABEL_AR } from '@/lib/order-state';
  */
 const STATUS_FILTER_OPTIONS: readonly string[] = [...FILTERABLE_STATES, 'CLOSED'];
 const STATUS_FILTER_LABELS: Record<string, string> = { ...STATE_LABEL_AR, CLOSED: 'مغلق' };
-import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiMagicLine, RiPrinterLine, RiRefreshLine, RiSearchLine, RiTimerLine, RiTruckLine, RiUploadCloud2Line } from '@remixicon/react';
+import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine, RiDownload2Line, RiEBike2Line, RiMagicLine, RiPrinterLine, RiSearchLine, RiTimerLine, RiTruckLine, RiUploadCloud2Line } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { arDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -475,10 +475,12 @@ export function OrdersScreen() {
             actions={
               <><div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
             {/* «holds» names only what THIS person finds inside: export, import and
-                AI entry are each behind a grant, and a fold that promises
-                «تصدير» to somebody without it opens onto a refresh button. */}
+                AI entry are each behind a grant. With none of the three there is
+                nothing to fold, so there is no «متقدم» at all (the list refreshes
+                itself, so a refresh button was the only thing left in it). */}
+            {(canExport || canImport || canCreate) && (
             <AdvancedGroup
-              holds={[canExport && 'تصدير', canImport && 'استيراد', 'تحديث', canCreate && 'إدخال بالذكاء']
+              holds={[canExport && 'تصدير', canImport && 'استيراد', canCreate && 'إدخال بالذكاء']
                 .filter(Boolean)
                 .join(' · ')}
             >
@@ -508,16 +510,6 @@ export function OrdersScreen() {
             </Button>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadOrders(pagination.page)}
-              className="p-2"
-              title="تحديث"
-            >
-              <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-
             {canCreate && (
             <Button
               size="sm"
@@ -530,6 +522,7 @@ export function OrdersScreen() {
             </Button>
             )}
             </AdvancedGroup>
+            )}
 
             {canCreate && (
             <Button
@@ -1025,9 +1018,8 @@ export function OrdersScreen() {
 
             {/* Pagination Bar */}
             <div className="px-6 py-3 border-t border-[var(--sys-border)] flex items-center justify-between text-xs text-[var(--sys-muted-foreground)]">
-              <span>
-                عرض <strong>{orders.length}</strong> من <strong>{pagination.total}</strong> طلب
-              </span>
+              {/* The count is on the line above the list already («عرض 1–25 من أصل N»). */}
+              <span />
 
               {/* An arrow on its own is not a name. Every other icon-only
                   button on this screen says what it does — the printer, the

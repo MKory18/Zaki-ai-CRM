@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { arDateTime } from '@/lib/format';
+import { OrderLink } from '@/components/orders/OrderLink';
 
 interface TelegramMsg {
   id: string;
@@ -226,7 +227,7 @@ export function TelegramOrdersScreen() {
                 ) },
                   { key: 'c5', label: "الطلب",
                     render: (m) => (
-                  <>{m.order ? <span className="font-mono text-[var(--sys-primary)] font-semibold" dir="ltr">{m.order.orderNumber}</span> : '—'}</>
+                  <>{m.order ? <OrderLink id={m.order.id} number={m.order.orderNumber} className="font-mono text-[var(--sys-primary)] font-semibold" /> : '—'}</>
                 ) },
                   { key: 'c6', label: "الوقت",
                     render: (m) => (arDateTime(m.createdAt)) },
