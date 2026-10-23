@@ -10,6 +10,7 @@ import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
 import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
@@ -286,7 +287,20 @@ export function ShippingBatchesScreen() {
       )}
 
       {shown.length === 0 ? (
-        <MissionDone why="لا دفعات هنا. تُنشأ الدفعة من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة." />
+        /* «تمّت المهمة!» says the whole screen is clear. A tab that is empty
+           while other tabs hold batches is not that — it only says this tab
+           is empty, and a tick over «قيد التجميع» with thirty handed-over
+           batches beside it would be a false «you are done». */
+        filter === 'all' ? (
+          <MissionDone why="لا دفعات هنا. تُنشأ الدفعة من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة." />
+        ) : (
+          <EmptyState
+            icon={RiTruckLine}
+            title="لا دفعات بهذه الحالة"
+            why="جرّب تبويباً ثانياً، أو «الكل» لترى كل الدفعات."
+            action={{ label: 'عرض الكل', onClick: () => setFilter('all') }}
+          />
+        )
       ) : (
         <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {shown.map((b) => {

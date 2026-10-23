@@ -253,7 +253,8 @@ describe('the end of a step offers the next one', () => {
       ['src/components/screens/AgentCustodyScreen.tsx', 'NextStepButton'],
       ['src/components/screens/finance/CollectionScreen.tsx', 'NextStepButton'],
       ['src/components/screens/finance/MatchingScreen.tsx', 'NextStepButton'],
-      ['src/components/screens/finance/ClosingScreen.tsx', 'NextStepButton'],
+      // The closing is the LAST numbered stop of the money road, so it has no
+      // button — see the test below, which draws it at that path.
     ];
     for (const [file, component] of screens) {
       const src = stripComments(repoFile(file));
@@ -262,6 +263,16 @@ describe('the end of a step offers the next one', () => {
       // the next stop is would be a second copy of the registry.
       expect(src, `${file} يمرّر وجهة الزر بنفسه`).not.toMatch(/<NextStepButton[^/>]+href/);
     }
+  });
+
+  it('— the daily close is the last stop of the money road: the button draws nothing there, so the screen does not carry one', () => {
+    where.path = '/finance/closing';
+    const { container } = render(<NextStepButton />);
+    expect(container.querySelector('a')).toBeNull();
+    expect(
+      stripComments(repoFile('src/components/screens/finance/ClosingScreen.tsx')),
+      'ClosingScreen يحمل زراً لا يُرسم أبداً'
+    ).not.toContain('NextStepButton');
   });
 });
 
