@@ -40,6 +40,8 @@ vi.mock('@/components/screens/ops/PickingAssistant', () => ({ PickingAssistant: 
 vi.mock('@/components/orders/ChangeRequestReview', () => ({ ChangeRequestReview: () => null }));
 vi.mock('@/components/orders/OrderDetailModal', () => ({ OrderDetailModal: () => null }));
 vi.mock('@/components/screens/confirmation/ActionDialogs', () => ({ RejectDialog: () => null }));
+// The keys panel under the installed apps fetches its own endpoint and is another screen's subject.
+vi.mock('@/components/apps/SystemTokensPanel', () => ({ SystemTokensPanel: () => null }));
 
 import { PreparationScreen } from './PreparationScreen';
 import { InstalledAppsScreen } from './InstalledAppsScreen';
@@ -65,7 +67,12 @@ const group = (productId: string) => ({
   lines: [line(`${productId}1`)],
 });
 
-beforeEach(() => api.mockReset());
+// A block body: `() => api.mockReset()` RETURNS the mock, and vitest runs whatever a
+// beforeEach returns as a cleanup — so `api()` was being called with no arguments
+// after every test, into whatever implementation the last test had set.
+beforeEach(() => {
+  api.mockReset();
+});
 afterEach(cleanup);
 
 describe('«التجهيز» — the groups start open', () => {
@@ -98,11 +105,15 @@ describe('«التجهيز» — the groups start open', () => {
 
 describe('«التطبيقات المثبتة» — a list that reloads itself', () => {
   it('draws its filters but no «تحديث» button', async () => {
-    api.mockImplementation(async (url?: string) =>
-      String(url ?? '').startsWith('/api/apps/deliveries')
-        ? { deliveries: [], totals: { ok: 0, failed: 0, pending: 0 } }
-        : { builtIn: [], external: [] }
-    );
+    // Every endpoint the screen asks is answered by name; an unknown one is an error,
+    // not a guess — a wrong-shaped answer to a child's request throws AFTER the test
+    // has passed and fails the whole run as an unhandled error.
+    api.mockImplementation(async (...args: unknown[]) => {
+      const u = String(args[0] ?? '');
+      if (u.startsWith('/api/apps/deliveries')) return { deliveries: [], totals: { ok: 0, failed: 0, pending: 0 } };
+      if (u === '/api/apps') return { builtIn: [], external: [] };
+      throw new Error(`unexpected request ${u}`);
+    });
     render(<InstalledAppsScreen />);
     // the filter pills are the screen's buttons; wait for them, then look for a refresh
     await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(1));
