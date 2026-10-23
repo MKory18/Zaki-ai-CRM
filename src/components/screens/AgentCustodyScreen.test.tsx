@@ -22,6 +22,7 @@ import React from 'react';
 const { apiJson } = vi.hoisted(() => ({ apiJson: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => apiJson(...a) }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/finance/agents' }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
 
 import { AgentCustodyScreen } from './AgentCustodyScreen';
 

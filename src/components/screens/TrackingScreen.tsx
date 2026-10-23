@@ -20,6 +20,7 @@ import { HealthChip } from '@/components/ui/HealthChip';
 import { URGENCY, canCollect, trackingUrgency, type ConditionKey } from '@/lib/tracking-priority';
 import { Money } from '@/components/ui/Money';
 import { Pager } from '@/components/ui/Pager';
+import { NextStepButton } from '@/components/ui/NextStep';
 import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
 import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
 import { AGES, AGE_AR } from '@/lib/age-piles';
@@ -1020,6 +1021,8 @@ export function TrackingScreen() {
           }}
         />
       )}
+
+      <NextStepButton />
 
       {collecting && chosen.length > 0 && (
         <CollectDialog

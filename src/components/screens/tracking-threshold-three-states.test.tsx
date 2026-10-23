@@ -52,6 +52,7 @@ vi.mock('@/components/ui/Confirm', () => ({
 vi.mock('@/components/screens/tracking/TransferDialog', () => ({ TransferDialog: () => null }));
 vi.mock('@/components/screens/tracking/CollectDialog', () => ({ CollectDialog: () => null }));
 vi.mock('@/components/screens/tracking/DeliverDialog', () => ({ DeliverDialog: () => null }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
 
 import { TrackingScreen } from './TrackingScreen';
 

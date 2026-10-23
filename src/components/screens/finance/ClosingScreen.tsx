@@ -7,6 +7,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiLoader4Line, RiLockLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Money } from '@/components/ui/Money';
+import { NextStepButton } from '@/components/ui/NextStep';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -188,6 +189,8 @@ export function ClosingScreen() {
           }}
         />
       )}
+
+      <NextStepButton />
     </div>
   );
 }
