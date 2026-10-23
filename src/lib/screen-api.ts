@@ -35,12 +35,3 @@ export function formatDate(d: string | Date | null | undefined) {
     return '—';
   }
 }
-
-export function formatDateTime(d: string | Date | null | undefined) {
-  if (!d) return '—';
-  try {
-    return format(new Date(d), 'yyyy/MM/dd HH:mm');
-  } catch {
-    return '—';
-  }
-}

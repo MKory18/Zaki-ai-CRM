@@ -55,7 +55,3 @@ export const orderClaimedBy = (name?: string | null): string =>
 /** The caller does not hold the claim they are trying to act on. */
 export const ORDER_CLAIM_NOT_HELD =
   'هذا الطلب ليس بين يديك. اسحبه أولاً، أو اطلبه من مَن يحمله.';
-
-/** A reason is required and was missing or too short. */
-export const reasonRequired = (min = 5): string =>
-  `اكتب السبب — ${min} أحرف على الأقل. هو ما يُقرأ في سجلّ الطلب بعد شهر.`;

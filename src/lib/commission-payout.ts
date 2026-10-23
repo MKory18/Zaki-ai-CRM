@@ -69,10 +69,6 @@ const REFUSAL_AR: Record<PayoutRefusal, string> = {
   NOTHING_OWED: 'مجموع العمولات المحدَّدة صفر',
 };
 
-export function payoutRefusalAr(reason: PayoutRefusal): string {
-  return REFUSAL_AR[reason];
-}
-
 export class PayoutRefused extends Error {
   constructor(public reason: PayoutRefusal) {
     super(REFUSAL_AR[reason]);
