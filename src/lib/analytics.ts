@@ -17,6 +17,8 @@ export interface DateFilter {
 // last 90 days server-side. This bounds every aggregate query below via the
 // orders_companyId_createdAt_idx and keeps memory/CPU predictable. 'all' is
 // clamped internally to 90 days too (the frontend keeps sending 'all').
+// The one exception is the dashboard and its loss panel, which pass
+// `reportRange(filter)` explicitly — see that function.
 const MAX_WINDOW_DAYS = 90;
 
 /**
@@ -76,13 +78,26 @@ export function previousRange(filter: DateFilter): { start: Date; end: Date } | 
 }
 
 /**
- * «الكل» MEANS ALL OF IT — on the screens that read the profit engine.
+ * «الكل» MEANS ALL OF IT — on the dashboard, and only there.
  *
  * The owner, 23/10, over a dashboard that said «الكل» and counted 12,449 of
  * 17,328 orders: «الكل مش اخر 90 يوم». The 90-day safety window stays on
  * `getDateRange` itself, which a dozen other screens call and some of them
- * (landing analytics) read as a real span; here, and only here, the whole
- * history is one GROUP BY over indexed columns and costs nothing to ask.
+ * (landing analytics) read as a real span.
+ *
+ * WHO ASKS FOR THE WHOLE HISTORY: `/api/analytics` (the dashboard tiles) and
+ * `/api/analytics/loss` (the loss panel on the same page, so the two never
+ * disagree about what «الكل» counted). Each passes this range EXPLICITLY.
+ * `getCompanyAnalytics` itself still defaults to `getDateRange`, so the
+ * finance summary, the profitability report and the AI summaries keep the
+ * window they were written against — widening them was nobody's request.
+ *
+ * IT IS NOT FREE. Sections 1–2 of the engine are GROUP BYs, but section 3
+ * reads one row per order LINE and then every order of those lines into
+ * memory. Over the whole history that is tens of thousands of rows, which is
+ * why the dashboard refreshes «الكل» every two minutes, not every thirty
+ * seconds.
+ *
  * An explicit pair of dates is still a window, clamped as before.
  */
 export function reportRange(filter: DateFilter): { start?: Date; end?: Date } {
@@ -175,11 +190,14 @@ export async function getCompanyAnalytics(
    * comparison must be computed by the code that computes the figure, or
    * the two will drift apart the first time an aggregate changes. Passing
    * a window is the whole extension — no second aggregation exists.
+   *
+   * An EMPTY window (`{}`, what `reportRange` answers for «الكل») means no
+   * date condition at all — the dashboard's whole history.
    */
-  window?: { start: Date; end: Date }
+  window?: { start?: Date; end?: Date }
 ) {
   const { companyId, storeId } = scope;
-  const { start, end } = window ?? reportRange(filter);
+  const { start, end } = window ?? getDateRange(filter);
 
   const dateFilter =
     start && end
