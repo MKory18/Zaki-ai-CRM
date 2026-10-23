@@ -120,13 +120,17 @@ export function BulkBar({
    * ── AND IT STAYS AT ONE PLACE IN THE TREE, WHATEVER `show` IS ──
    *
    * This used to return the moment ALONE when `show` was false and the
-   * moment INSIDE a fragment beside the bar when it was true. To React those
-   * are two different trees, so every flip of the selection unmounted the
-   * moment and mounted a fresh one — with a fresh memory of which batch it
-   * had already played. Finish thirty, tick one row, and the same thirty
-   * played again. One fragment, the moment always its first child, the bar
-   * second and only when there is a selection: the moment's memory now
-   * lives exactly as long as the screen does.
+   * moment as the first child of a fragment beside the bar when it was
+   * true. That happened to keep the moment's memory, but only because React
+   * unwraps an unkeyed top-level fragment and so matched the two shapes by
+   * position — an implementation detail one wrapper or one `key` away from
+   * remounting the moment on every flip of the selection, with a fresh
+   * memory of which batch it had already played (finish thirty, tick one
+   * row, and the same thirty play again). One shape now, the moment always
+   * the first child and the bar second only when there is a selection, so
+   * the moment's memory lives exactly as long as the screen does by
+   * construction; the test «a selection flip after a batch does not replay
+   * the batch» holds it.
    *
    * With no batch to report the moment draws only its empty, zero-high live
    * region, so a screen with no selection still costs one boolean and one

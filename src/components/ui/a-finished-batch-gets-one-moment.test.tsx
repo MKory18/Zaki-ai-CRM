@@ -27,7 +27,8 @@ import { stripComments } from '@/lib/guard-source';
  *   · one STAR_POINTS pair nudged by 2               → the geometry
  *   · the points written as a five-pointed star      → «exactly sixteen»
  *   · the once-per-serial guard deleted              → «not again for the same batch»
- *   · the BulkBar returning the moment in two trees  → «a selection flip does not replay it»
+ *   · the moment remounted on a selection flip       → «a selection flip does not replay it»
+ *     (`key={String(show)}` on it in BulkBar)
  *   · MOMENT_MS 2500 → 1500                          → «held two and a half seconds»
  *   · the fade timer keyed on the props again        → «a parent that lets go mid-moment»
  *   · the count printed with toLocaleString('ar-EG') → «Latin digits»
