@@ -181,14 +181,17 @@ export function FirstRunTour() {
           on purpose, and an interrupting card that competes with a bright
           page behind it is read as one more widget. Pointer-events stay on
           the veil so a stray click dismisses nothing — the buttons decide. */}
-      <div className="fixed inset-0 z-[60] bg-[var(--sys-background)]/50" aria-hidden />
+      <div className="fixed inset-0 z-[60] bg-[var(--sys-background)]/60" aria-hidden />
 
+      {/* Same z as the veil: the card comes later in the DOM, so it paints
+          above it. Both classes already ship elsewhere, so the tour adds no
+          CSS rule (the 94.04 KB first-load ceiling in quality-gates.test.ts). */}
       {rect && (
         <div
           role="dialog"
           aria-label="الجولة الأولى"
           style={{ top: place(rect).top, left: place(rect).left }}
-          className="fixed z-[61] w-[320px] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised"
+          className="fixed z-[60] w-[320px] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised"
         >
           <div className="flex items-start gap-3">
             <current.icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sys-primary)]" aria-hidden />
