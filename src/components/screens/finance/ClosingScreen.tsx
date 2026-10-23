@@ -8,7 +8,6 @@ import { RiAlertLine, RiLoader4Line, RiLockLine, RiWallet3Line } from '@remixico
 import { useToast } from '@/components/ui/Toast';
 import { Money } from '@/components/ui/Money';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { NextStepButton } from '@/components/ui/NextStep';
 
 /**
  * /finance/closing — count each wallet at the end of the day against its book
@@ -193,8 +192,6 @@ export function ClosingScreen() {
           }}
         />
       )}
-
-      <NextStepButton />
     </div>
   );
 }

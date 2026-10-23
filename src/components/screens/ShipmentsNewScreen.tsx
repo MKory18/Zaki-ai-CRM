@@ -67,7 +67,8 @@ export function ShipmentsNewScreen() {
   /** Looking at what is ready, or at what is being held back. */
   const [view, setView] = useState<'ready' | 'held'>('ready');
   /** Whether the list is showing fewer than all of it — see the next-step button. */
-  const narrowed = view === 'held' || Object.values(filters).some((v) => v !== '');
+  const narrowed =
+    view === 'held' || Object.entries(filters).some(([key, v]) => key !== 'courier' && v !== '');
   const [holding, setHolding] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
