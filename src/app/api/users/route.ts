@@ -17,6 +17,7 @@ import { can } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
 import { commissionRateField } from '@/lib/user-commission-rate';
 import { typed } from '@/lib/text-search';
+import { newStaffTheme } from '@/lib/system-themes';
 
 const createUserSchema = z.object({
   name: z.string().trim().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل').max(80),
@@ -58,6 +59,9 @@ export async function POST(req: Request) {
     // string. Tenant rule: system roles (companyId null) or same-company roles.
     let targetRoleId: string | null = null;
     let targetRoleName: string = role === 'PENDING_USER' ? 'MODERATOR' : role;
+    // The role's own published look, if the owner set one — read so a new
+    // hire of that role still opens on it (see `newStaffTheme`).
+    let targetRoleTheme: string | null = null;
     if (roleId) {
       const targetRole = await db.role.findUnique({ where: { id: roleId } });
       if (!targetRole) {
@@ -77,6 +81,7 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
       }
       targetRoleId = targetRole.id;
       targetRoleName = targetRole.name;
+      targetRoleTheme = targetRole.systemTheme ?? null;
     } else if (admin.role !== 'SUPER_ADMIN') {
       // Legacy role-string path: same conferral policy resolved through the
       // canonical legacy matrix (fail-closed for unknown names).
@@ -124,11 +129,14 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
           assignedAt: new Date(),
           /*
            * «ليل» is the first look a NEW member of staff opens on — the
-           * owner's Phase 3 brief. Written explicitly so whoever picks
-           * another theme from the picker simply overwrites it; the column
-           * itself already existed, so no migration rides along.
+           * owner's Phase 3 brief — unless the role they are given already
+           * carries a published look of its own, in which case the column
+           * stays empty and the role's base answers exactly as before.
+           * Written explicitly so whoever picks another theme from the
+           * picker simply overwrites it; the column itself already existed,
+           * so no migration rides along. `newStaffTheme` holds the rule.
            */
-          systemTheme: 'layl',
+          systemTheme: newStaffTheme(targetRoleTheme),
           // No fallback: the schema's own `.default(0)` already turned
           // «nothing typed» into zero, so a `?? 0` here could never fire.
           commissionRate,

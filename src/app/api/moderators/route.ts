@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { commissionByUserForOrders } from '@/lib/commission';
 import { COMMISSION_RATE_REFUSAL, readCommissionRate } from '@/lib/user-commission-rate';
+import { newStaffTheme } from '@/lib/system-themes';
 
 export async function GET() {
   try {
@@ -172,8 +173,11 @@ export async function POST(req: Request) {
          * «ليل» is the first look a NEW member of staff opens on — the
          * owner's Phase 3 brief. The column already existed; only the
          * creation path writes the default, and the picker overwrites it.
+         * A moderator made here is given the legacy role string and no
+         * role row, so there is no published role look to defer to — the
+         * case `newStaffTheme(null)` answers with «ليل».
          */
-        systemTheme: 'layl',
+        systemTheme: newStaffTheme(null),
       },
     });
 

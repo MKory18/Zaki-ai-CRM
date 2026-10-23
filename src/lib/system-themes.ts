@@ -931,3 +931,33 @@ export function openingTheme(own: string | null | undefined, roleBase: string | 
   if (roleBase) return sanitizeTheme(roleBase);
   return DEFAULT_THEME;
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * THE LOOK A NEW MEMBER OF STAFF IS GIVEN — «ليل», UNLESS THEIR ROLE HAS ONE.
+ *
+ * Phase 3 of the owner's brief opens every NEW employee on «ليل». The two
+ * creation doors (`/api/users` and `/api/moderators`) write it into the
+ * person's own column, so the first time they pick a theme of their own it
+ * is simply overwritten — and nobody who already exists is touched: no
+ * migration, no backfill, no update path ever writes it.
+ *
+ * ⚠️ BUT THE OWNER ALREADY HAS A WAY TO SAY THIS, AND IT MUST STILL WORK.
+ * `roles.system_theme` is documented in the schema as «the look a new
+ * person in this role opens on», and `openingTheme` reads the person's own
+ * column FIRST. Writing «ليل» unconditionally would make every new hire of
+ * a role with a published base open on «ليل» instead — the owner's base
+ * silently stops working for exactly the people it exists for. So when the
+ * role carries a base, the person's own column is left EMPTY and the base
+ * answers, as it always did; «ليل» fills only the place where the product's
+ * default used to.
+ *
+ * Whether «ليل» is right for every new employee is the owner's decision to
+ * confirm — it is one constant here.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export const NEW_STAFF_THEME = 'layl';
+
+export function newStaffTheme(roleBase: string | null | undefined): string | null {
+  return roleBase ? null : NEW_STAFF_THEME;
+}
