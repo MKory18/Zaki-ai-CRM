@@ -11,6 +11,7 @@ import { RiCheckLine, RiInboxUnarchiveLine, RiTimeLine } from '@remixicon/react'
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MissionDone } from '@/components/ui/NextStep';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Pager } from '@/components/ui/Pager';
 import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/ListToolbar';
@@ -347,11 +348,7 @@ export function ReturnsScreen() {
                   action={{ label: 'امسح الفلاتر', onClick: reset }}
                 />
               ) : extra.view === 'pending' ? (
-                <EmptyState
-                  icon={RiInboxUnarchiveLine}
-                  title="لا مرتجعات بانتظار الاستلام"
-                  why="المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة."
-                />
+                <MissionDone why="المرتجع يظهر هنا حين تُعلن شركةُ الشحن فشلَ التسليم أو إرجاعَ الطرد. فراغُ القائمة يعني أنّ لا طردَ في طريق العودة." />
               ) : (
                 <EmptyState
                   icon={RiInboxUnarchiveLine}

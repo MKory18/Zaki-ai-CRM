@@ -6,6 +6,7 @@ import { amount, arDateShort, type Currency } from '@/lib/format';
 import { RiAlertLine, RiArchiveLine, RiArrowLeftSLine, RiEBike2Line, RiLoader4Line, RiQuestionLine, RiWallet3Line } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { NextStepButton } from '@/components/ui/NextStep';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 
@@ -282,6 +283,9 @@ export function AgentCustodyScreen() {
         الأرقام محسوبة من الطلبات نفسها لحظة فتح الشاشة — لا رصيد مخزَّن يمكن أن يختلف عن الواقع.
         و«حصّل مؤكَّد» هو ما سُجِّل فعلاً لا ما نتوقّعه: {WHY_NO_AMOUNT}
       </p>
+
+      {/* The money road goes on from here: «التحصيل». */}
+      <NextStepButton />
     </div>
   );
 }
