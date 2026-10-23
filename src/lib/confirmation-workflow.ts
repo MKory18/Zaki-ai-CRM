@@ -237,6 +237,3 @@ export function deriveFollowUpState(
   if (diffMs <= 0) return 'DUE';
   return 'SCHEDULED';
 }
-
-/** Contact attempt results that resolve the follow-up */
-export const RESOLVING_RESULTS = ['CONFIRMED', 'REJECTED'] as const;

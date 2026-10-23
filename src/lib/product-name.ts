@@ -9,14 +9,3 @@ export function productName(
   }
   return product.name || product.nameEn || '';
 }
-
-export function productDescription(
-  product: { description?: string | null; descriptionEn?: string | null },
-  locale: 'ar' | 'en'
-): string {
-  if (!product) return '';
-  if (locale === 'en') {
-    return product.descriptionEn || product.description || '';
-  }
-  return product.description || product.descriptionEn || '';
-}

@@ -121,10 +121,6 @@ export const COURIER_BANDS: readonly CourierBand[] = [
   { key: 'speed', ar: 'سرعة التوصيل', weight: 10, unit: 'hours' },
 ];
 
-export function courierBand(key: CourierBandKey): CourierBand {
-  return COURIER_BANDS.find((b) => b.key === key)!;
-}
-
 /**
  * The floor under the whole score.
  *

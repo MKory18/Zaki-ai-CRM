@@ -9,12 +9,8 @@
  * format is unchanged (`v1:iv:tag:cipher`), so tokens already stored keep
  * decrypting. `WHATSAPP_ENCRYPTION_KEY` is still honoured as a key source.
  */
-import { encryptSecret, decryptSecret } from '@/lib/secrets';
+import { encryptSecret } from '@/lib/secrets';
 
 export function whatsappEncrypt(plaintext: string): string {
   return encryptSecret(plaintext);
-}
-
-export function whatsappDecrypt(blob: string): string {
-  return decryptSecret(blob);
 }

@@ -313,11 +313,6 @@ export const ALL_CATALOG_KEYS: Set<string> = new Set(
   PERMISSION_MODULES.flatMap((m) => m.items.map((i) => i.key))
 );
 
-/** Module id for a given key (for grouping/labels in the UI). */
-export function moduleOf(key: string): CatalogModule | undefined {
-  return PERMISSION_MODULES.find((m) => m.items.some((i) => i.key === key));
-}
-
 /** Catalog item for a key. */
 export function catalogItem(key: string): CatalogItem | undefined {
   for (const m of PERMISSION_MODULES) {
