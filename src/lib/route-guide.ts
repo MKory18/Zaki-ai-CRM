@@ -83,7 +83,6 @@ export const GUIDED_PATHS: readonly string[] = [
   // المخزون
   '/inventory/balances',
   '/manufacturing',
-  '/inventory/receiving',
   '/inventory/movements',
   // المال — بقية الشاشات
   '/finance/wallets',

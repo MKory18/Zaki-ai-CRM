@@ -91,8 +91,8 @@ const LIT = 'bg-[var(--sys-primary)]';
 // ───────────────────────── the arithmetic ─────────────────────────
 
 describe('the menu is fifteen lines', () => {
-  it('— fifty-five screens in the registry, fifteen lines in the menu', () => {
-    expect(ALL_ROUTES).toHaveLength(55);
+  it('— fifty-four screens in the registry, fifteen lines in the menu', () => {
+    expect(ALL_ROUTES).toHaveLength(54);
     expect(lines(NAV), 'عدد أسطر القائمة').toBe(15);
   });
 
