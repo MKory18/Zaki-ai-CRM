@@ -94,7 +94,11 @@ function geometry() {
   const room = dock.match(/<div aria-hidden className=\{[^}]*\} \/>/);
   const roomHeight = step(room![0].match(/\bh-(\d+(?:\.\d+)?)\b/)![1]);
 
-  const main = shell.match(/<main className="([^"]+)"/)![1];
+  // The shell's main element, wherever its class list sits among its attributes and however the tag is
+  // wrapped: since 23/10/2026 the tag also carries `data-empty-family` (the picture an empty list wears under
+  // «ليل»), written before the class list and on lines of its own — and a pattern that insisted on
+  // «<main className=» right after the tag name read that as no main at all and crashed on null.
+  const main = shell.match(/<main\b[^>]*\bclassName="([^"]+)"/)![1];
   const deskPad = step(main.match(/md:pb-(\d+(?:\.\d+)?)/)![1]);
   const phonePad = px(main.match(/(?<![:\w-])pb-\[(calc\([^\]]+\))\]/)![1]);
 
