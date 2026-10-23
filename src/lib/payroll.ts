@@ -48,10 +48,6 @@ export class PayrollRefused extends Error {
   }
 }
 
-export function payrollRefusalAr(reason: PayrollRefusal): string {
-  return REFUSAL_AR[reason];
-}
-
 export interface PayslipPreview {
   salary: number;
   currencyCode: string;

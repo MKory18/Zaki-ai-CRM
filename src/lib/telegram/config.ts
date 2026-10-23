@@ -14,11 +14,6 @@ export function getWebhookSecret(): string | null {
   return s && s.trim() ? s.trim() : null;
 }
 
-export function getEncryptionKey(): string | null {
-  const k = process.env.TELEGRAM_ENCRYPTION_KEY;
-  return k && k.trim() ? k.trim() : null;
-}
-
 export function getApiBaseUrl(): string {
   const base = process.env.TELEGRAM_API_BASE_URL;
   return base && base.trim() ? base.trim().replace(/\/+$/, '') : 'https://api.telegram.org';

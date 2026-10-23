@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import type { db as prismaDb } from './db';
 import { decryptSecret, encryptSecret, encryptionAvailable } from './secrets';
-import { currentCode, generateSecret, otpauthUri, stepAt, verifyCode } from './totp';
+import { generateSecret, otpauthUri, verifyCode } from './totp';
 
 type Tx = Prisma.TransactionClient | typeof prismaDb;
 
@@ -209,7 +209,3 @@ export async function checkSecondFactor(
 
   throw new TwoFactorRefused('BAD_CODE', 'الرمز غير صحيح');
 }
-
-/** Only for a test that needs a code the way a phone would make one. */
-export const codeFromSecret = currentCode;
-export const stepOf = stepAt;

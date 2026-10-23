@@ -106,13 +106,6 @@ export function differs(a: SegmentOutcome, b: SegmentOutcome): boolean {
 /** The dimensions of an order that can be measured against the shop. */
 export type ShapeDimension = 'product' | 'units' | 'region' | 'payment';
 
-export const DIMENSION_AR: Record<ShapeDimension, string> = {
-  product: 'المنتج',
-  units: 'عدد القطع',
-  region: 'المحافظة',
-  payment: 'طريقة الدفع',
-};
-
 export interface Driver {
   dimension: ShapeDimension;
   /** What this order's value of that dimension is, in words. */

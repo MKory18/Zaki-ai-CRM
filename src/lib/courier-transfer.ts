@@ -129,10 +129,3 @@ export function planTransfer(input: {
     reason: `سحب من ${from.name} وإصدار طلب بديل لـ ${to.name}`,
   };
 }
-
-/** Wording for the confirmation the user reads before committing. */
-export function describePlan(plan: TransferPlan, to: TransferParty): string {
-  return plan.mode === 'DIRECT'
-    ? `سيُسجَّل استلام الشحنة من المندوب، ثم تُسنَد إلى ${to.name} مباشرة — بنفس رقم الطلب.`
-    : `سيُطلب إرجاع الشحنة من الشركة الحالية، ويُنشأ طلب بديل يدخل تجهيز الشحنة ليُسنَد إلى ${to.name} من جديد. الطلب الأصلي يبقى بسجله وباركوده.`;
-}

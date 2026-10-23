@@ -61,10 +61,6 @@ export const PENALTY_KINDS: PenaltyKind[] = [
 
 export const PENALTY_KEYS = PENALTY_KINDS.map((k) => k.key);
 
-export function kindInfo(key: string): PenaltyKind | undefined {
-  return PENALTY_KINDS.find((k) => k.key === key);
-}
-
 /** PROPOSED → APPLIED | WAIVED; APPLIED → REVERSED. Nothing else. */
 export const PENALTY_STATUSES = ['PROPOSED', 'APPLIED', 'WAIVED', 'REVERSED'] as const;
 export type PenaltyStatus = (typeof PENALTY_STATUSES)[number];

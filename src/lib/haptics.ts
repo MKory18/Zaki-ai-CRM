@@ -41,8 +41,3 @@ export function hapticConfirm(): void {
 export function hapticRefuse(): void {
   buzz(REFUSE);
 }
-
-/** Whether this device can answer at all, for a setting that says so honestly. */
-export function hapticsAvailable(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
-}

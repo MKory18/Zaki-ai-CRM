@@ -141,17 +141,3 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
     },
   ];
 }
-
-/** One built-in by code, or undefined. */
-export function builtInApp(db: RegistryDb, code: string): BuiltInApp | undefined {
-  return builtInApps(db).find((a) => a.code === code.toUpperCase());
-}
-
-/** Is this a built-in code at all? Cheap, and needs no database. */
-export function isBuiltInCode(code: string): boolean {
-  return BUILT_IN_CODES.has(code.toUpperCase());
-}
-
-const BUILT_IN_CODES = new Set([
-  'LOGESTECHS', 'META_PIXEL', 'TIKTOK_PIXEL', 'SNAPCHAT_PIXEL', 'WHATSAPP', 'TELEGRAM',
-]);
