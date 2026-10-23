@@ -1,0 +1,22 @@
+-- ── THE TOUR THAT RUNS ONCE, AND ONLY ONCE ──
+--
+-- المرحلة ٢ — «الدليل جوا النظام»: a new person signs in and the system
+-- walks them through its own frame — the menu, the store they are standing
+-- in, the box that finds everything, the ⓘ that explains every screen.
+--
+-- WHETHER IT RAN is the USER's fact, not the browser's: somebody who works
+-- from the counter and from a laptop must not be walked through it twice,
+-- and a browser they have never used must not walk them through it a third
+-- time after they dismissed it on the first. So the mark lives on the row,
+-- like `systemTheme` before it.
+--
+-- ── NOT ONE EXISTING ROW IS TOUCHED ──
+--
+-- The column is NULLABLE WITH NO DEFAULT. An `ADD COLUMN … DEFAULT now()`
+-- would mark every existing user as having seen the tour the moment it
+-- lands — which is true-ish, but it would also mark the users who have not
+-- signed in since, and it would be a data rewrite dressed as a schema
+-- change. Nothing is dropped, nothing is renamed, no type changes, so the
+-- rollback is deleting what this created.
+
+ALTER TABLE "users" ADD COLUMN "tour_done_at" TIMESTAMP(3);

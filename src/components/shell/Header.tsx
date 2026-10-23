@@ -64,6 +64,8 @@ export function Header({
         targets for one command was the duplication underneath the bug.
       */}
       {(() => {
+        // The first-run tour anchors its second step here. See FirstRunTour.tsx.
+        const tour = { 'data-tour': 'context' } as const;
         const body = (
           <>
             <RiStore2Line className="w-4 h-4 text-[var(--sys-primary)] shrink-0" />
@@ -86,11 +88,14 @@ export function Header({
             title="تبديل البلد أو المتجر"
             aria-label={`المتجر الحالي ${context.storeName} — بدّل البلد أو المتجر`}
             className={`${shell} min-h-11 md:min-h-0 hover:border-[var(--sys-primary)] hover:text-[var(--sys-primary)]`}
+            {...tour}
           >
             {body}
           </Link>
         ) : (
-          <div className={shell}>{body}</div>
+          <div className={shell} {...tour}>
+            {body}
+          </div>
         );
       })()}
 
@@ -106,6 +111,8 @@ export function Header({
       <button
         type="button"
         onClick={onSearchClick}
+        // The first-run tour anchors its third step here. See FirstRunTour.tsx.
+        data-tour="search"
         className="hidden md:flex flex-1 max-w-md items-center gap-2 h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] text-sm text-[var(--sys-muted-foreground)] hover:border-[var(--sys-primary)]"
       >
         <RiSearchLine className="w-4 h-4 shrink-0 text-[var(--sys-muted)]" aria-hidden />

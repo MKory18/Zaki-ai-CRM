@@ -203,9 +203,11 @@ export function InventoryReceivingScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا منتجات مطابقة.
-        </p>
+        <EmptyState
+          icon={RiInboxArchiveLine}
+          title="لا منتجات مطابقة"
+          why="المخزون لا يحمل منتجاً بهذا الاسم. جرّب جزءاً من الاسم، أو أضِف المنتج من شاشة المنتجات."
+        />
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
                     <Rows

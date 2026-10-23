@@ -3,7 +3,7 @@
 import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiArrowDownLine, RiArrowUpLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
+import { RiArrowDownLine, RiArrowUpLine, RiHistoryLine, RiLoader4Line, RiSearchLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { arDateTime } from '@/lib/format';
@@ -107,9 +107,11 @@ export function InventoryMovementsScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.movements.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا حركات مطابقة.
-        </p>
+        <EmptyState
+          icon={RiHistoryLine}
+          title="لا حركات مطابقة"
+          why="لا حركة مخزون تطابق ما تبحث عنه. وسّع البحث أو امسحه لتعود كل الحركات."
+        />
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
                     <Rows

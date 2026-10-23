@@ -76,6 +76,9 @@ export function GuideButton() {
       onClick={guide.toggle}
       aria-haspopup="dialog"
       aria-expanded={guide.open}
+      // The first-run tour anchors its last step here — the ⓘ is the thing
+      // the tour exists to introduce. See FirstRunTour.tsx.
+      data-tour="guide"
       // 44px of target around a 16px glyph, with the negative margin that keeps
       // it from growing the title's row — the same classes `PanelHeader`'s ⓘ
       // carries, so it costs the stylesheet nothing.
