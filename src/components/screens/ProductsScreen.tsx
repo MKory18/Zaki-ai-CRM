@@ -17,6 +17,7 @@ import { RiAddCircleLine, RiArchiveLine, RiArrowRightUpLine, RiCloseLine, RiDele
 import { Money } from '@/components/ui/Money';
 import { CategoryPicker } from '@/components/products/CategoryPicker';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Rows } from '@/components/ui/Rows';
 import { HealthChip } from '@/components/ui/HealthChip';
@@ -312,12 +313,14 @@ export function ProductsScreen() {
             description="كتالوج المنتجات مع الصور، تحليل تكاليف التصنيع متعدد التشغيلات والمخزون"
             actions={
               <><div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <AdvancedGroup holds="تشغيلات الإنتاج">
             <Link href="/manufacturing">
               <Button variant="outline" size="sm" className="flex items-center space-x-1">
                 <RiFoldersLine className="w-4 h-4" />
                 <span>تشغيلات الإنتاج</span>
               </Button>
             </Link>
+            </AdvancedGroup>
             <Button
               size="sm"
               onClick={() => setCreateModalOpen(true)}

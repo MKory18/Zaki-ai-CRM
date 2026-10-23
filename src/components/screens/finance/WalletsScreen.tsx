@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { RiAddCircleLine, RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiScales3Line, RiShutDownLine, RiWallet3Line } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
@@ -269,6 +270,10 @@ export function WalletsScreen() {
               <span className="flex items-center gap-1.5">
                 {wallet && !renaming && (
                   <>
+                    {/* Rename, stop and delete are maintenance, not the day's
+                        work: the row's own controls stay beside the balance,
+                        these fold into متقدم. Nothing is removed. */}
+                    <AdvancedGroup holds="تعديل الاسم · إيقاف · حذف">
                     <button
                       onClick={() => { setRenaming(true); setNewName(wallet.name); }}
                       aria-label="عدّل الاسم" title="عدّل الاسم"
@@ -301,6 +306,7 @@ export function WalletsScreen() {
                     >
                       <RiDeleteBinLine className="w-4 h-4" />
                     </button>
+                    </AdvancedGroup>
                     {/* Offered only while it is still true. A wallet that has
                         started moving is reconciled by the daily closing, and
                         the server refuses this outright — so showing the button

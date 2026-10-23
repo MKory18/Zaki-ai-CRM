@@ -21,6 +21,7 @@ import {
 } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { batchTotal, batchUnitCost } from '@/lib/product-cost';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -370,6 +371,7 @@ export function ManufacturingScreen() {
           {/* The two doors this screen is next to, said out loud rather than
               left in the sidebar: the product itself, and the other door
               stock comes in through. «ضيف زر يوديني على المنتجات». */}
+          <AdvancedGroup holds="المنتجات · استلام بضاعة جاهزة">
           <Link href="/products">
             <Button size="sm" variant="outline" className="flex items-center space-x-1.5">
               <RiPriceTag3Line className="w-4 h-4" />
@@ -382,6 +384,7 @@ export function ManufacturingScreen() {
               <span>استلام بضاعة جاهزة</span>
             </Button>
           </Link>
+          </AdvancedGroup>
           <Button
             size="sm"
             onClick={openNewBatch}

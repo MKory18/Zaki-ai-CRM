@@ -1,0 +1,219 @@
+[
+  {
+    "kind": "secondary-control",
+    "location": "الطلبات /orders — تصدير CSV · استيراد طلبات · تحديث · إدخال بالذكاء الاصطناعي",
+    "evidence": "src/components/screens/OrdersScreen.tsx:453",
+    "safeAction": "hide",
+    "reason": "مطويّ تحت «متقدم» (AdvancedGroup) لا محذوف: «إدخال طلب سريع» يبقى الزرّ الظاهر الوحيد في الشريط، وكل زرّ مطويّ ما زال خلف صلاحية بابه (reports.export · orders.import · orders.create). إنشاء الطلب نفسه لم يُلمس."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "المنتجات /products — رابط «تشغيلات الإنتاج»",
+    "evidence": "src/components/screens/ProductsScreen.tsx:316",
+    "safeAction": "hide",
+    "reason": "رابط تنقّل إلى /manufacturing مطويّ تحت «متقدم»؛ «إضافة منتج» يبقى ظاهرًا. الصفحة نفسها ما زالت في القائمة الجانبية وسجلّ المسارات."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "الموظفون /admin/users — زرّ «تحديث القائمة»",
+    "evidence": "src/components/screens/UsersScreen.tsx:194",
+    "safeAction": "hide",
+    "reason": "تحديث يدويّ مطويّ تحت «متقدم»؛ «موظف جديد» يبقى ظاهرًا لمن معه users.create."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "صفحة الموظف /admin/users/[id] — «أعِد ضبط التحقّق بخطوتين»",
+    "evidence": "src/components/screens/UserDetailScreen.tsx:519",
+    "safeAction": "hide",
+    "reason": "خطوة استرداد لا عمل يومي، مطويّة تحت «متقدم» داخل بطاقة التحقّق بخطوتين التي ما زالت تقول إنه مسجَّل؛ الشرط نفسه (mayResetTwoFactor + totpEnabledAt) والباب نفسه بلا تغيير. «حفظ الدور» يبقى ظاهرًا."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "الحملات — «اسحب الحملات» · «اسحب الإنفاق»",
+    "evidence": "src/components/screens/CampaignsScreen.tsx:279",
+    "safeAction": "hide",
+    "reason": "زرّا السحب من منصّة مربوطة مطويّان تحت «متقدم» (ويظهران أصلًا فقط مع حساب مربوط)؛ «حملة جديدة» يبقى ظاهرًا. لا تغيير في حساب الإنفاق أو العائد."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "الصلاحيات /admin/permissions — «إرجاع للافتراضي» في محرّر الدور",
+    "evidence": "src/components/screens/PermissionsScreen.tsx:481",
+    "safeAction": "hide",
+    "reason": "مطويّ تحت «متقدم» داخل محرّر الدور؛ «حفظ التغييرات» يبقى ظاهرًا، والإرجاع ما زال لا يُطبَّق إلا بالحفظ. لا تغيير في أي صلاحية."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "تشغيلات الإنتاج /manufacturing — روابط «المنتجات» · «استلام بضاعة جاهزة»",
+    "evidence": "src/components/screens/ManufacturingScreen.tsx:374",
+    "safeAction": "hide",
+    "reason": "رابطا تنقّل مطويّان تحت «متقدم»؛ «تشغيلة جديدة» يبقى ظاهرًا. لا تغيير في حساب كلفة التشغيلة."
+  },
+  {
+    "kind": "secondary-control",
+    "location": "المحافظ /finance/wallets — «عدّل الاسم» · «أوقف المحفظة» · «احذف»",
+    "evidence": "src/components/screens/finance/WalletsScreen.tsx:276",
+    "safeAction": "hide",
+    "reason": "أزرار صيانة فقط مطويّة تحت «متقدم»؛ «حركة جديدة» و«العدّ الافتتاحيّ» والرصيد بلا أي تغيير. لا منطق مال لُمس، وشاشة المحافظ لم تُدمج في غيرها."
+  },
+  {
+    "kind": "page-links",
+    "location": "كل صفحات src/app — 78 صفحة",
+    "evidence": "src/lib/route-registry.ts:390",
+    "safeAction": "keep",
+    "reason": "صفر روابط صفحات ميتة: الصفحات الـ78 كلها قابلة للوصول. لا شيء يُخفى ولا يُحذف."
+  },
+  {
+    "kind": "redirect",
+    "location": "/store/menus → /store?tab=content&sec=menus",
+    "evidence": "next.config.ts:178",
+    "safeAction": "keep",
+    "reason": "تحويل دائم (permanent) يحمي الروابط والإشارات المرجعية القديمة؛ حذفه يكسرها. يبقى كما هو — ومسار المتجر أرض الوكيل الآخر فلا يُلمس."
+  },
+  {
+    "kind": "route-registry",
+    "location": "سجلّ المسارات NAV — 55 مدخلًا",
+    "evidence": "src/lib/route-registry.ts:109",
+    "safeAction": "keep",
+    "reason": "كل المداخل الـ55 لها صفحة، ولا مسار مكرّر ولا تسمية مكرّرة — لا دمج ولا إخفاء."
+  },
+  {
+    "kind": "screen",
+    "location": "WalletsScreen",
+    "evidence": "src/components/screens/finance/WalletsScreen.tsx:66",
+    "safeAction": "keep",
+    "reason": "الشاشة موجودة مرة واحدة فقط — لا نسخة ثانية تُدمج. وشاشات المال لا تُدمج في بعضها أصلًا (قاعدة ثابتة)."
+  },
+  {
+    "kind": "page-pair",
+    "location": "/ops/tracking «متابعة الشحن» ↔ /settings/tracking «بكسل التتبع والحملات»",
+    "evidence": "src/lib/route-registry.ts:151 · src/lib/route-registry.ts:347",
+    "safeAction": "keep",
+    "reason": "تشابه في الاسم فقط: الأولى محطة الشحن الرابعة (ops.track)، والثانية إعداد بكسلات التسويق (settings.view). عملان مختلفان — ليس دمجًا."
+  },
+  {
+    "kind": "permission-key",
+    "location": "landing_pages.view",
+    "evidence": "src/app/api/growth/landing-analytics/route.ts:21",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل (0 ذكر في 117 ترحيلًا تحت prisma/migrations). الأدوار تُمنح وقت التشغيل من شاشة الصلاحيات، فهذا قرار لا إخفاء. أرض صفحات الهبوط للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "landing_pages.create",
+    "evidence": "src/app/api/landing-pages/[id]/duplicate/route.ts:73",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض صفحات الهبوط للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "landing_pages.edit",
+    "evidence": "src/app/api/stores/fonts/[id]/route.ts:23",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض صفحات الهبوط للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "landing_pages.delete",
+    "evidence": "src/app/api/landing-pages/[id]/route.ts:291",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض صفحات الهبوط للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "landing_pages.publish",
+    "evidence": "src/app/api/landing-pages/[id]/route.ts:105",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض صفحات الهبوط للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "payroll.view",
+    "evidence": "src/app/api/users/[id]/profile/route.ts:67",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل؛ أي دور يحتاجه يُمنح وقت التشغيل من شاشة الصلاحيات. قرار لا إخفاء."
+  },
+  {
+    "kind": "permission-key",
+    "location": "payroll.pay",
+    "evidence": "src/app/api/payroll/payslip/route.ts:42",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. صلاحية دفع رواتب — منحها لدور قرار مالك صريح. قرار لا إخفاء."
+  },
+  {
+    "kind": "permission-key",
+    "location": "penalties.decide",
+    "evidence": "src/app/api/team/penalties/route.ts:79",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء."
+  },
+  {
+    "kind": "permission-key",
+    "location": "penalties.view",
+    "evidence": "src/app/api/team/penalties/route.ts:36",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء."
+  },
+  {
+    "kind": "permission-key",
+    "location": "team.monitor",
+    "evidence": "src/app/api/performance/card/route.ts:31",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء."
+  },
+  {
+    "kind": "permission-key",
+    "location": "storefront.view",
+    "evidence": "src/app/api/reviews/route.ts:39",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض المتجر للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "storefront.manage",
+    "evidence": "src/app/api/reviews/mode/route.ts:31",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض المتجر للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "storefront.domain",
+    "evidence": "src/app/api/store/domain/route.ts:78",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض المتجر للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "permission-key",
+    "location": "storefront.publish",
+    "evidence": "src/app/api/store/design/route.ts:164",
+    "safeAction": "keep",
+    "reason": "ينتظر قرار المالك: مُطبَّق على الخادم ولا يمنحه أي دور في أي ترحيل. قرار لا إخفاء. أرض المتجر للوكيل الآخر — يُسجَّل فقط."
+  },
+  {
+    "kind": "component",
+    "location": "OrderNotesPeek",
+    "evidence": "src/components/screens/ReturnsScreen.tsx:7",
+    "safeAction": "keep",
+    "reason": "له مستوردون أحياء (ReturnsScreen و finance/DifferenceActions.tsx:6) — ليس كودًا ميتًا."
+  },
+  {
+    "kind": "component",
+    "location": "ShapeRiskPanel",
+    "evidence": "src/components/orders/OrderDetailModal.tsx:14",
+    "safeAction": "keep",
+    "reason": "يستورده OrderDetailModal — حيّ، ليس كودًا ميتًا."
+  },
+  {
+    "kind": "component",
+    "location": "RatingLinkButton",
+    "evidence": "src/components/orders/ShippingSection.tsx:25",
+    "safeAction": "keep",
+    "reason": "يستورده ShippingSection — حيّ، ليس كودًا ميتًا."
+  },
+  {
+    "kind": "script",
+    "location": "scripts/analytics-old.ts",
+    "evidence": "scripts/analytics-parity.ts:15",
+    "safeAction": "keep",
+    "reason": "مرشّح حذف: مرجعه الوحيد scripts/analytics-parity.ts (اختبار تكافؤ مؤقت بين القديم والجديد). لا حذف الآن — الحذف بند مستقل بكلمة المالك، ومعه analytics-parity.ts نفسه."
+  }
+]

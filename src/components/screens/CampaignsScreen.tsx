@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { CAMPAIGN_PLATFORMS, CAMPAIGN_STATUSES } from '@/lib/campaigns';
 import { RiAddCircleLine, RiArrowDownCircleLine, RiArrowUpCircleLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiLinksLine, RiLoader4Line, RiMegaphoneLine, RiPencilLine, RiPlugLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { useCreateIntent } from '@/hooks/useCreateIntent';
@@ -275,6 +276,7 @@ export function CampaignsScreen() {
                   not exist; «اسحب الإنفاق» updates figures on rows that do.
                   One button doing both would mean a seller who wanted
                   today's spend also got nine archived campaigns. */}
+              <AdvancedGroup holds="اسحب الحملات · اسحب الإنفاق">
               <Button size="sm" variant="outline" onClick={() => void importCampaigns()} disabled={importing}>
                 {importing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiDownloadLine className="h-4 w-4" />}
                 اسحب الحملات
@@ -283,6 +285,7 @@ export function CampaignsScreen() {
                 {syncing ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
                 اسحب الإنفاق
               </Button>
+              </AdvancedGroup>
             </>
           )}
           <Button size="sm" onClick={() => setCreating(true)}>

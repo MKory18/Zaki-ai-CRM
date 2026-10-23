@@ -1879,6 +1879,16 @@
     "links": 1,
     "tabs": 0
   },
+  "src/components/ui/AdvancedGroup.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/ui/Button.tsx": {
     "buttons": 1,
     "inputs": 0,
