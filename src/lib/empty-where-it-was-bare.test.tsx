@@ -59,13 +59,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// Since PR 97 the emptied preparation QUEUE belongs to MissionDone («تمّت المهمة!»
+// + the reason + a door to the next stop) — this series follows it there.
 describe('the preparation screen, empty', () => {
-  it('names the subject and gives the reason, not a bare «لا توجد»', async () => {
+  it('says «تمّت المهمة!» with the reason, and is not a bare paragraph', async () => {
     const r = render(<PreparationScreen />);
     await act(async () => undefined);
     r.rerender(<PreparationScreen />);
-    expect(screen.getByText('لا طلبات مؤكدة بانتظار التجهيز')).toBeTruthy();
-    expect(screen.getByText(/بعد أن يُؤكَّد في مركز التأكيد/)).toBeTruthy();
+    expect(screen.getByText('تمّت المهمة!')).toBeTruthy();
+    expect(screen.getByText('لا توجد طلبات مؤكدة بانتظار التجهيز.')).toBeTruthy();
   });
 
   it('MUTATION: with work on the list, the hint is gone', async () => {
@@ -77,8 +79,8 @@ describe('the preparation screen, empty', () => {
     const r = render(<PreparationScreen />);
     await act(async () => undefined);
     r.rerender(<PreparationScreen />);
-    expect(screen.queryByText('لا طلبات مؤكدة بانتظار التجهيز')).toBeNull();
-    expect(screen.queryByText(/بعد أن يُؤكَّد/)).toBeNull();
+    expect(screen.queryByText('تمّت المهمة!')).toBeNull();
+    expect(screen.queryByText('لا توجد طلبات مؤكدة بانتظار التجهيز.')).toBeNull();
   });
 });
 

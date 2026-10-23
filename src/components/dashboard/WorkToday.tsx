@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api-client';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { useMayOpen } from '@/hooks/useMayOpen';
 import { findRoute } from '@/lib/route-registry';
+import { MissionCard } from './MissionCard';
 import { visibleWork, workKind, type WorkItem } from '@/lib/my-work';
 
 /**
@@ -69,7 +70,16 @@ export function WorkToday() {
 
   return (
     <section aria-labelledby="work-today">
-      <h2 id="work-today" className="mb-2 text-sm font-bold text-[var(--sys-heading)]">
+      {/* ─── «مهمّتك الجاية»: THE ONE THING, ABOVE THE LIST OF MANY ───
+          The plan's المرحلة ١ asks the dashboard to open with a single
+          sentence a person can act on. The grid below is every count that is
+          not zero — necessary, and up to six answers to «ماذا الآن»; this is
+          the first of them, chosen by rank on the server's own list. It draws
+          nothing when there is no mission, so the person with nothing waiting
+          sees exactly the page they saw before. */}
+      <MissionCard items={items} />
+
+      <h2 id="work-today" className="mb-2 mt-4 text-sm font-bold text-[var(--sys-heading)]">
         شغلك اليوم
       </h2>
 

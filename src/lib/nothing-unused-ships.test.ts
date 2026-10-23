@@ -260,6 +260,17 @@ const RENDERED_BY_NOTHING: Record<string, string> = {
    */
   'src/components/storefront/ShopSkeleton.tsx:ProductSkeleton':
     'هيكلُ تحميلِ صفحةِ المنتج — مبنيٌّ ومحروسٌ في shop-budget (وجودُه و aria-busy و sf-product)، ولا مسارَ يرسمه بعد',
+
+  /*
+   * `MissionCardView` IS RENDERED BY ITS OWN FILE — and that is the point.
+   *
+   * `MissionCard` chooses the mission (with `useMayOpen`, so it needs a
+   * session) and `WorkToday` renders it; the view half is exported so a test
+   * can draw a card with a mission already in hand, without faking a session.
+   * It is not dead code waiting for a route; it is the seam the test uses.
+   */
+  'src/components/dashboard/MissionCard.tsx:MissionCardView':
+    'النصف المرسوم من بطاقة «مهمّتك الجاية» — يُصدَّر ليصيّره اختبارُها بمهمّة جاهزة بلا جلسة؛ `MissionCard` نفسها هي ما تستخدمه الشاشة.',
 };
 
 describe('كلُّ مكوّنٍ إمّا تعرضه شاشة أو يُقال إنه بُني ولم يُوصَل', () => {

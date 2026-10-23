@@ -49,6 +49,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/dashboard/MissionCard.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
+    "tabs": 0
+  },
   "src/components/dashboard/WorkToday.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -1967,6 +1977,16 @@
     "modals": 0,
     "icons": 1,
     "links": 0,
+    "tabs": 0
+  },
+  "src/components/ui/NextStep.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 1,
     "tabs": 0
   },
   "src/components/ui/Pager.tsx": {

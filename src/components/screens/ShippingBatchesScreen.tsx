@@ -10,10 +10,10 @@ import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
 import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { MissionDone, NextStepButton } from '@/components/ui/NextStep';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -286,12 +286,7 @@ export function ShippingBatchesScreen() {
       )}
 
       {shown.length === 0 ? (
-        <EmptyState
-          icon={RiTruckLine}
-          title="لا دفعات شحن"
-          why="الدفعة تُنشأ من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة — لا شيء سُلّم بعد."
-          action={{ label: 'افتح إنشاء شحنة', href: '/ops/shipments/new' }}
-        />
+        <MissionDone why="لا دفعات هنا. تُنشأ الدفعة من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة." />
       ) : (
         <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {shown.map((b) => {
@@ -469,6 +464,9 @@ export function ShippingBatchesScreen() {
           })}
         </ul>
       )}
+
+      <NextStepButton />
+
     <CreateOrderModal
         isOpen={addingOrder}
         onClose={() => setAddingOrder(false)}

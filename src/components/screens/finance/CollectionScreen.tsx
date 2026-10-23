@@ -18,6 +18,7 @@ import {
 } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { NextStepButton } from '@/components/ui/NextStep';
 import { Money } from '@/components/ui/Money';
 import { approvalRefusal, isApproved, rematchRefusal } from '@/lib/settlement-gates';
 
@@ -412,6 +413,9 @@ export function CollectionScreen() {
           }}
         />
       )}
+
+      {/* The money road goes on from here: «المطابقة». */}
+      <NextStepButton />
 
       {explainFor && (
         <ExplainDialog
