@@ -273,7 +273,20 @@ export function WalletsScreen() {
                     {/* Rename, stop and delete are maintenance, not the day's
                         work: the row's own controls stay beside the balance,
                         these fold into متقدم. Nothing is removed. */}
-                    <AdvancedGroup holds="تعديل الاسم · إيقاف · حذف">
+                    {/* A STOPPED wallet is the one case where the day's work needs
+                        «أعِد تشغيلها»: «record» is disabled until it runs, so the
+                        way out must not sit under a fold that says «إيقاف». It
+                        is drawn here, beside the balance, and only while stopped. */}
+                    {!wallet.isActive && (
+                      <button
+                        onClick={() => patchWallet({ isActive: true }, 'أُعيد تشغيل المحفظة')}
+                        disabled={busy}
+                        className="h-11 md:h-8 px-3 rounded-lg border border-[var(--sys-success)]/60 text-[var(--sys-success)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-40"
+                      >
+                        <RiShutDownLine className="w-4 h-4" /> أعِد تشغيلها
+                      </button>
+                    )}
+                    <AdvancedGroup key={wallet.id} holds={wallet.isActive ? 'تعديل الاسم · إيقاف · حذف' : 'تعديل الاسم · حذف'}>
                     <button
                       onClick={() => { setRenaming(true); setNewName(wallet.name); }}
                       aria-label="عدّل الاسم" title="عدّل الاسم"
@@ -281,23 +294,16 @@ export function WalletsScreen() {
                     >
                       <RiPencilLine className="w-4 h-4" />
                     </button>
+                    {wallet.isActive && (
                     <button
-                      onClick={() =>
-                        patchWallet(
-                          { isActive: !wallet.isActive },
-                          wallet.isActive ? 'أُوقِفت المحفظة' : 'أُعيد تشغيل المحفظة'
-                        )
-                      }
+                      onClick={() => patchWallet({ isActive: false }, 'أُوقِفت المحفظة')}
                       disabled={busy}
-                      title={wallet.isActive ? 'أوقف المحفظة' : 'أعِد تشغيلها'}
-                      className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 disabled:opacity-40 ${
-                        wallet.isActive
-                          ? 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-warning-soft)] hover:text-[var(--sys-warning)]'
-                          : 'text-[var(--sys-success)] hover:bg-[var(--sys-success-soft)]'
-                      }`}
+                      title="أوقف المحفظة" aria-label="أوقف المحفظة"
+                      className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 cursor-pointer rounded-lg p-1.5 disabled:opacity-40 text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-warning-soft)] hover:text-[var(--sys-warning)]"
                     >
                       <RiShutDownLine className="w-4 h-4" />
                     </button>
+                    )}
                     <button aria-label="احذف"
                       onClick={removeWallet}
                       disabled={busy}

@@ -359,3 +359,49 @@ describe.each(CASES)('«$screen» keeps its main action in sight and folds the r
     expect(primaries.some(drawn)).toBe(true);
   });
 });
+
+describe('what a fold promises is what is inside it, for THIS person', () => {
+  it('«الطلبات»: without the export, import and AI-entry grants, «متقدم» names only the refresh it actually holds', async () => {
+    nav.pathname = '/orders';
+    signedIn('CONFIRMATION_AGENT', 'orders.view');
+    answering({ '/api/orders': { orders: [], pagination: { page: 1, pages: 1, total: 0 } } });
+    render(<OrdersScreen />);
+    const summary = (await screen.findByText('متقدم')).closest('summary') as HTMLElement;
+    expect(summary.textContent).toContain('تحديث');
+    for (const gone of ['تصدير', 'استيراد', 'إدخال بالذكاء']) {
+      expect(summary.textContent, `«متقدم» يعد بـ«${gone}» لمن لا يملكه`).not.toContain(gone);
+    }
+  });
+
+  it('«الطلبات»: with every grant, the row lists all four', async () => {
+    nav.pathname = '/orders';
+    signedIn('CONFIRMATION_AGENT', 'orders.view', 'reports.export', 'orders.import', 'orders.create');
+    answering({ '/api/orders': { orders: [], pagination: { page: 1, pages: 1, total: 0 } } });
+    render(<OrdersScreen />);
+    const summary = (await screen.findByText('متقدم')).closest('summary') as HTMLElement;
+    for (const name of ['تصدير', 'استيراد', 'تحديث', 'إدخال بالذكاء']) expect(summary.textContent).toContain(name);
+  });
+
+  it('«المحافظ»: a STOPPED wallet shows «أعِد تشغيلها» outside the fold — it is the only way to unlock «حركة جديدة»', async () => {
+    nav.pathname = '/finance/wallets';
+    signedIn('SUPER_ADMIN');
+    answering({ '/api/finance/wallets': { wallets: [{ ...WALLET, isActive: false }] } });
+    render(<WalletsScreen />);
+    const back = await screen.findByRole('button', { name: /أعِد تشغيلها/, hidden: true });
+    expect(back.closest('[data-advanced-group]'), '«أعِد تشغيلها» مطوية تحت «متقدم»').toBeNull();
+    expect(drawn(back)).toBe(true);
+    // the record button is the thing it unlocks, and it is disabled until then
+    expect((screen.getByRole('button', { name: 'حركة جديدة' }) as HTMLButtonElement).disabled).toBe(true);
+    // and the fold no longer offers a «stop» for a wallet that is already stopped
+    expect(screen.queryByRole('button', { name: 'أوقف المحفظة', hidden: true })).toBeNull();
+  });
+
+  it('«المحافظ»: an ACTIVE wallet has no «أعِد تشغيلها» at all — the negative case', async () => {
+    nav.pathname = '/finance/wallets';
+    signedIn('SUPER_ADMIN');
+    answering({ '/api/finance/wallets': { wallets: [WALLET] } });
+    render(<WalletsScreen />);
+    await screen.findByRole('button', { name: 'أوقف المحفظة', hidden: true });
+    expect(screen.queryByRole('button', { name: /أعِد تشغيلها/, hidden: true })).toBeNull();
+  });
+});

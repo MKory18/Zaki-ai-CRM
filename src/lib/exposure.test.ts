@@ -130,6 +130,7 @@ describe('what the browser is allowed to remember', () => {
   const ALLOWED: Record<string, string> = {
     'ai/AiDock.tsx': 'the assistant conversation — aggregates only, session storage, gone on reload',
     'labels/LabelSize.tsx': 'the paper loaded in this device’s printer',
+    'shell/FirstRunTour.tsx': 'whether «تخطّي» was pressed on the first-run tour — a flag keyed by user id, session storage, gone with the tab',
     /*
      * THIS ENTRY LEFT ON THIS BRANCH AND CAME BACK, AND THAT IS THE RIGHT
      * ANSWER.

@@ -559,6 +559,16 @@
     "links": 1,
     "tabs": 0
   },
+  "src/components/screens/ai/AssistantsTable.tsx": {
+    "buttons": 0,
+    "inputs": 5,
+    "columns": 5,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/screens/AiSettingsScreen.tsx": {
     "buttons": 8,
     "inputs": 4,
@@ -649,12 +659,62 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/screens/commission/FairnessPanel.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/commission/PayoutDialog.tsx": {
+    "buttons": 2,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/commission/PeriodProgress.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/screens/CommissionSettingsScreen.tsx": {
     "buttons": 10,
     "inputs": 15,
     "columns": 11,
     "cards": 0,
     "modals": 2,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/confirmation/ActionDialogs.tsx": {
+    "buttons": 5,
+    "inputs": 14,
+    "columns": 0,
+    "cards": 0,
+    "modals": 4,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/confirmation/AssistantDialog.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
     "icons": 4,
     "links": 0,
     "tabs": 0
@@ -737,6 +797,86 @@
     "modals": 0,
     "icons": 2,
     "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/finance/ClosingScreen.tsx": {
+    "buttons": 4,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/CollectionScreen.tsx": {
+    "buttons": 9,
+    "inputs": 10,
+    "columns": 7,
+    "cards": 0,
+    "modals": 2,
+    "icons": 6,
+    "links": 2,
+    "tabs": 0
+  },
+  "src/components/screens/finance/DifferenceActions.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/DifferencesByPerson.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/ManualMatching.tsx": {
+    "buttons": 6,
+    "inputs": 0,
+    "columns": 9,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/MatchingScreen.tsx": {
+    "buttons": 2,
+    "inputs": 1,
+    "columns": 10,
+    "cards": 0,
+    "modals": 0,
+    "icons": 3,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/finance/TransfersScreen.tsx": {
+    "buttons": 1,
+    "inputs": 5,
+    "columns": 8,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/finance/WalletsScreen.tsx": {
+    "buttons": 20,
+    "inputs": 14,
+    "columns": 6,
+    "cards": 0,
+    "modals": 4,
+    "icons": 13,
+    "links": 0,
     "tabs": 0
   },
   "src/components/screens/FinanceProfitScreen.tsx": {
@@ -857,6 +997,16 @@
     "modals": 1,
     "icons": 6,
     "links": 4,
+    "tabs": 0
+  },
+  "src/components/screens/ops/PickingAssistant.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
     "tabs": 0
   },
   "src/components/screens/OrdersScreen.tsx": {
@@ -1059,16 +1209,6 @@
     "links": 0,
     "tabs": 0
   },
-  "src/components/screens/StoreThemeScreen.tsx": {
-    "buttons": 14,
-    "inputs": 25,
-    "columns": 22,
-    "cards": 0,
-    "modals": 0,
-    "icons": 14,
-    "links": 3,
-    "tabs": 0
-  },
   "src/components/screens/StoresScreen.tsx": {
     "buttons": 9,
     "inputs": 3,
@@ -1076,6 +1216,16 @@
     "cards": 1,
     "modals": 0,
     "icons": 15,
+    "links": 3,
+    "tabs": 0
+  },
+  "src/components/screens/StoreThemeScreen.tsx": {
+    "buttons": 14,
+    "inputs": 25,
+    "columns": 22,
+    "cards": 0,
+    "modals": 0,
+    "icons": 14,
     "links": 3,
     "tabs": 0
   },
@@ -1107,216 +1257,6 @@
     "modals": 0,
     "icons": 4,
     "links": 1,
-    "tabs": 0
-  },
-  "src/components/screens/TrackingScreen.tsx": {
-    "buttons": 13,
-    "inputs": 0,
-    "columns": 15,
-    "cards": 0,
-    "modals": 0,
-    "icons": 15,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/UserDetailScreen.tsx": {
-    "buttons": 14,
-    "inputs": 10,
-    "columns": 5,
-    "cards": 8,
-    "modals": 1,
-    "icons": 23,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/UsersScreen.tsx": {
-    "buttons": 13,
-    "inputs": 5,
-    "columns": 9,
-    "cards": 1,
-    "modals": 2,
-    "icons": 13,
-    "links": 1,
-    "tabs": 0
-  },
-  "src/components/screens/WhatsAppInboxScreen.tsx": {
-    "buttons": 7,
-    "inputs": 3,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 17,
-    "links": 3,
-    "tabs": 0
-  },
-  "src/components/screens/WhatsAppSettingsScreen.tsx": {
-    "buttons": 2,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 3,
-    "modals": 0,
-    "icons": 8,
-    "links": 1,
-    "tabs": 0
-  },
-  "src/components/screens/WinbackScreen.tsx": {
-    "buttons": 2,
-    "inputs": 0,
-    "columns": 4,
-    "cards": 0,
-    "modals": 0,
-    "icons": 5,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/ai/AssistantsTable.tsx": {
-    "buttons": 0,
-    "inputs": 5,
-    "columns": 5,
-    "cards": 0,
-    "modals": 0,
-    "icons": 4,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/commission/FairnessPanel.tsx": {
-    "buttons": 1,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 1,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/commission/PayoutDialog.tsx": {
-    "buttons": 2,
-    "inputs": 4,
-    "columns": 0,
-    "cards": 0,
-    "modals": 1,
-    "icons": 2,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/commission/PeriodProgress.tsx": {
-    "buttons": 0,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 2,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/confirmation/ActionDialogs.tsx": {
-    "buttons": 5,
-    "inputs": 14,
-    "columns": 0,
-    "cards": 0,
-    "modals": 4,
-    "icons": 0,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/confirmation/AssistantDialog.tsx": {
-    "buttons": 1,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 1,
-    "icons": 4,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/ClosingScreen.tsx": {
-    "buttons": 4,
-    "inputs": 3,
-    "columns": 0,
-    "cards": 0,
-    "modals": 1,
-    "icons": 3,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/CollectionScreen.tsx": {
-    "buttons": 9,
-    "inputs": 10,
-    "columns": 7,
-    "cards": 0,
-    "modals": 2,
-    "icons": 6,
-    "links": 2,
-    "tabs": 0
-  },
-  "src/components/screens/finance/DifferenceActions.tsx": {
-    "buttons": 1,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 3,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/DifferencesByPerson.tsx": {
-    "buttons": 0,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 1,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/ManualMatching.tsx": {
-    "buttons": 6,
-    "inputs": 0,
-    "columns": 9,
-    "cards": 0,
-    "modals": 0,
-    "icons": 5,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/MatchingScreen.tsx": {
-    "buttons": 2,
-    "inputs": 1,
-    "columns": 10,
-    "cards": 0,
-    "modals": 0,
-    "icons": 3,
-    "links": 1,
-    "tabs": 0
-  },
-  "src/components/screens/finance/TransfersScreen.tsx": {
-    "buttons": 1,
-    "inputs": 5,
-    "columns": 8,
-    "cards": 0,
-    "modals": 0,
-    "icons": 4,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/finance/WalletsScreen.tsx": {
-    "buttons": 19,
-    "inputs": 14,
-    "columns": 6,
-    "cards": 0,
-    "modals": 4,
-    "icons": 12,
-    "links": 0,
-    "tabs": 0
-  },
-  "src/components/screens/ops/PickingAssistant.tsx": {
-    "buttons": 1,
-    "inputs": 0,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 2,
-    "links": 0,
     "tabs": 0
   },
   "src/components/screens/tracking/CollectDialog.tsx": {
@@ -1356,6 +1296,26 @@
     "cards": 0,
     "modals": 1,
     "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/TrackingScreen.tsx": {
+    "buttons": 13,
+    "inputs": 0,
+    "columns": 15,
+    "cards": 0,
+    "modals": 0,
+    "icons": 15,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/UserDetailScreen.tsx": {
+    "buttons": 14,
+    "inputs": 10,
+    "columns": 5,
+    "cards": 8,
+    "modals": 1,
+    "icons": 23,
     "links": 0,
     "tabs": 0
   },
@@ -1406,6 +1366,46 @@
     "cards": 0,
     "modals": 0,
     "icons": 1,
+    "links": 0,
+    "tabs": 0
+  },
+  "src/components/screens/UsersScreen.tsx": {
+    "buttons": 13,
+    "inputs": 5,
+    "columns": 9,
+    "cards": 1,
+    "modals": 2,
+    "icons": 13,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/WhatsAppInboxScreen.tsx": {
+    "buttons": 7,
+    "inputs": 3,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 17,
+    "links": 3,
+    "tabs": 0
+  },
+  "src/components/screens/WhatsAppSettingsScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 3,
+    "modals": 0,
+    "icons": 8,
+    "links": 1,
+    "tabs": 0
+  },
+  "src/components/screens/WinbackScreen.tsx": {
+    "buttons": 2,
+    "inputs": 0,
+    "columns": 4,
+    "cards": 0,
+    "modals": 0,
+    "icons": 5,
     "links": 0,
     "tabs": 0
   },
@@ -1529,16 +1529,6 @@
     "links": 0,
     "tabs": 0
   },
-  "src/components/settings/StoreIdentityCard.tsx": {
-    "buttons": 1,
-    "inputs": 2,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 2,
-    "links": 0,
-    "tabs": 0
-  },
   "src/components/settings/StorefrontSettings.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -1547,6 +1537,16 @@
     "modals": 0,
     "icons": 4,
     "links": 6,
+    "tabs": 0
+  },
+  "src/components/settings/StoreIdentityCard.tsx": {
+    "buttons": 1,
+    "inputs": 2,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 2,
+    "links": 0,
     "tabs": 0
   },
   "src/components/settings/TelegramSourcesCard.tsx": {
@@ -1849,16 +1849,6 @@
     "links": 1,
     "tabs": 0
   },
-  "src/components/storefront/StoreHero.tsx": {
-    "buttons": 0,
-    "inputs": 1,
-    "columns": 0,
-    "cards": 0,
-    "modals": 0,
-    "icons": 0,
-    "links": 1,
-    "tabs": 0
-  },
   "src/components/storefront/StorefrontShell.tsx": {
     "buttons": 1,
     "inputs": 1,
@@ -1867,6 +1857,16 @@
     "modals": 0,
     "icons": 0,
     "links": 8,
+    "tabs": 0
+  },
+  "src/components/storefront/StoreHero.tsx": {
+    "buttons": 0,
+    "inputs": 1,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/storefront/TrackForm.tsx": {

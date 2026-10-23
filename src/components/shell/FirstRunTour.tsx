@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { apiJson } from '@/lib/api-client';
 import { RiArrowLeftLine, RiInformationLine, RiMenuLine, RiSearchLine, RiStore2Line } from '@remixicon/react';
@@ -26,9 +26,15 @@ import { RiArrowLeftLine, RiInformationLine, RiMenuLine, RiSearchLine, RiStore2L
  *
  * ── SKIPPING AND «ما بدي أشرح مرة ثانية» ──
  *
- * «تخطّي» closes for THIS sign-in only — a person who skipped on a busy
- * morning still gets it tomorrow morning, which is the point of skipping
- * rather than refusing. The checkbox beside it is the refusal: checked, the
+ * «تخطّي» closes for THIS browser session only — a person who skipped on a
+ * busy morning still gets it tomorrow morning, which is the point of skipping
+ * rather than refusing. «This session» is a fact the BROWSER keeps
+ * (`sessionStorage`, keyed by the user), because the component alone forgets
+ * on every full reload and on every trip out of the shell layout (switching
+ * store goes through `/entry`): kept only in React state, a skip lasted until
+ * the next navigation and the person met the overlay again within the hour.
+ * `sessionStorage` dies with the tab, so «tomorrow» still greets. The checkbox
+ * beside it is the refusal: checked, the
  * dismissal is written to the row and it never opens again. Finishing the
  * last step writes the same thing — nobody completes a walkthrough and then
  * wants it replayed tomorrow.
@@ -41,6 +47,13 @@ import { RiArrowLeftLine, RiInformationLine, RiMenuLine, RiSearchLine, RiStore2L
  * (a phone folds the sidebar; a screen without a guide has no ⓘ) the step
  * is skipped rather than drawn against nothing: a tour that points at
  * empty air teaches nobody anything except distrust.
+ *
+ * «NOT ON THE SCREEN» INCLUDES «IN THE PAGE BUT HIDDEN». The sidebar is an
+ * `<aside class="hidden md:…">` and the search button `hidden md:flex`: on a
+ * phone both are in the DOM and `querySelector` finds them, yet they measure
+ * 0×0 — the card was clamped to the corner and pointed at nothing, under a
+ * counter that said «خطوة 1 من 4». So an anchor counts only if neither it nor
+ * any ancestor is `display: none` (`isShown`).
  *
  * ── ARABIC, RTL, SHORT ──
  *
@@ -82,6 +95,37 @@ const STEPS: TourStep[] = [
   },
 ];
 
+/** Per tab, per user: «تخطّي» was pressed in this browser session. */
+const skippedKey = (userId: string) => `zaki.tour.skipped.${userId}`;
+
+function skippedThisSession(userId: string): boolean {
+  try {
+    return window.sessionStorage.getItem(skippedKey(userId)) === '1';
+  } catch {
+    return false; // storage blocked: the tour simply cannot remember a skip
+  }
+}
+
+function rememberSkip(userId: string) {
+  try {
+    window.sessionStorage.setItem(skippedKey(userId), '1');
+  } catch {
+    /* blocked storage: the skip lasts until the next load, as it used to */
+  }
+}
+
+/**
+ * Whether a person could actually see this element: not itself `display:none`
+ * and not inside something that is. Walks up because `hidden` on a parent
+ * hides the child without the child's own computed display changing.
+ */
+function isShown(el: Element): boolean {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    if (window.getComputedStyle(node).display === 'none') return false;
+  }
+  return true;
+}
+
 /** Where the card goes relative to its anchor, per side of the screen. */
 function place(rect: DOMRect): { top: number; left: number } {
   // The sidebar stands on the RIGHT (RTL), the header on top. The card is
@@ -115,7 +159,11 @@ export function FirstRunTour() {
   // and plans only the steps whose elements are on THIS screen right now.
   useEffect(() => {
     if (!currentUser || currentUser.tourDoneAt) return;
-    const here = STEPS.filter((s) => document.querySelector(`[data-tour="${s.anchor}"]`));
+    if (skippedThisSession(currentUser.id)) return;
+    const here = STEPS.filter((s) => {
+      const el = document.querySelector(`[data-tour="${s.anchor}"]`);
+      return el !== null && isShown(el);
+    });
     // Nothing to point at is nothing to say: no overlay at all rather than an
     // overlay with no anchor, which would cover a screen and explain none of it.
     if (here.length === 0) return;
@@ -169,9 +217,36 @@ export function FirstRunTour() {
   };
 
   const skip = () => {
-    if (neverAgain) void dismissForever();
-    else setOpen(false);
+    if (neverAgain) {
+      void dismissForever();
+      return;
+    }
+    if (currentUser) rememberSkip(currentUser.id);
+    setOpen(false);
   };
+
+  // Escape is «تخطّي»: the veil covers the whole screen and swallows clicks,
+  // so the keyboard needs its own way out. The ref is the latest `skip`, so
+  // the listener is attached once per open and never goes stale.
+  const skipRef = useRef(skip);
+  useEffect(() => {
+    skipRef.current = skip;
+  });
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') skipRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  // Focus goes into the card when a step opens, so Tab/Enter work on the
+  // buttons it shows and not on the dimmed page behind it.
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (open && rect) cardRef.current?.focus();
+  }, [open, step, rect === null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open || !current || !currentUser || currentUser.tourDoneAt) return null;
 
@@ -188,10 +263,12 @@ export function FirstRunTour() {
           CSS rule (the 94.04 KB first-load ceiling in quality-gates.test.ts). */}
       {rect && (
         <div
+          ref={cardRef}
+          tabIndex={-1}
           role="dialog"
           aria-label="الجولة الأولى"
           style={{ top: place(rect).top, left: place(rect).left }}
-          className="fixed z-[60] w-[320px] rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised"
+          className="fixed z-[60] w-[320px] outline-none rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 shadow-raised"
         >
           <div className="flex items-start gap-3">
             <current.icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--sys-primary)]" aria-hidden />

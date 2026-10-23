@@ -658,15 +658,17 @@ export const SYSTEM_THEMES: SystemTheme[] = [
    * The teal carries the accent, the golds the moment — and text on either
    * is the dark of the ground (#050F1F), 9.66:1 on the gold and 7.38:1 on
    * the teal. A new staff member opens on this one: the creation paths in
-   * api/users and api/moderators write `layl` explicitly, and `layl` was
-   * deliberately placed in SHEET_THEMES so the FIRST paint already wears
-   * it rather than flashing the old default first.
+   * api/users and api/moderators write `layl` explicitly. `layl` is NOT in
+   * SHEET_THEMES (that list is the default and `auto` only, and
+   * a-new-member-of-staff-opens-on-layl.test.ts asserts it stays out): the
+   * theme's CSS is inlined per request from the user's own choice, so the
+   * first paint already wears it without being in the sheet.
    * ══════════════════════════════════════════════════════════════════════
    */
   {
     key: 'layl',
     ar: 'ليل',
-    note: 'سماويٌّ عميقٌ وذهبٌ دافئ، وصورٌ حقيقيّةٌ على الباب وفي القوائم الفارغة — الثيم الأول للموظف الجديد.',
+    note: 'سماويٌّ عميقٌ وذهبٌ دافئ، وصورٌ مرسومةٌ على الباب وفي القوائم الفارغة — الثيم الأول للموظف الجديد.',
     dark: true,
     vars: {
       background: '#050F1F',
