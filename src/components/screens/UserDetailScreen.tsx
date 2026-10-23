@@ -36,6 +36,7 @@ import { PASSWORD_RULES, passwordProblems } from '@/lib/password-rules';
 import { useConfirm } from '@/components/ui/Confirm';
 import { mayResetTwoFactor } from '@/lib/two-factor-reset';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -512,6 +513,10 @@ export function UserDetailScreen() {
                   {twoFaMsg.text}
                 </p>
               )}
+              {/* Resetting somebody's second factor is a recovery step, not a
+                  daily one; it folds under متقدم beside the password controls.
+                  Nothing is removed — the card still says it is registered. */}
+              <AdvancedGroup holds="إعادة ضبط">
               <button
                 type="button"
                 disabled={resetting2fa}
@@ -521,6 +526,7 @@ export function UserDetailScreen() {
                 {resetting2fa ? <RiLoader4Line className="w-4 h-4 animate-spin" /> : <RiShieldKeyholeLine className="w-4 h-4" />}
                 أعِد ضبط التحقّق بخطوتين
               </button>
+              </AdvancedGroup>
             </CardContent>
           </Card>
         )}

@@ -21,6 +21,7 @@ import {
 } from '@/lib/permission-catalog';
 import { RiAddCircleLine, RiAlertLine, RiArrowDownSLine, RiArrowGoBackLine, RiArrowUpSLine, RiCloseLine, RiDeleteBinLine, RiFileCopyLine, RiGroupLine, RiKey2Line, RiPencilLine, RiSearchLine, RiShieldCheckLine, RiToolsLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 
 interface RolePerm { permission: string; scope: string; scopeIds?: unknown }
 interface RoleRow {
@@ -477,10 +478,12 @@ export function PermissionsScreen() {
               </div>
               <div className="flex items-center gap-2">
                 {editingRole && defaultsAvailable && (
+                  <AdvancedGroup holds={ar ? 'إرجاع للافتراضي' : 'Restore defaults'}>
                   <Button variant="outline" size="sm" onClick={restoreDefaults} loading={restoring}>
                     <RiArrowGoBackLine className="icon-mirror w-4 h-4" />
                     {ar ? 'إرجاع للافتراضي' : 'Restore defaults'}
                   </Button>
+                  </AdvancedGroup>
                 )}
                 <Badge variant={activeCount > 0 ? 'success' : 'default'}>
                   {activeCount} {ar ? 'صلاحية مفعّلة' : 'enabled'}

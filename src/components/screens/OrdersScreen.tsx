@@ -41,6 +41,7 @@ import { RiAddCircleLine, RiArrowGoBackLine, RiArrowLeftSLine, RiArrowRightSLine
 import { Money } from '@/components/ui/Money';
 import { arDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -449,6 +450,7 @@ export function OrdersScreen() {
             description="كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء"
             actions={
               <><div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
+            <AdvancedGroup holds="تصدير · استيراد · تحديث · إدخال بالذكاء">
             {canExport && (
             <Button
               variant="outline"
@@ -496,6 +498,7 @@ export function OrdersScreen() {
               <span>إدخال بالذكاء الاصطناعي</span>
             </Button>
             )}
+            </AdvancedGroup>
 
             {canCreate && (
             <Button
