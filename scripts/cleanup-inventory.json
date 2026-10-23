@@ -51,7 +51,7 @@
   {
     "kind": "secondary-control",
     "location": "المحافظ /finance/wallets — «عدّل الاسم» · «أوقف المحفظة» · «احذف»",
-    "evidence": "src/components/screens/finance/WalletsScreen.tsx:274",
+    "evidence": "src/components/screens/finance/WalletsScreen.tsx:276",
     "safeAction": "hide",
     "reason": "أزرار صيانة فقط مطويّة تحت «متقدم»؛ «حركة جديدة» و«العدّ الافتتاحيّ» والرصيد بلا أي تغيير. لا منطق مال لُمس، وشاشة المحافظ لم تُدمج في غيرها."
   },
