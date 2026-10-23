@@ -359,6 +359,15 @@ export function OrdersScreen() {
   const labelSize = useLabelSize();
   const tell = useTell();
   const [printing, setPrinting] = useState(false);
+  /*
+   * THE LAST BATCH THAT FINISHED CLEANLY — for the picture, and for nothing
+   * else. DISPLAY ONLY: nothing reads this back, no request depends on it,
+   * and the print below runs exactly as it did before it existed. `serial`
+   * counts up per batch so the moment can tell a second batch from a
+   * re-render; whether the batch was big enough to earn the picture is the
+   * moment's own rule (`MOMENT_MIN` in BulkDoneMoment), not this screen's.
+   */
+  const [batchDone, setBatchDone] = useState<{ serial: number; count: number } | null>(null);
   const canPrint = userCan(currentUser, 'ops.labels');
   /**
    * ── EVERY BUTTON HERE ASKS WHAT ITS OWN DOOR ASKS ──
@@ -407,6 +416,16 @@ export function OrdersScreen() {
     setError(null);
     try {
       const out = await openWaybills({ orderIds: ids, ...labelSize.dims }, mode);
+      /*
+       * The finished-batch moment, after the waybills came back and only
+       * when every one of them did. Not for «PDF»: saving a file marks no
+       * order printed, so nothing was finished. Not when some were refused:
+       * the dialog below is the message then, and a celebration beside a
+       * list of refusals says two opposite things at once.
+       */
+      if (mode === 'print' && out.refused.length === 0) {
+        setBatchDone((prev) => ({ serial: (prev?.serial ?? 0) + 1, count: out.count }));
+      }
       if (out.refused.length) {
         void tell({
           title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
@@ -661,7 +680,7 @@ export function OrdersScreen() {
         {/* On a desk this sits where it always has. On a phone the shell
             hands it the bottom strip, because selecting five rows and then
             scrolling four screens up to act on them is why nobody did. */}
-        <BulkBar show={selected.size > 0}>
+        <BulkBar show={selected.size > 0} done={batchDone}>
           <>
             <span className="text-xs font-semibold text-[var(--sys-primary)]">
               محدَّد: {selected.size} طلب
