@@ -91,7 +91,9 @@ export function DashboardScreen() {
    * fires `focus` and not `visibilitychange`, and that is most of a
    * working day on a desk.
    */
-  useLiveRefresh(loadAnalytics, { everyMs: 30_000, key: period });
+  // «الكل» reads the whole history (see `reportRange`), so it is asked for
+  // every two minutes; a named period stays live at thirty seconds.
+  useLiveRefresh(loadAnalytics, { everyMs: period === 'all' ? 120_000 : 30_000, key: period });
 
   const fin = analytics?.financials ?? {
     deliveredRevenue: 0, costOfGoodsSold: 0, shippingCosts: 0,

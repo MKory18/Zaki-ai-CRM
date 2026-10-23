@@ -4,7 +4,7 @@ import { orderGoodsCost } from '@/lib/finance-workflow';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { getDateRange, type DateFilter } from '@/lib/analytics';
+import { reportRange, type DateFilter } from '@/lib/analytics';
 import { summariseLoss, type LossRow } from '@/lib/loss-analysis';
 
 /**
@@ -46,7 +46,10 @@ export async function GET(req: Request) {
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
     };
-    const { start, end } = getDateRange(filter);
+    // The same window the dashboard tiles above this panel read: under «الكل»
+    // both count the whole history, or the page would say two things at once.
+    // MAX_ROWS still bounds what is read.
+    const { start, end } = reportRange(filter);
     const createdAt = start || end ? { ...(start ? { gte: start } : {}), ...(end ? { lte: end } : {}) } : undefined;
 
     const where = {

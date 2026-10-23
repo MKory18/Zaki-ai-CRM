@@ -116,7 +116,9 @@ export async function GET(req: Request) {
     const endDate = searchParams.get('endDate') || undefined;
 
     const filter: DateFilter = { period, startDate, endDate };
-    const analytics = await getCompanyAnalytics({ companyId, storeId }, filter);
+    // «الكل» on the dashboard is the whole history — asked for here, by
+    // name, and not by the engine's default (see `reportRange`).
+    const analytics = await getCompanyAnalytics({ companyId, storeId }, filter, reportRange(filter));
     // Where every order ended up, in the owner's words — over the WHOLE
     // history, not the period: «how did my orders end» is asked of all of them.
     const outcomes = await countOutcomes(db, { companyId, storeId });
