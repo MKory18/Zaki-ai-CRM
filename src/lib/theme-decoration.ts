@@ -222,6 +222,16 @@ const DECOR_INK: Record<string, number> = {
   city90: 0.192,
   epic: 0.144,
   lux: 0.24,
+  /*
+   * «ليل» — weighed with the yardstick above, not picked. Its own drawing
+   * (`layl.webp`: the khatam — two squares turned 45° — on a lattice, with
+   * the middle 42% of the frame cut away so the hole is where the reading
+   * happens) covers 9.85% of the frame in alpha; its teal on deep navy is a
+   * 0.377 luminance gap; and the opacity that lands it on the MEDIAN of the
+   * eight masks above that are not left whole (ink × coverage × gap =
+   * 0.01506) is 0.406. A replacement drawing re-runs the same sum.
+   */
+  layl: 0.406,
 };
 
 /**
