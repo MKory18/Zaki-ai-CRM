@@ -58,8 +58,9 @@ export function useBulkActive(): boolean {
  * Wraps a screen's own bulk bar.
  *
  * `show` is the screen's existing condition — nothing here decides when a
- * selection exists. When it is false this renders nothing at all, so a
- * screen with no selection costs one boolean.
+ * selection exists. When it is false this renders no bar at all — only the
+ * finished-batch moment's empty live region (see below) — so a screen with
+ * no selection costs one boolean and one empty node.
  */
 export function BulkBar({
   show,
@@ -115,13 +116,26 @@ export function BulkBar({
    * The moment is rendered even when the bar is gone — that is exactly the
    * state a finished batch leaves behind (the selection cleared, so `show`
    * is false). Early-returning first would have swallowed every completion.
+   *
+   * ── AND IT STAYS AT ONE PLACE IN THE TREE, WHATEVER `show` IS ──
+   *
+   * This used to return the moment ALONE when `show` was false and the
+   * moment INSIDE a fragment beside the bar when it was true. To React those
+   * are two different trees, so every flip of the selection unmounted the
+   * moment and mounted a fresh one — with a fresh memory of which batch it
+   * had already played. Finish thirty, tick one row, and the same thirty
+   * played again. One fragment, the moment always its first child, the bar
+   * second and only when there is a selection: the moment's memory now
+   * lives exactly as long as the screen does.
+   *
+   * With no batch to report the moment draws only its empty, zero-high live
+   * region, so a screen with no selection still costs one boolean and one
+   * empty node.
    */
-  if (!show)
-    return done ? <BulkDoneMoment serial={done.serial} count={done.count} /> : null;
-
   return (
     <>
       <BulkDoneMoment serial={done?.serial ?? null} count={done?.count ?? null} />
+      {show && (
       <div
       ref={bar}
       className={
@@ -136,6 +150,7 @@ export function BulkBar({
     >
       <div className="flex flex-wrap items-center gap-2">{children}</div>
       </div>
+      )}
     </>
   );
 }

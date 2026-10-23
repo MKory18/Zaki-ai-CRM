@@ -22,10 +22,19 @@ import React from 'react';
  *
  * ── AND IT STOPS WHEN SOMEBODY ASKED IT TO ──
  *
- * `motion-reduce:animate-none` is not decoration: a nine-second rotation
- * is exactly the kind of movement that makes a screen unusable for
- * somebody with vestibular sensitivity, and a spinner is the one piece of
- * motion a person cannot dismiss.
+ * Stopping is not decoration: a nine-second rotation is exactly the kind
+ * of movement that makes a screen unusable for somebody with vestibular
+ * sensitivity, and a spinner is the one piece of motion a person cannot
+ * dismiss. It is answered by the house rule, not by a utility of its own:
+ * `system.css` ends with the `@media (prefers-reduced-motion: reduce)`
+ * block that pins every animation to ONE iteration of 1 ms with
+ * `!important` — one turn of 360° in a millisecond, which ends exactly
+ * where it began, so the star simply stands still. That block beats the
+ * inline `animationDuration` below (a sheet's `!important` outranks inline
+ * style), and a reduced-motion utility of its own here would have been a
+ * NEW rule in the first-load sheet saying the same thing again — paid for out
+ * of the hundred-odd bytes left under the ceiling `quality-gates.test.ts`
+ * holds.
  * ═══════════════════════════════════════════════════════════════════════
  */
 
@@ -51,7 +60,7 @@ export function StarMark({
       viewBox="0 0 100 100"
       width={size}
       height={size}
-      className={`animate-spin motion-reduce:animate-none ${className}`}
+      className={`animate-spin ${className}`}
       style={{ animationDuration: `${seconds}s` }}
       role={label ? 'img' : undefined}
       aria-label={label}
