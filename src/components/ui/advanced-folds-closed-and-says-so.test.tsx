@@ -31,7 +31,7 @@ import { AdvancedGroup } from './AdvancedGroup';
  *   M2 `aria-expanded` dropped from the summary     → both aria tests red
  *   M3 `onToggle` dropped (state never follows)     → «opens on a tap» red
  *   M4 open state read from / written to storage    → «not remembered» red
- *   M5 `group-open:rotate-180` put back             → «no new CSS» red
+ *   M5 the chevron turned by a group-open variant again → «no new CSS» red
  */
 
 /**
@@ -149,9 +149,18 @@ describe('«متقدم» draws with what the product already ships — no new CS
    * same promise before one: every utility class written in AdvancedGroup.tsx
    * must already be written somewhere else in src/, because Tailwind emits a
    * rule once per class — a class already used elsewhere costs zero bytes, a
-   * class used nowhere else is a new rule. The first version of this file used
-   * `group-open:rotate-180` and `[&::-webkit-details-marker]:hidden`, both
-   * used nowhere else; this test is why they are gone.
+   * class used nowhere else is a new rule. The first version of AdvancedGroup
+   * turned its chevron with a group-open variant and hid the browser's
+   * triangle with an arbitrary webkit-details-marker variant — two utilities
+   * no other file used; this test is why they are gone.
+   *
+   * TAILWIND READS COMMENTS TOO. It scans every file in the tree — tests,
+   * markdown, JSON, comments included — and ships a rule for every class-like
+   * string it finds. This file once named those two utilities verbatim in
+   * this very comment, and CI's «Payload budget» step measured the branch 94
+   * bytes over the ceiling for it while every className was clean. So they
+   * are described here in words, never spelled as a class; do the same in any
+   * comment, commit-tracked doc or fixture that talks about a utility.
    */
   const ROOT = join(process.cwd(), 'src');
   const SELF = join(ROOT, 'components/ui/AdvancedGroup.tsx');
