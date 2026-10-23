@@ -41,7 +41,8 @@ import React from 'react';
  * go red and was reverted):
  *   S1 «إدخال طلب سريع» moved inside the Orders «متقدم»     → الطلبات red
  *   S2 the wallet's «احذف» moved back out of «متقدم»        → المحافظ red
- *   S3 the Users refresh button unwrapped from «متقدم»       → الموظفون red
+ *   (S3, the Users refresh inside «متقدم», is gone: a fold of one icon button
+ *   was a click for nothing, and the button is drawn on the screen now.)
  */
 
 const { app, nav, net, push } = vi.hoisted(() => ({
@@ -220,7 +221,7 @@ const CASES: Case[] = [
       render(<OrdersScreen />);
     },
     primary: 'إدخال طلب سريع',
-    folded: ['تصدير CSV', 'استيراد طلبات', 'تحديث', 'إدخال بالذكاء الاصطناعي'],
+    folded: ['تصدير CSV', 'استيراد طلبات', 'إدخال بالذكاء الاصطناعي'],
   },
   {
     screen: 'المنتجات',
@@ -232,17 +233,6 @@ const CASES: Case[] = [
     },
     primary: 'إضافة منتج',
     folded: ['تشغيلات الإنتاج'],
-  },
-  {
-    screen: 'الموظفون',
-    mount: () => {
-      nav.pathname = '/admin/users';
-      signedIn('COMPANY_ADMIN', 'users.view', 'users.create');
-      answering({ '/api/users': { users: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 1 } } });
-      render(<UsersScreen />);
-    },
-    primary: 'موظف جديد',
-    folded: ['تحديث'],
   },
   {
     screen: 'صفحة الموظف',
@@ -361,14 +351,25 @@ describe.each(CASES)('«$screen» keeps its main action in sight and folds the r
 });
 
 describe('what a fold promises is what is inside it, for THIS person', () => {
-  it('«الطلبات»: without the export, import and AI-entry grants, «متقدم» names only the refresh it actually holds', async () => {
+  it('«الطلبات»: without the export, import and AI-entry grants there is nothing to fold, so there is no «متقدم» at all', async () => {
     nav.pathname = '/orders';
     signedIn('CONFIRMATION_AGENT', 'orders.view');
     answering({ '/api/orders': { orders: [], pagination: { page: 1, pages: 1, total: 0 } } });
     render(<OrdersScreen />);
+    await screen.findByText('الطلبات');
+    expect(document.querySelector('[data-advanced-group]'), 'طيٌّ فاضي').toBeNull();
+    // and the list does not carry a refresh button of its own: it refreshes itself
+    expect(screen.queryByRole('button', { name: 'تحديث', hidden: true })).toBeNull();
+  });
+
+  it('«الطلبات»: with only the export grant, «متقدم» names the export and nothing it does not hold', async () => {
+    nav.pathname = '/orders';
+    signedIn('CONFIRMATION_AGENT', 'orders.view', 'reports.export');
+    answering({ '/api/orders': { orders: [], pagination: { page: 1, pages: 1, total: 0 } } });
+    render(<OrdersScreen />);
     const summary = (await screen.findByText('متقدم')).closest('summary') as HTMLElement;
-    expect(summary.textContent).toContain('تحديث');
-    for (const gone of ['تصدير', 'استيراد', 'إدخال بالذكاء']) {
+    expect(summary.textContent).toContain('تصدير');
+    for (const gone of ['استيراد', 'إدخال بالذكاء', 'تحديث']) {
       expect(summary.textContent, `«متقدم» يعد بـ«${gone}» لمن لا يملكه`).not.toContain(gone);
     }
   });
@@ -379,7 +380,18 @@ describe('what a fold promises is what is inside it, for THIS person', () => {
     answering({ '/api/orders': { orders: [], pagination: { page: 1, pages: 1, total: 0 } } });
     render(<OrdersScreen />);
     const summary = (await screen.findByText('متقدم')).closest('summary') as HTMLElement;
-    for (const name of ['تصدير', 'استيراد', 'تحديث', 'إدخال بالذكاء']) expect(summary.textContent).toContain(name);
+    for (const name of ['تصدير', 'استيراد', 'إدخال بالذكاء']) expect(summary.textContent).toContain(name);
+  });
+
+  it('«الموظفون»: the list does not refresh itself, so its refresh is DRAWN — not folded under a «متقدم» of one button', async () => {
+    nav.pathname = '/admin/users';
+    signedIn('COMPANY_ADMIN', 'users.view', 'users.create');
+    answering({ '/api/users': { users: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 1 } } });
+    render(<UsersScreen />);
+    const refresh = await screen.findByRole('button', { name: 'تحديث القائمة', hidden: true });
+    expect(refresh.closest('[data-advanced-group]'), 'التحديث انطوى تحت «متقدم»').toBeNull();
+    expect(drawn(refresh)).toBe(true);
+    expect(document.querySelector('[data-advanced-group]'), '«متقدم» بزر واحد').toBeNull();
   });
 
   it('«المحافظ»: a STOPPED wallet shows «أعِد تشغيلها» outside the fold — it is the only way to unlock «حركة جديدة»', async () => {

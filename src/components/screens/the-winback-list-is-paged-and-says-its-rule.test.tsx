@@ -33,6 +33,7 @@ const { api, toast, ask, tell } = vi.hoisted(() => ({
   tell: vi.fn(),
 }));
 vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => api(...a) }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
 vi.mock('@/components/shell/ScreenTitle', () => ({
   ScreenTitle: ({ note }: { note?: string }) => <p data-testid="note">{note}</p>,
 }));

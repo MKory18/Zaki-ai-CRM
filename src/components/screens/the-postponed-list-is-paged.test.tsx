@@ -22,8 +22,9 @@ import { stripComments } from '@/lib/guard-source';
  *     a way out — not «no postponed orders».
  */
 
-const { api } = vi.hoisted(() => ({ api: vi.fn() }));
+const { api, may } = vi.hoisted(() => ({ api: vi.fn(), may: { yes: true } }));
 vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => api(...a) }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => may.yes }));
 vi.mock('@/components/shell/ScreenTitle', () => ({ ScreenTitle: () => <h1>الطلبات المؤجلة</h1> }));
 
 import { ConfirmationPostponedScreen } from './ConfirmationPostponedScreen';
@@ -72,6 +73,7 @@ const posts = () => api.mock.calls.filter((c) => c[1] && (c[1] as RequestInit).m
 
 beforeEach(() => {
   vi.clearAllMocks();
+  may.yes = true;
   facts = structuredClone(FACTS);
   total = 60;
   postFails = null;
@@ -314,3 +316,24 @@ describe('how it is built', () => {
     expect(src()).toContain("from '@/lib/postponed-filters'");
   });
 });
+
+describe('the order number on a postponed row opens the order it names', () => {
+  it('is a link to /orders/<id> for someone who may open the orders screen', async () => {
+    render(<ConfirmationPostponedScreen />);
+    // the table and the phone cards both draw the number: every copy is a link
+    const numbers = await screen.findAllByText('ORD-P1');
+    for (const n of numbers) {
+      const link = n.closest('a');
+      expect(link, 'الرقم نص عادي').not.toBeNull();
+      expect(link!.getAttribute('href')).toBe('/orders/P1');
+    }
+  });
+
+  it('NEGATIVE: for someone who may not, it is the same number as plain text — never a link to a refusal', async () => {
+    may.yes = false;
+    render(<ConfirmationPostponedScreen />);
+    const numbers = await screen.findAllByText('ORD-P1');
+    for (const n of numbers) expect(n.closest('a')).toBeNull();
+  });
+});
+

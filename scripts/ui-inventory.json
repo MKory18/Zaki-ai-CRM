@@ -250,12 +250,12 @@
     "tabs": 0
   },
   "src/components/orders/CreateOrderModal.tsx": {
-    "buttons": 3,
+    "buttons": 2,
     "inputs": 9,
     "columns": 0,
     "cards": 0,
     "modals": 1,
-    "icons": 7,
+    "icons": 6,
     "links": 0,
     "tabs": 0
   },
@@ -307,6 +307,16 @@
     "modals": 0,
     "icons": 3,
     "links": 0,
+    "tabs": 0
+  },
+  "src/components/orders/OrderLink.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/orders/OrderNotes.tsx": {
@@ -900,12 +910,12 @@
     "tabs": 0
   },
   "src/components/screens/InstalledAppsScreen.tsx": {
-    "buttons": 3,
+    "buttons": 2,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 7,
+    "icons": 6,
     "links": 2,
     "tabs": 0
   },
@@ -1010,12 +1020,12 @@
     "tabs": 0
   },
   "src/components/screens/OrdersScreen.tsx": {
-    "buttons": 17,
+    "buttons": 16,
     "inputs": 9,
     "columns": 0,
     "cards": 1,
     "modals": 0,
-    "icons": 17,
+    "icons": 16,
     "links": 0,
     "tabs": 0
   },
@@ -1030,12 +1040,12 @@
     "tabs": 0
   },
   "src/components/screens/PerformanceScreen.tsx": {
-    "buttons": 2,
+    "buttons": 1,
     "inputs": 0,
     "columns": 12,
     "cards": 5,
     "modals": 0,
-    "icons": 8,
+    "icons": 7,
     "links": 0,
     "tabs": 1
   },

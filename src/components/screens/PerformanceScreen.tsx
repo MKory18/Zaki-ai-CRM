@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { useApp } from '@/context/AppContext';
 import { apiJson } from '@/lib/api-client';
 import { DateRange } from '@/components/ui/DateRange';
@@ -12,7 +11,7 @@ import { LandingAnalyticsTab } from '@/components/performance/LandingAnalyticsTa
 import { userCan } from '@/lib/can';
 import { ScoreBoard } from '@/components/performance/ScoreBoard';
 import { findRoute, routeLabel } from '@/lib/route-registry';
-import { RiAlertLine, RiCopperCoinLine, RiDownload2Line, RiEBike2Line, RiInboxUnarchiveLine, RiTrophyLine, RiTruckLine } from '@remixicon/react';
+import { RiAlertLine, RiCopperCoinLine, RiEBike2Line, RiInboxUnarchiveLine, RiTrophyLine, RiTruckLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SkeletonRows } from '@/components/ui/Skeleton';
@@ -190,10 +189,6 @@ export function PerformanceScreen() {
     }
   };
 
-  const handleExport = () => {
-    window.open('/api/reports/export', '_blank');
-  };
-
   /**
    * THE VITALS THE SERVER SENT, AND THE VERDICT ON THE COST DATA.
    *
@@ -242,16 +237,9 @@ export function PerformanceScreen() {
             <div className="w-56">
               <DateRange value={range} onChange={setRange} label="كل المدة" />
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              className="flex items-center space-x-1"
-            >
-              <RiDownload2Line className="w-4 h-4" />
-              <span>تصدير CSV</span>
-            </Button>
+            {/* The «تصدير CSV» that stood here opened /api/reports/export with
+                no parameters: EVERY order, whatever range was picked in the box
+                beside it. The orders screen exports what its filters match. */}
           </div></>
             }
           />

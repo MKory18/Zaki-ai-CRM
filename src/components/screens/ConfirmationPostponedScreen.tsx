@@ -12,6 +12,7 @@ import { arDate } from '@/lib/format';
 import { usePagedList, type PagedRead, type Paging } from '@/hooks/usePagedList';
 import { KINDS, KIND_AR, TIMES, TIMES_AR, WHENS, whenLabel } from '@/lib/postponed-filters';
 import type { PostponedFacts } from '@/lib/postponed-list';
+import { OrderLink } from '@/components/orders/OrderLink';
 
 /**
  * /confirmation/postponed — order, customer, due date, days remaining,
@@ -203,7 +204,7 @@ export function ConfirmationPostponedScreen() {
               label: 'الطلب',
               primary: true,
               render: (o) => (
-                <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
+                <OrderLink id={o.id} number={o.orderNumber} className="font-medium text-[var(--sys-heading)]" />
               ),
             },
             {

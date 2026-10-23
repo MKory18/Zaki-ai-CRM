@@ -16,7 +16,6 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '
 import { findRoute, routeLabel } from '@/lib/route-registry';
 import { RiArrowLeftSLine, RiArrowRightSLine, RiForbidLine, RiKey2Line, RiLogoutBoxLine, RiMedalLine, RiPlayCircleLine, RiRefreshLine, RiSearchLine, RiShieldCheckLine, RiShieldCrossLine, RiUserAddLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HealthChip } from '@/components/ui/HealthChip';
@@ -191,11 +190,11 @@ export function UsersScreen() {
                 موظف جديد
               </Button>
             )}
-            <AdvancedGroup holds="تحديث القائمة">
-            <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2" title="تحديث">
+            {/* The list does not refresh itself, so the refresh stays — drawn, not
+                folded: a «متقدم» holding one icon button was a click for nothing. */}
+            <Button variant="outline" size="sm" onClick={() => loadUsers(pagination.page)} className="p-2" aria-label="تحديث القائمة" title="تحديث">
               <RiRefreshLine className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-            </AdvancedGroup>
           </div></>
             }
           />
