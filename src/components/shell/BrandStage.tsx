@@ -88,11 +88,11 @@ export function BrandStage({
         markup order — the layer comes first, so this comes after it.
       */}
       {/*
-        `zk-door-column` is a MARKER and styles nothing by itself. Under the one theme that wears
-        photographs (`neon-coast`, see PHOTOGRAPHIC in theme-decoration.ts) it becomes a panel of the
-        page's own colour, and that panel — not the picture behind it — is what the wordmark, the
-        tagline and the line under the card are read against. In every other theme the class matches
-        no rule at all.
+        `zk-door-column` is a MARKER and styles nothing by itself. Under the two themes that wear
+        photographs (`neon-coast`, and `layl` since the owner opened the list to it on 23/10/2026 —
+        see PHOTOGRAPHIC in theme-decoration.ts) it becomes a panel of the page's own colour, and that
+        panel — not the picture behind it — is what the wordmark, the tagline and the line under the
+        card are read against. In every other theme the class matches no rule at all.
       */}
       <div className="relative w-full max-w-lg space-y-6 zk-door-column">
         <div className="flex flex-col items-center gap-3 text-center">
