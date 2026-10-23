@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { requireContext } from '@/lib/geo-context';
 import { can, requirePermission } from '@/lib/authorization';
-import { getCompanyAnalytics, getDateRange, previousRange, DateFilter } from '@/lib/analytics';
+import { getCompanyAnalytics, reportRange, previousRange, DateFilter } from '@/lib/analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { db } from '@/lib/db';
 import { countOutcomes } from '@/lib/order-outcome';
@@ -142,7 +142,7 @@ export async function GET(req: Request) {
      * read, and none of the others asks these questions. What it owns — the
      * window, the scope, the revenue rule — is reused rather than rebuilt.
      */
-    const { start, end } = getDateRange(filter);
+    const { start, end } = reportRange(filter);
     const scopeWhere = { companyId, ...(storeId ? { storeId } : {}) };
     const windowWhere = {
       ...scopeWhere,

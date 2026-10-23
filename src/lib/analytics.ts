@@ -75,6 +75,21 @@ export function previousRange(filter: DateFilter): { start: Date; end: Date } | 
   return { start: new Date(prevEnd.getTime() - span), end: prevEnd };
 }
 
+/**
+ * «الكل» MEANS ALL OF IT — on the screens that read the profit engine.
+ *
+ * The owner, 23/10, over a dashboard that said «الكل» and counted 12,449 of
+ * 17,328 orders: «الكل مش اخر 90 يوم». The 90-day safety window stays on
+ * `getDateRange` itself, which a dozen other screens call and some of them
+ * (landing analytics) read as a real span; here, and only here, the whole
+ * history is one GROUP BY over indexed columns and costs nothing to ask.
+ * An explicit pair of dates is still a window, clamped as before.
+ */
+export function reportRange(filter: DateFilter): { start?: Date; end?: Date } {
+  const allTime = (filter.period || 'all') === 'all' && !(filter.startDate && filter.endDate);
+  return allTime ? {} : getDateRange(filter);
+}
+
 export function getDateRange(filter: DateFilter): { start?: Date; end?: Date } {
   const now = new Date();
   const period = filter.period || 'all';
@@ -164,7 +179,7 @@ export async function getCompanyAnalytics(
   window?: { start: Date; end: Date }
 ) {
   const { companyId, storeId } = scope;
-  const { start, end } = window ?? getDateRange(filter);
+  const { start, end } = window ?? reportRange(filter);
 
   const dateFilter =
     start && end
