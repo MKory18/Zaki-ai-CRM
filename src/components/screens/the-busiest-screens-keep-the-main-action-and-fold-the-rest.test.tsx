@@ -47,7 +47,7 @@ import React from 'react';
 const { app, nav, net, push } = vi.hoisted(() => ({
   app: { value: {} as Record<string, unknown> },
   nav: { pathname: '/', params: {} as Record<string, string> },
-  net: { answer: (_url: string): unknown => undefined },
+  net: { answer: (() => undefined) as (url: string) => unknown },
   push: vi.fn(),
 }));
 
