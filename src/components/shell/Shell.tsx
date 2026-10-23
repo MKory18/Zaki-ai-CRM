@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { NavGroup } from '@/lib/route-registry';
 import { Sidebar } from './Sidebar';
 import { Header, type ShellContextInfo } from './Header';
@@ -16,6 +17,7 @@ import { HubTabs } from './HubTabs';
 import { ScreenGuideProvider } from './ScreenGuide';
 import { FirstRunTour } from './FirstRunTour';
 import { StoreCurrencyProvider } from '@/context/StoreCurrency';
+import { emptyFamilyOf } from '@/lib/theme-decoration';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
 export function Shell({
@@ -39,6 +41,13 @@ export function Shell({
   const palette = useCommandPalette();
   /** The header's own rule, unchanged — see CommandPalette's note. */
   const canSearchRecords = userRole === 'SUPER_ADMIN';
+  /**
+   * Which family of screen this is, for the picture an empty list wears — and for nothing else.
+   * Written on the main element below as `data-empty-family`; only a theme whose empty lists wear a
+   * picture per family («ليل») has a rule that reads it, and the picture is still drawn by the one
+   * layer EmptyState draws. See `emptyFamilyOf` in theme-decoration.ts.
+   */
+  const emptyFamily = emptyFamilyOf(usePathname());
 
   return (
     <BulkProvider>
@@ -73,7 +82,10 @@ export function Shell({
             trying to read it. */}
         {/* Room for whatever owns the bottom strip: the navigation at its
             fixed height, or a bulk bar at whatever height it wrapped to. */}
-        <main className="w-full flex-1 p-4 pb-[calc(var(--bulk-h,4.5rem)+env(safe-area-inset-bottom))] md:p-6 md:pb-6">
+        <main
+          data-empty-family={emptyFamily}
+          className="w-full flex-1 p-4 pb-[calc(var(--bulk-h,4.5rem)+env(safe-area-inset-bottom))] md:p-6 md:pb-6"
+        >
           {/* The other screens of this screen's errand, as pills — the menu
               holds ONE line per group, and this is where its screens went.
               On a road (الشحن, المال) the pills carry the step number and the

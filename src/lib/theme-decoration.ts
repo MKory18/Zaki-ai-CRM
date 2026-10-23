@@ -302,7 +302,7 @@ export const PIECES = ['rosette', 'corner', 'skyline'] as const;
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * A THEME THAT WEARS PHOTOGRAPHS — THE ONE PLACE «MASKS ONLY» IS BROKEN,
+ * THE THEMES THAT WEAR PHOTOGRAPHS — THE ONE PLACE «MASKS ONLY» IS BROKEN,
  * AND WHAT HOLDS IN ITS PLACE.
  *
  * The rule above — shape only, never colour — was written for a reason that
@@ -310,12 +310,19 @@ export const PIECES = ['rosette', 'corner', 'skyline'] as const;
  * nobody measured», because a full-colour picture carries greens and golds
  * that no palette test ever looks at. The owner, 21/10, asked for exactly
  * that anyway, for one theme: «ثيم جي تي ايه بصور حقيقية» — and decided where
- * («بالأماكن التلاتة بس»). So `neon-coast`, and ONLY it, wears three real
- * photographs of a beachfront at the blue hour, and what the rule protected
- * is protected another way:
+ * («بالأماكن التلاتة بس»). So `neon-coast` wears three real photographs of a
+ * beachfront at the blue hour.
  *
- *   • THE LIST IS CLOSED. `PHOTOGRAPHIC` below has one key, and
- *     a-photographic-theme-keeps-its-text-readable.test.ts fails if a second
+ * And on 23/10/2026 the owner approved opening the same list to a second
+ * theme, «ليل» (`layl` — the theme a new member of staff opens on), so that
+ * the real pictures made for it are actually seen: the courtyard gate at
+ * night, the road to the kasbah, and the empty-list family. That approval is
+ * the only reason the list has two names, and the claim that holds the list
+ * names both on purpose. What the rule protected is protected the same way
+ * for the two of them:
+ *
+ *   • THE LIST IS CLOSED. `PHOTOGRAPHIC` below has two keys, and
+ *     a-photographic-theme-keeps-its-text-readable.test.ts fails if a third
  *     appears without somebody editing that claim on purpose.
  *   • THE THREE PLACES ARE THE SAME THREE. Nothing here is drawn by another
  *     component, and never behind a table, a form, an order, a figure of
@@ -343,14 +350,46 @@ export const PIECES = ['rosette', 'corner', 'skyline'] as const;
  *            the right-hand side, and the strip was shot with its calm sea on
  *            the right for that reason.
  *
+ * ── AND WHAT «ليل» DOES DIFFERENTLY, AND WHY ──
+ *
+ *   door     the same arrangement: the courtyard gate at night (the wide
+ *            picture) or the road to the kasbah (the portrait one, made as a
+ *            loading panel and standing here because a phone is a portrait
+ *            door), under a veil and with a panel of the page's own colour
+ *            under every word.
+ *   empty    not one picture but one per FAMILY of screen — the bell on the
+ *            confirmation queue, the tied parcel on preparation, the map on
+ *            shipment tracking, the scales on matching and collection, the
+ *            money office on the rest of the money, the crate on returns and
+ *            stock, the warehouse on receiving and production, and the
+ *            magnifier everywhere else. The family is read from the address
+ *            by `emptyFamilyOf` below and written once, on the shell's main
+ *            element, as `data-empty-family`. The layer that shows it is
+ *            still the one EmptyState draws and nothing else: no fourth
+ *            place, no picture element, no change to EmptyState.
+ *            And the picture lies on a POOL of the page's own darkest colour,
+ *            laid by the layer itself — because «ليل»'s palette leaves no
+ *            room on its lightest surface: its primary on `surface` measures
+ *            4.48:1 before any picture at all, so a picture laid straight onto
+ *            that surface (white being the worst picture there could be)
+ *            would take the action link under the bar at any strength. On the
+ *            pool the words are read against `--sys-background`, which is what
+ *            the claim composites the white picture over.
+ *   sidebar  no strip was made for «ليل», so the header keeps the theme's own
+ *            drawing — the corner of its octagram lattice, painted from
+ *            `--sys-primary` at its measured `DECOR_INK`, exactly as a theme
+ *            with a single mask draws it there.
+ *
  * ── AND WHAT IT COSTS ──
  *
  * The stylesheet nothing, like every other ornament: written by `SystemFrame`
- * for the one theme rendered. Each picture is under 100 KB and a person is sent
- * one of the two door pictures, not both. At «full» the door zooms — very
- * slowly, from its centre, so no edge is ever uncovered — and the other two
- * stand still: a layer that DRIFTS shows a seam of page along one side, which
- * is fine for a wash and wrong for a photograph.
+ * for the one theme rendered. Each picture is under 120 KB, a person is sent
+ * one of the two door pictures, not both, and an empty list asks for the one
+ * picture of its own family — a rule that matches no element downloads
+ * nothing. At «full» the door zooms — very slowly, from its centre, so no edge
+ * is ever uncovered — and the other two stand still: a layer that DRIFTS shows
+ * a seam of page along one side, which is fine for a wash and wrong for a
+ * photograph.
  *
  * `color-mix()` is how the veil is made from the theme's own tokens, so no
  * hex is written here. A browser too old to know it drops the whole
@@ -362,16 +401,24 @@ export interface Photographs {
   /** The wide door picture, and the portrait one a phone is given instead. */
   door: string;
   doorTall: string;
-  /** The 5:1 strip across the header of the menu. */
-  strip: string;
+  /**
+   * The 5:1 strip across the header of the menu. Absent: the header keeps the theme's own mask
+   * (`DECOR_INK`), drawn exactly as a theme with a single mask draws it there.
+   */
+  strip?: string;
   /** Page colour laid over the door's text column, 0–1. What every word of the sign-in page is read against. */
   panel: number;
   /** Page colour over the whole door picture at the top, the middle and the bottom — mood, not safety. */
   veil: readonly [number, number, number];
-  /** How much of an empty list is picture: its opacity. */
+  /** How much of an empty list is picture: its opacity, or — over the pool — its share of it. */
   empty: number;
-  /** Sidebar colour over the strip where the wordmark is, and where only the picture shows. */
-  header: readonly [number, number];
+  /** Sidebar colour over the strip where the wordmark is, and where only the picture shows. Comes with `strip`, never alone. */
+  header?: readonly [number, number];
+  /**
+   * An empty list's picture by the family of the screen it is on (`emptyFamilyOf`), on a pool of the
+   * page's own background. Absent: an empty list wears the door picture straight onto its surface.
+   */
+  emptyArt?: Readonly<Record<EmptyFamily, string>>;
 }
 
 export const PHOTOGRAPHIC: Record<string, Photographs> = {
@@ -384,15 +431,107 @@ export const PHOTOGRAPHIC: Record<string, Photographs> = {
     empty: 0.14,
     header: [0.82, 0.25],
   },
+  /*
+   * «ليل» — opened to pictures by the owner on 23/10/2026. Every file here was generated for this
+   * theme from the single prompt list (D1, L1–L3, E1–E6) and checked, picture by picture, for a
+   * five-pointed star, text and a watermark before it was wired: see public/brand/CREDITS.md.
+   *
+   * `panel` is the first step of 0.05 at which the primary (#36B5CC) clears 4.5:1 over a pure white
+   * picture: neon-coast's 0.8 leaves it at 4.37, 0.85 gives 5.24 — room, not a hairline. `empty` is the
+   * share of the pool the picture may have and still leave every word above 5:1 over a white one.
+   */
+  layl: {
+    door: 'layl.door.webp',
+    doorTall: 'layl.door-tall.webp',
+    panel: 0.85,
+    veil: [0.55, 0.25, 0.6],
+    empty: 0.14,
+    emptyArt: {
+      'new-orders': 'layl.empty.new-orders.webp',
+      preparation: 'layl.empty.preparation.webp',
+      tracking: 'layl.empty.tracking.webp',
+      matching: 'layl.empty.matching.webp',
+      finance: 'layl.empty.finance.webp',
+      inventory: 'layl.empty.inventory.webp',
+      warehouse: 'layl.empty.warehouse.webp',
+      search: 'layl.empty.search.webp',
+    },
+  },
 };
 
 /** Every file a photographic theme owns, by the name it carries on the disk. */
 export function photographsOf(key: string): string[] {
   const p = PHOTOGRAPHIC[key];
-  return p ? [p.door, p.doorTall, p.strip] : [];
+  if (!p) return [];
+  return [p.door, p.doorTall, ...(p.strip ? [p.strip] : []), ...(p.emptyArt ? Object.values(p.emptyArt) : [])];
 }
 
-function photographic(p: Photographs): string {
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * THE FAMILY OF THE SCREEN AN EMPTY LIST IS ON.
+ *
+ * The empty-list pictures were made for particular screens — each prompt
+ * says where it goes — and this table is those sentences, read as addresses.
+ * Most specific first, because «/finance/matching» is also under «/finance».
+ * Anything not named is «search»: the magnifier was made for «any search that
+ * found nothing», which is what an unnamed empty list most often is.
+ *
+ * It decides a PICTURE and nothing else: no permission, no data, no route.
+ * The shell writes the answer on its main element as `data-empty-family`,
+ * whatever the theme, and only a theme with `emptyArt` has a rule that reads
+ * it. Every prefix is held to a real route by the claim, so a renamed screen
+ * cannot quietly fall back to the magnifier.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export const EMPTY_FAMILIES = [
+  'new-orders',
+  'preparation',
+  'tracking',
+  'matching',
+  'finance',
+  'inventory',
+  'warehouse',
+  'search',
+] as const;
+export type EmptyFamily = (typeof EMPTY_FAMILIES)[number];
+
+/** The attribute the shell writes and the empty-list rules read. */
+export const EMPTY_FAMILY_ATTR = 'data-empty-family';
+
+export const EMPTY_FAMILY_OF_PATH: ReadonlyArray<readonly [string, EmptyFamily]> = [
+  ['/confirmation', 'new-orders'], // E1 — «الطلبات الجديدة» لما ما في ولا طلب بستنى تأكيد
+  ['/orders', 'new-orders'],
+  ['/ops/preparation', 'preparation'], // E2 — «التجهيز» لما كل الطرود جاهزة
+  ['/ops/returns', 'inventory'], // E3 — the empty crate, made for «المرتجعات» and filed under stock
+  ['/ops/tracking', 'tracking'], // E4 — «متابعة الشحن» لما ما في طرد بالطريق
+  ['/ops/batches', 'tracking'],
+  ['/ops/shipments', 'tracking'],
+  ['/finance/matching', 'matching'], // E5 — «المطابقة» و«التحصيل والكشوف»
+  ['/finance/collection', 'matching'],
+  ['/finance', 'finance'], // L3 — مكتب المال: the rest of the money
+  ['/inventory/receiving', 'warehouse'], // L1 — المستودع: goods coming in
+  ['/manufacturing', 'warehouse'],
+  ['/inventory', 'inventory'],
+  ['/products', 'inventory'],
+];
+
+/** The family of the screen at `pathname`; «search» for anything the table does not name. */
+export function emptyFamilyOf(pathname: string | null | undefined): EmptyFamily {
+  if (!pathname) return 'search';
+  for (const [prefix, family] of EMPTY_FAMILY_OF_PATH) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return family;
+  }
+  return 'search';
+}
+
+/**
+ * A theme's own mask, as a corner bled off the top edge of the header above the menu — so the strip
+ * carries a hint of the ornament rather than a small complete copy of it. One string, used by a theme
+ * with a single mask and by a photographic theme that has no strip, so the two cannot drift apart.
+ */
+const SIDEBAR_CORNER = 'no-repeat right -40px top -64px/200px';
+
+function photographic(key: string, p: Photographs): string {
   const D = DECOR_CLASS;
   const url = (file: string) => `url(/brand/decor/${file})`;
   const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -412,13 +551,69 @@ function photographic(p: Photographs): string {
     // that carries the words, and the claims for what it guarantees.
     `.zk-door-column{background:${mix('background', p.panel)};-webkit-backdrop-filter:blur(10px);` +
     `backdrop-filter:blur(10px);border-radius:1.25rem;padding:1rem}` +
-    // ── an empty list: the same picture, faint, faded out at its edges ──
+    (p.emptyArt ? emptyByFamily(p.emptyArt, p.empty, mix, url, fade) : emptyFromTheDoor(p, url, fade)) +
+    (p.strip && p.header ? strip(p.strip, p.header, mix, url) : ownCorner(key))
+  );
+}
+
+/** ── an empty list: the door picture, faint, faded out at its edges (`neon-coast`) ── */
+function emptyFromTheDoor(p: Photographs, url: (f: string) => string, fade: string): string {
+  const D = DECOR_CLASS;
+  return (
     `.${D}-empty{background:${url(p.door)} center 72%/cover no-repeat;opacity:${p.empty};` +
     `-webkit-mask:${fade};mask:${fade}}` +
-    `@media (orientation:portrait){.${D}-empty{background-image:${url(p.doorTall)}}}` +
-    // ── the header of the menu: heaviest veil on the right, where the wordmark is ──
-    `.${D}-sidebar{background:linear-gradient(to left,${mix('sidebar', p.header[0])} 0%,` +
-    `${mix('sidebar', p.header[0])} 55%,${mix('sidebar', p.header[1])} 100%),${url(p.strip)} right center/cover no-repeat}`
+    `@media (orientation:portrait){.${D}-empty{background-image:${url(p.doorTall)}}}`
+  );
+}
+
+/**
+ * ── an empty list: its family's picture, on a pool of the page's own background (`layl`) ──
+ *
+ * One declaration carries the veil, the picture and the pool, so a browser without `color-mix()` drops
+ * all three together and shows the plain wash. The magnifier is the rule every empty list starts from;
+ * a family's rule replaces only the picture, and only that family's picture is ever downloaded.
+ */
+function emptyByFamily(
+  art: Readonly<Record<EmptyFamily, string>>,
+  share: number,
+  mix: (token: string, n: number) => string,
+  url: (f: string) => string,
+  fade: string
+): string {
+  const D = DECOR_CLASS;
+  const veil = mix('background', 1 - share);
+  const layers = (file: string) => `linear-gradient(${veil},${veil}),${url(file)}`;
+  return (
+    `.${D}-empty{background:${layers(art.search)} center/cover no-repeat var(--sys-background);` +
+    `-webkit-mask:${fade};mask:${fade}}` +
+    EMPTY_FAMILIES.filter((f) => f !== 'search')
+      .map((f) => `[${EMPTY_FAMILY_ATTR}=${f}] .${D}-empty{background-image:${layers(art[f])}}`)
+      .join('')
+  );
+}
+
+/** ── the header of the menu: heaviest veil on the right, where the wordmark is (`neon-coast`) ── */
+function strip(
+  file: string,
+  header: readonly [number, number],
+  mix: (token: string, n: number) => string,
+  url: (f: string) => string
+): string {
+  return (
+    `.${DECOR_CLASS}-sidebar{background:linear-gradient(to left,${mix('sidebar', header[0])} 0%,` +
+    `${mix('sidebar', header[0])} 55%,${mix('sidebar', header[1])} 100%),${url(file)} right center/cover no-repeat}`
+  );
+}
+
+/** ── the header of the menu, for a theme with no strip: its own mask's corner, at its measured ink (`layl`) ── */
+function ownCorner(key: string): string {
+  const ink = DECOR_INK[key];
+  if (!ink) return '';
+  const url = `url(/brand/decor/${key}.webp)`;
+  return (
+    `.${DECOR_CLASS}-sidebar::after{content:'';position:absolute;inset:0;` +
+    `background-color:var(--sys-primary);opacity:${ink};` +
+    `-webkit-mask:${url} ${SIDEBAR_CORNER};mask:${url} ${SIDEBAR_CORNER}}`
   );
 }
 
@@ -459,7 +654,7 @@ function composed(key: string, c: Composition): string {
  * mask leaves behind. Hence `background-color` only inside this rule.
  */
 function ornament(key: string): string {
-  if (PHOTOGRAPHIC[key]) return photographic(PHOTOGRAPHIC[key]);
+  if (PHOTOGRAPHIC[key]) return photographic(key, PHOTOGRAPHIC[key]);
   if (COMPOSED[key]) return composed(key, COMPOSED[key]);
   const ink = DECOR_INK[key];
   if (!ink) return '';
@@ -479,8 +674,7 @@ function ornament(key: string): string {
     `.${DECOR_CLASS}-empty::after{-webkit-mask-size:320px;mask-size:320px}` +
     // A corner, bled off the top edge, so the strip above the menu carries
     // a hint of the ornament rather than a small complete copy of it.
-    `.${DECOR_CLASS}-sidebar::after{-webkit-mask:${url} no-repeat right -40px top -64px/200px;` +
-    `mask:${url} no-repeat right -40px top -64px/200px}`
+    `.${DECOR_CLASS}-sidebar::after{-webkit-mask:${url} ${SIDEBAR_CORNER};mask:${url} ${SIDEBAR_CORNER}}`
   );
 }
 

@@ -40,10 +40,14 @@ const DECOR_DIR = join(process.cwd(), 'public', 'brand', 'decor');
 const css = (key: string, level: 'off' | 'light' | 'full' = 'light') =>
   decorCss(themeByKey(key), level, key);
 
-/** The files a theme owns: one mask, or the three drawings of a composed one. */
+/**
+ * The files a theme owns: one mask, or the three drawings of a composed one — or its photographs, and,
+ * for a photographic theme with no strip across the header of the menu («ليل», 23/10/2026), its own
+ * mask as well, because that header keeps wearing it.
+ */
 const filesOf = (key: string): string[] =>
   PHOTOGRAPHIC[key]
-    ? photographsOf(key)
+    ? [...photographsOf(key), ...(PHOTOGRAPHIC[key].strip ? [] : [`${key}.webp`])]
     : COMPOSED[key]
       ? PIECES.map((piece) => `${key}.${piece}.webp`)
       : [`${key}.webp`];
