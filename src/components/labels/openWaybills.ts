@@ -29,7 +29,18 @@ export interface WaybillRequest {
 export interface WaybillOutcome {
   count: number;
   refused: { orderNumber: string; reason: string }[];
+  /**
+   * Whether the waybills reached the person's screen: a tab opened, or the
+   * CSV download started. `false` is a pop-up blocker that refused BOTH the
+   * in-click tab and the fallback — the server has prepared the labels, but
+   * nothing is on the screen, and a screen must not celebrate paper nobody
+   * can see.
+   */
+  opened: boolean;
 }
+
+/** What a screen says when `opened` is false — the one sentence, written once. */
+export const BLOCKED_WAYBILLS = 'المتصفح منع فتح نافذة البوالص. اسمح بالنوافذ المنبثقة لهذا الموقع ثم اضغط الطباعة من جديد.';
 
 export class WaybillError extends Error {
   constructor(message: string, readonly refused: { orderNumber: string; reason: string }[] = []) {
@@ -64,6 +75,7 @@ export async function openWaybills(req: WaybillRequest, mode: 'print' | 'pdf' | 
       throw new WaybillError(data.errorAr || data.error || 'تعذر تجهيز البوالص', data.refused ?? []);
     }
 
+    let opened = true;
     const path: string = mode === 'pdf' ? data.pdfPath : mode === 'csv' ? `${data.printPath}&format=csv` : data.printPath;
 
     if (mode === 'csv') {
@@ -77,11 +89,13 @@ export async function openWaybills(req: WaybillRequest, mode: 'print' | 'pdf' | 
     } else if (tab) {
       tab.location.href = path;
     } else {
-      // The browser refused even the in-click tab; this one it may allow.
-      window.open(path, '_blank');
+      // The browser refused even the in-click tab; this one it may allow —
+      // but it runs after an await, so a blocker usually refuses it too, and
+      // `window.open` answers null when it does.
+      opened = window.open(path, '_blank') !== null;
     }
 
-    return { count: data.count ?? 0, refused: data.refused ?? [] };
+    return { count: data.count ?? 0, refused: data.refused ?? [], opened };
   } catch (e) {
     tab?.close();
     throw e instanceof WaybillError ? e : new WaybillError(e instanceof Error ? e.message : 'تعذر تجهيز البوالص');

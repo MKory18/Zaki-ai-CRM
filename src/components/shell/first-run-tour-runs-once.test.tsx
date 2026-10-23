@@ -62,6 +62,7 @@ function Frame({ withGuide = true }: { withGuide?: boolean }) {
 
 beforeEach(() => {
   patches.length = 0;
+  window.sessionStorage.clear();
   user.current = { id: 'u1', name: 'سامر', tourDoneAt: null };
 });
 
@@ -106,6 +107,49 @@ describe('the tour fires for a person who has not seen it', () => {
   });
 });
 
+describe('«تخطّي» lasts for the browser session, not for the life of one component', () => {
+  it('a skipped tour does not come back when the shell is mounted again (reload, switching store)', () => {
+    const first = render(<Frame />);
+    fireEvent.click(screen.getByText('تخطّي'));
+    first.unmount();
+    render(<Frame />);
+    expect(screen.queryByRole('dialog', { name: 'الجولة الأولى' })).toBeNull();
+    expect(patches).toEqual([]); // still nothing on the row: tomorrow it greets
+  });
+
+  it('— but it is THIS person’s skip: somebody else on the same tab is still greeted', () => {
+    const first = render(<Frame />);
+    fireEvent.click(screen.getByText('تخطّي'));
+    first.unmount();
+    user.current = { id: 'u2', name: 'ليلى', tourDoneAt: null };
+    render(<Frame />);
+    expect(dialog()).toBeTruthy();
+  });
+
+  it('Escape is «تخطّي»: it closes the tour, remembers the skip, and writes nothing', () => {
+    const first = render(<Frame />);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'الجولة الأولى' })).toBeNull();
+    first.unmount();
+    render(<Frame />);
+    expect(screen.queryByRole('dialog', { name: 'الجولة الأولى' })).toBeNull();
+    expect(patches).toEqual([]);
+  });
+
+  it('Escape with «ما بدي أشرح مرة ثانية» ticked is the refusal, like the button', async () => {
+    render(<Frame />);
+    fireEvent.click(screen.getByLabelText('ما بدي أشرح مرة ثانية'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await act(async () => undefined);
+    expect(patches).toEqual(['/api/profile/tour']);
+  });
+
+  it('focus moves into the card, so the keyboard reaches its buttons and not the page behind', () => {
+    render(<Frame />);
+    expect(document.activeElement).toBe(dialog());
+  });
+});
+
 describe('«ما بدي أشرح مرة ثانية»', () => {
   it('checked, a skip writes the dismissal — the person said never', async () => {
     render(<Frame />);
@@ -142,6 +186,41 @@ describe('a step whose element is not on the screen', () => {
     expect(screen.getByText(/خطوة 2 من 2/)).toBeTruthy();
     // and it ends there — no dangling fourth step pointing at nothing
     expect(screen.getByText('خلصت')).toBeTruthy();
+  });
+
+  it('— and one that is in the page but HIDDEN counts as not there (a phone: the sidebar is display:none)', () => {
+    // jsdom has no stylesheet, so «hidden md:flex» is stood in for by the
+    // computed style it produces on a phone. The anchor is found by
+    // querySelector either way; only being SHOWN makes it a step.
+    const Phone = () => (
+      <div>
+        <aside data-tour="sidebar" style={{ display: 'none' }}>القائمة</aside>
+        <div data-tour="context">المتجر</div>
+        <div style={{ display: 'none' }}>
+          <button data-tour="search">ابحث</button>
+        </div>
+        <button data-tour="guide">ⓘ</button>
+        <FirstRunTour />
+      </div>
+    );
+    render(<Phone />);
+    // the sidebar (itself hidden) and the search box (hidden by its PARENT) are dropped
+    expect(screen.getByText(/خطوة 1 من 2/)).toBeTruthy();
+    expect(screen.getByText(/المتجر والبلد/)).toBeTruthy();
+    expect(screen.queryByText(/هذه القائمة/)).toBeNull();
+    fireEvent.click(screen.getByText('التالي'));
+    expect(screen.getByText(/زر «ⓘ»/)).toBeTruthy();
+    expect(screen.queryByText(/يلاقي كل شي/)).toBeNull();
+  });
+
+  it('and a screen where EVERY anchor is hidden gets no overlay at all', () => {
+    render(
+      <div style={{ display: 'none' }}>
+        <aside data-tour="sidebar">القائمة</aside>
+        <FirstRunTour />
+      </div>
+    );
+    expect(screen.queryByRole('dialog', { name: 'الجولة الأولى' })).toBeNull();
   });
 
   it('and a screen with nothing to anchor to gets no overlay at all', () => {

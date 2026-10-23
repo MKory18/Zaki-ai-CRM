@@ -49,6 +49,7 @@ vi.mock('@/components/labels/LabelSize', () => ({ useLabelSize: () => 'thermal',
 vi.mock('@/components/labels/openWaybills', () => ({
   openWaybills: (...a: unknown[]) => openWaybills(...a),
   describeRefused: () => '',
+  BLOCKED_WAYBILLS: 'المتصفح منع النافذة',
   WaybillError: class extends Error {},
 }));
 vi.mock('@/components/orders/CreateOrderModal', () => ({ CreateOrderModal: () => null }));
@@ -107,7 +108,7 @@ const moment = () => document.querySelector('[data-phase]');
 
 describe('«الطلبات» — the printed batch and its moment', () => {
   it('— a clean batch of twelve: the moment, with the count the server returned — and the print unchanged', async () => {
-    openWaybills.mockResolvedValue({ count: 12, refused: [] });
+    openWaybills.mockResolvedValue({ count: 12, refused: [], opened: true });
     await selectAllAndPress('طباعة البوالص');
     expect(openWaybills).toHaveBeenCalledTimes(1);
     expect(openWaybills.mock.calls[0][0].orderIds).toEqual(ROWS.map((r) => r.id));
@@ -117,20 +118,31 @@ describe('«الطلبات» — the printed batch and its moment', () => {
   });
 
   it('— PDF marks nothing printed, so nothing finished: no moment', async () => {
-    openWaybills.mockResolvedValue({ count: 12, refused: [] });
+    openWaybills.mockResolvedValue({ count: 12, refused: [], opened: true });
     await selectAllAndPress('PDF');
     expect(openWaybills.mock.calls[0][1]).toBe('pdf');
     expect(moment()).toBeNull();
   });
 
   it('— a batch with refusals: the refusal dialog is the message, not a celebration', async () => {
-    openWaybills.mockResolvedValue({ count: 11, refused: [{ id: 'o12', orderNumber: 'ORD-26-5011', reason: 'x' }] });
+    openWaybills.mockResolvedValue({ count: 11, refused: [{ id: 'o12', orderNumber: 'ORD-26-5011', reason: 'x' }], opened: true });
     await selectAllAndPress('طباعة البوالص');
     expect(moment()).toBeNull();
   });
 
+  it('— the browser blocked the window the waybills open in: no moment, and the person is told why', async () => {
+    // The server prepared twelve labels, but a pop-up blocker refused both the
+    // in-click tab and the fallback — `opened` is false. «12 طلبًا خلصوا» over a
+    // screen that printed nothing would say the job is done to somebody
+    // holding no paper.
+    openWaybills.mockResolvedValue({ count: 12, refused: [], opened: false });
+    await selectAllAndPress('طباعة البوالص');
+    expect(moment()).toBeNull();
+    expect(screen.getByText('المتصفح منع النافذة')).toBeTruthy();
+  });
+
   it('— a small batch is a click: the moment\'s own floor decides, not the screen', async () => {
-    openWaybills.mockResolvedValue({ count: 3, refused: [] });
+    openWaybills.mockResolvedValue({ count: 3, refused: [], opened: true });
     await selectAllAndPress('طباعة البوالص');
     expect(moment()).toBeNull();
   });

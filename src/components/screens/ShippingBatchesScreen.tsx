@@ -5,7 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
 import { arDateShort } from '@/lib/format';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
-import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
+import { BLOCKED_WAYBILLS, describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
 import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
@@ -206,6 +206,7 @@ export function ShippingBatchesScreen() {
       // The batch by id: its token no longer carries a list of order ids,
       // so a batch past two hundred orders prints like any other.
       const out = await openWaybills({ batchId: batch.id, ...labelSize.dims }, mode);
+      if (!out.opened && mode !== 'csv') setError(BLOCKED_WAYBILLS);
       if (out.refused.length) {
         void tell({
           title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,

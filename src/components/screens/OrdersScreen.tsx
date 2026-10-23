@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/Input';
 import { DateRange } from '@/components/ui/DateRange';
 import { BulkBar } from '@/components/shell/BulkBar';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
-import { describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
+import { BLOCKED_WAYBILLS, describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
 import { ScanButton } from '@/components/scan/ScanButton';
 import { userCan } from '@/lib/can';
@@ -421,11 +421,16 @@ export function OrdersScreen() {
        * when every one of them did. Not for «PDF»: saving a file marks no
        * order printed, so nothing was finished. Not when some were refused:
        * the dialog below is the message then, and a celebration beside a
-       * list of refusals says two opposite things at once.
+       * list of refusals says two opposite things at once. And not when the
+       * browser blocked the window the waybills open in: «12 طلبًا خلصوا»
+       * over a screen that printed nothing says the job is done when the
+       * person is still holding no paper — the message below tells them
+       * to allow pop-ups instead.
        */
-      if (mode === 'print' && out.refused.length === 0) {
+      if (mode === 'print' && out.refused.length === 0 && out.opened) {
         setBatchDone((prev) => ({ serial: (prev?.serial ?? 0) + 1, count: out.count }));
       }
+      if (!out.opened) setError(BLOCKED_WAYBILLS);
       if (out.refused.length) {
         void tell({
           title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
@@ -469,7 +474,14 @@ export function OrdersScreen() {
             description="كل الطلبات بحالتها ومَن يحملها — الحالة والفلتر يقرآن نفس الشيء"
             actions={
               <><div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap gap-y-2">
-            <AdvancedGroup holds="تصدير · استيراد · تحديث · إدخال بالذكاء">
+            {/* «holds» names only what THIS person finds inside: export, import and
+                AI entry are each behind a grant, and a fold that promises
+                «تصدير» to somebody without it opens onto a refresh button. */}
+            <AdvancedGroup
+              holds={[canExport && 'تصدير', canImport && 'استيراد', 'تحديث', canCreate && 'إدخال بالذكاء']
+                .filter(Boolean)
+                .join(' · ')}
+            >
             {canExport && (
             <Button
               variant="outline"
