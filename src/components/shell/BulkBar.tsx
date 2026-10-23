@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { BulkDoneMoment } from '@/components/ui/BulkDoneMoment';
 
 /**
  * WHEN SOMETHING IS SELECTED, THE BOTTOM OF THE PHONE BELONGS TO IT.
@@ -60,7 +61,25 @@ export function useBulkActive(): boolean {
  * selection exists. When it is false this renders nothing at all, so a
  * screen with no selection costs one boolean.
  */
-export function BulkBar({ show, children }: { show: boolean; children: React.ReactNode }) {
+export function BulkBar({
+  show,
+  children,
+  /**
+   * The batch that just finished, if one did.
+   *
+   * The bar owns the moment because the bar is the one thing that is
+   * already on screen for every batch action, on every screen that has
+   * one — a second component per screen would be the same picture with
+   * three different lapses. `serial` is the batch's identity, not a
+   * boolean: a boolean cannot tell a second batch from a re-render, and
+   * would either swallow the second finishing or replay the first.
+   */
+  done,
+}: {
+  show: boolean;
+  children: React.ReactNode;
+  done?: { serial: number; count: number } | null;
+}) {
   const { claim } = useContext(Ctx);
   const bar = useRef<HTMLDivElement>(null);
 
@@ -92,10 +111,18 @@ export function BulkBar({ show, children }: { show: boolean; children: React.Rea
     };
   }, [show]);
 
-  if (!show) return null;
+  /*
+   * The moment is rendered even when the bar is gone — that is exactly the
+   * state a finished batch leaves behind (the selection cleared, so `show`
+   * is false). Early-returning first would have swallowed every completion.
+   */
+  if (!show)
+    return done ? <BulkDoneMoment serial={done.serial} count={done.count} /> : null;
 
   return (
-    <div
+    <>
+      <BulkDoneMoment serial={done?.serial ?? null} count={done?.count ?? null} />
+      <div
       ref={bar}
       className={
         // Phone: the bottom strip, above the home indicator, over the page.
@@ -108,6 +135,7 @@ export function BulkBar({ show, children }: { show: boolean; children: React.Rea
       aria-label="إجراءات على المحدَّد"
     >
       <div className="flex flex-wrap items-center gap-2">{children}</div>
-    </div>
+      </div>
+    </>
   );
 }
