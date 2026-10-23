@@ -186,10 +186,12 @@ export function WalletsScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : wallets.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiWallet3Line className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          لا توجد محافظ بعد — أنشئ واحدة من الزر أعلاه.
-        </p>
+        <EmptyState
+          icon={RiWallet3Line}
+          title="لا محافظ بعد"
+          why="المحفظة هي مكان النقد: رصيدها هو ما في الصندوق. أنشئ واحدة ليُسجَّل عليها الداخل والخارج."
+          action={{ label: 'أنشئ أول محفظة', onClick: () => setCreating(true) }}
+        />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
