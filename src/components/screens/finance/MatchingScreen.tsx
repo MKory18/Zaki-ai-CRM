@@ -8,6 +8,7 @@ import { userCan } from '@/lib/can';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiGitBranchLine, RiLoader4Line } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { NextStepButton } from '@/components/ui/NextStep';
 import { DifferenceActions } from '@/components/screens/finance/DifferenceActions';
 import { DifferencesByPerson } from '@/components/screens/finance/DifferencesByPerson';
 import { useToast } from '@/components/ui/Toast';
@@ -243,6 +244,9 @@ export function MatchingScreen() {
           />
         </div>
       )}
+
+      {/* The money road goes on from here: «الإغلاق». */}
+      <NextStepButton />
     </div>
   );
 }

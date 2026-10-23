@@ -13,6 +13,7 @@ import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { MissionDone, NextStepButton } from '@/components/ui/NextStep';
 
 /**
  * /ops/batches — the handovers to the couriers.
@@ -285,9 +286,7 @@ export function ShippingBatchesScreen() {
       )}
 
       {shown.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا دفعات هنا. تُنشأ الدفعة من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة.
-        </p>
+        <MissionDone why="لا دفعات هنا. تُنشأ الدفعة من شاشة «إنشاء شحنة» عند تسليم الطلبات لشركة." />
       ) : (
         <ul className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg divide-y divide-[var(--sys-border)]">
           {shown.map((b) => {
@@ -465,6 +464,9 @@ export function ShippingBatchesScreen() {
           })}
         </ul>
       )}
+
+      <NextStepButton />
+
     <CreateOrderModal
         isOpen={addingOrder}
         onClose={() => setAddingOrder(false)}

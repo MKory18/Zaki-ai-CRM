@@ -11,6 +11,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleLine, RiLoader4Line, RiPencilLine } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { MissionDone, NextStepButton } from '@/components/ui/NextStep';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -104,13 +105,10 @@ export function PreparationScreen() {
 
       {data.groups.length > 0 && <PickingAssistant />}
 
-      {data.groups.length === 0 && (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          لا توجد طلبات مؤكدة بانتظار التجهيز.
-        </p>
-      )}
-
-      {data.groups.map((g) => (
+      {data.groups.length === 0 ? (
+        <MissionDone why="لا توجد طلبات مؤكدة بانتظار التجهيز." />
+      ) : (
+        data.groups.map((g) => (
         <section key={g.productId} className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           <button
             onClick={() => setOpen((o) => ({ ...o, [g.productId]: !o[g.productId] }))}
@@ -219,7 +217,10 @@ export function PreparationScreen() {
             </div>
           )}
         </section>
-      ))}
+        ))
+      )}
+
+      <NextStepButton />
 
       {openOrderId && (
         <OrderDetailModal

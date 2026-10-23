@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Money } from '@/components/ui/Money';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { useMayOpen } from '@/hooks/useMayOpen';
+import { NextStepButton, MissionDone } from '@/components/ui/NextStep';
 import { printLabelsStep } from '@/lib/next-step';
 
 /**
@@ -65,6 +66,8 @@ export function ShipmentsNewScreen() {
   const [exceptions, setExceptions] = useState<{ orderNumber: string; reasons: string[] }[]>([]);
   /** Looking at what is ready, or at what is being held back. */
   const [view, setView] = useState<'ready' | 'held'>('ready');
+  /** Whether the list is showing fewer than all of it — see the next-step button. */
+  const narrowed = view === 'held' || Object.values(filters).some((v) => v !== '');
   const [holding, setHolding] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -566,14 +569,24 @@ export function ShipmentsNewScreen() {
               </span>
             )}
             empty={
-              <EmptyState
-                icon={RiTruckLine}
-                title="لا طلبات جاهزة للشحن بهذه الفلاتر"
-                why="الطلب يصل هنا بعد تأكيده وتجهيزه. إن كنت تنتظر طلباً، فراجع الفلاتر أعلاه أو شاشةَ التجهيز."
-              />
+              narrowed ? (
+                <EmptyState
+                  icon={RiTruckLine}
+                  title="لا طلبات جاهزة للشحن بهذه الفلاتر"
+                  why="الطلب يصل هنا بعد تأكيده وتجهيزه. إن كنت تنتظر طلباً، فراجع الفلاتر أعلاه أو شاشةَ التجهيز."
+                />
+              ) : (
+                <MissionDone why="لا طلبات جاهزة للشحن الآن: كل ما تأكّد وتجهّز صار دفعةً أو شُحن." />
+              )
             }
           />
         </div>
+
+        {/* The road goes on from here: «دفعات الشحن». Only when this list is
+            not narrowed — a clerk who has filtered down to three rows has not
+            finished the errand, and a «next» button over a filtered list says
+            the opposite. */}
+        {!narrowed && <NextStepButton />}
         </>
       )}
 
