@@ -47,7 +47,7 @@ export const ORIGIN: Record<BatchOrigin, OriginFacts> = {
   RECEIVED: {
     ar: 'استلام بضاعة جاهزة',
     why: 'بضاعة مشتراة جاهزة، دخلت من باب الاستلام. تظهر في هذه القائمة لأن الدفعة هي المكان الوحيد الذي تسكنه الوحدات، ولأن كلفة شرائها تُحفظ معها — لا لأنها صُنعت.',
-    href: '/inventory/receiving',
+    href: '/inventory/balances',
   },
   OPENING: {
     ar: 'رصيد افتتاحي',

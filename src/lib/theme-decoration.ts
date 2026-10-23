@@ -509,7 +509,6 @@ export const EMPTY_FAMILY_OF_PATH: ReadonlyArray<readonly [string, EmptyFamily]>
   ['/finance/matching', 'matching'], // E5 — «المطابقة» و«التحصيل والكشوف»
   ['/finance/collection', 'matching'],
   ['/finance', 'finance'], // L3 — مكتب المال: the rest of the money
-  ['/inventory/receiving', 'warehouse'], // L1 — المستودع: goods coming in
   ['/manufacturing', 'warehouse'],
   ['/inventory', 'inventory'],
   ['/products', 'inventory'],

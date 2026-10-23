@@ -378,7 +378,7 @@ export function ManufacturingScreen() {
               <span>المنتجات</span>
             </Button>
           </Link>
-          <Link href="/inventory/receiving">
+          <Link href="/inventory/balances">
             <Button size="sm" variant="outline" className="flex items-center space-x-1.5">
               <RiInboxArchiveLine className="w-4 h-4" />
               <span>استلام بضاعة جاهزة</span>

@@ -144,6 +144,10 @@ const nextConfig: NextConfig = {
       // The tracking screen's old address, kept alive for bookmarks and for
       // links already pasted into notes and chats.
       { source: '/settings/pixels', destination: '/settings/tracking', permanent: true },
+      // «استلام بضاعة جاهزة» is a button on each balances card now, not a
+      // screen. The old address — and `?product=<id>` on it, which Next carries
+      // across a redirect — keeps landing on the dialog it used to open.
+      { source: '/inventory/receiving', destination: '/inventory/balances', permanent: true },
       // The single-product shop is one card on /store now: its old address
       // moves bookmarks and pasted links along permanently.
       { source: '/store/single-product', destination: '/store', permanent: true },

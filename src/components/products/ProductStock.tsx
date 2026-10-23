@@ -92,9 +92,9 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
             // invented manufacturing costs into the cost reports.
             // AND IT ARRIVES AT THIS PRODUCT, not at a list of a hundred.
             // «كمان تحديث المخزون مش موجود» was this: the door existed and
-            // opened onto a search box. The receiving screen now reads
+            // opened onto a search box. The balances screen now reads
             // `?product=` and opens that product's dialog directly.
-            <Link href={made ? '/manufacturing' : `/inventory/receiving?product=${productId}`}>
+            <Link href={made ? '/manufacturing' : `/inventory/balances?product=${productId}`}>
               <Button size="sm" variant="outline">
                 {made ? <RiBuilding4Line className="h-4 w-4" /> : <RiInboxArchiveLine className="h-4 w-4" />}
                 {made ? 'تشغيلة إنتاج' : 'إضافة مخزون'}

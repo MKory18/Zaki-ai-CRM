@@ -163,7 +163,6 @@ export const NAV: NavGroup[] = [
     routes: [
       r('/inventory/balances', 'أرصدة المخزون', 'Boxes', ['inventory.view']),
       r('/manufacturing', 'تشغيلات الإنتاج', 'Factory', ['production.view']),
-      r('/inventory/receiving', 'استلام بضاعة جاهزة', 'PackagePlus', ['inventory.adjust']),
       r('/inventory/movements', 'حركات المخزون', 'ArrowLeftRight', ['inventory.view']),
     ],
   },

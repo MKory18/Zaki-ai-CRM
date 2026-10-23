@@ -198,10 +198,10 @@ describe('two entries, one root, and nobody guessing which is which', () => {
 });
 
 describe('nothing was moved that a link, a bookmark or a saved layout points at', () => {
-  it('— every one of the 54 screens is still there, once, at its own address — and the front door is the 55th', () => {
+  it('— every one of the 53 screens is still there, once, at its own address — and the front door is the 54th', () => {
     const paths = ALL_ROUTES.map((r) => r.path);
-    expect(paths).toHaveLength(55);
-    expect(new Set(paths).size).toBe(55);
+    expect(paths).toHaveLength(54);
+    expect(new Set(paths).size).toBe(54);
     // The settings stand behind ONE menu line now; not one of them moved.
     for (const path of ['/settings/geo', '/settings/couriers', '/settings/tracking', '/apps/store', '/admin/jobs']) {
       expect(paths, path).toContain(path);

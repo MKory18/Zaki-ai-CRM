@@ -43,6 +43,10 @@ import React from 'react';
 vi.mock('@/context/AppContext', () => ({
   useApp: () => ({ t: { cancel: 'الغاء' }, locale: 'ar' }),
 }));
+// The screen reads `?product=` (the receive dialog's deep link); this test has none.
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
 // The picker is a second question. The screen selects the first product on
 // load, which is precisely the condition the defect needs.
 vi.mock('@/components/ui/ProductPicker', () => ({

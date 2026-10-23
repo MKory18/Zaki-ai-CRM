@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -11,6 +12,8 @@ import { routeLabel } from '@/lib/route-registry';
 import { RiArrowUpDownLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { OpeningStockCountBanner } from '@/components/inventory/OpeningStockCount';
+import { ReceiveDialog } from '@/components/inventory/ReceiveDialog';
+import { userCan } from '@/lib/can';
 import {
   IDLE_WINDOW_DAYS,
   MIN_DELIVERED_LINES,
@@ -61,6 +64,8 @@ interface StockRow {
   remaining: number;
   /** Held for open orders — the server's own figure, not a subtraction. */
   reserved: number;
+  /** The newest costed price, or null when this product has never been costed. */
+  lastUnitCost: number | null;
   health: StockHealth;
 }
 
@@ -90,7 +95,9 @@ function Figure({
 }
 
 export function InventoryBalancesScreen() {
-  const { t } = useApp();
+  const { t, currentUser } = useApp();
+  /** UX only: the door (`POST /api/inventory`) asks `inventory.adjust` itself. */
+  const canReceive = userCan(currentUser, 'inventory.adjust');
   const [stockSummary, setStockSummary] = useState<StockRow[]>([]);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
   const [ledgerDays, setLedgerDays] = useState<number | null>(null);
@@ -124,6 +131,25 @@ export function InventoryBalancesScreen() {
   const [modalLoading, setModalLoading] = useState(false);
   const [countError, setCountError] = useState<string | null>(null);
   const [term, setTerm] = useState('');
+
+  /**
+   * «استلام» — THE RECEIVING DOOR, ON THE CARD.
+   *
+   * It was its own screen (`/inventory/receiving`) with a second list of the
+   * same products. The dialog it opened is `ReceiveDialog`, unchanged; the
+   * only new thing is where it is pressed.
+   *
+   * ARRIVING FROM ONE PRODUCT, AT THAT PRODUCT: `?product=<id>` opens that
+   * product's dialog straight away (the product page's «إضافة مخزون» and the
+   * old `/inventory/receiving?product=` address, which redirects here, both
+   * carry it). DERIVED from the URL and the list rather than set in an effect,
+   * so there is no «have I already done this» flag — a closed dialog is
+   * `dismissed` and stays closed while the parameter is still in the address.
+   */
+  const asked = useSearchParams().get('product');
+  const [receiving, setReceiving] = useState<StockRow | null>(null);
+  const [receivedDismissed, setReceivedDismissed] = useState(false);
+  const [received, setReceived] = useState<string | null>(null);
 
   /** Which alert the reader pressed. One at a time — a screen, not a query builder. */
   const [only, setOnly] = useState<StockState | 'restock' | null>(null);
@@ -210,6 +236,24 @@ export function InventoryBalancesScreen() {
       .sort((a, b) => byUrgency(a.health, b.health));
   }, [stockSummary, term, only]);
 
+  const linked = useMemo(() => {
+    if (receivedDismissed || !asked || !canReceive || stockSummary.length === 0) {
+      return { row: null as StockRow | null, message: null as string | null };
+    }
+    const row = stockSummary.find((s) => s.id === asked) ?? null;
+    if (row?.sourceType === 'PURCHASED') return { row, message: null };
+    // A made product comes in through a production run; opening this dialog for
+    // it would end in the server's WRONG_DOOR after the quantity was typed.
+    return {
+      row: null,
+      message: row
+        ? `«${row.name}» منتج مصنّع — تُضاف كميته من «تشغيلات الإنتاج» ببنود كلفتها، لا من هنا.`
+        : 'لم يُعثر على هذا المنتج في هذا المتجر.',
+    };
+  }, [asked, canReceive, stockSummary, receivedDismissed]);
+  /** The dialog the reader opened, or the one the link asked for. */
+  const receiveFor = receiving ?? linked.row;
+
   const selected = stockSummary.find((s) => s.id === productId);
   const systemQty = selected?.remaining ?? 0;
   /** No arithmetic on a box that says nothing — `null`, not a zero. */
@@ -236,6 +280,17 @@ export function InventoryBalancesScreen() {
             counted. It is not a warning that repeats — the server refuses the
             count after the first movement and this disappears with it. */}
         <OpeningStockCountBanner onCounted={loadData} />
+
+        {received && (
+          <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">
+            {received}
+          </p>
+        )}
+        {linked.message && (
+          <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">
+            {linked.message}
+          </p>
+        )}
 
         {/* THE ALERTS — the owner's «تنبيهات».
             Counted by the server over the whole store, not by this component
@@ -393,6 +448,17 @@ export function InventoryBalancesScreen() {
                     <span className="text-xs text-[var(--sys-muted)]">
                       دخل {s.produced} · خرج {s.sold}
                     </span>
+                    {/* Only a product you BUY ready comes in here; a made one
+                        has «تشغيلة» on its chip and its own door. */}
+                    {canReceive && s.sourceType === 'PURCHASED' && (
+                      <button
+                        type="button"
+                        onClick={() => setReceiving(s)}
+                        className="text-xs font-medium text-[var(--sys-primary)] hover:underline"
+                      >
+                        استلام
+                      </button>
+                    )}
                     {h.bands.length > 0 && (
                       <button
                         type="button"
@@ -442,8 +508,25 @@ export function InventoryBalancesScreen() {
         </p>
       </div>
 
-      {/* Stock count. Adding stock is not possible here — goods enter
-          through production or receiving, where they carry a cost. */}
+      {receiveFor && (
+        <ReceiveDialog
+          product={receiveFor}
+          onClose={() => {
+            setReceiving(null);
+            // A closed dialog stays closed, even with `?product=` still in the address.
+            setReceivedDismissed(true);
+          }}
+          onSaved={async (message) => {
+            setReceiving(null);
+            setReceivedDismissed(true);
+            setReceived(message);
+            loadData();
+          }}
+        />
+      )}
+
+      {/* Stock count. Adding stock is not a count: goods enter through
+          production or «استلام» (above), where they carry a cost. */}
       <Modal
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}

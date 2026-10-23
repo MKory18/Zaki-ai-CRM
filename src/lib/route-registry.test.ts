@@ -35,7 +35,7 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 55 unique routes', () => {
+  it('lists 54 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
@@ -68,9 +68,15 @@ describe('navigation contract', () => {
     // 55 when `/settings` joined — the page of cards that the menu's ONE
     // settings line opens, where twelve entries stood. The other fifty-four
     // are exactly the ones that were here, at the same addresses.
+    //
+    // 54 when «استلام بضاعة جاهزة» (`/inventory/receiving`) became a button on
+    // each product's card on `/inventory/balances`: it read the SAME
+    // `/api/inventory` as the balances and offered a second list of the same
+    // products for one form. The address redirects permanently (and carries
+    // `?product=`), and the dialog is `ReceiveDialog`.
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(55);
-    expect(new Set(paths).size).toBe(55);
+    expect(paths).toHaveLength(54);
+    expect(new Set(paths).size).toBe(54);
   });
 
   it('the store section is its own group, and reads as one', () => {

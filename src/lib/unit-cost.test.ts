@@ -29,7 +29,7 @@ import {
  */
 
 const inventory = () => stripComments(repoFile('src/app/api/inventory/route.ts'));
-const screen = () => stripComments(repoFile('src/components/screens/InventoryReceivingScreen.tsx'));
+const screen = () => stripComments(repoFile('src/components/inventory/ReceiveDialog.tsx'));
 const opening = () => stripComments(repoFile('src/lib/stock-opening-count.ts'));
 
 describe('what a batch enters at', () => {
