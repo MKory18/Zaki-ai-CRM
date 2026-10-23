@@ -205,10 +205,11 @@ export function CollectionScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiFileExcel2Line className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          لا توجد كشوف مستوردة بعد.
-        </p>
+        <EmptyState
+          icon={RiFileExcel2Line}
+          title="لا توجد كشوف مستوردة بعد."
+          why="لم تُستورد أوراق التحصيل بعد. استورد كشف شركة الشحن ليبدأ مطابقة ما حُصّل بما استُحق."
+        />
       ) : (
         <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
           {/* Seven columns of money on a 375px screen. The same

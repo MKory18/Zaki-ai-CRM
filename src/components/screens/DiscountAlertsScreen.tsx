@@ -5,6 +5,7 @@ import { apiJson } from '@/lib/api-client';
 import { Rows } from '@/components/ui/Rows';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiDiscountPercentLine, RiLoader4Line } from '@remixicon/react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { arDate } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
@@ -109,10 +110,11 @@ export function DiscountAlertsScreen() {
           <RiLoader4Line className="w-4 h-4 animate-spin" /> جارٍ التحميل…
         </div>
       ) : data.totals.orders === 0 ? (
-        <p className="text-sm text-[var(--sys-muted-foreground)] bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-          <RiDiscountPercentLine className="w-5 h-5 mx-auto mb-2 text-[var(--sys-muted)]" />
-          لا خصومات في هذه المدة.
-        </p>
+        <EmptyState
+          icon={RiDiscountPercentLine}
+          title="لا خصومات في هذه المدة"
+          why="لا منتج بلغ حدّ التنبيه خلال المدة المختارة. وسّع المدة، أو خفّض الحدّ من إعدادات الخصومات."
+        />
       ) : (
         <>
           <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-4">

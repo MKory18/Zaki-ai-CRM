@@ -410,6 +410,8 @@ export interface SessionUser {
   commissionRate?: number;
   /** Which of the system's looks they chose. Null = the default. */
   systemTheme?: string | null;
+  /** When the one-time first-run tour was dismissed for good. Null = it has not run. */
+  tourDoneAt?: string | null;
   /**
    * The look this person's ROLE opens on — a base, not a choice.
    *

@@ -322,6 +322,8 @@ export function Sidebar({
         Open it slides in — the entrance is the half anybody sees.
       */}
       <aside
+        // The first-run tour anchors its first step here. See FirstRunTour.tsx.
+        data-tour='sidebar'
         className={clsx(
           'fixed top-0 bottom-0 right-0 z-40 flex-col w-[280px] bg-[var(--sys-sidebar)] text-[var(--sys-sidebar-foreground)] md:w-[var(--shell-nav)] md:flex',
           mobileOpen ? 'flex animate-in slide-in-from-right duration-200' : 'hidden'

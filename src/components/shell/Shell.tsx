@@ -14,6 +14,7 @@ import { CommandPalette, useCommandPalette } from './CommandPalette';
 import { BulkProvider } from './BulkBar';
 import { HubTabs } from './HubTabs';
 import { ScreenGuideProvider } from './ScreenGuide';
+import { FirstRunTour } from './FirstRunTour';
 import { StoreCurrencyProvider } from '@/context/StoreCurrency';
 
 /** Frame for every contract screen: fixed RTL sidebar + context header. */
@@ -83,6 +84,11 @@ export function Shell({
       </div>
 
       <MobileNav groups={groups} />
+
+      {/* The first-run walkthrough: once per person, on their row — see
+          FirstRunTour.tsx. Mounted in the shell so it greets the person on
+          whatever screen they land on, and never again once dismissed. */}
+      <FirstRunTour />
 
       {/* What arrived while you were looking at something else. On the
           START corner: the assistant anchors to the END one, and two
