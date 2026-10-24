@@ -42,6 +42,14 @@ vi.mock('@/components/labels/openWaybills', async (importOriginal) => ({
 import { ShipmentsNewScreen } from './ShipmentsNewScreen';
 import { BLOCKED_WAYBILLS, WaybillError } from '@/components/labels/openWaybills';
 
+/**
+ * This screen is drawn, shipped and printed in one test, and the full suite runs hundreds of files in
+ * parallel: Testing Library's one-second default is enough alone and not under that load (the blocked
+ * pop-up claim failed once in a full run and passed three times alone). The claims are unchanged;
+ * only how long each waits for the screen to catch up.
+ */
+const WAIT = { timeout: 8000 };
+
 const PRINTER = { id: 'u1', status: 'ACTIVE', role: 'MANAGER', permissions: ['ops.ship', 'ops.labels'] };
 const SHIPPER = { id: 'u2', status: 'ACTIVE', role: 'MANAGER', permissions: ['ops.ship'] };
 
@@ -66,16 +74,19 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+// the whole test, not just a wait inside it, gets the same room
+vi.setConfig({ testTimeout: 15000 });
+
 /** Ship the one order, ending on the banner. */
 async function ship() {
   render(<ShipmentsNewScreen />);
-  await waitFor(() => expect(screen.queryAllByText(/سامر خليل/).length).toBeGreaterThan(0));
+  await waitFor(() => expect(screen.queryAllByText(/سامر خليل/).length).toBeGreaterThan(0), WAIT);
   fireEvent.change(screen.getByLabelText(/شركة الشحن/), { target: { value: 'p1' } });
   fireEvent.click(document.querySelector('thead input[type="checkbox"]') as HTMLInputElement);
   await act(async () => {
     fireEvent.click(screen.getAllByText(/إنشاء شحنة \(/)[0]);
   });
-  await screen.findByText(/تم إنشاء الدفعة B-26-0001/);
+  await screen.findByText(/تم إنشاء الدفعة B-26-0001/, undefined, WAIT);
 }
 
 describe('the banner', () => {
@@ -108,7 +119,7 @@ describe('the banner', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
     });
-    expect(await screen.findByText(BLOCKED_WAYBILLS)).toBeTruthy();
+    expect(await screen.findByText(BLOCKED_WAYBILLS, undefined, WAIT)).toBeTruthy();
   });
 
   it('what the door refused to print is named', async () => {
@@ -127,7 +138,7 @@ describe('the banner', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
     });
-    expect(await screen.findByText('تعذر تجهيز البوالص')).toBeTruthy();
+    expect(await screen.findByText('تعذر تجهيز البوالص', undefined, WAIT)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'اطبع البوالص' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
