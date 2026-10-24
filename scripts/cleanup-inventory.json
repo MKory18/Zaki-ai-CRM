@@ -78,7 +78,7 @@
   },
   {
     "kind": "page-pair",
-    "location": "/ops/tracking «متابعة الشحن» ↔ /settings/tracking «بكسل التتبع والحملات»",
+    "location": "/ops/tracking «متابعة الشحن» ↔ /settings/tracking «بكسل الإعلانات»",
     "evidence": "src/lib/route-registry.ts:151 · src/lib/route-registry.ts:347",
     "safeAction": "keep",
     "reason": "تشابه في الاسم فقط: الأولى محطة الشحن الرابعة (ops.track)، والثانية إعداد بكسلات التسويق (settings.view). عملان مختلفان — ليس دمجًا."
