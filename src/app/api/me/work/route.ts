@@ -3,7 +3,9 @@ import { db } from '@/lib/db';
 import { ContextError, requireContext } from '@/lib/geo-context';
 import { can } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { awaitingConfirmationCount, waitingCount } from '@/lib/confirmation-queue';
+import { POSTPONE_LEAD_DAYS, awaitingConfirmationCount, waitingCount } from '@/lib/confirmation-queue';
+import { postponedScope } from '@/lib/postponed-list';
+import { whenWhere } from '@/lib/postponed-filters';
 import { kindsFor, type WorkItem, type WorkKey } from '@/lib/my-work';
 
 /**
@@ -78,6 +80,43 @@ export async function GET() {
       counts.CHANGE_REQUESTS = await db.orderChangeRequest.count({
         where: { companyId, status: 'PENDING', order: { storeId } },
       });
+    }
+
+    /** The warehouse's list: the very orders `/api/ops/preparation` groups by product. */
+    if (wanted.has('TO_PREPARE')) {
+      counts.TO_PREPARE = await db.order.count({
+        where: {
+          ...scope,
+          confirmationStatus: 'CONFIRMED',
+          shippingStatus: { in: ['NOT_READY', 'PACKING'] },
+          items: { some: {} },
+        },
+      });
+    }
+
+    // What `/api/confirmation/issues` lists by default (status OPEN), in this store.
+    if (wanted.has('ISSUES_OPEN')) {
+      counts.ISSUES_OPEN = await db.orderIssue.count({ where: { companyId, status: 'OPEN', order: { storeId } } });
+    }
+
+    /**
+     * «القابل للعمل عليه» of the postponed list, to the digit: the same scope and the same
+     * moment (`whenWhere('now')`). A supervisor counts everybody's; an agent only her own —
+     * the list's own rule, so the card and the list cannot disagree.
+     */
+    if (wanted.has('POSTPONED_DUE')) {
+      const supervisor = can(user, 'confirmation.supervise');
+      counts.POSTPONED_DUE = await db.order.count({
+        where: {
+          ...postponedScope({ companyId, storeId, ownOnly: supervisor ? undefined : user.id }),
+          AND: [whenWhere('now', new Date(), POSTPONE_LEAD_DAYS)],
+        },
+      });
+    }
+
+    // Statements not yet approved: approval is what moves the courier's cash, so it is the open decision.
+    if (wanted.has('STATEMENTS_OPEN')) {
+      counts.STATEMENTS_OPEN = await db.courierStatement.count({ where: { companyId, storeId, approvedAt: null, status: { not: 'APPROVED' } } });
     }
 
     /**

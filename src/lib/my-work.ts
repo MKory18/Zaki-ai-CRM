@@ -30,7 +30,11 @@ export type WorkKey =
   | 'READY_TO_SHIP'
   | 'RETURNS_WAITING'
   | 'CHANGE_REQUESTS'
-  | 'LATE_SHIPMENTS';
+  | 'LATE_SHIPMENTS'
+  | 'TO_PREPARE'
+  | 'ISSUES_OPEN'
+  | 'POSTPONED_DUE'
+  | 'STATEMENTS_OPEN';
 
 export interface WorkKind {
   key: WorkKey;
@@ -109,6 +113,22 @@ export const WORK_KINDS: readonly WorkKind[] = [
     rank: 3,
   },
   {
+    /**
+     * Confirmed and not yet on its way — the warehouse's list, by product.
+     * The same orders as «جاهز للشحن» a step EARLIER (it also counts the ones
+     * already being packed), so whoever holds both permissions sees them at
+     * both stages: one is the pick, the other is the dispatch.
+     */
+    key: 'TO_PREPARE',
+    ar: 'طلب للتجهيز',
+    permissions: ['ops.prepare'],
+    href: '/ops/preparation',
+    icon: 'PackageCheck',
+    tone: 'normal',
+    todo: 'مؤكَّدة وما خرجت من المخزن — جهّزها منتجاً منتجاً، وانتبه للنقص قبل الشحن.',
+    rank: 4,
+  },
+  {
     key: 'CONFIRM_POOL',
     ar: 'بانتظار التأكيد',
     permissions: ['confirmation.pull', 'confirmation.supervise'],
@@ -116,7 +136,43 @@ export const WORK_KINDS: readonly WorkKind[] = [
     icon: 'Inbox',
     tone: 'normal',
     todo: 'اسحب منها وابدأ بالاتصال بالزبائن.',
-    rank: 4,
+    rank: 5,
+  },
+  {
+    /** Entry mistakes sent back by the people who confirm — the moderator's data to fix. */
+    key: 'ISSUES_OPEN',
+    ar: 'إشكال مفتوح',
+    permissions: ['confirmation.issues'],
+    href: '/confirmation/issues',
+    icon: 'AlertTriangle',
+    tone: 'normal',
+    todo: 'خطأ بيانات برجّع الطلب من التأكيد — صحّحه أو أبطله ليكمل طريقه.',
+    rank: 6,
+  },
+  {
+    /**
+     * Postponed orders whose day has come (inside the lead window, or past it) — the same
+     * number «القابل للعمل عليه» is on the postponed list. An agent's own; a supervisor's all.
+     */
+    key: 'POSTPONED_DUE',
+    ar: 'مؤجَّل حان موعده',
+    permissions: ['confirmation.work', 'confirmation.supervise'],
+    href: '/confirmation/mine?tab=postponed',
+    icon: 'CalendarClock',
+    tone: 'normal',
+    todo: 'طلب الزبون يتأجل لهالموعد — اتصل به الآن أو أعده للطابور.',
+    rank: 7,
+  },
+  {
+    /** Courier statements that have not been approved — each is cash waiting on a decision. */
+    key: 'STATEMENTS_OPEN',
+    ar: 'كشف لم يُعتمد',
+    permissions: ['settlement.review'],
+    href: '/finance/matching',
+    icon: 'GitCompare',
+    tone: 'normal',
+    todo: 'طابقه وراجع فروقه ثم اعتمده — الكاش ما يدخل المحفظة قبل الاعتماد.',
+    rank: 8,
   },
   {
     /**
@@ -132,7 +188,7 @@ export const WORK_KINDS: readonly WorkKind[] = [
     icon: 'ClipboardList',
     tone: 'normal',
     todo: 'أدخلتها ولم يؤكّدها موظف التأكيد بعد — تتابعها من «الطلبات».',
-    rank: 5,
+    rank: 9,
   },
 ];
 
@@ -155,12 +211,15 @@ export function kindsFor(can: (permission: string) => boolean): WorkKind[] {
   const pulls = allowed.some((k) => k.key === 'CONFIRM_POOL');
   return allowed
     .filter((k) => !(pulls && k.key === 'MY_UNCONFIRMED'))
-    .map((k) =>
+    .map((k) => {
       // The pool is WORKED at the top of «طلباتي» (the pull panel); the
       // supervisor's page is the one that lists it. Whoever supervises opens
       // that; whoever only pulls opens her desk.
-      k.key === 'CONFIRM_POOL' && !can('confirmation.supervise') ? { ...k, href: '/confirmation/mine' } : k
-    );
+      if (k.key === 'CONFIRM_POOL' && !can('confirmation.supervise')) return { ...k, href: '/confirmation/mine' };
+      // The postponed ones are a tab of an agent's desk and half of a supervisor's «المتابعة».
+      if (k.key === 'POSTPONED_DUE' && can('confirmation.supervise')) return { ...k, href: '/confirmation/follow-up' };
+      return k;
+    });
 }
 
 export interface WorkItem {
