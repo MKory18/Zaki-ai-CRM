@@ -39,6 +39,8 @@ vi.mock('@/components/ui/Confirm', () => ({
   useTell: () => vi.fn(),
 }));
 vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
+// «شحن جديد» now asks who is signed in, to offer «اطبع البوالص» only to somebody who may print.
+vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: null }) }));
 vi.mock('@/hooks/useLiveRefresh', () => ({
   useLiveRefresh: (load: () => Promise<void>, opts?: { initial?: boolean }) => {
     React.useEffect(() => {

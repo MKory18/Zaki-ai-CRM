@@ -1,0 +1,141 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+
+/**
+ * «اطبع البوالص» — IN THE BANNER THAT SAYS THE SHIPMENT WAS MADE.
+ *
+ * «تم إنشاء الدفعة X بـ N طلب» ended there and a link took the person to the batches
+ * screen to find the print button. The button is the banner's now: the same call the batches
+ * screen makes (the batch by id, on this device's paper), in the click that opens the sheet.
+ * Printing changes no state — it is the safe half of the handover; «سُلّمت الآن» (which does)
+ * stays on the batches screen, by the owner's choice.
+ */
+
+const { apiJson, openWaybills, tell, user } = vi.hoisted(() => ({
+  apiJson: vi.fn(),
+  openWaybills: vi.fn(),
+  tell: vi.fn(),
+  user: { current: null as unknown },
+}));
+
+vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => apiJson(...a), apiFetch: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/ops/shipments/new', useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ failed: vi.fn(), done: vi.fn() }) }));
+vi.mock('@/components/ui/Confirm', () => ({
+  useConfirm: () => vi.fn(async () => true),
+  useAsk: () => vi.fn(async () => null),
+  useTell: () => tell,
+}));
+vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: user.current }) }));
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
+vi.mock('@/components/shell/ScreenTitle', () => ({ ScreenTitle: () => null }));
+vi.mock('@/components/orders/CustomerHistory', () => ({ CustomerHistoryButton: () => null }));
+vi.mock('@/components/screens/confirmation/ActionDialogs', () => ({ RejectDialog: () => null }));
+vi.mock('@/components/ops/DelayShipmentDialog', () => ({ DelayShipmentDialog: () => null }));
+vi.mock('@/components/labels/openWaybills', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/labels/openWaybills')>()),
+  openWaybills: (...a: unknown[]) => openWaybills(...a),
+}));
+
+import { ShipmentsNewScreen } from './ShipmentsNewScreen';
+import { BLOCKED_WAYBILLS, WaybillError } from '@/components/labels/openWaybills';
+
+const PRINTER = { id: 'u1', status: 'ACTIVE', role: 'MANAGER', permissions: ['ops.ship', 'ops.labels'] };
+const SHIPPER = { id: 'u2', status: 'ACTIVE', role: 'MANAGER', permissions: ['ops.ship'] };
+
+const row = {
+  id: '1', orderNumber: 'ORD-1', merchantRef: 'ORD-1',
+  customer: { id: 'c1', fullName: 'سامر خليل', phone: '0790000000', city: 'عمّان' },
+  previousOrders: 0, region: { id: 'r1', name: 'عمّان' },
+  items: [{ productName: 'منتج', quantity: 1, freeQuantity: 0 }],
+  cod: { subtotal: 20, discount: 0, deliveryFee: 0, cod: 20, currency: 'JOD', feeSource: 'region' },
+  blocks: [], selectable: true, hardBlocked: false, shipHoldUntil: null, standDownBlocked: null, shipHoldReason: null,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  user.current = PRINTER;
+  openWaybills.mockResolvedValue({ count: 1, refused: [], opened: true });
+  apiJson.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') return { batch: { id: 'b-1', batchNumber: 'B-26-0001' }, shipped: 1, exceptions: [] };
+    if (url.includes('/api/ops/shipments')) return { orders: [row], heldCount: 0 };
+    return { providers: [{ id: 'p1', name: 'شركة الشحن أ' }], regions: [{ id: 'r1', name: 'عمّان' }] };
+  });
+});
+afterEach(cleanup);
+
+/** Ship the one order, ending on the banner. */
+async function ship() {
+  render(<ShipmentsNewScreen />);
+  await waitFor(() => expect(screen.queryAllByText(/سامر خليل/).length).toBeGreaterThan(0));
+  fireEvent.change(screen.getByLabelText(/شركة الشحن/), { target: { value: 'p1' } });
+  fireEvent.click(document.querySelector('thead input[type="checkbox"]') as HTMLInputElement);
+  await act(async () => {
+    fireEvent.click(screen.getAllByText(/إنشاء شحنة \(/)[0]);
+  });
+  await screen.findByText(/تم إنشاء الدفعة B-26-0001/);
+}
+
+describe('the banner', () => {
+  it('prints the batch that was just made — by its id, inside the click', async () => {
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
+    });
+    expect(openWaybills).toHaveBeenCalledTimes(1);
+    const [req, mode] = openWaybills.mock.calls[0];
+    expect(req.batchId).toBe('b-1');
+    expect(req.width).toBeGreaterThan(0);
+    expect(mode).toBe('print');
+    expect(screen.queryByText(BLOCKED_WAYBILLS)).toBeNull();
+  });
+
+  it('prints and nothing else — no handover is written from here', async () => {
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
+    });
+    const writes = apiJson.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === 'POST');
+    expect(writes).toHaveLength(1); // the shipment itself, and nothing after it
+    expect(screen.queryByRole('button', { name: /سُلّمت/ })).toBeNull();
+  });
+
+  it('a blocked pop-up is said, not celebrated', async () => {
+    openWaybills.mockResolvedValue({ count: 1, refused: [], opened: false });
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
+    });
+    expect(await screen.findByText(BLOCKED_WAYBILLS)).toBeTruthy();
+  });
+
+  it('what the door refused to print is named', async () => {
+    openWaybills.mockResolvedValue({ count: 1, refused: [{ orderNumber: 'ORD-9', reason: 'بلا شركة شحن' }], opened: true });
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
+    });
+    expect(tell).toHaveBeenCalledTimes(1);
+    expect(tell.mock.calls[0][0].body).toContain('ORD-9 (بلا شركة شحن)');
+  });
+
+  it('a failure to prepare them is an error line, and the button is usable again', async () => {
+    openWaybills.mockRejectedValue(new WaybillError('تعذر تجهيز البوالص'));
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'اطبع البوالص' }));
+    });
+    expect(await screen.findByText('تعذر تجهيز البوالص')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'اطبع البوالص' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('NEGATIVE: somebody who may ship but not print gets the way to the batches, not a button its door refuses', async () => {
+    user.current = SHIPPER;
+    await ship();
+    expect(screen.queryByRole('button', { name: 'اطبع البوالص' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'اطبع البوالص' }).getAttribute('href')).toBe('/ops/batches');
+    expect(openWaybills).not.toHaveBeenCalled();
+  });
+});
