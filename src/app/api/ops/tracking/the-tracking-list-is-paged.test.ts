@@ -145,6 +145,29 @@ describe('what it asks the database', () => {
     expect(lean().where.AND).toEqual([{ shippingStatus: 'RETURNED' }, expect.objectContaining({ OR: expect.any(Array) })]);
   });
 
+  it('and a PRODUCT is its own clause — the orders for that product, in THIS store, ANDed with the state and the search', async () => {
+    await get(`product=${P1}&status=DELIVERED&q=ab`);
+    const and = lean().where.AND as any[];
+    expect(and).toHaveLength(3);
+    expect(and[0]).toEqual({ shippingStatus: 'DELIVERED' });
+    expect(and[1]).toEqual({ productId: P1 });
+    expect(and[2].OR).toBeDefined();
+    // The store is still in the WHERE: another store's product id finds nothing here.
+    expect(lean().where).toMatchObject({ companyId: 'c1', storeId: 's1' });
+  });
+
+  it('NEGATIVE: no product asked for means no product clause; «all» is no choice; a word that is no id is refused and reads nothing', async () => {
+    await get();
+    expect(JSON.stringify(lean().where.AND)).not.toContain('productId');
+    db.order.findMany.mockClear();
+    await get('product=all');
+    expect(JSON.stringify(lean().where.AND)).not.toContain('productId');
+    db.order.findMany.mockClear();
+    const res = await get('product=كريم');
+    expect(res.status).toBe(400);
+    expect(db.order.findMany).not.toHaveBeenCalled();
+  });
+
   it('and only whoever may follow shipments reads it — the permission is asked by name, and a refusal reads nothing', async () => {
     requirePermission.mockRejectedValue(new Error('Forbidden: missing required permission ops.track'));
     expect((await get()).status).toBe(403);
@@ -263,7 +286,7 @@ describe('the numbers it sends with the page', () => {
   it('and it says what was applied, and whether the bound was reached — a list is never silently shorter than it looks', async () => {
     world = [parcel('a')];
     const body = await (await get(`status=RETURNED&courier=${P1}&age=fresh&q=ab`)).json();
-    expect(body.applied).toEqual({ status: 'RETURNED', task: null, courier: P1, region: null, age: 'fresh', q: 'ab' });
+    expect(body.applied).toEqual({ status: 'RETURNED', task: null, courier: P1, region: null, age: 'fresh', product: null, q: 'ab' });
     expect(body.capped).toBe(false);
   });
 

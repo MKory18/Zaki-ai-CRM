@@ -62,6 +62,8 @@ export interface TrackingApplied {
   courier: string | null;
   region: string | null;
   age: Age | null;
+  /** The product the order is for — a question for the database, like the state and the search. */
+  product: string | null;
   q: string | null;
 }
 
@@ -90,7 +92,7 @@ export function trackingFilters(params: URLSearchParams): TrackingFilterResult {
     return raw && raw !== 'all' ? raw : undefined;
   };
 
-  const applied: TrackingApplied = { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, q: null };
+  const applied: TrackingApplied = { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, product: null, q: null };
 
   const status = word('status');
   if (status) {
@@ -122,6 +124,13 @@ export function trackingFilters(params: URLSearchParams): TrackingFilterResult {
   if (age) {
     if (!isAge(age)) return refuse('age', 'مدّة الشحن', age);
     applied.age = age;
+  }
+
+  const product = choice('product');
+  if (product) {
+    // A product is a real id or nothing: «nobody» is not a product, and a word is not an id.
+    if (!UUID.test(product)) return refuse('product', 'المنتج', product);
+    applied.product = product;
   }
 
   const q = params.get('q')?.trim().slice(0, MAX_SEARCH_LENGTH);

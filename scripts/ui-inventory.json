@@ -902,7 +902,7 @@
   "src/components/screens/finance/ManualMatching.tsx": {
     "buttons": 6,
     "inputs": 0,
-    "columns": 9,
+    "columns": 11,
     "cards": 0,
     "modals": 0,
     "icons": 5,

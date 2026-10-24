@@ -6,6 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { apiJson } from '@/lib/api-client';
 import { SHIPPING_STATUS_AR } from '@/lib/shipping-workflow';
+import { useProducts } from '@/hooks/useProducts';
 import { ALERT_AR, type TrackingAlertKind } from '@/lib/tracking-alert';
 import { canCollect } from '@/lib/tracking-priority';
 import type { TrackingListFacts } from '@/lib/tracking-list';
@@ -141,6 +142,20 @@ export function readChoice(chosen: Row[]): { step: Step | null; problem: string 
   return { step, problem: null };
 }
 
+/**
+ * THE STATES A PARCEL CAN BE IN AND STILL BE MATCHED BY HAND — the ones the screen opens on, one by one.
+ * The words come from `SHIPPING_STATUS_AR`; the list is only which of them are worth asking for.
+ */
+const MATCHING_STATUSES = [
+  'SHIPPED',
+  'OUT_FOR_DELIVERY',
+  'READY_FOR_PICKUP',
+  'FAILED_DELIVERY',
+  'RETURN_REQUESTED',
+  'DELIVERED',
+  'PARTIALLY_DELIVERED',
+] as const satisfies readonly (keyof typeof SHIPPING_STATUS_AR)[];
+
 /* The words come from `SHIPPING_STATUS_AR`, like every other screen that says a status. */
 const STATUS_LABEL: Record<string, string> = SHIPPING_STATUS_AR;
 
@@ -168,6 +183,10 @@ export function ManualMatching() {
 
   const [term, setTerm] = useState('');
   const [courier, setCourier] = useState('all');
+  /** `all` — what the screen opens on (open parcels + delivered and still owed); otherwise ONE shipping status. */
+  const [status, setStatus] = useState('all');
+  /** `all`, or one product's id: only the parcels of orders for that product. */
+  const [product, setProduct] = useState('all');
   /** '' — everything open with the courier; `COLLECT` — only what arrived and is still owed. */
   const [view, setView] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -179,12 +198,14 @@ export function ManualMatching() {
 
   const list = usePagedList<Row, Extra>({
     url: '/api/ops/tracking',
-    params: { q: term.trim() || undefined, courier, task: view },
+    params: { q: term.trim() || undefined, courier, task: view, status, product },
     read,
     limit: PAGE,
   });
   const { extra, rows, pagination } = list;
   const facts = extra?.facts;
+  // After the list, so the list's own read is the screen's FIRST: a failure of the first answer is the list's to show.
+  const { products } = useProducts();
 
   const pickable = (o: Row): boolean => {
     const step = stepFor(o);
@@ -222,6 +243,8 @@ export function ManualMatching() {
     setTerm('');
     setCourier('all');
     setView('');
+    setStatus('all');
+    setProduct('all');
     setSelected({});
   };
   const pick = (these: Row[]) => setSelected(Object.fromEntries(these.map((o) => [o.id, true])));
@@ -244,6 +267,26 @@ export function ManualMatching() {
         ]
       : []),
     {
+      key: 'status',
+      label: 'الحالة',
+      value: status,
+      onChange: choose(setStatus),
+      options: [
+        { value: 'all', label: 'كل الحالات المفتوحة' },
+        ...MATCHING_STATUSES.map((s) => ({ value: s, label: SHIPPING_STATUS_AR[s] })),
+      ],
+    },
+    {
+      key: 'product',
+      label: 'المنتج',
+      value: product,
+      onChange: choose(setProduct),
+      options: withChosen(product, [
+        { value: 'all', label: 'كل المنتجات' },
+        ...products.map((p) => ({ value: p.id, label: p.name })),
+      ]),
+    },
+    {
       key: 'view',
       label: 'ما أعرضه',
       value: view,
@@ -254,7 +297,7 @@ export function ManualMatching() {
       ],
     },
   ];
-  const activeCount = [courier !== 'all', view !== '', term.trim() !== ''].filter(Boolean).length;
+  const activeCount = [courier !== 'all', view !== '', status !== 'all', product !== 'all', term.trim() !== ''].filter(Boolean).length;
 
   /**
    * THE OUTCOME, ONE ORDER AT A TIME.

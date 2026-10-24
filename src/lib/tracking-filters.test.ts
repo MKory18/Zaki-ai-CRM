@@ -29,12 +29,12 @@ const REGION = '33333333-3333-4333-8333-333333333333';
 
 describe('nothing chosen', () => {
   it('— is the screen’s own job description: the default state, no chip, no company, no governorate, no age, no word', () => {
-    expect(ask()).toEqual({ ok: true, applied: { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, q: null } });
+    expect(ask()).toEqual({ ok: true, applied: { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, product: null, q: null } });
   });
 
   it('and «all» and blanks are no choice — except in the state, where `all` keeps the meaning it always had', () => {
     for (const q of ['task=all', 'courier=all', 'region=all', 'age=all', 'task=', 'courier=%20', 'q=%20%20']) {
-      expect(ask(q), q).toEqual({ ok: true, applied: { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, q: null } });
+      expect(ask(q), q).toEqual({ ok: true, applied: { status: DEFAULT_STATUS, task: null, courier: null, region: null, age: null, product: null, q: null } });
     }
   });
 });
@@ -68,6 +68,23 @@ describe('the state', () => {
     expect(isStatusChoice(EVERY_STATUS)).toBe(true);
     expect(isStatusChoice('RETURNED')).toBe(true);
     for (const bad of ['all', '', undefined, 7, null, 'returned']) expect(isStatusChoice(bad), String(bad)).toBe(false);
+  });
+});
+
+describe('the product', () => {
+  const PRODUCT = '44444444-4444-4444-8444-444444444444';
+
+  it('— is the id of one product, or no choice: «all» and blanks are none', () => {
+    expect(ask(`product=${PRODUCT}`)).toMatchObject({ ok: true, applied: { product: PRODUCT } });
+    for (const q of ['product=all', 'product=', 'product=%20']) expect(ask(q), q).toMatchObject({ ok: true, applied: { product: null } });
+  });
+
+  it('and what is not an id — a name, «nobody» — is refused in Arabic, saying which', () => {
+    for (const bad of ['كريم', 'none', '123']) {
+      const r = ask(`product=${encodeURIComponent(bad)}`);
+      expect(r.ok, bad).toBe(false);
+      if (!r.ok) expect(r.errorAr).toContain('المنتج');
+    }
   });
 });
 
