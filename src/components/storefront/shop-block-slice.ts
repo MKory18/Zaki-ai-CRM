@@ -82,6 +82,36 @@ export const SHOP_BLOCK_CLASSES = [
   'lp-timeline-when',
 ] as const;
 
+/**
+ * The selectors of a rule's head, split at the commas that SEPARATE them.
+ *
+ * `head.split(',')` also cut at the commas INSIDE a function — `:is(.lp-cta, .lp-btn, .lp-sticky)` — and
+ * rejoined what survived, so a landing rule written `html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) { … }`
+ * reached the shop as `html .lp-root :is(.lp-cta,.lp-btn{ … }`: a selector with its parenthesis never closed.
+ * A browser reads an unclosed `(` as «everything after this is still inside it», so every rule after it —
+ * the whole of the shop's own `.sf-*` sheet, which is appended after the blocks — was thrown away, and the
+ * header, the grid and the cards drew unstyled. Measured on a built page: 62 rules parsed out of a
+ * 31,972-byte sheet.
+ *
+ * A comma separates selectors only at depth zero (outside `()` and `[]`).
+ */
+function splitSelectorList(head: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let k = 0; k < head.length; k++) {
+    const c = head[k];
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth = Math.max(0, depth - 1);
+    else if (c === ',' && depth === 0) {
+      parts.push(head.slice(from, k));
+      from = k + 1;
+    }
+  }
+  parts.push(head.slice(from));
+  return parts;
+}
+
 /** Does this selector name a landing class the shop cannot draw? */
 function selectorIsForeign(selector: string, keep: readonly string[]): boolean {
   const mentioned = selector.match(/\blp-[a-z0-9-]+/g);
@@ -156,8 +186,7 @@ export function shopBlockSlice(css: string, keep: readonly string[] = SHOP_BLOCK
 
     // A plain rule. Its head may list several selectors; keep the ones the
     // shop can reach rather than the whole list or none of it.
-    const kept = head
-      .split(',')
+    const kept = splitSelectorList(head)
       .map((s) => s.trim())
       .filter((s) => s && !selectorIsForeign(s, keep));
     if (kept.length) out.push(`${kept.join(',')}{${body}}`);
