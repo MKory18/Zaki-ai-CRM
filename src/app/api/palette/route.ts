@@ -4,6 +4,7 @@ import { requireContext } from '@/lib/geo-context';
 import { can, getPermissionScope } from '@/lib/authorization';
 import { manageableUsersWhere } from '@/lib/manageable-user';
 import { creatablesFor } from '@/lib/palette-create';
+import { paletteProducts } from '@/lib/palette-products';
 import { paletteCounts, paletteSummary, readsTheWholeStore } from '@/lib/palette-intel';
 import { typed } from '@/lib/text-search';
 import { rateLimit } from '@/lib/rate-limit';
@@ -90,11 +91,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json().catch(() => null)) as { q?: unknown } | null;
     const term = typeof body?.q === 'string' ? body.q.trim().slice(0, 80) : '';
-    if (term.length < 2) return NextResponse.json({ facts: [], people: [] });
-
-    if (!getPermissionScope(user, 'orders.view')) {
-      return NextResponse.json({ facts: [], people: [] });
-    }
+    if (term.length < 2) return NextResponse.json({ facts: [], people: [], products: [] });
 
     const rl = rateLimit(`palette:${companyId}:${user.id}`, 60, 60 * 1000);
     if (!rl.allowed) {
@@ -102,6 +99,17 @@ export async function POST(req: Request) {
         { errorAr: `طلبات كثيرة جداً. أعد المحاولة بعد ${rl.retryAfterSec} ثانية` },
         { status: 429 }
       );
+    }
+
+    /*
+     * PRODUCTS, ON THEIR OWN GRANT. A catalogue keeper with no `orders.view` still finds a product
+     * here — the box is also how they reach their screen. The orders-shaped answers below stay
+     * behind `orders.view`, exactly as they were.
+     */
+    const products = await paletteProducts(user, { companyId, storeId }, term);
+
+    if (!getPermissionScope(user, 'orders.view')) {
+      return NextResponse.json({ facts: [], people: [], products });
     }
 
     /*
@@ -136,6 +144,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       facts: await paletteCounts({ companyId, storeId }, user, term),
       people,
+      products,
     });
   } catch (error) {
     return apiErrorResponse(error);
