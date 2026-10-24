@@ -257,18 +257,18 @@ export function buildBehaviorScript(preview: boolean): string {
   const script = `(function(){'use strict';
 var POS = { 'fixed-bottom':1, 'fixed-top':1, 'floating':1 };
 var RULES = {
-  'bg': [/^#[0-9a-fA-F]{3,8}$|^rgba?\\\\(\\\\s*\\\\d{1,3}\\\\s*,\\\\s*\\\\d{1,3}\\\\s*,\\\\s*\\\\d{1,3}\\\\s*(,\\\\s*(0?\\\\.\\\\d+|1(\\\\.0+)?)\\\\s*)?\\\\)$/, 30, 'background-color'],
-  'color': [/^#[0-9a-fA-F]{3,8}$|^rgba?\\\\(\\\\s*\\\\d{1,3}\\\\s*,\\\\s*\\\\d{1,3}\\\\s*,\\\\s*\\\\d{1,3}\\\\s*(,\\\\s*(0?\\\\.\\\\d+|1(\\\\.0+)?)\\\\s*)?\\\\)$/, 30, 'color'],
-  'font-size': [/^\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%)$/, 20, 'font-size'],
-  'font-weight': [/^\\\\d{2,3}$|^normal$|^bold$/, 10, 'font-weight'],
-  'radius': [/^\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%)$/, 20, 'border-radius'],
-  'width': [/^\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%)$/, 20, 'width'],
-  'padding': [/^\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%)?(?:\\\\s+\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%))?$/, 50, 'padding'],
-  'shadow': [/^[\\\\w\\\\s.,#()\\\\[\\\\]-]+$/, 100, 'box-shadow'],
-  'bottom': [/^\\\\d+(?:\\\\.\\\\d+)?(?:px|rem|em|%)$/, 20, 'bottom'],
-  'z-index': [/^\\\\d{1,6}$/, 6, 'z-index']
+  'bg': [/^#[0-9a-fA-F]{3,8}$|^rgba?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*(0?\\.\\d+|1(\\.0+)?)\\s*)?\\)$/, 30, 'background-color'],
+  'color': [/^#[0-9a-fA-F]{3,8}$|^rgba?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*(0?\\.\\d+|1(\\.0+)?)\\s*)?\\)$/, 30, 'color'],
+  'font-size': [/^\\d+(?:\\.\\d+)?(?:px|rem|em|%)$/, 20, 'font-size'],
+  'font-weight': [/^\\d{2,3}$|^normal$|^bold$/, 10, 'font-weight'],
+  'radius': [/^\\d+(?:\\.\\d+)?(?:px|rem|em|%)$/, 20, 'border-radius'],
+  'width': [/^\\d+(?:\\.\\d+)?(?:px|rem|em|%)$/, 20, 'width'],
+  'padding': [/^\\d+(?:\\.\\d+)?(?:px|rem|em|%)?(?:\\s+\\d+(?:\\.\\d+)?(?:px|rem|em|%))?$/, 50, 'padding'],
+  'shadow': [/^[\\w\\s.,#()\\[\\]-]+$/, 100, 'box-shadow'],
+  'bottom': [/^\\d+(?:\\.\\d+)?(?:px|rem|em|%)$/, 20, 'bottom'],
+  'z-index': [/^\\d{1,6}$/, 6, 'z-index']
 };
-var BAD = /;\\\\s*\\\\{\\\\}|<>|j\\\\s*a\\\\s*v\\\\s*a\\\\s*s\\\\s*c\\\\s*r\\\\s*i\\\\s*p\\\\s*t|e\\\\s*x\\\\s*p\\\\s*r\\\\s*e\\\\s*s\\\\s*s\\\\s*i\\\\s*o\\\\s*n|url\\\\(/i;
+var BAD = /;\\s*\\{\\}|<>|j\\s*a\\s*v\\s*a\\s*s\\s*c\\s*r\\s*i\\s*p\\s*t|e\\s*x\\s*p\\s*r\\s*e\\s*s\\s*s\\s*i\\s*o\\s*n|url\\(/i;
 function sv(name, raw) {
   var r = RULES[name]; if (!r) return null;
   var v = String(raw == null ? '' : raw).trim();
