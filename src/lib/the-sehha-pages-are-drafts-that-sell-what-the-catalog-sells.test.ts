@@ -1,0 +1,189 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PrismaClient } from '@prisma/client';
+import { landingSectionsSchema } from '@/lib/landing-sections';
+import { applyPages, sectionsFor, type PagesDeps } from '../../scripts/sehha/pages';
+import { CATALOG, STORE_NAMES } from '../../scripts/sehha/catalog';
+
+/**
+ * «صفحات الهبوط اعملهم زي هيك» (صفحة YouCan: البوسترات كاملة واحد تحت الثاني، ثم نموذج الطلب، وزر عائم).
+ *
+ * A page here is a DRAFT — never published, never in the shop window — and it carries no price: the order form
+ * reads the product's own offers, so the figures stay where `apply-sehha` wrote them from the posters. The
+ * pictures are the product's own posters (already uploaded), shown whole. Running twice makes nothing twice, and
+ * a taken address is never overwritten.
+ */
+
+const STORE = { id: 'st1', companyId: 'co1', name: 'متجر صحة بلس' };
+
+interface Row { id: string; slug: string; companyId: string; storeId: string; productId: string; isPublished: boolean; sections: string; [k: string]: unknown }
+
+/** The poster rows `apply-sehha` would have left on a product: cover first, then `sehha:<key>:<n>` for each poster. */
+const imagesOf = (productId: string, only?: string[]) =>
+  CATALOG.filter((c) => `prod-${c.sku}` === productId).flatMap((c) => [
+    { url: `/api/media/${productId}/${c.key}-cover.webp`, altText: `sehha:${c.key}:cover` },
+    ...c.posters.map((n) => ({ url: `/api/media/${productId}/${c.key}-${n}.webp`, altText: `sehha:${c.key}:${n}` })),
+  ]).filter((r) => !only || only.includes(r.altText.split(':')[2]));
+
+function fake(opts: { stores?: unknown[]; taken?: Partial<Row>[]; products?: string[]; posterNumbers?: string[] } = {}) {
+  const pages: Row[] = (opts.taken ?? []).map((t, i) => ({
+    id: `p${i}`, slug: 's', companyId: 'co1', storeId: 'st1', productId: 'x', isPublished: false, sections: '[]', ...t,
+  }));
+  const db = {
+    store: { findMany: vi.fn(async () => opts.stores ?? [STORE]) },
+    product: {
+      findFirst: vi.fn(async ({ where }: { where: { sku: string } }) =>
+        (opts.products ?? CATALOG.map((c) => c.sku)).includes(where.sku) ? { id: `prod-${where.sku}` } : null
+      ),
+    },
+    productImage: {
+      findMany: vi.fn(async ({ where }: { where: { productId: string } }) => imagesOf(where.productId, opts.posterNumbers)),
+    },
+    landingPage: {
+      findFirst: vi.fn(async ({ where }: { where: { slug: string } }) => pages.find((p) => p.slug === where.slug) ?? null),
+      create: vi.fn(async ({ data }: { data: Row }) => {
+        pages.push({ ...data, id: `new${pages.length}` });
+        return data;
+      }),
+    },
+  };
+  return { db: db as unknown as PrismaClient, raw: db, pages };
+}
+
+const deps = (db: PrismaClient): PagesDeps => ({ db, standDownRedirectsTo: vi.fn(async () => undefined), log: () => undefined });
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('one page, as built from the posters', () => {
+  const sections = sectionsFor(['/p/1.webp', '/p/2.webp', '/p/4.webp']);
+
+  it('is a page the editor accepts, with the order form and the floating button every selling page has', () => {
+    expect(landingSectionsSchema.safeParse(sections).success).toBe(true);
+    const types = sections.map((s) => s.type);
+    expect(types).toContain('form');
+    expect(types).toContain('sticky');
+  });
+
+  it('opens on the posters — whole and one under another, in the order given', () => {
+    expect(sections[0]).toMatchObject({ type: 'gallery', layout: 'stack', images: ['/p/1.webp', '/p/2.webp', '/p/4.webp'] });
+  });
+
+  it('the form comes straight after the posters', () => {
+    expect(sections[1].type).toBe('form');
+  });
+
+  it('NEGATIVE: carries no price — not one number of the catalog is a word on the page', () => {
+    // Every WORD the page carries (strings, minus ids and the image paths) — a price would be one of them.
+    const words = (v: unknown, key = ''): string[] =>
+      typeof v === 'string' ? (key === 'id' || key === 'images' ? [] : [v])
+      : Array.isArray(v) ? v.flatMap((x) => words(x, key))
+      : v && typeof v === 'object' ? Object.entries(v).flatMap(([k, x]) => words(x, k))
+      : [];
+    const spoken = words(sections).join(' | ');
+    expect(JSON.stringify(sections)).not.toMatch(/"(price|sellingPrice|amount|basePrice)"/);
+    for (const c of CATALOG) for (const t of c.tiers) expect(spoken, `${c.key} ${t.price}`).not.toMatch(new RegExp(`(^|\\D)${t.price}(\\D|$)`));
+    expect(spoken).not.toMatch(/\$|دولار/);
+  });
+
+  it('and the trust block is left empty, so the renderer draws the facts instead of words nobody measured', () => {
+    expect(sections.find((s) => s.type === 'trust')).toMatchObject({ items: [] });
+  });
+});
+
+describe('applying', () => {
+  it('a dry run writes nothing and says what it would build', async () => {
+    const { db, raw } = fake();
+    const d = deps(db);
+    const r = await applyPages(d, { apply: false });
+    expect(raw.landingPage.create).not.toHaveBeenCalled();
+    expect(d.standDownRedirectsTo).not.toHaveBeenCalled();
+    expect(r.pages).toHaveLength(7);
+    expect(r.pages.every((p) => p.actions.length === 1 && p.warnings.length === 0)).toBe(true);
+  });
+
+  it('--apply makes seven pages — DRAFTS, in this store, out of the shop window, tied to their own product', async () => {
+    const { db, pages } = fake();
+    await applyPages(deps(db), { apply: true });
+    expect(pages).toHaveLength(7);
+    for (const p of pages) {
+      expect(p).toMatchObject({ companyId: 'co1', storeId: 'st1', isPublished: false, showInStore: false, builderMode: 'BLOCKS' });
+    }
+    const item = CATALOG.find((c) => c.key === 'albetchu')!;
+    const page = pages.find((p) => p.slug === item.slug)!;
+    expect(page.productId).toBe(`prod-${item.sku}`);
+    expect(landingSectionsSchema.safeParse(JSON.parse(page.sections)).success).toBe(true);
+  });
+
+  it('each page shows ITS product’s posters, in poster order — never the cover, never a held-back poster', async () => {
+    const { db, pages } = fake();
+    await applyPages(deps(db), { apply: true });
+    for (const item of CATALOG) {
+      const page = pages.find((p) => p.slug === item.slug)!;
+      const stack = JSON.parse(page.sections)[0];
+      expect(stack.images, item.key).toEqual(item.posters.map((n) => `/api/media/prod-${item.sku}/${item.key}-${n}.webp`));
+    }
+  });
+
+  it('stands the redirect down for the new address, as the create door does', async () => {
+    const { db } = fake();
+    const d = deps(db);
+    await applyPages(d, { apply: true, only: ['albetchu'] });
+    expect(d.standDownRedirectsTo).toHaveBeenCalledWith('albetchu-scar-cream');
+  });
+
+  it('runs twice and still leaves seven — the second run builds nothing', async () => {
+    const { db, pages } = fake();
+    await applyPages(deps(db), { apply: true });
+    const again = await applyPages(deps(db), { apply: true });
+    expect(pages).toHaveLength(7);
+    expect(again.pages.every((p) => p.actions[0].includes('تُركت كما هي'))).toBe(true);
+  });
+
+  it('a page the owner already published or edited at that address is left untouched', async () => {
+    const item = CATALOG[0];
+    const { db, raw, pages } = fake({
+      taken: [{ slug: item.slug, productId: `prod-${item.sku}`, isPublished: true, sections: '[{"mine":true}]' }],
+    });
+    await applyPages(deps(db), { apply: true, only: ['albetchu'] });
+    expect(raw.landingPage.create).not.toHaveBeenCalled();
+    expect(pages[0].sections).toBe('[{"mine":true}]');
+    expect(pages[0].isPublished).toBe(true);
+  });
+
+  it('NEGATIVE: an address held by another product or store is never overwritten — it is reported', async () => {
+    const item = CATALOG[0];
+    for (const other of [{ productId: 'someone-else' }, { storeId: 'st9' }, { companyId: 'co9' }]) {
+      const { db, raw } = fake({ taken: [{ slug: item.slug, productId: `prod-${item.sku}`, ...other }] });
+      const r = await applyPages(deps(db), { apply: true, only: ['albetchu'] });
+      expect(raw.landingPage.create).not.toHaveBeenCalled();
+      expect(r.pages[0].warnings[0]).toContain('مأخوذ');
+    }
+  });
+
+  it('NEGATIVE: a missing product, or posters apply-sehha has not uploaded, is skipped with the step to take', async () => {
+    const a = fake({ products: [] });
+    const ra = await applyPages(deps(a.db), { apply: true });
+    expect(a.raw.landingPage.create).not.toHaveBeenCalled();
+    expect(ra.pages.every((p) => p.warnings[0].includes('apply-sehha'))).toBe(true);
+
+    // only poster 1 of three is on the product
+    const b = fake({ posterNumbers: ['1'] });
+    const rb = await applyPages(deps(b.db), { apply: true, only: ['albetchu'] });
+    expect(b.raw.landingPage.create).not.toHaveBeenCalled();
+    expect(rb.pages[0].warnings[0]).toContain('ناقصة');
+  });
+
+  it('NEGATIVE: no matching store, or two, stops before anything is written', async () => {
+    for (const stores of [[], [STORE, { ...STORE, id: 'st2', name: 'صحة بلس' }]]) {
+      const { db, raw } = fake({ stores });
+      await expect(applyPages(deps(db), { apply: true })).rejects.toThrow(/بالضبط/);
+      expect(raw.landingPage.create).not.toHaveBeenCalled();
+    }
+    expect(STORE_NAMES).toContain('متجر صحة بلس');
+  });
+
+  it('--only touches just the named products', async () => {
+    const { db, pages } = fake();
+    await applyPages(deps(db), { apply: true, only: ['cap', 'vara'] });
+    expect(pages.map((p) => p.slug).sort()).toEqual(['led-red-light-cap', 'vara-harir-cream']);
+  });
+});

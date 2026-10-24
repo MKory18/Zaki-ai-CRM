@@ -319,6 +319,10 @@ export const BLOCK_CSS = `
   border: 1px solid var(--store-border);
 }
 
+/* A tall poster is the page itself: one under another, whole, never cropped. */
+.lp-gallery[data-layout='stack'] { grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 480px; margin-inline: auto; }
+.lp-gallery[data-layout='stack'] img { height: auto; aspect-ratio: auto; object-fit: contain; border: 0; border-radius: 0; }
+
 /* ── catalog: the shop's own pages and products ──
    ONE COLUMN COUNT IS THE SELLER'S, ONE IS THE PHONE'S. The
    --store-cat-cols variable is their choice for a wide screen; a phone is too

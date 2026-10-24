@@ -1,0 +1,124 @@
+import type { PrismaClient } from '@prisma/client';
+import { landingSectionsSchema, newSection, type LandingSection } from '../../src/lib/landing-sections';
+import { buildTemplate } from '../../src/lib/page-templates';
+import { CATALOG, STORE_NAMES, type Item } from './catalog';
+
+/**
+ * صفحات هبوط «صحة بلس»: صفحة مسودة لكل منتج من المنتجات السبعة (scripts/sehha/catalog.ts)، على نمط صفحات YouCan:
+ * البوسترات كاملة، واحد تحت الثاني، ثم نموذج الطلب، وزر «اطلب الآن» عائم.
+ *
+ * ── ما يضمنه ──
+ *   • مسودة غير منشورة دائماً (`isPublished: false`) وبلا ظهور بالمتجر (`showInStore: false`): ما تنشر ولا تغيّر المتجر.
+ *     يراجعها صاحب المتجر وينشرها بيده من «صفحات الهبوط».
+ *   • تُجرَّب أولاً بلا كتابة (الافتراضي)، وتكتب مع `--apply` فقط. يُعاد تشغيله بأمان: صفحة بنفس الرابط عند نفس المنتج تُترك كما هي
+ *     (لا تُنشأ مرتين ولا تُمسّ إن عدّلها صاحبها). رابط مأخوذ لمنتج آخر أو متجر آخر يتوقف عنده بتحذير.
+ *   • لا يحذف ولا يعدّل صفحة موجودة، ولا يرفع صوراً: البوسترات هي نفسها صور المنتج التي رفعها `apply-sehha`.
+ *   • لا ينسخ أي سعر ولا عرض إلى الصفحة: النموذج يقرأ عروض المنتج مباشرة، فالأسعار تبقى حيث كتبها `apply-sehha` من البوسترات.
+ *   • يعمل على متجر واحد بالاسم، وإن لم يجده أو وجد أكثر من واحد يتوقف.
+ *
+ * البوسترات الداخلة هي `item.posters` فقط (بوسترات «آراء العملاء / نتائج حقيقية» المتروكة لا تدخل).
+ */
+
+export interface PagesDeps {
+  db: PrismaClient;
+  /** A page that takes the address must stand a redirect down, exactly as the create door does. */
+  standDownRedirectsTo: (slug: string) => Promise<unknown>;
+  log: (line: string) => void;
+}
+
+export interface PagesReport {
+  store: string;
+  pages: { key: string; slug: string; actions: string[]; warnings: string[] }[];
+}
+
+/**
+ * The sections of one product page — and not one price in them.
+ * The order form reads the product's own offers at render time.
+ */
+export function sectionsFor(posters: string[]): LandingSection[] {
+  const stack = { ...newSection('gallery'), title: '', images: posters.slice(0, 12), layout: 'stack' };
+  // Trust is left EMPTY on purpose: the renderer then draws the facts (cash on delivery) instead of words nobody measured.
+  const blocks: LandingSection[] = [stack as LandingSection, newSection('form'), newSection('trust'), newSection('footer'), newSection('sticky')];
+  return landingSectionsSchema.parse(blocks);
+}
+
+export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?: string[] }): Promise<PagesReport> {
+  const { db, log } = deps;
+  const stores = await db.store.findMany({ where: { name: { in: STORE_NAMES } }, select: { id: true, companyId: true, name: true } });
+  if (stores.length !== 1) {
+    throw new Error(`وجدت ${stores.length} متجر بالأسماء ${STORE_NAMES.join(' / ')} — لازم واحد بالضبط، توقفت.`);
+  }
+  const { id: storeId, companyId, name: storeName } = stores[0];
+  log(`${opts.apply ? 'تطبيق' : 'تجربة'} على المتجر «${storeName}» — صفحات مسودة غير منشورة`);
+
+  const items: Item[] = opts.only?.length ? CATALOG.filter((i) => opts.only!.includes(i.key)) : CATALOG;
+  const theme = JSON.stringify(buildTemplate('classic').theme);
+  const report: PagesReport = { store: storeName, pages: [] };
+
+  for (const item of items) {
+    const actions: string[] = [];
+    const warnings: string[] = [];
+    const done = () => report.pages.push({ key: item.key, slug: item.slug, actions, warnings });
+
+    const product = await db.product.findFirst({ where: { companyId, storeId, sku: item.sku }, select: { id: true } });
+    if (!product) {
+      warnings.push(`المنتج ${item.sku} غير موجود بالمتجر — شغّل apply-sehha أولاً. تُخطّي.`);
+      done();
+      continue;
+    }
+
+    const holder = await db.landingPage.findFirst({
+      where: { slug: item.slug },
+      select: { id: true, companyId: true, storeId: true, productId: true, isPublished: true },
+    });
+    if (holder) {
+      if (holder.companyId === companyId && holder.storeId === storeId && holder.productId === product.id) {
+        actions.push(`الصفحة /lp/${item.slug} موجودة${holder.isPublished ? ' (منشورة)' : ' (مسودة)'} — تُركت كما هي`);
+      } else {
+        warnings.push(`الرابط /lp/${item.slug} مأخوذ لصفحة غير هذه (منتج أو متجر آخر) — تُخطّي، لم تُمسّ.`);
+      }
+      done();
+      continue;
+    }
+
+    // The posters are the product's own pictures, put there by apply-sehha — found by the marker it wrote, in the poster order.
+    const rows = await db.productImage.findMany({
+      where: { productId: product.id, altText: { startsWith: `sehha:${item.key}:` } },
+      select: { url: true, altText: true },
+    });
+    const posters = item.posters.map((n) => rows.find((r) => r.altText === `sehha:${item.key}:${n}`)?.url).filter((u): u is string => !!u);
+    if (posters.length !== item.posters.length) {
+      warnings.push(`بوسترات «${item.key}» ناقصة بصور المنتج (${posters.length} من ${item.posters.length}) — شغّل apply-sehha --apply أولاً. تُخطّي.`);
+      done();
+      continue;
+    }
+
+    actions.push(`صفحة مسودة «${item.pageName}» على /lp/${item.slug} — ${posters.length} بوستر كاملة ثم نموذج الطلب (عروض المنتج الحيّة)`);
+    if (opts.apply) {
+      await db.landingPage.create({
+        data: {
+          companyId,
+          storeId,
+          name: item.pageName,
+          slug: item.slug,
+          productId: product.id,
+          builderMode: 'BLOCKS',
+          theme,
+          sections: JSON.stringify(sectionsFor(posters)),
+          isPublished: false,
+          showInStore: false,
+        },
+      });
+      await deps.standDownRedirectsTo(item.slug);
+    }
+    done();
+  }
+
+  for (const p of report.pages) {
+    log(`\n▸ ${p.key}`);
+    for (const a of p.actions) log(`   ${opts.apply ? '✔' : '·'} ${a}`);
+    for (const w of p.warnings) log(`   ⚠ ${w}`);
+  }
+  log(opts.apply ? '\nانتهى. كل الصفحات مسودة غير منشورة — راجعها وانشرها من «صفحات الهبوط».' : '\nتجربة بلا كتابة. للتطبيق: أضف --apply');
+  return report;
+}
