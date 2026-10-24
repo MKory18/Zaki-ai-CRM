@@ -5,14 +5,15 @@ import { CATALOG, STORE_NAMES, type Item } from './catalog';
 
 /**
  * صفحات هبوط «صحة بلس»: صفحة مسودة لكل منتج من المنتجات السبعة (scripts/sehha/catalog.ts)، على نمط صفحات YouCan:
- * البوسترات كاملة، واحد تحت الثاني، ثم نموذج الطلب، وزر «اطلب الآن» عائم.
+ * البوسترات كاملة، واحد تحت الثاني، ثم نموذج الطلب («مضغوط» + اختيار الكمية كقائمة راديو)، وزر «اطلب الآن» عائم.
  *
  * ── ما يضمنه ──
  *   • مسودة غير منشورة دائماً (`isPublished: false`) وبلا ظهور بالمتجر (`showInStore: false`): ما تنشر ولا تغيّر المتجر.
  *     يراجعها صاحب المتجر وينشرها بيده من «صفحات الهبوط».
  *   • تُجرَّب أولاً بلا كتابة (الافتراضي)، وتكتب مع `--apply` فقط. يُعاد تشغيله بأمان: صفحة بنفس الرابط عند نفس المنتج تُترك كما هي
  *     (لا تُنشأ مرتين ولا تُمسّ إن عدّلها صاحبها). رابط مأخوذ لمنتج آخر أو متجر آخر يتوقف عنده بتحذير.
- *   • لا يحذف ولا يعدّل صفحة موجودة، ولا يرفع صوراً: البوسترات هي نفسها صور المنتج التي رفعها `apply-sehha`.
+ *   • لا يحذف ولا يعدّل صفحة موجودة — إلا مع `--restyle`: يضبط شكل النموذج (مضغوط + قائمة راديو) على **مسودة** من صفحاته لم يُختر
+ *     فيها شكل بعد، ولا يمسّ أي شيء آخر فيها، ولا يمسّ صفحة منشورة. ولا يرفع صوراً: البوسترات هي نفسها صور المنتج التي رفعها `apply-sehha`.
  *   • لا ينسخ أي سعر ولا عرض إلى الصفحة: النموذج يقرأ عروض المنتج مباشرة، فالأسعار تبقى حيث كتبها `apply-sehha` من البوسترات.
  *   • يعمل على متجر واحد بالاسم، وإن لم يجده أو وجد أكثر من واحد يتوقف.
  *
@@ -38,11 +39,39 @@ export interface PagesReport {
 export function sectionsFor(posters: string[]): LandingSection[] {
   const stack = { ...newSection('gallery'), title: '', images: posters.slice(0, 12), layout: 'stack' };
   // Trust is left EMPTY on purpose: the renderer then draws the facts (cash on delivery) instead of words nobody measured.
-  const blocks: LandingSection[] = [stack as LandingSection, newSection('form'), newSection('trust'), newSection('footer'), newSection('sticky')];
+  const form = { ...newSection('form'), ...YOUCAN_FORM };
+  const blocks: LandingSection[] = [stack as LandingSection, form as LandingSection, newSection('trust'), newSection('footer'), newSection('sticky')];
   return landingSectionsSchema.parse(blocks);
 }
 
-export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?: string[] }): Promise<PagesReport> {
+/** The form the way a YouCan order form reads: a plain column, and the bundles as a radio list. */
+export const YOUCAN_FORM = { formStyle: 'compact', offerStyle: 'radio' } as const;
+
+/**
+ * The saved sections with the YouCan form look put on every form block that has not had a look chosen yet.
+ * Returns null when there is nothing to change — so a page the owner already styled is never touched.
+ */
+export function restyled(sectionsJson: string | null): string | null {
+  if (!sectionsJson) return null;
+  let list: unknown;
+  try {
+    list = JSON.parse(sectionsJson);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(list)) return null;
+  let changed = false;
+  const next = list.map((s) => {
+    if (s && typeof s === 'object' && (s as { type?: string }).type === 'form' && !('formStyle' in s) && !('offerStyle' in s)) {
+      changed = true;
+      return { ...s, ...YOUCAN_FORM };
+    }
+    return s;
+  });
+  return changed ? JSON.stringify(next) : null;
+}
+
+export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?: string[]; restyle?: boolean }): Promise<PagesReport> {
   const { db, log } = deps;
   const stores = await db.store.findMany({ where: { name: { in: STORE_NAMES } }, select: { id: true, companyId: true, name: true } });
   if (stores.length !== 1) {
@@ -69,11 +98,20 @@ export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?:
 
     const holder = await db.landingPage.findFirst({
       where: { slug: item.slug },
-      select: { id: true, companyId: true, storeId: true, productId: true, isPublished: true },
+      select: { id: true, companyId: true, storeId: true, productId: true, isPublished: true, sections: true },
     });
     if (holder) {
       if (holder.companyId === companyId && holder.storeId === storeId && holder.productId === product.id) {
-        actions.push(`الصفحة /lp/${item.slug} موجودة${holder.isPublished ? ' (منشورة)' : ' (مسودة)'} — تُركت كما هي`);
+        const next = opts.restyle && !holder.isPublished ? restyled(holder.sections) : null;
+        if (next) {
+          actions.push(`الصفحة /lp/${item.slug} (مسودة): شكل النموذج ← مضغوط + قائمة اختيار الكمية`);
+          if (opts.apply) {
+            // `isPublished: false` in the WHERE: a page published a moment ago is never touched.
+            await db.landingPage.updateMany({ where: { id: holder.id, isPublished: false }, data: { sections: next } });
+          }
+        } else {
+          actions.push(`الصفحة /lp/${item.slug} موجودة${holder.isPublished ? ' (منشورة)' : ' (مسودة)'} — تُركت كما هي`);
+        }
       } else {
         warnings.push(`الرابط /lp/${item.slug} مأخوذ لصفحة غير هذه (منتج أو متجر آخر) — تُخطّي، لم تُمسّ.`);
       }

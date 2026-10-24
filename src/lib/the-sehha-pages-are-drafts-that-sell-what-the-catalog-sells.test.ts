@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import { landingSectionsSchema } from '@/lib/landing-sections';
-import { applyPages, sectionsFor, type PagesDeps } from '../../scripts/sehha/pages';
+import { applyPages, restyled, sectionsFor, type PagesDeps } from '../../scripts/sehha/pages';
 import { CATALOG, STORE_NAMES } from '../../scripts/sehha/catalog';
 
 /**
@@ -69,6 +69,10 @@ describe('one page, as built from the posters', () => {
 
   it('the form comes straight after the posters', () => {
     expect(sections[1].type).toBe('form');
+  });
+
+  it('the form reads like a YouCan form: compact, with the bundles as a radio list', () => {
+    expect(sections[1]).toMatchObject({ formStyle: 'compact', offerStyle: 'radio' });
   });
 
   it('NEGATIVE: carries no price — not one number of the catalog is a word on the page', () => {
@@ -185,5 +189,79 @@ describe('applying', () => {
     const { db, pages } = fake();
     await applyPages(deps(db), { apply: true, only: ['cap', 'vara'] });
     expect(pages.map((p) => p.slug).sort()).toEqual(['led-red-light-cap', 'vara-harir-cream']);
+  });
+});
+
+describe('--restyle — the form look on the drafts that already exist', () => {
+  /** A draft as the first run saved it: the form block has no look chosen. */
+  const oldSections = JSON.stringify([
+    { id: 'g', type: 'gallery', images: ['/a'], layout: 'stack' },
+    { id: 'f', type: 'form', title: 'أكمل الطلب', subtitle: '' },
+  ]);
+  const item = CATALOG[0];
+  const draft = (over: Partial<Row> = {}) => ({ slug: item.slug, productId: `prod-${item.sku}`, isPublished: false, sections: oldSections, ...over });
+
+  it('puts the compact form and the radio list on a draft whose form had no look chosen — and touches nothing else', async () => {
+    const f = fake({ taken: [draft()] });
+    (f.raw.landingPage as unknown as Record<string, unknown>).updateMany = vi.fn(async ({ data }: { data: { sections: string } }) => {
+      f.pages[0].sections = data.sections;
+      return { count: 1 };
+    });
+    await applyPages(deps(f.db), { apply: true, only: ['albetchu'], restyle: true });
+    const saved = JSON.parse(f.pages[0].sections);
+    expect(saved[1]).toMatchObject({ id: 'f', type: 'form', title: 'أكمل الطلب', formStyle: 'compact', offerStyle: 'radio' });
+    expect(saved[0]).toEqual(JSON.parse(oldSections)[0]);
+    expect(f.raw.landingPage.create).not.toHaveBeenCalled();
+  });
+
+  it('a dry run says it would, and writes nothing', async () => {
+    const f = fake({ taken: [draft()] });
+    const update = vi.fn();
+    (f.raw.landingPage as unknown as Record<string, unknown>).updateMany = update;
+    const r = await applyPages(deps(f.db), { apply: false, only: ['albetchu'], restyle: true });
+    expect(update).not.toHaveBeenCalled();
+    expect(r.pages[0].actions[0]).toContain('شكل النموذج');
+  });
+
+  it('without --restyle an existing page is left exactly as it is', async () => {
+    const f = fake({ taken: [draft()] });
+    const update = vi.fn();
+    (f.raw.landingPage as unknown as Record<string, unknown>).updateMany = update;
+    await applyPages(deps(f.db), { apply: true, only: ['albetchu'] });
+    expect(update).not.toHaveBeenCalled();
+    expect(f.pages[0].sections).toBe(oldSections);
+  });
+
+  it('NEGATIVE: a published page is never restyled', async () => {
+    const f = fake({ taken: [draft({ isPublished: true })] });
+    const update = vi.fn();
+    (f.raw.landingPage as unknown as Record<string, unknown>).updateMany = update;
+    await applyPages(deps(f.db), { apply: true, only: ['albetchu'], restyle: true });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: a form the owner already styled (any look chosen) is left alone', () => {
+    const styled = JSON.stringify([{ id: 'f', type: 'form', formStyle: 'card', offerStyle: 'cards' }]);
+    expect(restyled(styled)).toBeNull();
+    expect(restyled(JSON.stringify([{ id: 'f', type: 'form', offerStyle: 'cards' }]))).toBeNull();
+  });
+
+  it('NEGATIVE: unreadable or empty sections change nothing', () => {
+    expect(restyled(null)).toBeNull();
+    expect(restyled('not json')).toBeNull();
+    expect(restyled('{"a":1}')).toBeNull();
+  });
+
+  it('NEGATIVE: the update repeats the guard — a page published a moment ago is not overwritten', async () => {
+    const f = fake({ taken: [draft()] });
+    const update = vi.fn(async (_a: { where: Record<string, unknown> }) => ({ count: 0 }));
+    (f.raw.landingPage as unknown as Record<string, unknown>).updateMany = update;
+    await applyPages(deps(f.db), { apply: true, only: ['albetchu'], restyle: true });
+    expect(update.mock.calls[0][0].where).toMatchObject({ isPublished: false });
+  });
+
+  it('running it again changes nothing — the look is on the page now', () => {
+    const once = restyled(oldSections)!;
+    expect(restyled(once)).toBeNull();
   });
 });

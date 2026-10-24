@@ -2,6 +2,7 @@
  * npx tsx scripts/apply-sehha-pages.ts                 ← تجربة، لا تكتب شيئاً
  * npx tsx scripts/apply-sehha-pages.ts --apply         ← إنشاء الصفحات كمسودات غير منشورة
  * npx tsx scripts/apply-sehha-pages.ts --apply --only=cap,vara
+ * npx tsx scripts/apply-sehha-pages.ts --apply --restyle     ← يضبط شكل النموذج على المسودات القائمة (مضغوط + قائمة راديو)
  *
  * يُشغَّل بعد apply-sehha (الأسعار والعروض والصور). من جذر التطبيق، وبـ DATABASE_URL المعتاد.
  */
@@ -14,7 +15,7 @@ async function main() {
   const only = args.find((a) => a.startsWith('--only='))?.slice('--only='.length).split(',').filter(Boolean);
   const report = await applyPages(
     { db, standDownRedirectsTo, log: (l) => console.log(l) },
-    { apply: args.includes('--apply'), only }
+    { apply: args.includes('--apply'), only, restyle: args.includes('--restyle') }
   );
   const warned = report.pages.some((p) => p.warnings.length > 0);
   await db.$disconnect();

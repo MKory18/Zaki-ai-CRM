@@ -281,6 +281,9 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   // has a thank-you block, ours when it does not.
   const thanks = sections.find((s) => s.type === 'thankyou' && s.enabled);
   const thankYou = thanks && thanks.type === 'thankyou' ? { title: thanks.title, message: thanks.message } : undefined;
+  // The look of the order form is the form block's choice.
+  const formBlock = sections.find((s) => s.type === 'form' && s.enabled);
+  const formChoices = formBlock && formBlock.type === 'form' ? formBlock : undefined;
 
   const orderForm = (
     <LandingFormBridge
@@ -301,6 +304,8 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
         // on the thank-you screen. A shop with none gets no button.
         whatsapp={lp.store?.supportPhone ?? null}
         showOfferPicker={!pageHasOffersBlock}
+        formStyle={formChoices?.formStyle}
+        offerStyle={formChoices?.offerStyle}
         thankYou={thankYou}
       />
     </LandingFormBridge>
