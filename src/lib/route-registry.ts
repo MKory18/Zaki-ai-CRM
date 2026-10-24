@@ -58,6 +58,21 @@ export interface RouteDef {
    * follow all of that around; a number that belongs to the screen does not.
    */
   step?: number;
+  /**
+   * THIS SCREEN IS THE DETAIL OF ANOTHER — SO IT IS NOT A MENU LINE FOR WHOEVER CAN OPEN THAT ONE.
+   *
+   * `foldedUnder` names the screen it is the detail of (`/dashboard` for the
+   * performance board). `menuNav` leaves the route out of the menu — the
+   * sidebar, the pills, the phone bar, the palette — for a person who may open
+   * that screen, because the screen carries a link to this one. A person who
+   * may NOT open it keeps this route as a line: folding is for the menu, never
+   * for access, and nobody loses a screen by it.
+   *
+   * It is a statement about the MENU only. The route stays in the registry with
+   * its path, permissions, guide and title; `visibleNav`, the page guard and
+   * every notification link still read it as before.
+   */
+  foldedUnder?: string;
 }
 
 /**
@@ -218,7 +233,9 @@ export const NAV: NavGroup[] = [
     icon: 'Gauge',
     hub: 'tabs',
     routes: [
-      r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']),
+      // The DETAIL of the dashboard (owner, 24/10): a link there («التفاصيل»), not a second
+      // menu line, for whoever can open the dashboard. Whoever cannot keeps it as a line.
+      { ...r('/growth/performance', 'لوحة الأداء', 'Gauge', ['reports.view', 'analytics.view']), foldedUnder: '/dashboard' },
       r('/growth/campaigns', 'الحملات', 'Megaphone', ['reports.view']),
 
       /**
@@ -424,6 +441,28 @@ export function visibleNav(user: SessionUser, can: PermissionCheck): NavGroup[] 
   return NAV.map((g) => ({ ...g, routes: g.routes.filter((route) => canAccessRoute(user, route, can)) })).filter(
     (g) => g.routes.length > 0
   );
+}
+
+/**
+ * THE MENU: `visibleNav` minus what folds under a screen this person can open.
+ *
+ * `visibleNav` answers «what may this person open» — the arrangement API, the
+ * guard and the landing page ask THAT. The shell's menu asks this: a route marked
+ * `foldedUnder` is not a line for somebody who can open the screen it is the detail
+ * of, because that screen links to it. Someone who cannot open that screen keeps
+ * the route as a line, so folding never takes a screen away.
+ */
+export function menuNav(user: SessionUser, can: PermissionCheck): NavGroup[] {
+  return visibleNav(user, can)
+    .map((g) => ({
+      ...g,
+      routes: g.routes.filter((route) => {
+        if (!route.foldedUnder) return true;
+        const parent = findRoute(route.foldedUnder);
+        return !(parent && canAccessRoute(user, parent, can));
+      }),
+    }))
+    .filter((g) => g.routes.length > 0);
 }
 
 /**
