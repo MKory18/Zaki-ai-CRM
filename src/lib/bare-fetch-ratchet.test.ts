@@ -89,7 +89,6 @@ const DEBT = new Map<string, number>([
   ['src/components/ai/AiDock.tsx', 1],
   ['src/components/labels/openWaybills.ts', 1],
   ['src/components/screens/ai/AssistantsTable.tsx', 1],
-  ['src/components/screens/AuditScreen.tsx', 1],
   ['src/components/screens/LandingPageDetailScreen.tsx', 1],
   ['src/components/screens/LandingPageEditorScreen.tsx', 1],
   ['src/components/screens/PerformanceScreen.tsx', 1],

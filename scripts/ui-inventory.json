@@ -642,11 +642,11 @@
   "src/components/screens/AuditScreen.tsx": {
     "buttons": 0,
     "inputs": 0,
-    "columns": 6,
+    "columns": 8,
     "cards": 1,
     "modals": 0,
     "icons": 0,
-    "links": 0,
+    "links": 1,
     "tabs": 0
   },
   "src/components/screens/BenchScreen.tsx": {
