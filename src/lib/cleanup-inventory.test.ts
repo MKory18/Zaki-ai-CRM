@@ -90,12 +90,24 @@ describe('scripts/cleanup-inventory.json — the clean-up says what it did and p
     }
   });
 
-  it('never merges a money screen, and keeps the deletion candidate on disk until the owner says delete', () => {
+  it('never merges a money screen', () => {
     for (const e of entries) {
       if (e.evidence.includes('/finance/')) expect(e.safeAction, `${e.location}: شاشة مال انعرضت للدمج`).not.toBe('merge');
     }
-    const old = entries.find((e) => e.location === 'scripts/analytics-old.ts');
-    expect(old?.safeAction).toBe('keep');
-    expect(existsSync(join(ROOT, 'scripts/analytics-old.ts')), 'انحذف قبل كلمة المالك').toBe(true);
+  });
+
+  /**
+   * THE ONE DELETION THE OWNER SAID YES TO (24/10).
+   *
+   * `analytics-old.ts` and `analytics-parity.ts` were a temporary old-vs-new comparison, referenced by
+   * nothing but each other. A deletion waits for the owner's word, and this is the word: they are gone,
+   * nothing in the repository points at them, and the inventory no longer lists a candidate that is not there.
+   */
+  it('has deleted the two comparison scripts the owner said to delete — and left nothing pointing at them', () => {
+    for (const gone of ['scripts/analytics-old.ts', 'scripts/analytics-parity.ts']) {
+      expect(existsSync(join(ROOT, gone)), `${gone} رجع`).toBe(false);
+      expect(entries.find((e) => e.location === gone), `${gone} لسا بالجرد`).toBeUndefined();
+      expect(entries.some((e) => e.evidence.includes(gone)), `دليل بيشير لـ${gone}`).toBe(false);
+    }
   });
 });

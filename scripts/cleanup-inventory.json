@@ -201,12 +201,5 @@
     "evidence": "src/components/orders/ShippingSection.tsx:25",
     "safeAction": "keep",
     "reason": "يستورده ShippingSection — حيّ، ليس كودًا ميتًا."
-  },
-  {
-    "kind": "script",
-    "location": "scripts/analytics-old.ts",
-    "evidence": "scripts/analytics-parity.ts:15",
-    "safeAction": "keep",
-    "reason": "مرشّح حذف: مرجعه الوحيد scripts/analytics-parity.ts (اختبار تكافؤ مؤقت بين القديم والجديد). لا حذف الآن — الحذف بند مستقل بكلمة المالك، ومعه analytics-parity.ts نفسه."
   }
 ]
