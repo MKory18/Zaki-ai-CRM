@@ -49,6 +49,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/dashboard/DetailsLinks.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 2,
+    "tabs": 0
+  },
   "src/components/dashboard/LossPanel.tsx": {
     "buttons": 0,
     "inputs": 0,

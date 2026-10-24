@@ -5,7 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { AiDock } from '@/components/ai/AiDock';
 import { can } from '@/lib/authorization';
 import { requireShellContext } from '@/lib/page-guard';
-import { visibleNav } from '@/lib/route-registry';
+import { menuNav, visibleNav } from '@/lib/route-registry';
 import { applyArrangement } from '@/lib/nav-arrangement';
 import { readArrangement } from '@/lib/nav-arrangement-store';
 import { listAccessibleCountries, listAccessibleStores } from '@/lib/geo-context';
@@ -38,7 +38,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
 
   return (
     <Shell
-      groups={applyArrangement(visibleNav(user, can), nav?.resolved ?? null)}
+      groups={applyArrangement(menuNav(user, can), nav?.resolved ?? null)}
       userName={user.name}
       userRole={user.role}
       viewer={{ name: user.name, id: user.id }}

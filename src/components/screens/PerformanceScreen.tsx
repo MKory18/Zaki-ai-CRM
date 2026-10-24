@@ -18,6 +18,7 @@ import { SkeletonRows } from '@/components/ui/Skeleton';
 import { Rows } from '@/components/ui/Rows';
 import { healthOf } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
+import { BackToDashboardLink } from '@/components/dashboard/DetailsLinks';
 import type { CourierScore } from '@/lib/courier-score';
 import { rowCostStated, type Trust } from '@/lib/cod-vitals';
 
@@ -234,6 +235,7 @@ export function PerformanceScreen() {
             description="ربح كل منتج، وترتيب المنتجات، وأداء الفريق — للمدة المختارة"
             actions={
               <><div className="flex items-center gap-2 flex-wrap gap-y-2">
+            <BackToDashboardLink />
             <div className="w-56">
               <DateRange value={range} onChange={setRange} label="كل المدة" />
             </div>

@@ -14,6 +14,7 @@ import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, Ri
 import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { DetailsLink } from '@/components/dashboard/DetailsLinks';
 import { LossPanel } from '@/components/dashboard/LossPanel';
 import { WorkToday } from '@/components/dashboard/WorkToday';
 import { healthOf, type Health } from '@/lib/health';
@@ -323,6 +324,9 @@ export function DashboardScreen() {
                 </button>
               ))}
             </div>
+
+            {/* The performance board is the DETAIL of this screen (see `DetailsLinks`). */}
+            <DetailsLink />
 
             <Button
               variant="outline"
