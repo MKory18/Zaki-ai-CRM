@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiRobot2Line, RiSendPlaneLine, RiSubtractLine } from '@remixicon/react';
 import { useBulkActive } from '@/components/shell/BulkBar';
 import { arTime } from '@/lib/format';
@@ -208,6 +209,14 @@ function AiDockSurface() {
           <RiRobot2Line className="h-4 w-4" /> المساعد الذكي
         </span>
         <span className="flex items-center gap-0.5">
+          {/* The full page of this same chat. It is not a menu line any more: the bubble is
+              the assistant, and this is how it opens wide. */}
+          <Link
+            href="/assistant"
+            className="rounded-lg px-2 text-xs font-medium text-[var(--sys-muted)] hover:bg-[var(--sys-card)]/10 hover:text-[var(--sys-primary-foreground)]"
+          >
+            افتح كاملاً
+          </Link>
           {msgs.length > 0 && (
             <button
               type="button"

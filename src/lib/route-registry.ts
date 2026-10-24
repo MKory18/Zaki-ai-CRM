@@ -73,6 +73,17 @@ export interface RouteDef {
    * every notification link still read it as before.
    */
   foldedUnder?: string;
+  /**
+   * NOT A MENU LINE FOR ANYBODY — REACHED FROM SOMEWHERE ELSE.
+   *
+   * For a screen whose real door is not the menu. `menuNav` leaves it out of the
+   * sidebar, the pills, the phone bar and the palette for everyone; the route keeps
+   * its path, permissions, guide and guard, and every link to it still works. Today
+   * that is «المساعد الذكي»: the bubble on every screen IS the assistant, and its
+   * header carries «افتح كاملاً» to this page, so a menu line for the same chat was
+   * a second door to one room.
+   */
+  offMenu?: boolean;
 }
 
 /**
@@ -255,7 +266,8 @@ export const NAV: NavGroup[] = [
        * They are one click apart either way, which was the point of the
        * old argument; and the group is named for what is DONE here.
        */
-      r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']),
+      // The bubble on every screen is the same chat; this page is its «افتح كاملاً» (owner, 24/10).
+      { ...r('/assistant', 'المساعد الذكي', 'Bot', ['ai.use']), offMenu: true },
       r('/growth/intelligence', 'مركز الذكاء', 'Lightbulb', ['growth.intelligence']),
       /*
        * THE BENCH, BESIDE THE INTELLIGENCE CENTRE AND NOT UNDER PRODUCTS.
@@ -453,10 +465,13 @@ export function visibleNav(user: SessionUser, can: PermissionCheck): NavGroup[] 
  * the route as a line, so folding never takes a screen away.
  */
 export function menuNav(user: SessionUser, can: PermissionCheck): NavGroup[] {
+  // Two reasons a route is not a line: it is the DETAIL of a screen this person can open
+  // (`foldedUnder`), or its door is not the menu at all (`offMenu`).
   return visibleNav(user, can)
     .map((g) => ({
       ...g,
       routes: g.routes.filter((route) => {
+        if (route.offMenu) return false;
         if (!route.foldedUnder) return true;
         const parent = findRoute(route.foldedUnder);
         return !(parent && canAccessRoute(user, parent, can));
