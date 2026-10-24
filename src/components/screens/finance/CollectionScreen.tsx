@@ -22,6 +22,7 @@ import { NextStepButton } from '@/components/ui/NextStep';
 import { Money } from '@/components/ui/Money';
 import { importedSentence, type ImportedStatement } from '@/lib/statement-import-message';
 import { approvalRefusal, isApproved, rematchRefusal } from '@/lib/settlement-gates';
+import { useConfirm } from '@/components/ui/Confirm';
 
 /**
  * /finance/collection — the three sequential steps, in order and visible as
@@ -110,6 +111,7 @@ const STATUS_STYLE: Record<string, string> = {
 export function CollectionScreen() {
   const { currentUser } = useApp();
   const mayOpen = useMayOpen();
+  const confirm = useConfirm();
   /*
    * A COMPANY THAT SENDS NO STATEMENT HAS NOTHING TO IMPORT HERE — AND THE PAGE SAID NOTHING ABOUT IT.
    * The way in is «يدوي — بلا كشف» on the matching screen, which needs two things the link must ask for
@@ -158,6 +160,25 @@ export function CollectionScreen() {
     } finally {
       setBusy(null);
     }
+  }
+
+  /**
+   * TAKING BACK A WRONG UPLOAD.
+   * Offered until the statement is APPROVED (the row itself stops offering it, and `undoImportRefusal` is the rule the server enforces): before it nothing
+   * financial exists, so the statement goes with its receipts and matches; after it a correction is a reversing entry.
+   */
+  async function undoImport(s: StatementRow) {
+    const ok = await confirm({
+      title: `إلغاء استيراد الكشف «${s.reference}»؟`,
+      body:
+        (s.counts.receipts > 0 ? `سيُحذف معه ${s.counts.receipts} إيصال استلام (ومرفقاته) ونتيجة المطابقة. ` : 'يُحذف الكشف وسطوره. ') +
+        'لم يتحرك أي مبلغ ولم يُسجَّل شيء بالمحافظ لأنه لم يُعتمد بعد، ويمكن رفع الملف نفسه من جديد. يزول هذا الخيار عند الاعتماد.',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    await act(s.id, `أُلغي استيراد الكشف «${s.reference}»`, () =>
+      apiJson(`/api/finance/statements/${s.id}`, { method: 'DELETE' })
+    );
   }
 
   return (
@@ -354,6 +375,14 @@ export function CollectionScreen() {
                 </span>
               ) : (
                 <span className="flex flex-wrap gap-3 justify-end">
+                  {/* This branch is the unapproved one — an approved row draws «معتمد» above and has no button. */}
+                  <button
+                    disabled={busy === s.id}
+                    onClick={() => void undoImport(s)}
+                    className="text-xs text-[var(--sys-destructive)] hover:underline disabled:opacity-50"
+                  >
+                    إلغاء الاستيراد
+                  </button>
                   <button onClick={() => setReceiptFor(s)} className="text-xs text-[var(--sys-primary)] hover:underline">
                     إيصال استلام
                   </button>

@@ -114,3 +114,19 @@ export function approvalRefusal(s: StatementState): Refusal | null {
   }
   return null;
 }
+
+/**
+ * May an imported statement still be taken back?
+ *
+ * Until it is APPROVED. Everything before approval is derived rows — the file's lines, the receipts that
+ * recorded what arrived and the match rows — and no wallet movement, no order and no commission has been
+ * written from them (that is the whole point of approval being the gate). So a wrong upload can be undone
+ * at any step up to it, receipts and matches going with it. After approval the money moved, and every
+ * correction is a reversing entry, as it always was.
+ */
+export function undoImportRefusal(s: { status: string; approvedAt?: Date | string | null }): Refusal | null {
+  if (isApproved(s)) {
+    return { code: 'ALREADY_APPROVED', error: 'الكشف معتمد — لا يُلغى. أيّ تصحيح بعد الاعتماد يكون بقيد عكسي.' };
+  }
+  return null;
+}

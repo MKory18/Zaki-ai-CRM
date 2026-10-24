@@ -226,6 +226,15 @@ export function proofStorageKey(
   return `companies/${companyId}/settlement/${statementId}/receipts/${receiptId}.${EXT[mime]}`;
 }
 
+/**
+ * Removes a proof's file when its receipt is gone (an import taken back). Best effort by design: the rows
+ * are already deleted, and a file nobody references costs disk, while an error here must not undo the cancel.
+ */
+export async function removeProofFile(storageKey: string): Promise<void> {
+  if (STORAGE_PROVIDER !== 'local' || !isSafeStorageKey(storageKey)) return;
+  await fs.promises.rm(path.join(LOCAL_STORAGE_DIR, storageKey), { force: true }).catch(() => undefined);
+}
+
 export async function writeProofFile(storageKey: string, buffer: Buffer): Promise<void> {
   if (STORAGE_PROVIDER !== 'local') {
     throw new Error(`STORAGE_PROVIDER=${STORAGE_PROVIDER} غير مُهيأ لرفع إثبات التحصيل`);
