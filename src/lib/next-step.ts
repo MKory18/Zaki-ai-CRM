@@ -68,21 +68,6 @@ export function deskIsEmpty(desk: Desk | null | undefined): boolean {
   return !!desk && desk.work.length === 0 && desk.noAnswer.length === 0;
 }
 
-/**
- * «اسحب طلبات جديدة» — only when that was the last thing on her desk.
- *
- * Not before: with forty rows still there, offering to take on more work is
- * an instruction to start something while what is in front of her is not
- * done. And a LINK to the pull screen, not a second pull: the pull has one
- * door and one set of refusals — the cap, the empty pool, «not your desk» —
- * and a button here that called it directly would need all of them again.
- */
-export function pullMoreStep(desk: Desk | null | undefined, mayOpen: MayOpen): Step | undefined {
-  if (!deskIsEmpty(desk)) return undefined;
-  if (!mayOpen('/confirmation/queue')) return undefined;
-  return { label: 'اسحب طلبات جديدة', href: '/confirmation/queue' };
-}
-
 /** «اطبع البوالص» — after a batch was made; printing lives on the batches screen. */
 export function printLabelsStep(mayOpen: MayOpen): Step | undefined {
   if (!mayOpen('/ops/batches')) return undefined;

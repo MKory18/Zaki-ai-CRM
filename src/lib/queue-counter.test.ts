@@ -95,11 +95,11 @@ describe('the picker and the counter', () => {
   });
 
   it('and the screen says which number is which', () => {
-    const src = stripComments(repoFile('src/components/screens/ConfirmationQueueScreen.tsx'));
+    const src = stripComments(repoFile('src/components/confirmation/PullPanel.tsx'));
     expect(src).toContain('طلب جاهز للسحب الآن');
     // The RENDER, not merely the field's declaration: a block switched off
     // still leaves the name in the interface above it.
-    expect(src, 'الرقمُ المؤجَّل لا يُعرَض').toMatch(/\{!!data\.waitingOnADate && \(/);
+    expect(src, 'الرقمُ المؤجَّل لا يُعرَض').toMatch(/!!data\.waitingOnADate && \(/);
     expect(src).toContain('مؤجَّلة حتى موعدها');
   });
 });

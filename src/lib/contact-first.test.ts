@@ -172,8 +172,8 @@ describe('the screen says it before she presses, not after', () => {
     }
   });
 
-  it('and the queue screen opens the order the refusal names', () => {
-    const q = stripComments(repoFile('src/components/screens/ConfirmationQueueScreen.tsx'));
+  it('and the pull panel opens the order the refusal names', () => {
+    const q = stripComments(repoFile('src/components/confirmation/PullPanel.tsx'));
     expect(q).toMatch(/data\.refusal\?\.code === 'UNTOUCHED_ORDER' && data\.refusal\.orderId/);
     expect(q).toMatch(/href=\{`\/orders\/\$\{data\.refusal\.orderId\}`\}/);
   });

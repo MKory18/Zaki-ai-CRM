@@ -1,85 +1,29 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { apiJson } from '@/lib/api-client';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { RiInboxLine, RiLoader4Line, RiPhoneLockLine, RiTimerFlashLine } from '@remixicon/react';
-import { useToast } from '@/components/ui/Toast';
+import { RiLoader4Line } from '@remixicon/react';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { PullPanel, useQueue } from '@/components/confirmation/PullPanel';
 
 /**
- * /confirmation/queue — agents see NO list: one "pull next" button and a
- * waiting counter. The server decides priority (postponed due first, then
- * oldest) and whether this agent may pull at all. Supervisors additionally
- * receive the rows, which are the same data.
+ * /confirmation/queue — THE SUPERVISOR'S VIEW OF THE POOL.
+ *
+ * An agent no longer comes here: «اسحب الطلب التالي» sits at the top of
+ * «طلباتي», where she works, so pulling does not send her anywhere (and the
+ * menu does not offer her this page — the registry gives it to
+ * `confirmation.supervise` alone, and the page sends anybody else to
+ * «طلباتي»). What stays is what only a supervisor needs: the same counter and
+ * the rows behind it, which are the same data. A supervisor who ALSO pulls
+ * finds the button on the panel, and pressing it takes her to what she pulled.
  */
-
-interface QueueResponse {
-  waiting: number;
-  owned: { total: number; withoutAttempt: number };
-  caps: { withoutAttempt: number; total: number };
-  leadDays: number;
-  waitingOnADate?: number;
-  canPull: boolean;
-  refusal: {
-    code: string;
-    message: string;
-    /** The untouched order the UNTOUCHED_ORDER refusal is about, if any. */
-    orderId?: string | null;
-    orderNumber?: string | null;
-  } | null;
-  autoReleased: number;
-  orders: {
-    id: string;
-    orderNumber: string;
-    createdAt: string;
-    confirmationStatus: string;
-    postponedUntil: string | null;
-    postponeCount: number;
-    totalAmount: number;
-    customer: { fullName: string; city: string };
-    product: { name: string } | null;
-  }[] | null;
-}
 
 export function ConfirmationQueueScreen() {
   const router = useRouter();
-  const toast = useToast();
-  const [data, setData] = useState<QueueResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pulling, setPulling] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await apiJson<QueueResponse>('/api/confirmation/queue'));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر تحميل الطابور');
-    }
-  }, []);
-
-  /*
-   * A pull queue is the screen where stale costs the most: two agents
-   * reading a list from five minutes ago both reach for the same order.
-   * It polled already; what it did not do was refresh when somebody came
-   * BACK to it, which is how it is actually used.
-   */
-  useLiveRefresh(load, { everyMs: 30_000 });
-
-  const pullNext = async () => {
-    setPulling(true);
-    try {
-      await apiJson('/api/confirmation/pull', { method: 'POST' });
-      router.push('/confirmation/mine');
-    } catch (e) {
-      toast.failed(e instanceof Error ? e.message : 'تعذر سحب طلب');
-      void load();
-    } finally {
-      setPulling(false);
-    }
-  };
+  const queue = useQueue(true);
+  const { data } = queue;
 
   if (!data) {
     return (
@@ -89,109 +33,10 @@ export function ConfirmationQueueScreen() {
     );
   }
 
-  /** The server's word for «this account does not pull, it supervises». */
-  const notMyDesk = data.refusal?.code === 'NOT_YOUR_DESK';
-
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       <ScreenTitle />
-      <div className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg p-6 text-center">
-        <div className="mx-auto w-14 h-14 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)] flex items-center justify-center">
-          <RiInboxLine className="w-6 h-6 text-[var(--sys-primary)]" />
-        </div>
-        <p className="mt-4 text-4xl font-bold text-[var(--sys-heading)] tabular-nums">{data.waiting}</p>
-        <p className="mt-1 text-sm text-[var(--sys-muted-foreground)]">طلب جاهز للسحب الآن</p>
-
-        {/*
-          WAITING ON A DATE IS NOT WAITING FOR YOU.
-
-          The big number used to include postponed orders whose day has not
-          come. So a pool holding nothing but far-off promises showed «٣
-          بانتظار التأكيد» above a live button that answered «لا توجد
-          طلبات» every time — which is «ببطل أقدر أسحب أي طلب». They are
-          counted, and said, separately.
-        */}
-        {!!data.waitingOnADate && (
-          <p className="mt-1 text-xs text-[var(--sys-muted)]">
-            و{data.waitingOnADate} مؤجَّلة حتى موعدها — تُسحب في يومها وحدها
-          </p>
-        )}
-
-        {/*
-          NOT «NOT NOW» BUT «NOT YOURS».
-
-          Every other refusal is temporary — finish the order in your hand,
-          come back under the cap — so the button stays, greyed, and the
-          sentence says what to do about it. `NOT_YOUR_DESK` is the server
-          saying this account never holds `confirmation.pull`: a supervisor
-          watching the pool. A button drawn for her could only ever answer
-          403, so it is not drawn, and the sentence is a plain statement
-          rather than a complaint about something she did.
-        */}
-        {!notMyDesk && (
-          <button
-            onClick={pullNext}
-            disabled={!data.canPull || pulling || data.waiting === 0}
-            className="mt-6 px-8 py-3 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold disabled:opacity-50"
-          >
-            {pulling ? 'جارٍ السحب…' : 'اسحب الطلب التالي'}
-          </button>
-        )}
-
-        {(error || data.refusal) && (
-          <p
-            className={`mt-4 text-sm rounded-lg p-3 ${
-              notMyDesk && !error
-                ? 'text-[var(--sys-muted-foreground)] bg-[var(--sys-surface)] border border-[var(--sys-border)]'
-                : 'text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)]'
-            }`}
-          >
-            {error ?? data.refusal?.message}
-            {/*
-              AND A WAY TO THE ORDER IT MEANS.
-
-              The refusal used to say «طلبك الحالي» and point nowhere. When
-              that order is postponed it is hidden from «طلباتي» until its
-              date, and «الطلبات المؤجلة» lists it with no contact buttons —
-              so the agent was told to do something on an order she could not
-              open, and the only exit was the ninety-business-minute release.
-              This is the door.
-            */}
-            {!error && data.refusal?.code === 'UNTOUCHED_ORDER' && data.refusal.orderId && (
-              <a
-                href={`/orders/${data.refusal.orderId}`}
-                className="mt-2 inline-flex min-h-11 items-center font-bold underline"
-              >
-                افتح الطلب {data.refusal.orderNumber ?? ''} وسجّل محاولة
-              </a>
-            )}
-          </p>
-        )}
-
-        {/* The caps are what bounds HER pulling. They mean nothing on a desk
-            that does not pull, and two zeroes over two ceilings read as a
-            quota she has failed to use. */}
-        {!notMyDesk && (
-          <>
-            <div className="mt-6 grid grid-cols-2 gap-3 text-right">
-              <Stat
-                icon={<RiPhoneLockLine className="w-4 h-4" />}
-                label="لديك بلا محاولة اتصال"
-                value={`${data.owned.withoutAttempt} / ${data.caps.withoutAttempt}`}
-              />
-              <Stat
-                icon={<RiTimerFlashLine className="w-4 h-4" />}
-                label="إجمالي ما بيدك"
-                value={`${data.owned.total} / ${data.caps.total}`}
-              />
-            </div>
-            <p className="mt-4 text-xs text-[var(--sys-muted)]">
-              الأولوية للطلبات المؤجلة المستحقة خلال {data.leadDays} يوم، ثم الأقدم. يُحرَّر أي طلب بلا محاولة اتصال بعد 90
-              دقيقة عمل.
-            </p>
-          </>
-        )}
-      </div>
+      <PullPanel queue={queue} onPulled={() => router.push('/confirmation/mine')} />
 
       {data.orders && (
         <section className="bg-[var(--sys-card)] border border-[var(--sys-border)] rounded-lg overflow-hidden">
@@ -233,18 +78,6 @@ export function ConfirmationQueueScreen() {
           />
         </section>
       )}
-    </div>
-  );
-}
-
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--sys-surface)] border border-[var(--sys-border)]">
-      <span className="text-[var(--sys-muted-foreground)]">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-[var(--sys-muted-foreground)] truncate">{label}</p>
-        <p className="text-sm font-semibold text-[var(--sys-heading)] tabular-nums" dir="ltr">{value}</p>
-      </div>
     </div>
   );
 }

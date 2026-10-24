@@ -25,6 +25,20 @@ describe('who sees which number', () => {
     expect(keys(kindsFor(may('confirmation.pull')))).toContain('CONFIRM_POOL');
   });
 
+  /**
+   * THE POOL IS WORKED AT THE TOP OF «طلباتي», LISTED ON THE SUPERVISOR'S PAGE.
+   * The card opens where THIS person acts on it — an agent sent to the
+   * supervisor's page would be redirected, and a supervisor sent to a desk she
+   * does not work would be refused.
+   */
+  it('«بانتظار التأكيد» opens the desk for whoever pulls, and the queue for whoever supervises', () => {
+    const href = (...p: string[]) => kindsFor(may(...p)).find((k) => k.key === 'CONFIRM_POOL')?.href;
+    expect(href('confirmation.pull')).toBe('/confirmation/mine');
+    expect(href('confirmation.pull', 'confirmation.work')).toBe('/confirmation/mine');
+    expect(href('confirmation.supervise')).toBe('/confirmation/queue');
+    expect(href('confirmation.pull', 'confirmation.supervise')).toBe('/confirmation/queue');
+  });
+
   it('the moderator sees his own orders not yet confirmed', () => {
     expect(keys(kindsFor(may('orders.create')))).toEqual(['MY_UNCONFIRMED']);
   });

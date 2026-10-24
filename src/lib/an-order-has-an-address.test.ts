@@ -144,7 +144,7 @@ describe('every link of this shape lands on a page that exists', () => {
     const hits = sources().filter((f) => /href=\{`\/orders\/\$\{/.test(f.src));
     const names = hits.map((f) => f.rel.split('/').pop());
     expect(names).toEqual(
-      expect.arrayContaining(['ConfirmationQueueScreen.tsx', 'MatchingScreen.tsx', 'WhatsAppInboxScreen.tsx'])
+      expect.arrayContaining(['PullPanel.tsx', 'MatchingScreen.tsx', 'WhatsAppInboxScreen.tsx'])
     );
   });
 

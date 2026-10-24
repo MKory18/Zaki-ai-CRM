@@ -625,7 +625,7 @@ export async function createPublicOrder(
     title: surface.notice.title,
     message: surface.notice.message(order.orderNumber),
     type: 'ORDER_NEW',
-    link: ['/confirmation/queue', '/orders'],
+    link: ['/confirmation/queue', '/confirmation/mine', '/orders'],
   });
 
   // Tell the installed apps. Never inline with the write: an order that

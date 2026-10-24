@@ -21,8 +21,8 @@ import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
-import { useMayOpen } from '@/hooks/useMayOpen';
-import { deskIsEmpty, pullMoreStep } from '@/lib/next-step';
+import { deskIsEmpty } from '@/lib/next-step';
+import { PullPanel, useQueue } from '@/components/confirmation/PullPanel';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { Rows } from '@/components/ui/Rows';
@@ -164,7 +164,6 @@ function sourceLabel(order: OrderRow): string {
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
-  const mayOpen = useMayOpen();
   /**
    * ── THE PHONE STRIP FOLLOWS ITS OWN PERMISSION ──
    *
@@ -180,6 +179,17 @@ export function ConfirmationMineScreen() {
    */
   const { currentUser } = useApp();
   const canLogContact = userCan(currentUser, 'orders.contact_log');
+  /**
+   * «اسحب الطلب التالي» IS HERE, NOT ON ANOTHER SCREEN.
+   *
+   * The pull used to live on `/confirmation/queue` and sent her here after
+   * it; from the empty desk below she was sent back. Now the panel stands at
+   * the top of the desk and pulling leaves her where she is. Gated on the
+   * door's own key (`confirmation.pull`): `GET /api/confirmation/queue` answers
+   * 403 to anyone else, so for them nothing is asked and nothing is drawn.
+   */
+  const canPull = userCan(currentUser, 'confirmation.pull');
+  const queue = useQueue(canPull);
   const [data, setData] = useState<MineResponse | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +261,8 @@ export function ConfirmationMineScreen() {
     try {
       const result = await fn();
       const fresh = await load();
+      // What she now holds changed the caps on the pull panel too.
+      void queue.reload();
       // Only on SUCCESS — a refusal throws above and lands in `catch`, so
       // «what to say next» is never said about something that did not happen.
       after?.(fresh);
@@ -296,15 +308,13 @@ export function ConfirmationMineScreen() {
    * the moment she presses it again on the next row, or looks away to check.
    *
    * It says so now, with the number. And when that was the LAST thing on her
-   * desk — nothing to call, nothing to decide — it offers the one thing that
-   * follows, which is to pull more. Not before: with forty rows still there,
-   * «اسحب طلبات جديدة» would be an instruction to take on more work while
-   * the work in front of her is not done.
+   * desk — nothing to call, nothing to decide — it says so and points up at
+   * the pull panel, which stands at the top of this very screen. Not before:
+   * with forty rows still there, «اسحب الطلب التالي» would be an instruction to
+   * take on more work while the work in front of her is not done.
    *
-   * A link to the pull screen and not a second pull: the pull has exactly one
-   * door and one set of refusals (the cap, the empty pool, «not your desk»),
-   * and a button here that called it directly would need all of them again.
-   * Offered only to somebody who may open that screen — a moderator may not.
+   * (It used to offer a link to the pull SCREEN from here; that screen is the
+   * supervisor's now, and the panel needs no link.)
    */
   const confirm = (order: OrderRow) =>
     act(
@@ -319,8 +329,7 @@ export function ConfirmationMineScreen() {
       (fresh) =>
         toast.done(
           `تم تأكيد الطلب ${order.orderNumber}`,
-          deskIsEmpty(fresh) ? 'لا شيء بقي على مكتبك.' : undefined,
-          pullMoreStep(fresh, mayOpen)
+          deskIsEmpty(fresh) ? 'لا شيء بقي على مكتبك. اسحب الطلب التالي من أعلى الشاشة.' : undefined
         )
     );
 
@@ -453,6 +462,7 @@ export function ConfirmationMineScreen() {
   return (
     <div className="space-y-6 max-w-5xl">
       <ScreenTitle />
+      {canPull && <PullPanel queue={queue} compact onPulled={async () => void (await load())} />}
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
       )}
