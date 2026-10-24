@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 import { landingSectionsSchema } from '@/lib/landing-sections';
-import { applyPages, restyled, sectionsFor, type PagesDeps } from '../../scripts/sehha/pages';
+import { applyPages, restyled, sectionsFor, TITLE_ID, type PagesDeps } from '../../scripts/sehha/pages';
 import { CATALOG, STORE_NAMES } from '../../scripts/sehha/catalog';
 
 /**
@@ -122,7 +122,7 @@ describe('applying', () => {
     await applyPages(deps(db), { apply: true });
     for (const item of CATALOG) {
       const page = pages.find((p) => p.slug === item.slug)!;
-      const stack = JSON.parse(page.sections)[0];
+      const stack = JSON.parse(page.sections).find((b: { type: string }) => b.type === 'gallery');
       expect(stack.images, item.key).toEqual(item.posters.map((n) => `/api/media/prod-${item.sku}/${item.key}-${n}.webp`));
     }
   });
@@ -209,8 +209,10 @@ describe('--restyle — the form look on the drafts that already exist', () => {
     });
     await applyPages(deps(f.db), { apply: true, only: ['albetchu'], restyle: true });
     const saved = JSON.parse(f.pages[0].sections);
-    expect(saved[1]).toMatchObject({ id: 'f', type: 'form', title: 'أكمل الطلب', formStyle: 'compact', offerStyle: 'radio' });
-    expect(saved[0]).toEqual(JSON.parse(oldSections)[0]);
+    // the product's name is put in front; everything that was there is still there, in order
+    expect(saved[0].id).toBe(TITLE_ID);
+    expect(saved[2]).toMatchObject({ id: 'f', type: 'form', title: 'أكمل الطلب', formStyle: 'compact', offerStyle: 'radio' });
+    expect(saved[1]).toEqual(JSON.parse(oldSections)[0]);
     expect(f.raw.landingPage.create).not.toHaveBeenCalled();
   });
 
@@ -263,5 +265,59 @@ describe('--restyle — the form look on the drafts that already exist', () => {
   it('running it again changes nothing — the look is on the page now', () => {
     const once = restyled(oldSections)!;
     expect(restyled(once)).toBeNull();
+  });
+});
+
+describe('the product’s name above the posters', () => {
+  const item = CATALOG[0];
+  const title = { name: item.pageName, line: item.strip };
+
+  it('is the FIRST block of a new page: the name as its title, in a display face, with the line the posters carry beneath', () => {
+    const sections = sectionsFor(['/p/1.webp'], title);
+    expect(landingSectionsSchema.safeParse(sections).success).toBe(true);
+    expect(sections[0]).toMatchObject({
+      id: TITLE_ID, type: 'text', title: item.pageName, body: item.strip,
+      look: { text: { font: 'messiri', scale: 'l', weight: 'bold' } },
+    });
+    expect(sections[1].type).toBe('gallery');
+  });
+
+  it('and the pages the script creates all open with their own product’s name', async () => {
+    const { db, pages } = fake();
+    await applyPages(deps(db), { apply: true });
+    for (const c of CATALOG) {
+      const first = JSON.parse(pages.find((p) => p.slug === c.slug)!.sections)[0];
+      expect(first, c.key).toMatchObject({ id: TITLE_ID, type: 'text', title: c.pageName });
+    }
+  });
+
+  it('every product of the catalogue makes a valid titled page, and the name is its own', () => {
+    for (const c of CATALOG) {
+      const sections = sectionsFor(['/p/1.webp'], { name: c.pageName, line: c.strip });
+      expect(landingSectionsSchema.safeParse(sections).success, c.key).toBe(true);
+      expect(sections[0]).toMatchObject({ title: c.pageName });
+    }
+  });
+
+  it('without a title the page is what it was (the posters first)', () => {
+    expect(sectionsFor(['/p/1.webp'])[0].type).toBe('gallery');
+  });
+
+  it('--restyle puts it in front of an existing draft — once', () => {
+    const old = JSON.stringify([{ id: 'g', type: 'gallery', images: ['/a'], layout: 'stack' }, { id: 'f', type: 'form', formStyle: 'compact', offerStyle: 'radio' }]);
+    const once = restyled(old, title)!;
+    expect(JSON.parse(once)[0]).toMatchObject({ id: TITLE_ID, title: item.pageName });
+    expect(JSON.parse(once)).toHaveLength(3);
+    expect(restyled(once, title)).toBeNull();
+  });
+
+  it('NEGATIVE: a page that already has it (or whose owner removed everything but the form look) is not given a second', () => {
+    const has = JSON.stringify([{ id: TITLE_ID, type: 'text' }, { id: 'f', type: 'form', formStyle: 'card', offerStyle: 'cards' }]);
+    expect(restyled(has, title)).toBeNull();
+  });
+
+  it('NEGATIVE: without a title to put, nothing is added to a page whose form is already styled', () => {
+    const styled = JSON.stringify([{ id: 'f', type: 'form', formStyle: 'card', offerStyle: 'cards' }]);
+    expect(restyled(styled)).toBeNull();
   });
 });
