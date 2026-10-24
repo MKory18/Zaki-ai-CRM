@@ -953,6 +953,26 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
           <GalleryField images={s.images} onChange={(images) => patch({ images })} onUpload={onUpload} />
+          <div className="space-y-1">
+            <span className="block text-xs font-semibold text-[var(--sys-heading)]">شكل الصور</span>
+            <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+              {([
+                ['grid', 'شبكة مربعة'],
+                ['stack', 'متتالية كاملة'],
+              ] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => patch({ layout: v })}
+                  className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                    s.layout === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       );
 

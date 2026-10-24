@@ -182,6 +182,14 @@ const gallery = z.object({
   type: z.literal('gallery'),
   title: richTextSchema(120).default(''),
   images: z.array(z.string().max(2048)).max(12).default([]),
+  /**
+   * HOW THE PICTURES SIT.
+   *
+   * `grid` is the gallery as it always was: squares, two across. `stack` is one picture under another at its
+   * own shape, uncropped — for a poster that IS the page (a tall picture with its words on it), where a
+   * square would cut the words. Additive: every saved page lacks the field and reads as `grid`.
+   */
+  layout: z.enum(['grid', 'stack']).default('grid'),
 });
 
 /**

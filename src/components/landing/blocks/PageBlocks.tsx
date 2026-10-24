@@ -383,7 +383,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
       }
       return (
         <Section title={s.title}>
-          <div className="lp-gallery">
+          <div className="lp-gallery" data-layout={s.layout}>
             {images.map((src, i) => (
               // The seller's own uploads; next/image would need every host
               // allow-listed, and a blocked hero is worse than an unoptimised one.
