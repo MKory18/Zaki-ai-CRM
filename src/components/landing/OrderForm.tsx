@@ -85,6 +85,9 @@ interface OrderFormProps {
    * is selected.
    */
   showOfferPicker?: boolean;
+  /** The form's look and how it lists the bundles — the `form` block's choices. Default: as it always was. */
+  formStyle?: 'card' | 'compact';
+  offerStyle?: 'cards' | 'radio';
   /**
    * WHICH WAY THIS FORM READS.
    *
@@ -161,7 +164,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, dir = 'rtl', whatsapp, endpoint, thankYou }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -730,7 +733,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               )}
             </div>
           ) : (
-            <form onSubmit={onSubmit} noValidate className="space-y-4 px-5 py-6">
+            <form onSubmit={onSubmit} noValidate className={formStyle === 'compact' ? 'px-5 py-6 lp-form-compact' : 'space-y-4 px-5 py-6'}>
               {/* ─── Offers (server-provided — replaces the quantity stepper) ─── */}
               {/* The page's own offers block is the picker; here it is a
                   dropdown, so the choice can still be changed at the last
@@ -754,7 +757,28 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   </select>
                 </div>
               )}
-              {hasOffers && showOfferPicker && (
+              {hasOffers && showOfferPicker && offerStyle === 'radio' && (
+                <fieldset className="lp-radios">
+                  <legend className="lp-radios-title">👇 اختر الكمية</legend>
+                  {offers.map((o) => (
+                    <label key={o.id} className="lp-radio">
+                      <input
+                        type="radio"
+                        name="zf-offer-radio"
+                        value={o.id}
+                        checked={o.id === selectedOffer}
+                        onChange={() => { setSelectedOffer(o.id); setFieldErrors((fe) => { const n = { ...fe }; delete n.offerId; return n; }); }}
+                        disabled={state === 'loading'}
+                      />
+                      <span>
+                        {o.name} = <b dir="ltr">{fmt(o.price)} {currency}</b>
+                        {o.freeQuantity > 0 ? ` + ${o.freeQuantity} هدية مجانية` : ''}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+              {hasOffers && showOfferPicker && offerStyle !== 'radio' && (
                 <div>
                   <span className={labelCls}>اختر العرض</span>
                   <div className="space-y-2">
@@ -821,7 +845,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               )}
 
               {/* الاسم الكامل */}
-              <div>
+              <div className={formStyle === 'compact' ? 'lp-half' : undefined}>
                 <label htmlFor="zf-full_name" className={labelCls}>
                   الاسم الكامل <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>
@@ -841,7 +865,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               </div>
 
               {/* رقم الهاتف */}
-              <div>
+              <div className={formStyle === 'compact' ? 'lp-half' : undefined}>
                 <label htmlFor="zf-phone" className={labelCls}>
                   رقم الهاتف <span className="text-[var(--store-accent,#b8256e)]">*</span>
                 </label>

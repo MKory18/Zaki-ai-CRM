@@ -476,6 +476,18 @@ const form = z.object({
    * time somebody reaches the fields; what they need here is what to do.
    */
   subtitle: richTextSchema(240).default('املأ بياناتك ويتواصل معك فريقنا للتأكيد'),
+  /**
+   * THE LOOK OF THE FORM. `card` is the form as it always was; `compact` is a plain column — name and phone
+   * side by side, the address under them, one wide button — the way a YouCan order form reads.
+   * Additive: every saved page lacks the field and reads as `card`.
+   */
+  formStyle: z.enum(['card', 'compact']).default('card'),
+  /**
+   * HOW THE BUNDLE IS CHOSEN INSIDE THE FORM. `cards` is what it always was; `radio` is a plain list with a
+   * radio button per bundle («عبوة عدد 2 = 35 دولار») under «اختر الكمية». Display only: the choice is still the
+   * offer's id, and the server prices it.
+   */
+  offerStyle: z.enum(['cards', 'radio']).default('cards'),
 });
 
 /** The three reassurances under the button. */

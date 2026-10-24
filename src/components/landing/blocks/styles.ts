@@ -323,6 +323,15 @@ export const BLOCK_CSS = `
 .lp-gallery[data-layout='stack'] { grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 480px; margin-inline: auto; }
 .lp-gallery[data-layout='stack'] img { height: auto; aspect-ratio: auto; object-fit: contain; border: 0; border-radius: 0; }
 
+/* The order form, as a plain column (the form block's «مضغوط»): name and phone side by side, the rest full width. */
+.lp-form-compact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lp-form-compact > * { grid-column: 1 / -1; }
+.lp-form-compact > .lp-half { grid-column: auto; }
+.lp-radios { border: 0; padding: 0; margin: 0; }
+.lp-radios-title { width: 100%; text-align: center; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.lp-radio { display: flex; align-items: center; gap: 10px; padding: 7px 4px; font-size: 13px; cursor: pointer; }
+.lp-radio input { width: 18px; height: 18px; accent-color: var(--store-accent, #b8256e); }
+
 /* ── catalog: the shop's own pages and products ──
    ONE COLUMN COUNT IS THE SELLER'S, ONE IS THE PHONE'S. The
    --store-cat-cols variable is their choice for a wide screen; a phone is too

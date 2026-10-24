@@ -1418,6 +1418,46 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
           <Field label="سطر تحته" value={s.subtitle} onChange={(v) => patch({ subtitle: v })} />
+          <div className="space-y-1">
+            <span className="block text-xs font-semibold text-[var(--sys-heading)]">شكل النموذج</span>
+            <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+              {([
+                ['card', 'بطاقة'],
+                ['compact', 'مضغوط'],
+              ] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => patch({ formStyle: v })}
+                  className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                    s.formStyle === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <span className="block text-xs font-semibold text-[var(--sys-heading)]">اختيار العرض داخل النموذج</span>
+            <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+              {([
+                ['cards', 'بطاقات'],
+                ['radio', 'قائمة اختيار'],
+              ] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => patch({ offerStyle: v })}
+                  className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                    s.offerStyle === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       );
 
