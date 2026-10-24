@@ -7,10 +7,11 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { consumeOrderStock } from '@/lib/stock-consumption';
 import { receiptGap } from '@/lib/settlement';
-import { approvalRefusal, isApproved } from '@/lib/settlement-gates';
+import { approvalRefusal, isApproved, undoImportRefusal } from '@/lib/settlement-gates';
 import { recordMovement } from '@/lib/wallets';
 import { markPayableForOrders } from '@/lib/commission';
 import { zodMessage } from '@/lib/zod-message';
+import { removeProofFile } from '@/lib/settlement-proof';
 
 /**
  * One statement.
@@ -330,6 +331,80 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       // How many the statement itself closed, so the screen can say it
       // rather than leaving somebody to notice the tracking list shrank.
       deliveredByStatement: approved.deliveredCount,
+    });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+/**
+ * DELETE /api/finance/statements/:id — take back a wrong import, at any step until it is approved.
+ *
+ * Before approval nothing financial exists: the lines, the receipts (and their proof files) and the match
+ * rows are all derived, and no wallet movement, order change or payable commission has been written from
+ * them. So the statement goes with all of it, and the file can be imported again. After approval the money
+ * moved and this refuses (`undoImportRefusal`) — a correction is then a reversing entry.
+ *
+ * The act is kept: the audit log is append-only and records which file, how many lines, the total, and each
+ * receipt that went with it (amount, currency, wallet, proof name), and by whom.
+ */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { user, companyId, storeId } = await requireContext();
+    // Whoever may import a statement may take the import back.
+    await requirePermission('settlement.upload');
+
+    const statement = await db.courierStatement.findFirst({
+      where: { id, companyId, storeId },
+      select: {
+        id: true, reference: true, fileName: true, status: true, approvedAt: true,
+        totalAmount: true, currencyCode: true, deliveryProviderId: true,
+        _count: { select: { lines: true, receipts: true, matches: true } },
+        receipts: {
+          select: { amount: true, currencyCode: true, proofKey: true, proofName: true, wallet: { select: { name: true } } },
+        },
+      },
+    });
+    if (!statement) return NextResponse.json({ error: 'الكشف غير موجود' }, { status: 404 });
+
+    const refusal = undoImportRefusal({ status: statement.status, approvedAt: statement.approvedAt });
+    if (refusal) return NextResponse.json(refusal, { status: 409 });
+
+    // The guard is repeated in the delete itself, so an approval that lands a moment after the check above
+    // still stops it: nothing is removed unless the row is STILL unapproved. Lines, receipts and matches
+    // follow the statement (onDelete: Cascade).
+    const removed = await db.$transaction(async (tx) => {
+      const live = await tx.courierStatement.deleteMany({
+        where: { id, companyId, storeId, approvedAt: null, status: { not: 'APPROVED' } },
+      });
+      return live.count;
+    });
+    if (removed === 0) {
+      return NextResponse.json(
+        { code: 'ALREADY_APPROVED', error: 'اعتُمد الكشف للتو — لم يعد يُلغى. أيّ تصحيح الآن يكون بقيد عكسي.' },
+        { status: 409 }
+      );
+    }
+
+    // The proof files of the receipts that went with it. After the rows are gone, and best effort.
+    await Promise.all(statement.receipts.filter((r) => r.proofKey).map((r) => removeProofFile(r.proofKey as string)));
+
+    await logAudit({
+      companyId, userId: user.id, action: 'STATEMENT_IMPORT_UNDONE',
+      entity: 'CourierStatement', entityId: id,
+      previousData: {
+        reference: statement.reference, fileName: statement.fileName, status: statement.status,
+        lines: statement._count.lines, matches: statement._count.matches, total: Number(statement.totalAmount),
+        currencyCode: statement.currencyCode, deliveryProviderId: statement.deliveryProviderId,
+        receipts: statement.receipts.map((r) => ({
+          amount: Number(r.amount), currencyCode: r.currencyCode, wallet: r.wallet.name, proof: r.proofName ?? null,
+        })),
+      },
+    });
+
+    return NextResponse.json({
+      ok: true, reference: statement.reference, lines: statement._count.lines, receipts: statement._count.receipts,
     });
   } catch (error) {
     return apiErrorResponse(error);
