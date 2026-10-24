@@ -438,7 +438,7 @@ export function DashboardScreen() {
             previous={prev.confirmationRate}
             health={verdicts.confirmationRate}
             goodWhen="rising"
-            href={linkTo("/confirmation/queue")}
+            href={linkTo("/confirmation/queue") ?? linkTo("/confirmation/mine")}
           />
 
           <KpiCard

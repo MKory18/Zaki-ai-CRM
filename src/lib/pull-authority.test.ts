@@ -81,28 +81,7 @@ describe('the pull endpoint', () => {
   });
 });
 
-describe('the queue screen', () => {
-  const src = repoFile('src/components/screens/ConfirmationQueueScreen.tsx');
-
-  it('reads the server’s NOT_YOUR_DESK rather than guessing from the role', () => {
-    expect(src).toContain("data.refusal?.code === 'NOT_YOUR_DESK'");
-  });
-
-  it('draws the pull button only when this is a desk that pulls', () => {
-    expect(src).toMatch(/\{!notMyDesk && \(\s*<button/);
-    // The rendered label is still there — a guard that passes while the
-    // button has been deleted outright proves nothing.
-    expect(src).toMatch(
-      />\s*\{pulling \? 'جارٍ السحب…' : 'اسحب الطلب التالي'\}\s*<\/button>/
-    );
-  });
-
-  it('and the claim caps go with it — two zeroes over two ceilings read as a failed quota', () => {
-    expect(src).toMatch(/\{!notMyDesk && \(\s*<>/);
-    expect(src).toContain('لديك بلا محاولة اتصال');
-  });
-
-  it('is a whole screen, not a stub that happens to contain the words', () => {
-    expect(src.length).toBeGreaterThan(2000);
-  });
-});
+// The screen half of this — «NOT_YOUR_DESK» draws no button and no caps, a refusal
+// keeps the button greyed with its sentence — moved with the pull panel to
+// `src/components/confirmation/the-pull-panel.test.tsx`, which RENDERS it instead of
+// reading its source for the shape of the JSX.

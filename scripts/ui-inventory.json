@@ -29,6 +29,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/confirmation/PullPanel.tsx": {
+    "buttons": 1,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 0,
+    "icons": 4,
+    "links": 1,
+    "tabs": 0
+  },
   "src/components/confirmation/WinbackRuleDialog.tsx": {
     "buttons": 3,
     "inputs": 4,
@@ -770,13 +780,13 @@
     "tabs": 0
   },
   "src/components/screens/ConfirmationQueueScreen.tsx": {
-    "buttons": 1,
+    "buttons": 0,
     "inputs": 0,
     "columns": 4,
     "cards": 0,
     "modals": 0,
-    "icons": 4,
-    "links": 1,
+    "icons": 1,
+    "links": 0,
     "tabs": 0
   },
   "src/components/screens/CouriersScreen.tsx": {

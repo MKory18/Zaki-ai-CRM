@@ -249,12 +249,12 @@ describe('createNotification — one row per recipient', () => {
     await createNotification({
       ...base, storeId: A,
       audience: { userIds: ['agent', 'mod', 'wh'] },
-      link: ['/confirmation/queue', '/orders'],
+      link: ['/confirmation/queue', '/confirmation/mine', '/orders'],
     });
     const linkOf = Object.fromEntries(state.written.map((r) => [r.userId, r.link]));
     expect(linkOf).toEqual({
-      agent: '/confirmation/queue', // confirmation.pull opens the queue
-      mod: '/orders', // a moderator cannot open the queue, can open his orders
+      agent: '/confirmation/mine', // confirmation.pull opens «طلباتي» (the pull panel is there), not the supervisor's queue
+      mod: '/orders', // a moderator cannot open either, can open his orders
       wh: null, // neither: no link at all
     });
   });

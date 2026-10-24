@@ -314,7 +314,7 @@ export async function createTelegramOrder(input: CreateTelegramOrderInput): Prom
       title: 'طلب جديد من تيليجرام',
       message: `تم إنشاء طلب جديد #${(order as any).orderNumber} تلقائيًا من تيليجرام.`,
       type: 'ORDER_NEW',
-      link: ['/confirmation/queue', '/orders'],
+      link: ['/confirmation/queue', '/confirmation/mine', '/orders'],
     });
 
     return { ok: true, orderId: order.id, orderNumber: (order as any).orderNumber };

@@ -124,9 +124,13 @@ export const NAV: NavGroup[] = [
     icon: 'ClipboardList',
     hub: 'tabs',
     routes: [
-      // Moderators never hold confirmation.pull / .supervise — pulling is not their job.
-      r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.pull', 'confirmation.supervise']),
-      r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work']),
+      // The SUPERVISOR's view of the pool. An agent pulls from the top of «طلباتي»
+      // (`PullPanel`), so this entry is not hers: its page sends her there.
+      // Moderators never hold confirmation.supervise either.
+      r('/confirmation/queue', 'الطلبات الجديدة', 'Inbox', ['confirmation.supervise']),
+      // `confirmation.pull` too: the pull panel is at the top of this screen, so whoever may
+      // pull must be able to open it (the list under it still asks `confirmation.work`).
+      r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work', 'confirmation.pull']),
       r('/confirmation/postponed', 'الطلبات المؤجلة', 'CalendarClock', ['confirmation.work', 'confirmation.supervise']),
       // The discount is money, so this is the supervisor's screen — the
       // agent meets the result of it as an ordinary new order in her queue.

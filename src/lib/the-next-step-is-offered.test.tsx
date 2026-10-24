@@ -25,7 +25,7 @@ vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: user.curr
 
 import { ToastProvider, useToast, type ToastAction } from '@/components/ui/Toast';
 import { useMayOpen } from '@/hooks/useMayOpen';
-import { deskIsEmpty, openOrderStep, printLabelsStep, pullMoreStep } from './next-step';
+import { deskIsEmpty, openOrderStep, printLabelsStep } from './next-step';
 import { findRoute } from './route-registry';
 import { repoFile, stripComments } from './guard-source';
 
@@ -71,36 +71,22 @@ describe('«افتح الطلب» — after an order was made', () => {
   });
 });
 
-describe('«اسحب طلبات جديدة» — only when that was the last thing on her desk', () => {
-  const full = { work: [{}], noAnswer: [] };
-  const decisions = { work: [], noAnswer: [{}, {}] };
-  const empty = { work: [], noAnswer: [] };
-
-  it('— not while there is a call left to make', () => {
-    expect(pullMoreStep(full, yes)).toBeUndefined();
-  });
-
-  it('and not while there is a decision left to take', () => {
-    expect(pullMoreStep(decisions, yes)).toBeUndefined();
-  });
-
-  it('and when the desk is empty it points at the pull screen', () => {
-    expect(pullMoreStep(empty, yes)).toEqual({ label: 'اسحب طلبات جديدة', href: '/confirmation/queue' });
-  });
-
-  it('and not to somebody who may not open it — a moderator may not', () => {
-    expect(pullMoreStep(empty, no)).toBeUndefined();
-  });
-
+describe('an empty desk — what «there is nothing left to do» means', () => {
+  /*
+   * «اسحب طلبات جديدة» used to be a toast link to the pull SCREEN, offered when
+   * this said the desk was empty. The pull panel stands at the top of «طلباتي»
+   * now, so there is nothing to link to — but the question «is the desk empty»
+   * still decides what the confirmation toast says, and it must still never
+   * say «done» about a desk it could not read.
+   */
   it('and «I could not read the desk» is NOT «the desk is empty»', () => {
     /*
      * The one that matters. A failed read is `null`, and rendering that as
-     * «you are done, take more» would tell an agent with forty orders still
-     * waiting that she has finished.
+     * «you are done» would tell an agent with forty orders still waiting
+     * that she has finished.
      */
     expect(deskIsEmpty(null)).toBe(false);
     expect(deskIsEmpty(undefined)).toBe(false);
-    expect(pullMoreStep(null, yes)).toBeUndefined();
   });
 
   it('and only calls to make and decisions to take count as work', () => {
@@ -123,8 +109,8 @@ describe('«اطبع البوالص» — after a batch was made', () => {
 });
 
 describe('every address a step points at is a real screen', () => {
-  it('— the three are in the registry, so a rename cannot leave a link dead', () => {
-    for (const href of ['/orders', '/confirmation/queue', '/ops/batches']) {
+  it('— the two are in the registry, so a rename cannot leave a link dead', () => {
+    for (const href of ['/orders', '/ops/batches']) {
       expect(findRoute(href), href).toBeDefined();
     }
   });
@@ -275,7 +261,8 @@ describe('the three moments use it, and say it only when it happened', () => {
   it('and confirming an order says so — it used to be silent', () => {
     const src = stripComments(repoFile('src/components/screens/ConfirmationMineScreen.tsx'));
     expect(src).toContain('تم تأكيد الطلب');
-    expect(src).toContain('pullMoreStep(fresh, mayOpen)');
+    // …and when that was the last thing on her desk it points at the pull panel on the same screen.
+    expect(src).toContain('اسحب الطلب التالي من أعلى الشاشة');
     expect(src).toContain('deskIsEmpty(fresh)');
   });
 

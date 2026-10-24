@@ -136,11 +136,24 @@ describe('role visibility', () => {
     expect(canAccessRoute(moderator(), findRoute('/orders')!, can)).toBe(true);
   });
 
-  it('a confirmation agent reaches queue, mine and postponed but not issues', () => {
+  it('a confirmation agent reaches mine and postponed but not the supervisor’s queue, nor issues', () => {
     const agent = userWith(['confirmation.pull', 'confirmation.work'], 'CONFIRMATION_AGENT');
-    const allowed = ['/confirmation/queue', '/confirmation/mine', '/confirmation/postponed'];
+    const allowed = ['/confirmation/mine', '/confirmation/postponed'];
     for (const p of allowed) expect(canAccessRoute(agent, findRoute(p)!, can)).toBe(true);
+    // The pull is at the top of «طلباتي»; the queue page is the supervisor's.
+    expect(canAccessRoute(agent, findRoute('/confirmation/queue')!, can)).toBe(false);
     expect(canAccessRoute(agent, findRoute('/confirmation/issues')!, can)).toBe(false);
+  });
+
+  it('whoever may pull may open «طلباتي» — the panel is there — and a supervisor opens the queue', () => {
+    const puller = userWith(['confirmation.pull'], 'CONFIRMATION_AGENT');
+    expect(canAccessRoute(puller, findRoute('/confirmation/mine')!, can)).toBe(true);
+    const supervisor = userWith(['confirmation.supervise'], 'CONFIRMATION_AGENT');
+    expect(canAccessRoute(supervisor, findRoute('/confirmation/queue')!, can)).toBe(true);
+    const moderator = userWith(['orders.view'], 'MODERATOR');
+    for (const p of ['/confirmation/queue', '/confirmation/mine']) {
+      expect(canAccessRoute(moderator, findRoute(p)!, can), p).toBe(false);
+    }
   });
 
   it('warehouse never reaches money or customer screens', () => {

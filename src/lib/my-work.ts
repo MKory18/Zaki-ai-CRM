@@ -153,7 +153,14 @@ export function workKind(key: WorkKey): WorkKind | undefined {
 export function kindsFor(can: (permission: string) => boolean): WorkKind[] {
   const allowed = WORK_KINDS.filter((k) => k.permissions.some((p) => can(p)));
   const pulls = allowed.some((k) => k.key === 'CONFIRM_POOL');
-  return allowed.filter((k) => !(pulls && k.key === 'MY_UNCONFIRMED'));
+  return allowed
+    .filter((k) => !(pulls && k.key === 'MY_UNCONFIRMED'))
+    .map((k) =>
+      // The pool is WORKED at the top of «طلباتي» (the pull panel); the
+      // supervisor's page is the one that lists it. Whoever supervises opens
+      // that; whoever only pulls opens her desk.
+      k.key === 'CONFIRM_POOL' && !can('confirmation.supervise') ? { ...k, href: '/confirmation/mine' } : k
+    );
 }
 
 export interface WorkItem {
