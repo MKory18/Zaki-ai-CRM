@@ -47,7 +47,9 @@ export interface Item {
   alts: string[];
 }
 
-export const STORE_NAME = 'صحة بلس';
+/** The shop's name differs between the owner's copies («صحة بلس» locally, «متجر صحة بلس» in production). Exactly one store must match. */
+export const STORE_NAMES = ['متجر صحة بلس', 'صحة بلس'];
+export const STORE_NAME = STORE_NAMES[0];
 
 const FREE = 'توصيل مجاني داخل سوريا · الدفع عند الاستلام';
 const FAST = 'شحن سريع داخل سوريا · الدفع عند الاستلام';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { PrismaClient } from '@prisma/client';
-import { CATALOG, STORE_NAME, type Item } from './catalog';
+import { CATALOG, STORE_NAME, STORE_NAMES, type Item } from './catalog';
 
 /**
  * يطبّق `catalog.ts` على قاعدة البيانات: أسعار وعروض المنتجات السبعة وصورها. (صفحات الهبوط خطوة لاحقة منفصلة.)
@@ -46,12 +46,12 @@ const POSTER_ALT = (key: string, n: number) => `sehha:${key}:${n}`;
 
 export async function applyCatalog(deps: Deps, opts: Options): Promise<Report> {
   const { db, log } = deps;
-  const stores = await db.store.findMany({ where: { name: STORE_NAME }, select: { id: true, companyId: true, name: true } });
+  const stores = await db.store.findMany({ where: { name: { in: STORE_NAMES } }, select: { id: true, companyId: true, name: true } });
   if (stores.length !== 1) {
-    throw new Error(`متجر «${STORE_NAME}»: وُجد ${stores.length} (المطلوب واحد بالضبط) — توقّفت بلا كتابة.`);
+    throw new Error(`متجر «${STORE_NAMES.join('» أو «')}»: وُجد ${stores.length} (المطلوب واحد بالضبط) — توقّفت بلا كتابة.`);
   }
   const { id: storeId, companyId } = stores[0];
-  const report: Report = { store: STORE_NAME, items: [] };
+  const report: Report = { store: stores[0].name, items: [] };
   const items = CATALOG.filter((i) => !opts.only?.length || opts.only.includes(i.key));
   if (opts.only?.length && items.length !== opts.only.length) {
     throw new Error(`مفتاح غير معروف: ${opts.only.filter((k) => !CATALOG.some((i) => i.key === k)).join('، ')}`);

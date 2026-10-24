@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { applyCatalog, type Deps } from '../../scripts/sehha/apply';
-import { CATALOG, STORE_NAME } from '../../scripts/sehha/catalog';
+import { CATALOG, STORE_NAME, STORE_NAMES } from '../../scripts/sehha/catalog';
 
 /**
  * «التزم بالعروض الي بالصور» — THE SEVEN PRODUCTS OF «صحة بلس», AS THE POSTERS PRICE THEM.
@@ -72,7 +72,7 @@ function fakeShop(seed: { products?: Row[]; offers?: Row[]; images?: Row[]; stor
   const writes: string[] = [];
   const w = (what: string) => writes.push(what);
   const db: any = {
-    store: { findMany: async ({ where }: any) => t.stores.filter((s) => s.name === where.name) },
+    store: { findMany: async ({ where }: any) => t.stores.filter((s) => where.name.in.includes(s.name)) },
     product: {
       findFirst: async ({ where }: any) => t.products.find((p) => p.sku === where.sku && p.storeId === where.storeId) ?? null,
       create: async ({ data }: any) => (w('product.create'), t.products.push({ id: `p${++n}`, ...data }), t.products.at(-1)),
@@ -208,6 +208,14 @@ describe('applying', () => {
 });
 
 describe('refusing to guess', () => {
+  it('finds the shop under either of its two names — «صحة بلس» here, «متجر صحة بلس» in production', async () => {
+    for (const name of STORE_NAMES) {
+      const { db } = fakeShop({ stores: [{ id: 's1', companyId: 'co1', name }] });
+      const report = await applyCatalog(deps(db), { apply: false, only: ['vara'] });
+      expect(report.store).toBe(name);
+    }
+  });
+
   it('stops, writing nothing, when the store is not there', async () => {
     const { db, writes } = fakeShop({ stores: [] });
     await expect(applyCatalog(deps(db), { apply: true })).rejects.toThrow(/وُجد 0/);
