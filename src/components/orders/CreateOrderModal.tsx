@@ -15,7 +15,9 @@ import { amount } from '@/lib/format';
 import { RiArchiveLine, RiCheckboxCircleLine, RiMapPinLine, RiMegaphoneLine, RiPhoneLine, RiStickyNoteLine, RiUserFollowLine, RiUserSettingsLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
 import { useMayOpen } from '@/hooks/useMayOpen';
-import { openOrderStep } from '@/lib/next-step';
+import { openOrderStep, openPreparationStep } from '@/lib/next-step';
+import { confirmOrderNow } from '@/lib/confirm-now';
+import { userCan } from '@/lib/can';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -30,11 +32,18 @@ interface CreateOrderModalProps {
 }
 
 export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
-  const { t, locale, isRtl } = useApp();
+  const { t, locale, isRtl, currentUser } = useApp();
   const ar = locale === 'ar';
   const toast = useToast();
   const mayOpen = useMayOpen();
   const [loading, setLoading] = useState(false);
+  /**
+   * «الزبون على الخط — أكّده الآن». Offered only to somebody who may confirm (`orders.confirm`):
+   * the server asks the same of the confirmation call, so this is the door's answer drawn early,
+   * never a way past it.
+   */
+  const mayConfirm = userCan(currentUser, 'orders.confirm');
+  const [confirmNow, setConfirmNow] = useState(false);
 
   const [moderators, setModerators] = useState<any[]>([]);
 
@@ -72,6 +81,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
       // Reset ALL form state first so stale customer data / selections from a
       // previous open never persist, then load fresh dropdown data
       setLoading(false);
+      setConfirmNow(false);
       setCustomerName('');
       setCustomerPhone('');
       setCustomerAltPhone('');
@@ -217,7 +227,15 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
        */
       const openIt = openOrderStep(created?.id, mayOpen);
       if (data.notice) toast.warn(`تم إنشاء الطلب ${created?.orderNumber ?? ''} — ${data.notice}`.trim(), undefined, openIt);
-      else toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح', undefined, openIt);
+      // With «أكّده الآن» the one message below says both things; two toasts for one act is noise.
+      else if (!(confirmNow && created?.id)) toast.done(created?.orderNumber ? `تم إنشاء الطلب ${created.orderNumber} بنجاح` : 'تم إنشاء الطلب بنجاح', undefined, openIt);
+      // The customer is on the line: confirm what was just made, through the ordinary confirmation door.
+      if (confirmNow && created?.id) {
+        const done = await confirmOrderNow(created.id);
+        const label = created.orderNumber ?? 'الطلب';
+        if (done.ok) toast.done(`تم إنشاء ${label} وتأكيده — صار في شاشة التجهيز.`, undefined, openPreparationStep(mayOpen));
+        else toast.warn(`أُنشئ ${label} لكن تعذّر تأكيده: ${done.reason} — أكّده من شاشة الطلبات.`, undefined, openIt);
+      }
       onSuccess(created);
       onClose();
     } catch (err: any) {
@@ -423,6 +441,15 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
         </div>
 
         {/* ─── Actions ─── */}
+        {mayConfirm && (
+          <label className="flex items-start gap-2 text-sm text-[var(--sys-foreground)]">
+            <input type="checkbox" checked={confirmNow} onChange={(e) => setConfirmNow(e.target.checked)} className="mt-1" />
+            <span>
+              <span className="font-semibold">الزبون على الخط — أكّده الآن</span>
+              <span className="block text-xs text-[var(--sys-muted-foreground)]">يُنشأ الطلب ويُؤكَّد فوراً ويذهب إلى التجهيز، بدل أن يدخل طابور التأكيد.</span>
+            </span>
+          </label>
+        )}
         <div className="flex items-center justify-end pt-1">
           {/* A text button here used to only CLOSE the modal while telling the
               person to try «الإدخال بالذكاء» from «the green button» — which is
@@ -434,7 +461,7 @@ export function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModa
             </Button>
             <Button type="submit" loading={loading} disabled={!ready}>
               <RiMegaphoneLine className="w-4 h-4" />
-              إنشاء الطلب ({goods === undefined ? '—' : money(goods)})
+              {confirmNow ? 'إنشاء الطلب وتأكيده' : 'إنشاء الطلب'} ({goods === undefined ? '—' : money(goods)})
             </Button>
           </div>
         </div>

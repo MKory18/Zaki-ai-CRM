@@ -7,9 +7,8 @@ import { arDateShort } from '@/lib/format';
 import { LabelSizePicker, useLabelSize } from '@/components/labels/LabelSize';
 import { BLOCKED_WAYBILLS, describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useTell } from '@/components/ui/Confirm';
-import { CreateOrderModal } from '@/components/orders/CreateOrderModal';
 import { ScanSheet } from '@/components/scan/ScanButton';
-import { RiAddCircleLine, RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
+import { RiBarcodeLine, RiDownload2Line, RiEBike2Line, RiLoader4Line, RiLockLine, RiPrinterLine, RiQrScan2Line, RiSendPlaneLine, RiTruckLine } from '@remixicon/react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
@@ -63,8 +62,6 @@ export function ShippingBatchesScreen() {
   const labelSize = useLabelSize();
   // Somebody phoned and ordered. There is nothing to confirm — the call WAS
   // the confirmation — so the order goes straight to the packing line.
-  const [addingOrder, setAddingOrder] = useState(false);
-  const [addNotice, setAddNotice] = useState<string | null>(null);
   // Checking parcels against a batch. Only the REFERENCES are held — the
   // endpoint also returns names and phones, and a verification screen has no
   // business keeping those anywhere, in memory or otherwise.
@@ -122,38 +119,6 @@ export function ShippingBatchesScreen() {
       toast.failed(e instanceof Error ? e.message : 'تعذر الترحيل');
     } finally {
       setBusy(null);
-    }
-  }
-
-  /**
-   * Create the order, then confirm it through the ORDINARY confirmation
-   * endpoint.
-   *
-   * Not a second confirmation path: that one reserves the stock, stamps who
-   * confirmed and when, and writes the status log. Re-implementing any of
-   * that here would be a copy that drifts, and the first thing to drift
-   * would be the reservation — which is how a shelf ends up promising units
-   * it does not have.
-   */
-  async function addConfirmedOrder(order?: { id: string; orderNumber?: string }) {
-    await load();
-    if (!order?.id) return;
-    try {
-      const fresh = await apiJson<{ order: { version: number } }>(`/api/orders/${order.id}`);
-      await apiJson(`/api/orders/${order.id}/confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'confirm', expectedVersion: fresh.order.version }),
-      });
-      setAddNotice(`تم إنشاء ${order.orderNumber ?? 'الطلب'} وتأكيده — صار في شاشة التجهيز.`);
-    } catch (e) {
-      // The order exists either way; say so plainly rather than leaving
-      // somebody to wonder whether it was created at all.
-      setError(
-        `أُنشئ ${order.orderNumber ?? 'الطلب'} لكن تعذّر تأكيده تلقائياً: ${
-          e instanceof Error ? e.message : ''
-        } — أكّده من شاشة الطلبات.`
-      );
     }
   }
 
@@ -264,24 +229,9 @@ export function ShippingBatchesScreen() {
             {label}
           </button>
         ))}
-        <button
-          onClick={() => setAddingOrder(true)}
-          className="ms-auto inline-flex items-center gap-1.5 h-11 md:h-8 px-2.5 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-xs font-semibold hover:bg-[var(--sys-primary)]"
-          title="زبون اتصل وطلب — يُنشأ مؤكداً ويذهب مباشرة إلى التجهيز"
-        >
-          <RiAddCircleLine className="w-4 h-4" />
-          أضف طلباً مؤكداً
-        </button>
-
         {/* The paper every «طباعة بوالص الدفعة» below will use. */}
-        <LabelSizePicker compact className="flex items-center" />
+        <LabelSizePicker compact className="ms-auto flex items-center" />
       </div>
-
-      {addNotice && (
-        <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">
-          {addNotice}
-        </p>
-      )}
 
       {error && (
         <p className="text-sm text-[var(--sys-destructive)] bg-[var(--sys-destructive-soft)] border border-[var(--sys-destructive-border)] rounded-lg p-3">{error}</p>
@@ -481,12 +431,6 @@ export function ShippingBatchesScreen() {
       )}
 
       <NextStepButton />
-
-    <CreateOrderModal
-        isOpen={addingOrder}
-        onClose={() => setAddingOrder(false)}
-        onSuccess={addConfirmedOrder}
-      />
 
       {verify && (
         <ScanSheet
