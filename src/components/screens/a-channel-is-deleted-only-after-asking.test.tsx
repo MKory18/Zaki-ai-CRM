@@ -18,6 +18,8 @@ vi.mock('@/components/ui/Toast', () => ({ useToast: () => ({ failed: vi.fn(), su
 vi.mock('@/components/ui/PageHeader', () => ({ PageHeader: ({ title }: { title: string }) => <h1>{title}</h1> }));
 vi.mock('@/components/ui/Money', () => ({ Money: () => <span /> }));
 vi.mock('@/components/ui/HealthChip', () => ({ HealthChip: () => null }));
+// The screen links to the performance board (where the channel score moved) for whoever may open it.
+vi.mock('@/hooks/useMayOpen', () => ({ useMayOpen: () => () => true }));
 
 import { ChannelsScreen } from './ChannelsScreen';
 

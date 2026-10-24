@@ -19,6 +19,7 @@ import { Rows } from '@/components/ui/Rows';
 import { healthOf } from '@/lib/health';
 import { HealthChip } from '@/components/ui/HealthChip';
 import { BackToDashboardLink } from '@/components/dashboard/DetailsLinks';
+import { ChannelScoresSection } from '@/components/growth/ChannelScores';
 import type { CourierScore } from '@/lib/courier-score';
 import { rowCostStated, type Trust } from '@/lib/cod-vitals';
 
@@ -512,6 +513,9 @@ export function PerformanceScreen() {
             <AttributionTable rows={channels} totals={attrTotals?.channels} empty="لا طلبات مرتبطة بقناة في هذه المدة." />
           </CardContent>
         </Card>
+
+        {/* What each of those doors DELIVERED and COLLECTED — the score that used to sit at the foot of the channels settings. */}
+        <ChannelScoresSection />
 
         {/* Couriers */}
         <Card>
