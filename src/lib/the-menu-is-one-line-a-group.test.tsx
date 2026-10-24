@@ -91,8 +91,8 @@ const LIT = 'bg-[var(--sys-primary)]';
 // ───────────────────────── the arithmetic ─────────────────────────
 
 describe('the menu is fifteen lines', () => {
-  it('— fifty-four screens in the registry, fifteen lines in the menu', () => {
-    expect(ALL_ROUTES).toHaveLength(54);
+  it('— fifty-three screens in the registry, fifteen lines in the menu', () => {
+    expect(ALL_ROUTES).toHaveLength(53);
     expect(lines(NAV), 'عدد أسطر القائمة').toBe(15);
   });
 
@@ -334,7 +334,7 @@ describe('the pills above a screen', () => {
     here.path = '/confirmation/mine';
     const arranged = applyArrangement(menuFor('confirmation.work', 'confirmation.issues', 'confirmation.supervise'), {
       order: ['/confirmation/issues'],
-      hidden: ['/confirmation/winback'],
+      hidden: ['/confirmation/follow-up'],
       pinned: [],
     });
     render(<HubTabs groups={arranged} />);
@@ -342,19 +342,22 @@ describe('the pills above a screen', () => {
     const pills = within(nav).getAllByRole('link').map((a) => a.textContent);
     // Hidden by the person: not there. First by the person: first.
     expect(pills[0]).toBe('الإشكالات');
-    expect(pills).not.toContain('استرجاع الملغى');
+    expect(pills).not.toContain('المتابعة');
     expect(pills).toContain('طلباتي');
     expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe('طلباتي');
   });
 
   it('and a screen the person may not open is not a greyed pill — it is not there', () => {
     here.path = '/confirmation/mine';
-    render(<HubTabs groups={menuFor('confirmation.work')} />);
+    // An agent with the issues door: her desk and the issues list. The supervisor's two
+    // screens («الطلبات الجديدة» — she pulls from the top of her own desk — and «المتابعة»)
+    // are not theirs to see, so they are not there at all.
+    render(<HubTabs groups={menuFor('confirmation.work', 'confirmation.pull', 'confirmation.issues')} />);
     const nav = screen.getByRole('navigation', { name: 'أقسام مركز التأكيد' });
     const pills = within(nav).getAllByRole('link').map((a) => a.textContent);
     expect(pills).toContain('طلباتي');
     expect(pills).not.toContain('الطلبات الجديدة');
-    expect(pills).not.toContain('استرجاع الملغى');
+    expect(pills).not.toContain('المتابعة');
   });
 
   it('and each pill carries its own unread number', () => {

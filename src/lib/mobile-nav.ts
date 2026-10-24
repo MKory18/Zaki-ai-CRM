@@ -36,7 +36,7 @@ const PHONE_ORDER = [
   '/ops/preparation',
   '/ops/tracking',
   '/orders',
-  '/confirmation/postponed',
+  '/confirmation/follow-up',
   '/ops/shipments/new',
   '/ops/returns',
   '/finance/collection',

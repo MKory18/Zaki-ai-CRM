@@ -749,6 +749,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/screens/ConfirmationFollowUpScreen.tsx": {
+    "buttons": 0,
+    "inputs": 0,
+    "columns": 1,
+    "cards": 0,
+    "modals": 0,
+    "icons": 0,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/screens/ConfirmationIssuesScreen.tsx": {
     "buttons": 6,
     "inputs": 5,

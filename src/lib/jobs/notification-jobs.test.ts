@@ -57,14 +57,15 @@ describe('surface-postponed', () => {
     );
   });
 
-  it('tells the holding agent and this store\'s supervisors, and links to the postponed screen', async () => {
+  it('tells the holding agent and this store\'s supervisors, and links each to the postponed list that is theirs', async () => {
     const result = await surfacePostponed.run({ now } as any);
     expect(createNotification).toHaveBeenCalledTimes(1);
     expect(createNotification.mock.calls[0][0]).toMatchObject({
       companyId: 'c1',
       storeId: 'A',
       type: 'POSTPONED_DUE',
-      link: '/confirmation/postponed',
+      // the supervisor opens «المتابعة»; an agent's postponed orders are a tab of «طلباتي» (first openable wins, per recipient)
+      link: ['/confirmation/follow-up', '/confirmation/mine?tab=postponed'],
     });
     expect(createNotification.mock.calls[0][0].recipients.map((u: any) => u.id).sort()).toEqual(['agent-1', 'sup-1']);
     expect(result.processed).toBe(1);

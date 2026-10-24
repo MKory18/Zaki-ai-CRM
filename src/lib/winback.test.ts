@@ -332,10 +332,13 @@ describe('and the screen teaches the rule instead of hiding it', () => {
     expect(src, 'الشاشة تقبل أيّ رقم').toMatch(/discount > max/);
   });
 
-  it('borrows its heading from the registry, like every other screen', () => {
+  it('borrows its heading from the registry, like every other screen — and inside «المتابعة» the page carries it', () => {
     expect(screen()).toContain('<ScreenTitle');
     expect(screen(), 'عنوانٌ مكتوبٌ في الشاشة يخالف القائمة').not.toMatch(/ScreenTitle[\s\S]{0,80}title=/);
-    expect(stripComments(repoFile('src/lib/route-registry.ts'))).toContain("r('/confirmation/winback'");
+    // The screen is a tab of «المتابعة» now: its address is the page's, and `embedded`
+    // keeps it from drawing a second title under the page's own.
+    expect(stripComments(repoFile('src/lib/route-registry.ts'))).toContain("r('/confirmation/follow-up'");
+    expect(screen()).toMatch(/embedded \? \(/);
   });
 
   it('and says why it is empty when it is', () => {

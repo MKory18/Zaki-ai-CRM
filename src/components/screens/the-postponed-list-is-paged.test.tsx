@@ -337,3 +337,16 @@ describe('the order number on a postponed row opens the order it names', () => {
   });
 });
 
+describe('drawn inside another screen (`embedded`)', () => {
+  it('has its own heading on its own address — and none under the title of «طلباتي» or «المتابعة»', async () => {
+    const own = render(<ConfirmationPostponedScreen />);
+    await screen.findAllByText('ORD-P1');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    own.unmount();
+
+    render(<ConfirmationPostponedScreen embedded />);
+    await screen.findAllByText('ORD-P1');
+    expect(screen.queryByRole('heading', { level: 1 }), 'عنوان ثانٍ تحت عنوان الصفحة').toBeNull();
+  });
+});
+

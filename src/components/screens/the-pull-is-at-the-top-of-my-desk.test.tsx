@@ -16,16 +16,17 @@ import React from 'react';
  *   · what she holds changing (a confirmation) reloads the pool's caps too.
  */
 
-const { api, push, user } = vi.hoisted(() => ({
+const { api, push, params, user } = vi.hoisted(() => ({
   api: vi.fn(),
   push: vi.fn(),
+  params: { current: new URLSearchParams() },
   user: { current: { id: 'u1', name: 'سارة', role: 'CONFIRMATION_AGENT', permissions: ['confirmation.work', 'confirmation.pull'], status: 'ACTIVE' } as Record<string, unknown> },
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
   usePathname: () => '/confirmation/mine',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => params.current,
 }));
 vi.mock('@/lib/api-client', () => ({ apiJson: (...a: unknown[]) => api(...a), apiFetch: vi.fn() }));
 vi.mock('@/context/AppContext', () => ({
@@ -54,6 +55,11 @@ vi.mock('./confirmation/ActionDialogs', () => ({
   RejectDialog: () => null,
 }));
 vi.mock('./confirmation/AssistantDialog', () => ({ AssistantDialog: () => null }));
+vi.mock('@/components/screens/ConfirmationPostponedScreen', () => ({
+  ConfirmationPostponedScreen: ({ embedded }: { embedded?: boolean }) => (
+    <div data-testid="postponed-list" data-embedded={String(!!embedded)} />
+  ),
+}));
 
 import { ConfirmationMineScreen } from './ConfirmationMineScreen';
 
@@ -83,6 +89,7 @@ const calls = (prefix: string, method?: string) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  params.current = new URLSearchParams();
   user.current = { id: 'u1', name: 'سارة', role: 'CONFIRMATION_AGENT', permissions: ['confirmation.work', 'confirmation.pull'], status: 'ACTIVE' };
   api.mockImplementation(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST' && url === '/api/confirmation/pull') return { ok: true };
@@ -123,3 +130,30 @@ describe('«طلباتي» — the pull panel', () => {
     expect(calls('/api/confirmation/queue'), 'سُئل باب الطابور عن موظف ما يسحب').toHaveLength(0);
   });
 });
+
+describe('«طلباتي» — the fourth tab, «المؤجلة»', () => {
+  it('is the postponed list drawn inside the desk, under the one title of the desk', async () => {
+    render(<ConfirmationMineScreen />);
+    await screen.findByRole('tab', { name: /المؤجلة/ });
+    expect(screen.queryByTestId('postponed-list')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: /المؤجلة/ }));
+    expect(screen.getByTestId('postponed-list').getAttribute('data-embedded')).toBe('true');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('`?tab=postponed` — the old address, a «came due» notice, the redirect of the supervisor page — opens on it', async () => {
+    params.current = new URLSearchParams('tab=postponed');
+    render(<ConfirmationMineScreen />);
+    await screen.findByTestId('postponed-list');
+    expect(screen.getByRole('tab', { name: /المؤجلة/ }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('and another tab brings the desk back — the postponed list is a tab, not a one-way door', async () => {
+    params.current = new URLSearchParams('tab=postponed');
+    render(<ConfirmationMineScreen />);
+    await screen.findByTestId('postponed-list');
+    fireEvent.click(screen.getByRole('tab', { name: /للشغل/ }));
+    expect(screen.queryByTestId('postponed-list')).toBeNull();
+  });
+});
+
