@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit';
 import { productCosts } from '@/lib/product-cost';
 import { requirePermission, getPermissionScope } from '@/lib/authorization';
 import { maySeeCost, withoutCost } from '@/lib/cost-visibility';
+import { productScopeWhere } from '@/lib/product-scope';
 import { BASE_PRICE_NOT_A_NUMBER, readBasePrice } from '@/lib/product-base-price';
 
 export async function GET(req: Request) {
@@ -24,16 +25,9 @@ export async function GET(req: Request) {
     // This store's catalogue. A store is a separate business here: its own
     // goods, its own stock, its own shelf. A product from another store
     // showing up in this list is one somebody could try to sell.
-    const where: Prisma.ProductWhereInput = { companyId, ...(storeId ? { storeId } : {}) };
-    // Scope → SQL filters. CATEGORY/SPECIFIC read scopeIds that were
-    // tenant-validated when the grant was written. ALL_COMPANY / OWN → no
-    // extra filter (OWN is unsupported for products — documented in
-    // authorization.ts — and treated as company-wide).
-    if (scope.scope === 'CATEGORY') {
-      where.categoryId = { in: Array.isArray(scope.scopeIds) ? (scope.scopeIds as string[]) : [] };
-    } else if (scope.scope === 'SPECIFIC') {
-      where.id = { in: Array.isArray(scope.scopeIds) ? (scope.scopeIds as string[]) : [] };
-    }
+    // Scope → SQL filters (`productScopeWhere`, shared with the command palette): CATEGORY/SPECIFIC
+    // read scopeIds that were tenant-validated when the grant was written; ALL_COMPANY / OWN add none.
+    const where: Prisma.ProductWhereInput = productScopeWhere(scope, companyId, storeId);
 
     // Optional search (q) + limit for scope pickers / search UIs.
     // When absent the behavior is unchanged from before.

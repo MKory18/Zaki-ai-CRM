@@ -241,9 +241,16 @@ interface Person {
   roleAr: string;
 }
 
+/** A product, as the server is willing to name one: an id, a name, a code. No price, no cost, no stock. */
+interface ProductHit {
+  id: string;
+  name: string;
+  sku: string;
+}
+
 /** Same shape for all of them, so a row is a row and the list reads as one. */
 interface Row {
-  kind: 'count' | 'record' | 'person' | 'screen' | 'action' | 'create';
+  kind: 'count' | 'record' | 'person' | 'product' | 'screen' | 'action' | 'create';
   key: string;
   label: string;
   hint: string;
@@ -262,6 +269,7 @@ const GROUP_AR: Record<Row['kind'], string> = {
   count: 'أرقام',
   record: 'سجلات',
   person: 'الموظفون',
+  product: 'المنتجات',
   screen: 'شاشات',
   action: 'أفعال',
   create: '+ أنشئ',
@@ -296,6 +304,7 @@ export function CommandPalette({
   /** The counters and the colleagues a typed word asked for. */
   const [counts, setCounts] = useState<PaletteFact[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [products, setProducts] = useState<ProductHit[]>([]);
   /** One line a command wrote back into the open box. */
   const [notice, setNotice] = useState<string | null>(null);
   const [looking, setLooking] = useState(false);
@@ -355,12 +364,13 @@ export function CommandPalette({
     if (!open || term.length < 2) {
       setCounts([]);
       setPeople([]);
+      setProducts([]);
       return;
     }
     let dropped = false;
     const id = setTimeout(async () => {
       try {
-        const data = await apiJson<{ facts: PaletteFact[]; people: Person[] }>('/api/palette', {
+        const data = await apiJson<{ facts: PaletteFact[]; people: Person[]; products?: ProductHit[] }>('/api/palette', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ q: term }),
@@ -368,10 +378,12 @@ export function CommandPalette({
         if (dropped) return;
         setCounts(data.facts ?? []);
         setPeople(data.people ?? []);
+        setProducts(data.products ?? []);
       } catch {
         if (dropped) return;
         setCounts([]);
         setPeople([]);
+        setProducts([]);
       }
     }, SETTLE_MS);
     return () => {
@@ -517,6 +529,16 @@ export function CommandPalette({
       icon: 'CircleUser',
     }));
 
+    // A product, one press from its page — the list arrives empty unless the server found `products.view`.
+    const catalogue: Row[] = products.map((product) => ({
+      kind: 'product' as const,
+      key: `g:${product.id}`,
+      label: product.name,
+      hint: product.sku,
+      href: `/products/${product.id}`,
+      icon: 'Package',
+    }));
+
     const screens: Row[] = groups
       .flatMap((group) => group.routes.map((route) => ({ group, route })))
       .filter(({ route }) => route.label.toLowerCase().includes(term) || route.path.includes(term))
@@ -536,8 +558,8 @@ export function CommandPalette({
       .filter((c) => c.label.toLowerCase().includes(term) || c.words.some((w) => w.toLowerCase().includes(term)))
       .map(asCreate);
 
-    return [...counters, ...records, ...colleagues, ...screens, ...creating, ...actions];
-  }, [groups, hits, counts, people, query, folded, canSwitchStore, may, ctx]);
+    return [...counters, ...records, ...colleagues, ...catalogue, ...screens, ...creating, ...actions];
+  }, [groups, hits, counts, people, products, query, folded, canSwitchStore, may, ctx]);
 
   const go = useCallback(
     (row: Row) => {

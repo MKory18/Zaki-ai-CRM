@@ -235,7 +235,7 @@ describe('the door is a door, not a gate', () => {
 
   it('and two letters is the floor here too', async () => {
     const body = await (await ask('ك')).json();
-    expect(body).toEqual({ facts: [], people: [] });
+    expect(body).toEqual({ facts: [], people: [], products: [] });
     expect(db.order.count).not.toHaveBeenCalled();
     expect(db.user.findMany).not.toHaveBeenCalled();
   });
