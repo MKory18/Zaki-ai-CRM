@@ -291,7 +291,7 @@
   },
   "src/components/orders/CreateOrderModal.tsx": {
     "buttons": 2,
-    "inputs": 9,
+    "inputs": 10,
     "columns": 0,
     "cards": 0,
     "modals": 1,
@@ -1170,12 +1170,12 @@
     "tabs": 0
   },
   "src/components/screens/ShippingBatchesScreen.tsx": {
-    "buttons": 9,
+    "buttons": 8,
     "inputs": 0,
     "columns": 0,
     "cards": 0,
     "modals": 0,
-    "icons": 14,
+    "icons": 13,
     "links": 0,
     "tabs": 0
   },
