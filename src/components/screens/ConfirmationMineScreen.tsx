@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiJson } from '@/lib/api-client';
 import { CONTACT_FIRST_MESSAGE } from '@/lib/confirmation-queue';
 import { humanMinutes, useElapsedMinutes } from '@/components/ui/Elapsed';
@@ -23,6 +24,7 @@ import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLo
 import { useToast } from '@/components/ui/Toast';
 import { deskIsEmpty } from '@/lib/next-step';
 import { PullPanel, useQueue } from '@/components/confirmation/PullPanel';
+import { ConfirmationPostponedScreen } from '@/components/screens/ConfirmationPostponedScreen';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { Rows } from '@/components/ui/Rows';
@@ -223,7 +225,10 @@ export function ConfirmationMineScreen() {
    * «للشغل» first, because that is what the morning is: an order nobody
    * has reached yet is a call, and a call is the job.
    */
-  const [tab, setTab] = useState<'work' | 'noAnswer' | 'done'>('work');
+  // `?tab=postponed` — the old «الطلبات المؤجلة» address, a notification about a postponed
+  // order that came due, and the supervisor-only page's redirect all land on the fourth tab.
+  const askedTab = useSearchParams().get('tab');
+  const [tab, setTab] = useState<'work' | 'noAnswer' | 'done' | 'postponed'>(askedTab === 'postponed' ? 'postponed' : 'work');
 
   /**
    * Returns what it loaded — or `null` — so a caller that needs to know what
@@ -505,9 +510,18 @@ export function ConfirmationMineScreen() {
           count={confirmed.total}
           note={confirmed.q ? `بحث «${confirmed.q}»` : 'يوم واحد في كلّ مرّة'}
         />
+        {/* Her own postponed orders — the same list the supervisor reads in «المتابعة», drawn
+            here so the agent is not sent to a page of her own for it. No count: the figure
+            this screen has (`waitingLater`) is only the ones for a later day. */}
+        <TabButton
+          active={tab === 'postponed'}
+          onClick={() => setTab('postponed')}
+          label="المؤجلة"
+          note="ما أجّلتَه لموعد — تعمل على ما حلّ موعده"
+        />
       </div>
 
-      {tab !== 'done' && (
+      {(tab === 'work' || tab === 'noAnswer') && (
       <section>
         <SectionHead
           title={tab === 'work' ? 'للشغل' : 'لا يرد'}
@@ -874,6 +888,8 @@ export function ConfirmationMineScreen() {
       </section>
       )}
 
+      {tab === 'postponed' && <ConfirmationPostponedScreen embedded />}
+
       {tab === 'done' && (
       <section className="space-y-3">
         {/*
@@ -1172,7 +1188,7 @@ function TabButton({
   active: boolean;
   onClick: () => void;
   label: string;
-  count: number;
+  count?: number;
   note?: string;
   tone?: 'warning';
 }) {
@@ -1191,6 +1207,7 @@ function TabButton({
     >
       <span className="flex items-center gap-1.5 text-sm font-bold">
         {label}
+        {count !== undefined && (
         <span
           className={`text-xs px-1.5 py-0.5 rounded-md border tabular-nums font-normal ${
             tone === 'warning'
@@ -1201,6 +1218,7 @@ function TabButton({
         >
           {count}
         </span>
+        )}
       </span>
       {note && <span className="block text-xs font-normal text-[var(--sys-muted)]">{note}</span>}
     </button>

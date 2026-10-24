@@ -148,6 +148,10 @@ const nextConfig: NextConfig = {
       // screen. The old address — and `?product=<id>` on it, which Next carries
       // across a redirect — keeps landing on the dialog it used to open.
       { source: '/inventory/receiving', destination: '/inventory/balances', permanent: true },
+      // «الطلبات المؤجلة» and «استرجاع الملغى» are the two tabs of «المتابعة». An agent who
+      // arrives at the first is sent on, by the page, to the tab of «طلباتي» that is hers.
+      { source: '/confirmation/postponed', destination: '/confirmation/follow-up', permanent: true },
+      { source: '/confirmation/winback', destination: '/confirmation/follow-up?tab=winback', permanent: true },
       // The single-product shop is one card on /store now: its old address
       // moves bookmarks and pasted links along permanently.
       { source: '/store/single-product', destination: '/store', permanent: true },

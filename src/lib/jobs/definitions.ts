@@ -338,7 +338,8 @@ export const surfacePostponed: JobDefinition = {
           title: 'طلب مؤجَّل حان موعده',
           message,
           type: 'POSTPONED_DUE',
-          link: '/confirmation/postponed',
+          // The supervisor's «المتابعة»; an agent's postponed orders are a tab of «طلباتي».
+          link: ['/confirmation/follow-up', '/confirmation/mine?tab=postponed'],
         });
         if (told) notified++;
       }

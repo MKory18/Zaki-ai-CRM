@@ -53,7 +53,12 @@ const read = (body: unknown): PagedRead<Row, Extra> => {
   return { rows: b.orders, pagination: b.pagination, extra: { leadDays: b.leadDays, facts: b.facts } };
 };
 
-export function ConfirmationPostponedScreen() {
+/**
+ * `embedded` — drawn as a tab of another screen («طلباتي» for an agent, «المتابعة» for a
+ * supervisor), which already has its own heading: a second `<h1>` with the route's name
+ * under the first is two titles for one page.
+ */
+export function ConfirmationPostponedScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const [search, setSearch] = useState('');
   const [when, setWhen] = useState('all');
   const [kind, setKind] = useState('all');
@@ -163,7 +168,7 @@ export function ConfirmationPostponedScreen() {
 
   return (
     <div className="max-w-5xl space-y-3">
-      <ScreenTitle />
+      {!embedded && <ScreenTitle />}
 
       <p className="text-sm text-[var(--sys-muted-foreground)]">
         القابل للعمل عليه: المستحق خلال {leadDays} يوم أو المتأخر. الباقي للعرض فقط —

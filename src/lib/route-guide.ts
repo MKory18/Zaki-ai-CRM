@@ -66,8 +66,7 @@ export const GUIDED_PATHS: readonly string[] = [
   // مركز التأكيد
   '/confirmation/queue',
   '/confirmation/mine',
-  '/confirmation/postponed',
-  '/confirmation/winback',
+  '/confirmation/follow-up',
   '/confirmation/issues',
   // الشحن — the five stops of one parcel's road
   '/ops/preparation',

@@ -42,8 +42,11 @@ describe('postponing a shipment', () => {
     // this gets reported again.
     expect(src, 'التبويب يحمل الاسمَ نفسَه الذي في القائمة').not.toMatch(/'held', 'مؤجَّلة'\]/);
 
-    const menu = ALL_ROUTES.find((r) => r.path === '/confirmation/postponed');
-    expect(menu?.label).toBe('الطلبات المؤجلة');
+    // The menu word is a TAB of «المتابعة» now («مؤجلة»), and the screen's own tab says
+    // «مؤجَّلة الشحن» — different words on purpose, on screens that are different jobs.
+    const menu = ALL_ROUTES.find((r) => r.path === '/confirmation/follow-up');
+    expect(menu?.label).toBe('المتابعة');
+    expect(menu?.label).not.toBe('مؤجَّلة الشحن');
   });
 
   it('and the tab says how many are being held', () => {

@@ -73,7 +73,8 @@ const read = (body: unknown): PagedRead<Row, Extra> => {
 const reasonAr = (code: string | null) => (code ? (REJECTION_REASON_AR[code] ?? code) : 'بلا سبب');
 const day = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : '—');
 
-export function WinbackScreen() {
+/** `embedded` — a tab of «المتابعة», whose page already carries the title (see `ConfirmationPostponedScreen`). */
+export function WinbackScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const toast = useToast();
   const ask = useAsk();
   const tell = useTell();
@@ -195,11 +196,16 @@ export function WinbackScreen() {
     },
   ];
 
+  const explain = `طلباتٌ أُلغيت لسببٍ يزول بالوقت أو بالسعر، ومضى على إلغائها ${rule.coolingDays} يوماً على الأقلّ. العرضُ يُنشئ طلباً جديداً في الطابور، والقديمُ يبقى ملغى.`;
+
   return (
     <div className="space-y-4">
-      <ScreenTitle
-        note={`طلباتٌ أُلغيت لسببٍ يزول بالوقت أو بالسعر، ومضى على إلغائها ${rule.coolingDays} يوماً على الأقلّ. العرضُ يُنشئ طلباً جديداً في الطابور، والقديمُ يبقى ملغى.`}
-      />
+      {embedded ? (
+        // Inside «المتابعة»: the page already has its title, so only the sentence under it stays.
+        <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">{explain}</p>
+      ) : (
+        <ScreenTitle note={explain} />
+      )}
 
       {/* THE RULE, VISIBLE. Otherwise the screen looks arbitrary — and, beside it, the way to change it. */}
       <section className="flex flex-wrap items-start gap-3 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">

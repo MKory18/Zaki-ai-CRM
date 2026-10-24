@@ -619,3 +619,20 @@ describe('how it is built', () => {
     expect(src()).toMatch(/canEditRule && \(\s*<WinbackRuleDialog/);
   });
 });
+
+describe('drawn as the «ملغاة سابقاً» tab of «المتابعة» (`embedded`)', () => {
+  it('keeps the sentence that says what these orders are, but not a title of its own', async () => {
+    render(<WinbackScreen embedded />);
+    await screen.findByLabelText('الحالة');
+    // The page owns the title; the screen's heading component is not drawn, and the
+    // sentence it carried is a plain paragraph instead.
+    expect(screen.queryByTestId('note')).toBeNull();
+    expect(screen.getByText(/طلباتٌ أُلغيت لسببٍ يزول بالوقت أو بالسعر/)).toBeTruthy();
+  });
+
+  it('and on its own address it still draws the title with that sentence as its note', async () => {
+    await draw();
+    expect(screen.getByTestId('note').textContent).toMatch(/طلباتٌ أُلغيت لسببٍ يزول بالوقت أو بالسعر/);
+  });
+});
+

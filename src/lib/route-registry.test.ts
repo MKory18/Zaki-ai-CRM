@@ -35,7 +35,7 @@ describe('navigation contract', () => {
     ]);
   });
 
-  it('lists 54 unique routes', () => {
+  it('lists 53 unique routes', () => {
     // 52 until /ops/labels was folded into the shipping batches screen:
     // printing, the sizes and the courier CSV all live where the batch is.
     // 59 with the store section's seven screens, all live. 60 with
@@ -75,8 +75,12 @@ describe('navigation contract', () => {
     // products for one form. The address redirects permanently (and carries
     // `?product=`), and the dialog is `ReceiveDialog`.
     const paths = ALL_ROUTES.map((route) => route.path);
-    expect(paths).toHaveLength(54);
-    expect(new Set(paths).size).toBe(54);
+    //
+    // 53 when «الطلبات المؤجلة» and «استرجاع الملغى» became the two tabs of «المتابعة»
+    // (`/confirmation/follow-up`, the supervisor's), and an agent's postponed orders a tab
+    // of «طلباتي». Both old addresses redirect permanently.
+    expect(paths).toHaveLength(53);
+    expect(new Set(paths).size).toBe(53);
   });
 
   it('the store section is its own group, and reads as one', () => {
@@ -136,13 +140,22 @@ describe('role visibility', () => {
     expect(canAccessRoute(moderator(), findRoute('/orders')!, can)).toBe(true);
   });
 
-  it('a confirmation agent reaches mine and postponed but not the supervisor’s queue, nor issues', () => {
+  it('a confirmation agent reaches only «طلباتي» — not the supervisor’s queue or follow-up, nor issues', () => {
     const agent = userWith(['confirmation.pull', 'confirmation.work'], 'CONFIRMATION_AGENT');
-    const allowed = ['/confirmation/mine', '/confirmation/postponed'];
-    for (const p of allowed) expect(canAccessRoute(agent, findRoute(p)!, can)).toBe(true);
-    // The pull is at the top of «طلباتي»; the queue page is the supervisor's.
-    expect(canAccessRoute(agent, findRoute('/confirmation/queue')!, can)).toBe(false);
-    expect(canAccessRoute(agent, findRoute('/confirmation/issues')!, can)).toBe(false);
+    expect(canAccessRoute(agent, findRoute('/confirmation/mine')!, can)).toBe(true);
+    // The pull is at the top of «طلباتي», and her postponed orders are a tab of it.
+    for (const p of ['/confirmation/queue', '/confirmation/follow-up', '/confirmation/issues']) {
+      expect(canAccessRoute(agent, findRoute(p)!, can), p).toBe(false);
+    }
+    // The old addresses are not registry routes any more — they redirect.
+    for (const p of ['/confirmation/postponed', '/confirmation/winback']) expect(findRoute(p), p).toBeUndefined();
+  });
+
+  it('a supervisor reaches the queue and «المتابعة»', () => {
+    const supervisor = userWith(['confirmation.supervise'], 'CONFIRMATION_AGENT');
+    for (const p of ['/confirmation/queue', '/confirmation/follow-up']) {
+      expect(canAccessRoute(supervisor, findRoute(p)!, can), p).toBe(true);
+    }
   });
 
   it('whoever may pull may open «طلباتي» — the panel is there — and a supervisor opens the queue', () => {

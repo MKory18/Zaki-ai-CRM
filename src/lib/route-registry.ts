@@ -131,10 +131,11 @@ export const NAV: NavGroup[] = [
       // `confirmation.pull` too: the pull panel is at the top of this screen, so whoever may
       // pull must be able to open it (the list under it still asks `confirmation.work`).
       r('/confirmation/mine', 'طلباتي', 'ClipboardList', ['confirmation.work', 'confirmation.pull']),
-      r('/confirmation/postponed', 'الطلبات المؤجلة', 'CalendarClock', ['confirmation.work', 'confirmation.supervise']),
-      // The discount is money, so this is the supervisor's screen — the
-      // agent meets the result of it as an ordinary new order in her queue.
-      r('/confirmation/winback', 'استرجاع الملغى', 'Repeat', ['confirmation.supervise']),
+      // «المتابعة»: the postponed orders and the cancelled-before ones, two tabs of one
+      // screen (owner, 24/10). The supervisor's — the win-back tab is a discount, which is
+      // money, and the agent meets the result of it as an ordinary new order in her queue.
+      // An agent's postponed orders are a tab of «طلباتي»; the old addresses redirect.
+      r('/confirmation/follow-up', 'المتابعة', 'CalendarClock', ['confirmation.supervise']),
       r('/confirmation/issues', 'الإشكالات', 'AlertTriangle', ['confirmation.issues']),
     ],
   },
