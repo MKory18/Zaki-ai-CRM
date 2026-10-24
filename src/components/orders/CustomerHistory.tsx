@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import { Modal } from '@/components/ui/Modal';
 import { OrderStateBadge } from './OrderStateBadge';
+import { OrderLink } from './OrderLink';
 import { arDate } from '@/lib/format';
 import { RiHistoryLine, RiLoader4Line, RiShieldFlashLine } from '@remixicon/react';
 import { Money } from '@/components/ui/Money';
@@ -136,7 +137,7 @@ export function CustomerHistoryModal({
           {history?.orders.map((o) => (
             <article key={o.id} className="border border-[var(--sys-border)] rounded-lg p-3">
               <header className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-medium text-[var(--sys-heading)]" dir="ltr">{o.orderNumber}</span>
+                <OrderLink id={o.id} number={o.orderNumber} className="font-medium text-[var(--sys-heading)]" />
                 <OrderStateBadge state={o.state} />
                 <span className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
                   {arDate(o.createdAt)}

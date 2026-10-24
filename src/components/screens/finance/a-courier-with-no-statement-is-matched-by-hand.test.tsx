@@ -190,6 +190,21 @@ const ticked = () =>
 const press = (name: RegExp) => fireEvent.click(screen.getByRole('button', { name }));
 const choose = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+describe('the reference opens the order', () => {
+  it('— for somebody who may open the orders screen, the reference is a link to that order', async () => {
+    user.current = { ...ADMIN, permissions: [...ADMIN.permissions, 'orders.view'] };
+    await draw();
+    const link = screen.getAllByRole('link', { name: 'M1' })[0];
+    expect(link.getAttribute('href')).toBe('/orders/id-M1');
+  });
+
+  it('NEGATIVE: and for somebody who may not, it is the text it was — no link that ends in a refusal', async () => {
+    await draw();
+    expect(screen.queryByRole('link', { name: 'M1' })).toBeNull();
+    expect(screen.getAllByText('M1').length).toBeGreaterThan(0);
+  });
+});
+
 describe('opening it', () => {
   it('asks the follow-up door for page one, fifty to a page, and nothing else', async () => {
     await draw();

@@ -9,6 +9,9 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/context/AppContext';
+import { useToast } from '@/components/ui/Toast';
+import { useMayOpen } from '@/hooks/useMayOpen';
+import { openBalancesStep } from '@/lib/next-step';
 import { arDate } from '@/lib/format';
 import { BatchCostDialog, type BatchForCost } from '@/components/production/BatchCostDialog';
 import {
@@ -94,6 +97,8 @@ function numberOnly(v: number | undefined | typeof NOT_A_NUMBER): number | undef
 
 export function ManufacturingScreen() {
   const { t } = useApp();
+  const toast = useToast();
+  const mayOpen = useMayOpen();
   const [batches, setBatches] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -321,6 +326,8 @@ export function ManufacturingScreen() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      // It used to close in silence. The units are on the shelf now; the balances are where to see them.
+      toast.done(`أُضيفت التشغيلة ${batchNumber}`, 'دخلت المخزون بكلفتها.', openBalancesStep(mayOpen));
       setCreateModalOpen(false);
       setBatchNumber('');
       setNotes('');

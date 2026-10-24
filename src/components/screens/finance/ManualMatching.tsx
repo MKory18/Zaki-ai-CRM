@@ -17,6 +17,7 @@ import { ListToolbar, withChosen, type ToolbarFilter } from '@/components/ui/Lis
 import { Money } from '@/components/ui/Money';
 import { Pager } from '@/components/ui/Pager';
 import { Rows } from '@/components/ui/Rows';
+import { OrderLink } from '@/components/orders/OrderLink';
 
 /**
  * «مطابقة يدوية» — a courier, or a company, that sends no statement and no file.
@@ -434,9 +435,7 @@ export function ManualMatching() {
               primary: true,
               render: (o) => (
                 <>
-                  <span dir="ltr" className="font-medium text-[var(--sys-heading)]">
-                    {o.merchantRef ?? o.orderNumber}
-                  </span>
+                  <OrderLink id={o.id} number={o.merchantRef ?? o.orderNumber} className="font-medium text-[var(--sys-heading)]" />
                   {o.alert && (
                     <span className="block text-xs text-[var(--sys-destructive)]">
                       {ALERT_AR[o.alert.kind]}
