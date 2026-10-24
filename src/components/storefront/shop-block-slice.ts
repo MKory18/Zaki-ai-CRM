@@ -61,6 +61,24 @@ export const SHOP_BLOCK_CLASSES = [
   'lp-trust',
   'lp-catalog',
   'lp-catalog-cats',
+  /*
+   * ── THE CATALOGUE BLOCK'S OWN PARTS ──
+   * A shop's home draws the `catalog` block (landing/blocks/PageBlocks.tsx), and the sweep below only reads
+   * `components/storefront`, so it could not see the cards that block renders. `lp-catalog` and `lp-catalog-cats`
+   * were kept; the card, its picture, its name and its price chip were not — and every product picture drew at
+   * its natural shape instead of the square frame, with the name and the price run together on one line.
+   * `a-shop-sheet-never-opens-a-parenthesis-it-does-not-close.test.ts` now reads the block itself.
+   */
+  'lp-catalog-card',
+  'lp-catalog-media',
+  'lp-catalog-noimg',
+  'lp-catalog-body',
+  'lp-catalog-name',
+  'lp-catalog-price',
+  'lp-catalog-tag',
+  'lp-catalog-cat',
+  'lp-catalog-sm',
+  'lp-catalog-lg',
   'lp-faq-item',
   'lp-form-section',
   'lp-footer',

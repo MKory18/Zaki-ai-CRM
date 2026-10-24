@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { SHOP_SHEET } from '@/components/storefront/styles';
 import { BLOCK_CSS } from '@/components/landing/blocks/styles';
-import { shopBlockSlice } from '@/components/storefront/shop-block-slice';
+import { SHOP_BLOCK_CLASSES, shopBlockSlice } from '@/components/storefront/shop-block-slice';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { stripComments } from './guard-source';
 
 /**
  * A SELECTOR WITH A `(` THAT NEVER CLOSES EATS THE REST OF THE STYLESHEET.
@@ -86,5 +89,35 @@ describe('the slice, on a selector list inside a function', () => {
   it('the source stylesheet itself has the rule that used to be cut', () => {
     // If this ever stops being true the guard above is guarding nothing.
     expect(BLOCK_CSS).toMatch(/:is\(\.lp-cta,\s*\.lp-btn,\s*\.lp-sticky\)/);
+  });
+});
+
+describe('the catalogue block, which the shop home draws', () => {
+  /**
+   * `a-shop-does-not-wear-the-whole-wardrobe` reads `components/storefront`; the `catalog` block lives in
+   * `landing/blocks/PageBlocks.tsx` and is drawn BY the shop home, so its classes were never swept. They were
+   * dropped from the shop's sheet and every product picture drew at its natural shape.
+   */
+  const block = stripComments(readFileSync(join(process.cwd(), 'src/components/landing/blocks/PageBlocks.tsx'), 'utf8'));
+  const start = block.indexOf("case 'catalog'");
+  const classes = [...new Set((block.slice(start, start + 6000).match(/lp-catalog(?:-[a-z]+)?/g) ?? []))];
+
+  it('reads at least the parts it is known to have', () => {
+    for (const c of ['lp-catalog-card', 'lp-catalog-media', 'lp-catalog-body', 'lp-catalog-name', 'lp-catalog-price']) {
+      expect(classes, c).toContain(c);
+    }
+  });
+
+  it('every class it draws is a class the shop keeps', () => {
+    const missing = classes.filter((c) => !(SHOP_BLOCK_CLASSES as readonly string[]).includes(c));
+    expect(missing, 'صنف يرسمه بلوك الكتالوج ولا تحمله ورقة المتجر').toEqual([]);
+  });
+
+  it('and the rule that squares every product picture is in the sheet the shop is sent', () => {
+    expect(SHOP_SHEET).toMatch(/\.lp-catalog-card img\s*\{[^}]*aspect-ratio:\s*1\s*\/\s*1/);
+  });
+
+  it('with the price drawn as a chip of its own, not run into the name', () => {
+    expect(SHOP_SHEET).toMatch(/\.lp-catalog-price\s*\{[^}]*border-radius/);
   });
 });

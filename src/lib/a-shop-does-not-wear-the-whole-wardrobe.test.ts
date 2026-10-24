@@ -70,6 +70,18 @@ function classesTheShopDraws(): Set<string> {
       }
     }
   }
+  /*
+   * THE CATALOGUE BLOCK IS A SHOP SOURCE TOO. The shop's home draws the `catalog` block, whose markup lives in
+   * landing/blocks/PageBlocks.tsx — outside the roots above — so its card, picture, name and price chip were
+   * never swept, were left out of the list, and every product picture drew unframed. Its classes are read
+   * from the block itself (and the card sizes from the schema, because the markup builds `lp-catalog-${size}`).
+   */
+  const blocks = stripComments(readFileSync(join(ROOT, 'src/components/landing/blocks/PageBlocks.tsx'), 'utf8'));
+  const at = blocks.indexOf("case 'catalog'");
+  for (const m of blocks.slice(at, at + 6000).matchAll(/lp-catalog(?:-[a-z]+)?/g)) found.add(m[0]);
+  const sizes = readFileSync(join(ROOT, 'src/lib/landing-sections.ts'), 'utf8').match(/cardSize:\s*z\.enum\(\[([^\]]+)\]/)?.[1] ?? '';
+  // `md` is the default size and has no rule of its own: nothing to keep, so it is not in the list.
+  for (const size of sizes.match(/'([a-z]+)'/g) ?? []) if (size !== "'md'") found.add(`lp-catalog-${size.replace(/'/g, '')}`);
   return found;
 }
 
