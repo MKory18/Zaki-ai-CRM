@@ -349,8 +349,9 @@ export const NAV: NavGroup[] = [
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
       r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
       r('/settings/tracking', 'بكسل التتبع والحملات', 'Radar', ['settings.view']),
-      r('/settings/whatsapp', 'إعدادات واتساب', 'MessageCircle', ['whatsapp.manage']),
-      r('/settings/telegram', 'إعدادات تلجرام', 'Send', ['telegram.manage']),
+      // «الربط»: WhatsApp and Telegram, one card each (owner, 24/10). Each card is drawn only
+      // for whoever holds ITS key; the page opens for either. The old addresses redirect.
+      r('/settings/links', 'الربط', 'MessageCircle', ['whatsapp.manage', 'telegram.manage']),
 
       /**
        * WHAT WAS CONFIGURED FROM OTHER GROUPS, NOW CONFIGURED HERE.

@@ -57,7 +57,7 @@ export const SETTINGS_CARDS: readonly SettingsCard[] = [
     key: 'chat',
     title: 'واتساب وتلجرام',
     why: 'حالة الربط وإعادة الاتصال. المحادثات نفسها في «المحادثات».',
-    paths: ['/settings/whatsapp', '/settings/telegram'],
+    paths: ['/settings/links'],
   },
   {
     key: 'ai',

@@ -123,7 +123,7 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
       description:
         'رقم واحد للشركة يتشاركه الموظفون، عبر واجهة ميتا الرسمية وحدها — لا جسور غير رسمية تُغلق حسابك.',
       category: 'MESSAGING',
-      settingsPath: '/settings/whatsapp',
+      settingsPath: '/settings/links',
       permission: 'whatsapp.manage',
       configured: async ({ companyId }) =>
         (await db.whatsAppConnection.count({ where: { companyId } })) > 0,
@@ -134,7 +134,7 @@ export function builtInApps(db: RegistryDb): BuiltInApp[] {
       summary: 'استقبال الطلبات من مجموعات تلجرام',
       description: 'يقرأ الرسائل من المصادر التي تحدّدها ويحوّلها إلى طلبات في نفس نظام الطلبات.',
       category: 'MESSAGING',
-      settingsPath: '/settings/telegram',
+      settingsPath: '/settings/links',
       permission: 'telegram.manage',
       configured: async ({ companyId }) =>
         (await db.telegramSource.count({ where: { companyId, isActive: true } })) > 0,

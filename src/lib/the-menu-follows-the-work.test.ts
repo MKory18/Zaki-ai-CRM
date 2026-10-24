@@ -147,7 +147,10 @@ describe('operations sit with the work, and configuration sits in settings', () 
     // The pairing the contract already had, which the AI was the exception to.
     // The inboxes are their own group, «المحادثات», since the menu was folded.
     expect(pathsOf('chats')).toEqual(['/growth/whatsapp/inbox', '/growth/telegram/orders']);
-    expect(pathsOf('settings')).toEqual(expect.arrayContaining(['/settings/whatsapp', '/settings/telegram']));
+    // …and the setup is ONE page now, «الربط», with a card for each (owner, 24/10).
+    expect(pathsOf('settings')).toContain('/settings/links');
+    expect(pathsOf('settings')).not.toContain('/settings/whatsapp');
+    expect(pathsOf('settings')).not.toContain('/settings/telegram');
   });
 
   it('and nothing under /settings is filed in another group', () => {
@@ -198,10 +201,10 @@ describe('two entries, one root, and nobody guessing which is which', () => {
 });
 
 describe('nothing was moved that a link, a bookmark or a saved layout points at', () => {
-  it('— every one of the 52 screens is still there, once, at its own address — and the front door is the 53rd', () => {
+  it('— every one of the 51 screens is still there, once, at its own address — and the front door is the 52nd', () => {
     const paths = ALL_ROUTES.map((r) => r.path);
-    expect(paths).toHaveLength(53);
-    expect(new Set(paths).size).toBe(53);
+    expect(paths).toHaveLength(52);
+    expect(new Set(paths).size).toBe(52);
     // The settings stand behind ONE menu line now; not one of them moved.
     for (const path of ['/settings/geo', '/settings/couriers', '/settings/tracking', '/apps/store', '/admin/jobs']) {
       expect(paths, path).toContain(path);

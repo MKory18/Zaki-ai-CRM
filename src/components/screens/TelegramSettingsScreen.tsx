@@ -12,7 +12,8 @@ import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine 
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 
-export function TelegramSettingsScreen() {
+/** `embedded` — a card of «الربط» (`/settings/links`): no page padding, a section heading instead of the page header. */
+export function TelegramSettingsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const { currentUser } = useApp();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,19 @@ export function TelegramSettingsScreen() {
 
   return (
     <>
-      <div className="p-6 space-y-6 max-w-3xl mx-auto" dir="rtl">
+      <div className={embedded ? 'space-y-6' : 'p-6 space-y-6 max-w-3xl mx-auto'} dir="rtl">
+        {embedded ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-base font-bold text-[var(--sys-heading)]">تلجرام</h2>
+              <p className="text-xs text-[var(--sys-muted-foreground)]">حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/growth/telegram/orders" className="text-xs font-semibold text-[var(--sys-primary)] hover:underline">طلبات تلجرام</Link>
+              <Button variant="ghost" size="sm" onClick={load} aria-label="تحديث حالة تلجرام"><RiRefreshLine className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        ) : (
         <PageHeader title="إعدادات تلجرام"
             description="حالة اتصال البوت والويبهوك (لا تُعرض أي مفاتيح سرية هنا أبدًا)"
             actions={
@@ -79,6 +92,7 @@ export function TelegramSettingsScreen() {
           </div></>
             }
           />
+        )}
 
         {error && (
           <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)] px-3 py-2.5 text-xs">{error}</div>
