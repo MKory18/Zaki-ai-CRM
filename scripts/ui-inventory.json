@@ -1160,7 +1160,7 @@
     "tabs": 0
   },
   "src/components/screens/ShipmentsNewScreen.tsx": {
-    "buttons": 5,
+    "buttons": 6,
     "inputs": 6,
     "columns": 5,
     "cards": 0,

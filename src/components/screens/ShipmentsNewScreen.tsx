@@ -9,7 +9,11 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { RiAlertLine, RiArrowGoBackLine, RiCloseCircleLine, RiLoader4Line, RiPauseCircleLine, RiTruckLine } from '@remixicon/react';
 import { RejectDialog } from '@/components/screens/confirmation/ActionDialogs';
 import { DelayShipmentDialog, type DelayChoice } from '@/components/ops/DelayShipmentDialog';
-import { useConfirm } from '@/components/ui/Confirm';
+import { useConfirm, useTell } from '@/components/ui/Confirm';
+import { useApp } from '@/context/AppContext';
+import { userCan } from '@/lib/can';
+import { useLabelSize } from '@/components/labels/LabelSize';
+import { BLOCKED_WAYBILLS, describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -73,6 +77,13 @@ export function ShipmentsNewScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  /** The batch the banner above is about — what «اطبع البوالص» prints. */
+  const [justMade, setJustMade] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
+  const { currentUser } = useApp();
+  const tell = useTell();
+  const labelSize = useLabelSize();
+  const mayPrint = userCan(currentUser, 'ops.labels');
 
   useEffect(() => {
     apiJson<{ providers: { id: string; name: string }[]; regions: { id: string; name: string }[] }>(
@@ -257,7 +268,7 @@ export function ShipmentsNewScreen() {
 
     setBusy(true);
     try {
-      const res = await apiJson<{ batch: { batchNumber: string }; shipped: number; exceptions: { orderNumber: string; reasons: string[] }[] }>(
+      const res = await apiJson<{ batch: { id: string; batchNumber: string }; shipped: number; exceptions: { orderNumber: string; reasons: string[] }[] }>(
         '/api/ops/shipments',
         {
           method: 'POST',
@@ -270,12 +281,45 @@ export function ShipmentsNewScreen() {
         }
       );
       setDone(`تم إنشاء الدفعة ${res.batch.batchNumber} بـ ${res.shipped} طلب`);
+      setJustMade(res.batch.id);
       setExceptions(res.exceptions);
       await load();
     } catch (e) {
       toast.failed(e instanceof Error ? e.message : 'تعذر إنشاء الشحنة');
     } finally {
       setBusy(false);
+    }
+  };
+
+  /**
+   * «اطبع البوالص» — the batch just made, printed from the banner that says it was made.
+   *
+   * The same call the batches screen makes (`openWaybills` by batch id, on this device's
+   * paper), run inside the click so the browser lets the sheet open. The permission is
+   * `ops.labels`, the door's own; the screen does not hold an arithmetic or a list of its own.
+   */
+  const printJustMade = async () => {
+    if (!justMade) return;
+    setPrinting(true);
+    setError(null);
+    try {
+      const out = await openWaybills({ batchId: justMade, ...labelSize.dims }, 'print');
+      if (!out.opened) setError(BLOCKED_WAYBILLS);
+      if (out.refused.length) {
+        void tell({
+          title: `جُهِّزت ${out.count} بوليصة، ولم تُجهَّز ${out.refused.length}`,
+          body: `لا يُطبع إلا طلب مؤكَّد له شركة شحن:
+${describeRefused(out.refused)}`,
+        });
+      }
+    } catch (e) {
+      if (e instanceof WaybillError && e.refused.length) {
+        void tell({ title: e.message, body: describeRefused(e.refused), tone: 'danger' });
+      } else {
+        setError(e instanceof Error ? e.message : 'تعذر الطباعة');
+      }
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -328,19 +372,28 @@ export function ShipmentsNewScreen() {
         <p className="text-sm text-[var(--sys-success)] bg-[var(--sys-success-soft)] border border-[var(--sys-success)]/30 rounded-lg p-3">
           {done}
           {/*
-            THE LABELS ARE PRINTED ON THE NEXT SCREEN, AND NOTHING SAID SO.
-            «تم إنشاء الدفعة X» ended there; printing lives on the batches
+            THE LABELS ARE PRINTED FROM HERE, AT THE PLACE THE EYE IS.
+            «تم إنشاء الدفعة X» ended there and printing lived on the batches
             screen, so the person went back to the menu and looked for it.
-            The pills above already name the next stop — this is the
-            same step, at the place the eye is when it has just worked.
+            Whoever holds `ops.labels` prints the batch just made from this
+            line; whoever does not is still pointed at the screen that has it.
           */}
-          {labelsStep && (
+          {justMade && mayPrint ? (
             <>
               {' — '}
-              <Link href={labelsStep.href} className="font-bold underline">
-                {labelsStep.label}
-              </Link>
+              <button type="button" onClick={printJustMade} disabled={printing} className="font-bold underline disabled:opacity-50">
+                {printing ? 'جارٍ التجهيز…' : 'اطبع البوالص'}
+              </button>
             </>
+          ) : (
+            labelsStep && (
+              <>
+                {' — '}
+                <Link href={labelsStep.href} className="font-bold underline">
+                  {labelsStep.label}
+                </Link>
+              </>
+            )
           )}
         </p>
       )}
