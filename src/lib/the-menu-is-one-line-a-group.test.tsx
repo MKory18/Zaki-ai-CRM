@@ -441,7 +441,7 @@ describe('the settings front door', () => {
     const link = screen.getByRole('link', { name: 'البلدان والمتاجر' });
     expect(link.getAttribute('href')).toBe('/settings/geo');
     // A card's links are the screens' own names, as the menu used to say them.
-    expect(screen.getByRole('link', { name: 'بكسل التتبع والحملات' }).getAttribute('href')).toBe('/settings/tracking');
+    expect(screen.getByRole('link', { name: 'بكسل الإعلانات' }).getAttribute('href')).toBe('/settings/tracking');
     expect(screen.getByRole('link', { name: 'المهام المجدولة' }).getAttribute('href')).toBe('/admin/jobs');
   });
 
@@ -456,7 +456,7 @@ describe('the settings front door', () => {
     may.allow = (path) => path === '/settings/channels';
     render(<SettingsHomeScreen />);
     expect(screen.getByRole('link', { name: 'قنوات الطلبات' })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'بكسل التتبع والحملات' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'بكسل الإعلانات' })).toBeNull();
   });
 });
 
@@ -468,7 +468,7 @@ describe('the return from an ad platform', () => {
     render(<SettingsHomeScreen />);
     const status = screen.getByRole('status');
     expect(status.textContent).toContain('تمّ الربط مع ميتا — 2 حساب إعلاني.');
-    expect(within(status).getByRole('link', { name: 'بكسل التتبع والحملات' }).getAttribute('href')).toBe('/settings/tracking');
+    expect(within(status).getByRole('link', { name: 'بكسل الإعلانات' }).getAttribute('href')).toBe('/settings/tracking');
   });
 
   it('and the sentence offers its link only to somebody who may open where it leads', () => {

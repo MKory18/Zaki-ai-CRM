@@ -26,7 +26,7 @@ const REASON_OPTIONS = PICKABLE_REJECTION_REASONS.map((key) => ({
 
 const RESULTS: Record<string, { ar: string; en: string }> = {
   ANSWERED: { ar: 'أجاب', en: 'Answered' },
-  NO_ANSWER: { ar: 'لم يجب', en: 'No Answer' },
+  NO_ANSWER: { ar: 'لا يرد', en: 'No Answer' },
   BUSY: { ar: 'مشغول', en: 'Busy' },
   WRONG_NUMBER: { ar: 'رقم خاطئ', en: 'Wrong Number' },
   CALLBACK_REQUESTED: { ar: 'طلب الاتصال به', en: 'Callback Requested' },
@@ -226,14 +226,14 @@ export function ConfirmationActions({ order, ar, isRtl, onRefreshOrder }: Confir
             disabled={busy}
             className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-warning)]/60 text-[var(--sys-warning)] hover:bg-[var(--sys-warning-soft)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiPhoneLockLine className="w-4 h-4" />{ar ? 'لم يجب' : 'No Answer'}
+            <RiPhoneLockLine className="w-4 h-4" />{ar ? 'لا يرد' : 'No Answer'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('call_later'); }}
             disabled={busy}
             className="min-h-11 md:min-h-0 inline-flex items-center inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-[var(--sys-border-strong)] text-[var(--sys-foreground)] hover:bg-[var(--sys-surface)] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RiTimerLine className="w-4 h-4" />{ar ? 'الاتصال لاحقاً' : 'Call Later'}
+            <RiTimerLine className="w-4 h-4" />{ar ? 'تأجيل' : 'Call Later'}
           </button>
           <button
             onClick={() => { setNote(''); setOpenForm('followup'); }}

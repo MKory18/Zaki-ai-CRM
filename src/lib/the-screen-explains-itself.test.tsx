@@ -292,7 +292,7 @@ describe('the ⓘ', () => {
     expect(button(), 'زر بلا شرح خلفه').toBeNull();
   });
 
-  it('and IS drawn on the two screens that were left without one: the dashboard, and «بكسل التتبع والحملات» (22/10)', () => {
+  it('and IS drawn on the two screens that were left without one: the dashboard, and «بكسل الإعلانات» (22/10)', () => {
     for (const path of ['/dashboard', '/settings/tracking']) {
       cleanup();
       here.path = path;

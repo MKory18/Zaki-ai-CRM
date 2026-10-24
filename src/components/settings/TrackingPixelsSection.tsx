@@ -237,7 +237,7 @@ export function TrackingPixelsSection() {
     <section id="tracking" dir="rtl" className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-4 sm:p-6">
       <div className="mb-1 flex items-center gap-2">
         <RiRadarLine className="h-4 w-4 text-[var(--sys-primary)]" />
-        <h1 className="text-base font-bold text-[var(--sys-heading)]">بكسل التتبع والحملات</h1>
+        <h1 className="text-base font-bold text-[var(--sys-heading)]">بكسل الإعلانات</h1>
       </div>
       <p className="mb-3 text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
         البكسلات تعمل على صفحات البيع وحدها — صفحات الهبوط وواجهات المتاجر — ولا تُحمَّل أبداً داخل لوحة التحكم

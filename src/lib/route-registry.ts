@@ -377,7 +377,7 @@ export const NAV: NavGroup[] = [
       r('/settings/couriers', 'شركات الشحن وأجورها', 'Truck', ['settings.view']),
       r('/settings/commission', 'العمولات', 'Percent', ['settings.view']),
       r('/settings/channels', 'قنوات الطلبات', 'Radio', ['settings.view']),
-      r('/settings/tracking', 'بكسل التتبع والحملات', 'Radar', ['settings.view']),
+      r('/settings/tracking', 'بكسل الإعلانات', 'Radar', ['settings.view']),
       // «الربط»: WhatsApp and Telegram, one card each (owner, 24/10). Each card is drawn only
       // for whoever holds ITS key; the page opens for either. The old addresses redirect.
       r('/settings/links', 'الربط', 'MessageCircle', ['whatsapp.manage', 'telegram.manage']),
