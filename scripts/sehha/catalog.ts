@@ -118,10 +118,11 @@ export const CATALOG: Item[] = [
   {
     key: 'kamaa',
     sku: 'LEG-19',
-    basePrice: 15,
+    // البوستر الجديد (25/10): «عبوة واحدة 12 دولار» و«عبوتان + الثالثة مجاناً 20 دولار».
+    basePrice: 12,
     tiers: [
-      { name: 'عبوة واحدة', quantity: 1, freeQuantity: 0, price: 15 },
-      { name: 'عبوتان + عبوة مجانية', quantity: 2, freeQuantity: 1, price: 25 },
+      { name: 'عبوة واحدة', quantity: 1, freeQuantity: 0, price: 12 },
+      { name: 'عبوتان + الثالثة مجاناً', quantity: 2, freeQuantity: 1, price: 20 },
     ],
     slug: 'kamaa-eye-water',
     pageName: 'ماء الكمأة للعين',
