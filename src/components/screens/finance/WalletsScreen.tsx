@@ -926,13 +926,13 @@ function CreateWalletDialog({
             value={currency}
             onChange={(e) => setCurrency(e.target.value.toUpperCase())}
             required
-            maxLength={3}
+            maxLength={4}
             placeholder="USD"
             className="w-full h-11 md:h-10 px-3 rounded-lg border border-[var(--sys-border-input)] text-sm"
             dir="ltr"
           />
           <span className="block text-xs text-[var(--sys-muted)] mt-1">
-            ثلاثة أحرف. لا يمكن تغييرها لاحقاً — كل حركة تُسجَّل بها.
+            ثلاثة أحرف (USD) أو أربعة (USDT). لا يمكن تغييرها لاحقاً — كل حركة تُسجَّل بها.
             {country && currency && currency !== country.currencyCode && (
               <span className="block text-[var(--sys-warning)] mt-0.5">
                 تختلف عن عملة {country.name} ({country.currencyCode}) — مقبول، وسيُطلب سعر الصرف عند الحاجة.

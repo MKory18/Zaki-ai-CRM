@@ -22,7 +22,7 @@ import { zodMessage } from '@/lib/zod-message';
 const createSchema = z.object({
   countryId: z.string().uuid(),
   name: z.string().trim().min(2).max(60),
-  currencyCode: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'رمز العملة ثلاثة أحرف'),
+  currencyCode: z.string().trim().toUpperCase().regex(/^[A-Z]{3,4}$/, 'رمز العملة ثلاثة أو أربعة أحرف (USD، USDT)'),
   openingBalance: z.number().min(-1_000_000_000).max(1_000_000_000).default(0),
 });
 
