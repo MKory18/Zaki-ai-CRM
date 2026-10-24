@@ -1039,8 +1039,13 @@ async function stepTarget(ctx, dump) {
   for (const s of rows(dump, 'shippings')) {
     let p = byName.get(s.name) || (PROVIDER_ALIASES[s.name] && byCode.get(PROVIDER_ALIASES[s.name])) || null;
     if (p) { plan.push(`${s.name} → existing «${p.name}» (${p.code})`); ctx.providerMap.set(s.id, p.id); continue; }
-    const code = `LEG-${s.id}`;
-    if (allCodes.has(code)) throw new Error(`provider code ${code} is taken in this company by another store's courier — refusing to guess`);
+    // `LEG-{legacy id}` — unless that code already names ANOTHER courier in
+    // the company (it was matched by name above if it were this one). On the
+    // Syria store an earlier setup gave «الو دليفيري» LEG-3, which is صالح's
+    // legacy id; the store's slug then keeps the code unique and readable.
+    let code = `LEG-${s.id}`;
+    if (allCodes.has(code)) code = `LEG-${s.id}-${store.slug}`;
+    if (allCodes.has(code)) throw new Error(`provider codes LEG-${s.id} and ${code} are both taken in this company — refusing to guess`);
     plan.push(`${s.name} → NEW on this store (${code})`);
     if (DRY_RUN) continue;
     p = await prisma.deliveryProvider.create({ data: { companyId: company.id, storeId: store.id, name: s.name, code, kind: 'COMPANY', isActive: true } });
@@ -1051,14 +1056,31 @@ async function stepTarget(ctx, dump) {
   log('providers:');
   for (const line of plan) log(`  ${line}`);
 
+  // --fill-empty-fees <legacy courier name>: an EXISTING courier that has no
+  // fee at all may take the legacy table too — the owner's choice for
+  // «الباشا» on the Syria store (22/10), which carried 15,022 orders and no
+  // prices. One with even a single fee is refused: nothing is overwritten.
+  const fillName = argVal('--fill-empty-fees');
+  const fillIds = new Set();
+  if (fillName) {
+    const legacy = rows(dump, 'shippings').find((s) => s.name === fillName);
+    const providerId = legacy ? ctx.providerMap.get(legacy.id) : null;
+    if (!providerId) throw new Error(`--fill-empty-fees «${fillName}»: no such legacy courier mapped to this store`);
+    const has = await prisma.deliveryFee.count({ where: { deliveryProviderId: providerId } });
+    if (has > 0) throw new Error(`--fill-empty-fees «${fillName}»: it already has ${has} fee(s) — refusing to overwrite a live fee table`);
+    fillIds.add(providerId);
+    log(`fill-empty-fees: «${fillName}» has no fees — it takes the legacy table`);
+  }
+
   // legacy shipping_prices → DeliveryFee, for the couriers the import created
+  // (and the one empty courier named by --fill-empty-fees)
   const feeRows = rows(dump, 'shipping_prices');
   const legacyShippings = new Map(rows(dump, 'shippings').map((s) => [s.id, s]));
   let feesMade = 0, feesWould = 0;
   for (const f of feeRows) {
     const legacyProvider = legacyShippings.get(f.shipping_id);
     const isNew = DRY_RUN ? plan.some((l) => l.startsWith(`${legacyProvider?.name} → NEW`)) : createdByImport.has(ctx.providerMap.get(f.shipping_id));
-    if (!isNew) continue;
+    if (!isNew && !fillIds.has(ctx.providerMap.get(f.shipping_id))) continue;
     const regionId = ctx.regionMap.get(f.region_id);
     if (!regionId) { warn(`shipping_price ${f.id}: region ${f.region_id} not mapped — skipped`); continue; }
     if (DRY_RUN) { feesWould++; continue; }
@@ -1069,8 +1091,8 @@ async function stepTarget(ctx, dump) {
     feesMade++;
   }
   log(DRY_RUN
-    ? `[dry] delivery fees that would be created for new couriers: ${feesWould} (existing couriers' fees are never touched)`
-    : `delivery fees created for new couriers: ${feesMade} (existing couriers' fees untouched)`);
+    ? `[dry] delivery fees that would be created: ${feesWould} (new couriers${fillIds.size ? ' + the empty one named' : ''}; a courier with fees is never touched)`
+    : `delivery fees created: ${feesMade} (new couriers${fillIds.size ? ' + the empty one named' : ''}; a courier with fees is never touched)`);
 
   // channel: reuse if present, never created here
   ctx.channel = await prisma.orderChannel.findFirst({ where: { companyId: company.id, name: 'الموقع القديم' } });
