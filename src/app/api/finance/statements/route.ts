@@ -149,8 +149,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const { rows, total, error } = parseStatement(fileBytes);
-    if (error) return NextResponse.json({ error, code: 'UNREADABLE_FILE' }, { status: 400 });
+    const read = parseStatement(fileBytes);
+    if (read.error) return NextResponse.json({ error: read.error, code: 'UNREADABLE_FILE' }, { status: 400 });
+    const { rows } = read;
+    /*
+     * THE TOTAL IS ROUNDED ONCE, HERE, AND EVERYTHING BELOW READS THAT ONE NUMBER.
+     *
+     * `read.total` is a running float sum of two hundred lines — 292 lines of a real file added up to
+     * `2869.040000000001`. The column was already written through `roundMinor`, but the audit row and the
+     * answer carried the raw sum, so the screen told the seller «بإجمالي 2869.040000000001» for a statement
+     * that holds 2,869.04. The answer also names the currency and its minor unit, so the screen can write the
+     * figure the way every other money figure is written instead of printing a bare number.
+     */
+    const total = roundMinor(read.total, country.minorUnit);
 
     const statement = await db.$transaction(async (tx) => {
       const created = await tx.courierStatement.create({
@@ -161,7 +172,7 @@ export async function POST(req: Request) {
           reference: input.reference,
           periodFrom: input.periodFrom ? new Date(input.periodFrom) : null,
           periodTo: input.periodTo ? new Date(input.periodTo) : null,
-          totalAmount: roundMinor(total, country.minorUnit),
+          totalAmount: total,
           currencyCode: country.currencyCode,
           fileName: input.fileName,
           fileHash: hash,
@@ -191,7 +202,10 @@ export async function POST(req: Request) {
       newData: { reference: input.reference, courier: provider.name, rows: rows.length, total, fileHash: hash },
     });
 
-    return NextResponse.json({ statement, rows: rows.length, total }, { status: 201 });
+    return NextResponse.json(
+      { statement, rows: rows.length, total, currencyCode: country.currencyCode, minorUnit: country.minorUnit },
+      { status: 201 }
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }

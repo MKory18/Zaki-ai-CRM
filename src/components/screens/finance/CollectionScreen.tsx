@@ -20,6 +20,7 @@ import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { NextStepButton } from '@/components/ui/NextStep';
 import { Money } from '@/components/ui/Money';
+import { importedSentence, type ImportedStatement } from '@/lib/statement-import-message';
 import { approvalRefusal, isApproved, rematchRefusal } from '@/lib/settlement-gates';
 
 /**
@@ -181,11 +182,11 @@ export function CollectionScreen() {
           setError(null);
           setDone(null);
           try {
-            const res = await apiJson<{ rows: number; total: number }>('/api/finance/statements', {
+            const res = await apiJson<ImportedStatement>('/api/finance/statements', {
               method: 'POST',
               body: JSON.stringify(payload),
             });
-            setDone(`تم استيراد ${res.rows} سطراً بإجمالي ${res.total}`);
+            setDone(importedSentence(res));
             await load();
             return true;
           } catch (e) {
