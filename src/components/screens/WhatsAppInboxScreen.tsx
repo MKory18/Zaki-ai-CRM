@@ -326,7 +326,7 @@ export function WhatsAppInboxScreen() {
                   : 'متغيّرات البيئة على الخادم غير مكتملة. صفحةُ الإعداد تسرد المطلوبَ بأسمائه وخطواتِ التفعيل.'}
               </p>
               {canManage && (
-                <Link href="/settings/whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold hover:opacity-90">
+                <Link href="/settings/links#whatsapp" className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--sys-primary)] text-[var(--sys-primary-foreground)] text-sm font-semibold hover:opacity-90">
                   <RiSettings3Line className="w-4 h-4" />
                   إعداد WhatsApp
                 </Link>

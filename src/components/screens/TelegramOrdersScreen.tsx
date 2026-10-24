@@ -127,7 +127,7 @@ export function TelegramOrdersScreen() {
             actions={
               <><div className="flex items-center gap-2">
             {canManage && (
-              <Link href="/settings/telegram">
+              <Link href="/settings/links#telegram">
                 <Button variant="outline" size="sm"><RiEqualizer2Line className="w-4 h-4 ml-1" /> الإعدادات</Button>
               </Link>
             )}
@@ -160,7 +160,7 @@ export function TelegramOrdersScreen() {
             {/* Adding, switching and removing groups is configuration — it
                 lives on the settings screen, beside the bot it depends on. */}
             {canManage && (
-              <Link href="/settings/telegram" className="text-xs text-[var(--sys-primary)] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
+              <Link href="/settings/links#telegram" className="text-xs text-[var(--sys-primary)] hover:underline mr-auto">الاتصال والمجموعات المرتبطة ←</Link>
             )}
           </CardContent>
         </Card>

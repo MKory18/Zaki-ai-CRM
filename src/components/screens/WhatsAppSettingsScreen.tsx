@@ -9,7 +9,12 @@ import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshL
 import { PageHeader } from '@/components/ui/PageHeader';
 import { arDateTime } from '@/lib/format';
 
-export function WhatsAppSettingsScreen() {
+/**
+ * `embedded` — a card of «الربط» (`/settings/links`), which owns the page's title: the
+ * page padding and the screen's own heading are not drawn, and a plain section heading
+ * with the way to the inbox stands instead.
+ */
+export function WhatsAppSettingsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const { currentUser } = useApp();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'test' | 'reconnect' | null>(null);
@@ -85,7 +90,18 @@ export function WhatsAppSettingsScreen() {
 
   return (
     <>
-      <div className="p-6 space-y-6 max-w-2xl">
+      <div className={embedded ? 'space-y-6' : 'p-6 space-y-6 max-w-2xl'}>
+        {embedded ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-base font-bold text-[var(--sys-heading)]">واتساب</h2>
+              <p className="text-xs text-[var(--sys-muted-foreground)]">ربط رقم WhatsApp Business واحد مشترك لكل الموظفين</p>
+            </div>
+            <Link href="/growth/whatsapp/inbox" className="text-xs font-semibold text-[var(--sys-primary)] hover:underline">
+              صندوق الواتساب
+            </Link>
+          </div>
+        ) : (
         <PageHeader title="إعدادات واتساب"
             description="ربط رقم WhatsApp Business واحد مشترك لكل الموظفين"
             actions={
@@ -94,6 +110,7 @@ export function WhatsAppSettingsScreen() {
           </Link></>
             }
           />
+        )}
 
         {/* Status */}
         <div className={`p-4 rounded-lg border flex items-center gap-3 ${status === 'CONNECTED' ? 'bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]' : 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]'}`}>

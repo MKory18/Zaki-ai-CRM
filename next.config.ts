@@ -152,6 +152,9 @@ const nextConfig: NextConfig = {
       // arrives at the first is sent on, by the page, to the tab of «طلباتي» that is hers.
       { source: '/confirmation/postponed', destination: '/confirmation/follow-up', permanent: true },
       { source: '/confirmation/winback', destination: '/confirmation/follow-up?tab=winback', permanent: true },
+      // «إعدادات واتساب» and «إعدادات تلجرام» are the two cards of «الربط».
+      { source: '/settings/whatsapp', destination: '/settings/links#whatsapp', permanent: true },
+      { source: '/settings/telegram', destination: '/settings/links#telegram', permanent: true },
       // The single-product shop is one card on /store now: its old address
       // moves bookmarks and pasted links along permanently.
       { source: '/store/single-product', destination: '/store', permanent: true },
