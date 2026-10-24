@@ -68,6 +68,25 @@ export function deskIsEmpty(desk: Desk | null | undefined): boolean {
   return !!desk && desk.work.length === 0 && desk.noAnswer.length === 0;
 }
 
+/**
+ * «افتح التجهيز» — when the LAST order on a confirmation desk was confirmed.
+ *
+ * The front half of the road has no numbered stops (`next-stop.ts` only knows the two
+ * roads), but the hop is real: what was just confirmed is what the warehouse packs next.
+ * Offered only to somebody who may open the preparation desk — an agent who confirms and
+ * nothing else is told nothing, which is the road's own rule.
+ */
+export function openPreparationStep(mayOpen: MayOpen): Step | undefined {
+  if (!mayOpen('/ops/preparation')) return undefined;
+  return { label: 'افتح التجهيز', href: '/ops/preparation' };
+}
+
+/** «افتح الأرصدة» — after a production run was added: its units are on the shelf now. */
+export function openBalancesStep(mayOpen: MayOpen): Step | undefined {
+  if (!mayOpen('/inventory/balances')) return undefined;
+  return { label: 'افتح الأرصدة', href: '/inventory/balances' };
+}
+
 /** «اطبع البوالص» — after a batch was made; printing lives on the batches screen. */
 export function printLabelsStep(mayOpen: MayOpen): Step | undefined {
   if (!mayOpen('/ops/batches')) return undefined;

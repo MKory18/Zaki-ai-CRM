@@ -15,6 +15,7 @@ import { Money } from '@/components/ui/Money';
 import { IntelligenceStrip } from '@/components/growth/IntelligenceStrip';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DetailsLink } from '@/components/dashboard/DetailsLinks';
+import { PersonNameLink, ProductNameLink } from '@/components/dashboard/NameLinks';
 import { LossPanel } from '@/components/dashboard/LossPanel';
 import { WorkToday } from '@/components/dashboard/WorkToday';
 import { healthOf, type Health } from '@/lib/health';
@@ -273,11 +274,13 @@ export function DashboardScreen() {
     icon: typeof RiShoppingBagLine;
     label: string;
     name?: string;
+    /** The product's id — what makes the name a link. */
+    id?: string;
     value: React.ReactNode;
     tint: string;
     text: string;
   }[] = [
-    { icon: RiShoppingBagLine, label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', name: analytics?.rankings?.mostRequested?.name, value: `${analytics?.rankings?.mostRequested?.totalOrders ?? 0} ${locale === 'ar' ? 'طلب' : 'orders'}`, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
+    { icon: RiShoppingBagLine, label: locale === 'ar' ? 'الأكثر طلباً' : 'Most Requested', name: analytics?.rankings?.mostRequested?.name, id: analytics?.rankings?.mostRequested?.id, value: `${analytics?.rankings?.mostRequested?.totalOrders ?? 0} ${locale === 'ar' ? 'طلب' : 'orders'}`, tint: 'bg-[var(--sys-surface)] border-[var(--sys-primary-soft)]', text: 'text-[var(--sys-primary)]' },
     /**
      * «الأكثر ربحاً» ONLY WHERE A PROFIT WAS ACTUALLY MEASURED.
      *
@@ -292,10 +295,10 @@ export function DashboardScreen() {
      * says which field is empty when it cannot.
      */
     profitStated
-      ? { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: analytics?.rankings?.mostProfitable?.name, value: fmt(analytics?.rankings?.mostProfitable?.netProfit ?? 0), tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' }
+      ? { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: analytics?.rankings?.mostProfitable?.name, id: analytics?.rankings?.mostProfitable?.id, value: fmt(analytics?.rankings?.mostProfitable?.netProfit ?? 0), tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' }
       : { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: undefined, value: locale === 'ar' ? 'كلفة البضاعة غير مسجَّلة' : 'No recorded cost', tint: 'bg-[var(--sys-surface)] border-[var(--sys-border)]', text: 'text-[var(--sys-muted-foreground)]' },
-    { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', name: analytics?.rankings?.mostDelivered?.name, value: `${analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0} ${locale === 'ar' ? 'توصيل' : 'delivered'}`, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
-    { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', name: analytics?.rankings?.highestRejection?.name, value: `${analytics?.rankings?.highestRejection?.rejectedOrders ?? 0} ${locale === 'ar' ? 'رفض' : 'rejected'}`, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
+    { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', name: analytics?.rankings?.mostDelivered?.name, id: analytics?.rankings?.mostDelivered?.id, value: `${analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0} ${locale === 'ar' ? 'توصيل' : 'delivered'}`, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
+    { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', name: analytics?.rankings?.highestRejection?.name, id: analytics?.rankings?.highestRejection?.id, value: `${analytics?.rankings?.highestRejection?.rejectedOrders ?? 0} ${locale === 'ar' ? 'رفض' : 'rejected'}`, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
 
   return (
@@ -595,7 +598,7 @@ export function DashboardScreen() {
                           English alternative, so there is nothing to
                           resolve: it is printed. */}
                       <p className="text-sm font-bold text-[var(--sys-heading)] line-clamp-1">
-                        {r.name || '—'}
+                        {r.name ? <ProductNameLink id={r.id} name={r.name} /> : '—'}
                       </p>
                     </div>
                   </div>
@@ -655,7 +658,9 @@ export function DashboardScreen() {
                         {idx + 1}
                       </span>
                       <div>
-                        <p className="text-sm font-bold text-[var(--sys-heading)]">{mod.name}</p>
+                        <p className="text-sm font-bold text-[var(--sys-heading)]">
+                          <PersonNameLink id={mod.id} name={mod.name} />
+                        </p>
                         <p className="text-xs text-[var(--sys-muted)]">
                           {mod.totalOrders} {locale === 'ar' ? 'طلب' : 'orders'} • {mod.confirmedOrders}{' '}
                           {locale === 'ar' ? 'مؤكد' : 'confirmed'}

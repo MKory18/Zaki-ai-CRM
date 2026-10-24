@@ -22,7 +22,8 @@ import { raiseChangeRequest } from '@/components/orders/raiseChangeRequest';
 import { AssistantDialog } from './confirmation/AssistantDialog';
 import { RiAlertLine, RiCheckboxCircleLine, RiCloseCircleLine, RiCloseLine, RiLoader4Line, RiPencilLine, RiPhoneLockLine, RiSearchLine, RiShieldFlashLine, RiSparkling2Line, RiTimerLine } from '@remixicon/react';
 import { useToast } from '@/components/ui/Toast';
-import { deskIsEmpty } from '@/lib/next-step';
+import { deskIsEmpty, openPreparationStep } from '@/lib/next-step';
+import { useMayOpen } from '@/hooks/useMayOpen';
 import { PullPanel, useQueue } from '@/components/confirmation/PullPanel';
 import { ConfirmationPostponedScreen } from '@/components/screens/ConfirmationPostponedScreen';
 import { useApp } from '@/context/AppContext';
@@ -166,6 +167,7 @@ function sourceLabel(order: OrderRow): string {
 
 export function ConfirmationMineScreen() {
   const toast = useToast();
+  const mayOpen = useMayOpen();
   /**
    * ── THE PHONE STRIP FOLLOWS ITS OWN PERMISSION ──
    *
@@ -334,7 +336,9 @@ export function ConfirmationMineScreen() {
       (fresh) =>
         toast.done(
           `تم تأكيد الطلب ${order.orderNumber}`,
-          deskIsEmpty(fresh) ? 'لا شيء بقي على مكتبك. اسحب الطلب التالي من أعلى الشاشة.' : undefined
+          deskIsEmpty(fresh) ? 'لا شيء بقي على مكتبك. اسحب الطلب التالي من أعلى الشاشة.' : undefined,
+          // The last one: what she confirmed is what the warehouse packs next — for whoever may open that desk.
+          deskIsEmpty(fresh) ? openPreparationStep(mayOpen) : undefined
         )
     );
 
