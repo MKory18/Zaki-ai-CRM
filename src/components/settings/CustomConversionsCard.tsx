@@ -215,7 +215,7 @@ export function CustomConversionsCard() {
       setForm({ name: '', eventName: '', trigger: '', valueSource: 'ORDER_TOTAL' });
       setAdding(false);
       await load();
-      setMsg({ ok: !json.warning, text: json.warning || 'أُضيف التحويل.' });
+      setMsg({ ok: !json.warning, text: json.warning || json.note || 'أُضيف التحويل.' });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : 'تعذر الإنشاء' });
     } finally {

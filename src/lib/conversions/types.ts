@@ -68,8 +68,18 @@ export function isValueSource(v: unknown): v is ValueSource {
  */
 export const BROWSER_PIXEL_EVENTS = ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase'] as const;
 
-export function collidesWithBrowserPixel(eventName: string): boolean {
+export function collidesWithBrowserPixel(eventName: string, trigger?: string): boolean {
+  // `Purchase` at confirmation REPLACES the browser's: the page stands down for that pixel, so Meta counts one.
+  if (replacesBrowserPurchase(eventName, trigger)) return false;
   return (BROWSER_PIXEL_EVENTS as readonly string[]).includes(eventName.trim());
+}
+
+/**
+ * «الشراء بيتحقق لما يتم تأكيد الطلب»: a server conversion named `Purchase` on the confirmation is the one
+ * combination that takes the browser's Purchase place instead of doubling it.
+ */
+export function replacesBrowserPurchase(eventName: string, trigger?: string): boolean {
+  return eventName.trim() === 'Purchase' && trigger === 'order.confirmed';
 }
 
 /**

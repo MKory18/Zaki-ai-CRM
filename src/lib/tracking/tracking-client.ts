@@ -132,6 +132,8 @@ export class TrackingEngine {
     if (event === 'ViewContent' && !Array.isArray(safe.content_ids)) return;
     for (const pixel of pixels) {
       if (!this.consent(pixel.platform, pixel.scope)) continue;
+      // The server sends this pixel's Purchase when the order is CONFIRMED; the browser must not send a second.
+      if (event === 'Purchase' && pixel.purchaseOnServer) continue;
       // Purchase is once per order; ViewContent once per PRODUCT, so moving
       // from one product page to the next is a second view, not a repeat.
       const scope = event === 'ViewContent'

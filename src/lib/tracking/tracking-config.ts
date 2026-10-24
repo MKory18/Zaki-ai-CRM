@@ -53,7 +53,7 @@ function toView(row: {
   enabled: boolean;
   storeId: string | null;
   countryId: string | null;
-}): TrackingPixelView | null {
+}, purchaseOnServer = false): TrackingPixelView | null {
   const platform = row.platform as TrackingPlatform;
   const scope = row.scope as TrackingScope;
   const pixelId = validateTrackingPixelId(platform, row.pixelId);
@@ -67,7 +67,38 @@ function toView(row: {
     enabled: row.enabled === true,
     storeId: row.storeId,
     countryId: row.countryId,
+    ...(purchaseOnServer ? { purchaseOnServer: true } : {}),
   };
+}
+
+/**
+ * The pixels whose Purchase is sent by the SERVER when an order is confirmed.
+ *
+ * The owner's rule: «الشراء بيتحقق لما يتم تأكيد الطلب». The server side already exists — a conversion on
+ * `order.confirmed` is queued and sent through the Conversions API — so the only missing half is the browser
+ * standing down. The conditions are the ones `queueConversions` uses to decide a delivery will happen at all
+ * (conversion on, pixel on, token held): a pixel that cannot receive the server event keeps its browser
+ * Purchase, so signal is never lost to a switch that sends nothing.
+ *
+ * Fails to an empty set: if this cannot be read the browser keeps sending Purchase, which is the old
+ * behaviour — never silence.
+ */
+export async function pixelsWithServerPurchase(companyId: string): Promise<Set<string>> {
+  try {
+    const rows = await db.customConversion.findMany({
+      where: {
+        companyId,
+        enabled: true,
+        trigger: 'order.confirmed',
+        eventName: 'Purchase',
+        pixel: { enabled: true, capiToken: { not: null } },
+      },
+      select: { pixelId: true },
+    });
+    return new Set(rows.map((r) => r.pixelId));
+  } catch {
+    return new Set();
+  }
 }
 
 const SCOPE_COLUMNS = {
@@ -82,7 +113,8 @@ export async function getCompanyTrackingPixels(companyId: string): Promise<Track
       orderBy: { createdAt: 'asc' },
       select: SCOPE_COLUMNS,
     });
-    return rows.map(toView).filter((p): p is TrackingPixelView => p !== null);
+    const onServer = await pixelsWithServerPurchase(companyId);
+    return rows.map((r) => toView(r, onServer.has(r.id))).filter((p): p is TrackingPixelView => p !== null);
   } catch {
     return []; // tracking must never break a page render
   }
