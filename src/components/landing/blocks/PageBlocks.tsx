@@ -207,13 +207,16 @@ export function PageBlocks({
   selection?: BlockSelection;
 }) {
   const shown = selection ? sections : sections.filter((s) => s.enabled);
+  // The first picture a visitor sees: the first gallery among the opening blocks. It is the page's largest paint, so it
+  // loads at once and first — `lazy` held it back until layout, on the one image that should never wait.
+  const lead = shown.slice(0, 3).find((s) => s.type === 'gallery')?.id;
 
   return (
     <>
       {shown.map((s, i) => {
         const block = (
           <Dressed section={s}>
-            <Block section={s} ctx={ctx} />
+            <Block section={s} ctx={ctx} lead={s.id === lead} />
           </Dressed>
         );
         if (!selection) return <React.Fragment key={s.id}>{block}</React.Fragment>;
@@ -297,7 +300,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
   );
 }
 
-function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext }) {
+function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx: BlockContext; lead?: boolean }) {
   switch (s.type) {
     case 'announcement':
       return s.text ? <div className="lp-announce" data-edit="text" {...rich(s.text)} /> : null;
@@ -389,7 +392,13 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
               // The seller's own uploads; next/image would need every host
               // allow-listed, and a blocked hero is worse than an unoptimised one.
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" loading="lazy" />
+              <img
+                key={i}
+                src={src}
+                alt=""
+                loading={lead && i === 0 ? 'eager' : 'lazy'}
+                fetchPriority={lead && i === 0 ? 'high' : undefined}
+              />
             ))}
           </div>
         </Section>
