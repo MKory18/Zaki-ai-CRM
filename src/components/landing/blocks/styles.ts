@@ -960,6 +960,13 @@ export const BLOCK_CSS = `
 @media (prefers-reduced-motion: reduce) {
   .lp-sticky-bar { transition: none; }
 }
+/* A movement that draws the eye, when the block asks for one — and none for a visitor whose device asks for less. */
+.lp-sticky[data-motion='bounce'] { animation: lp-bounce 1.8s ease-in-out infinite; }
+.lp-sticky[data-motion='sway'] { animation: lp-sway 2.2s ease-in-out infinite; }
+@keyframes lp-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes lp-sway { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) { .lp-sticky[data-motion] { animation: none; } }
+
 /* The button sends you to the form; it must not then sit on top of it,
    nor on the last line of the footer. Only when the button is there. */
 .lp-root:has(.lp-sticky) .lp-form-section { padding-bottom: 80px; }
@@ -1160,6 +1167,9 @@ html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
   width: var(--look-btn-width, auto);
   display: var(--look-btn-display, inline-block);
 }
+/* The floating bar's button stays a centred row whatever the rule above says: as an inline-block its words and its
+   price ran together («اطلب الآنUSD 12») and sat against one side of the bar. Colour and size still come from above. */
+html .lp-root .lp-sticky { display: flex; align-items: center; justify-content: center; gap: 10px; width: auto; text-align: center; }
 `;
 
 /** Google Fonts stylesheet for the chosen Arabic family, or null for system. */

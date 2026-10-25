@@ -1534,11 +1534,32 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="نص الزر" value={s.text} onChange={(v) => patch({ text: v })} />
           <Check label="إظهار السعر على الزر" checked={s.showPrice} onChange={(v) => patch({ showPrice: v })} />
+          <div className="space-y-1">
+            <span className="block text-xs font-semibold text-[var(--sys-heading)]">حركة الزر</span>
+            <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+              {([
+                ['none', 'بلا حركة'],
+                ['bounce', 'فوق وتحت'],
+                ['sway', 'يمين وشمال'],
+              ] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => patch({ motion: v })}
+                  className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                    s.motion === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يلاحق الزائر أسفل الشاشة، وبالضغط عليه ينزل مباشرة إلى تعبئة البيانات.
             موقعه في الترتيب لا يغيّر شيئاً — هو مثبّت على الشاشة لا على الصفحة.
             وما في «إخفاء» له ولا للنموذج: الطلب لازم يضلّ على بُعد ضغطة من أي
-            موضع تمرير، فالكلمة إلّي تكتبها هي الشي الوحيد إلّي يتغيّر فيه.
+            موضع تمرير. الكلمة والحركة من هون، ولونه وحجمه من «الزر — لونه وحجمه» تحت.
             وإذا للمتجر رقم واتساب، بيوقف جنبه زرّ تواصل.
           </p>
         </div>

@@ -40,9 +40,11 @@ interface Props {
    * to a shopper exactly like a shop that does not answer.
    */
   whatsapp?: string | null;
+  /** The block's chosen movement; `none` (or absent) is still. */
+  motion?: 'none' | 'bounce' | 'sway';
 }
 
-export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsapp }: Props) {
+export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsapp, motion = 'none' }: Props) {
   // Start on what the form starts on, so the two agree before any click.
   const initial = offers.find((o) => o.isDefault)?.id ?? offers[0]?.id ?? '';
   const [offerId, setOfferId] = useState(initial);
@@ -112,7 +114,7 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsa
           <RiWhatsappLine size={22} aria-hidden />
         </a>
       )}
-      <OrderCta className="lp-sticky">
+      <OrderCta className="lp-sticky" data-motion={motion === 'none' ? undefined : motion}>
         <span>{text || 'اطلب الآن'}</span>
         {showPrice && price !== undefined && price > 0 && (
           <b dir="ltr">
