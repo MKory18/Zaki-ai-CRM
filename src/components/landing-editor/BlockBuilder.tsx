@@ -1555,6 +1555,29 @@ function SectionFields({
               ))}
             </div>
           </div>
+          {s.motion !== 'none' && (
+            <div className="space-y-1">
+              <span className="block text-xs font-semibold text-[var(--sys-heading)]">سرعة الحركة</span>
+              <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+                {([
+                  ['slow', 'بطيئة'],
+                  ['normal', 'عادية'],
+                  ['fast', 'سريعة'],
+                ] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => patch({ motionSpeed: v })}
+                    className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+                      s.motionSpeed === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="text-xs leading-relaxed text-[var(--sys-muted-foreground)]">
             يلاحق الزائر أسفل الشاشة، وبالضغط عليه ينزل مباشرة إلى تعبئة البيانات.
             موقعه في الترتيب لا يغيّر شيئاً — هو مثبّت على الشاشة لا على الصفحة.
