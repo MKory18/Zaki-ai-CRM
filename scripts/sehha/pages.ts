@@ -36,12 +36,49 @@ export interface PagesReport {
  * The sections of one product page — and not one price in them.
  * The order form reads the product's own offers at render time.
  */
-export function sectionsFor(posters: string[]): LandingSection[] {
+export function sectionsFor(posters: string[], title?: PageTitle): LandingSection[] {
   const stack = { ...newSection('gallery'), title: '', images: posters.slice(0, 12), layout: 'stack' };
   // Trust is left EMPTY on purpose: the renderer then draws the facts (cash on delivery) instead of words nobody measured.
   const form = { ...newSection('form'), ...YOUCAN_FORM };
-  const blocks: LandingSection[] = [stack as LandingSection, form as LandingSection, newSection('trust'), newSection('footer'), newSection('sticky')];
+  const blocks: LandingSection[] = [
+    ...(title ? [titleBlock(title) as LandingSection] : []),
+    stack as LandingSection,
+    form as LandingSection,
+    newSection('trust'),
+    newSection('footer'),
+    newSection('sticky'),
+  ];
   return landingSectionsSchema.parse(blocks);
+}
+
+/** What sits above the posters: the product's name, and the line its posters carry about delivery and payment. */
+export interface PageTitle {
+  name: string;
+  line: string;
+}
+
+/** The block's id: how `restyled` knows a page already has its title (and never adds a second). */
+export const TITLE_ID = 'sehha-title';
+
+/**
+ * THE PRODUCT'S NAME, ABOVE THE POSTERS, IN A DISPLAY FACE.
+ *
+ * A `text` block: its title is the name — drawn as the block's heading, so it wears the page's colours — in «المصيري»
+ * (the font list calls it «أنيق للعناوين»), a little larger than body size, bold. The body is the line the posters
+ * already say (free delivery · pay on receipt), because a text block with no body draws nothing at all.
+ */
+function titleBlock(t: PageTitle) {
+  return {
+    ...newSection('text'),
+    id: TITLE_ID,
+    title: t.name,
+    body: t.line,
+    look: {
+      ...newSection('text').look,
+      space: 'tight',
+      text: { font: 'messiri', scale: 'l', weight: 'bold', italic: false, color: '', headingColor: '' },
+    },
+  };
 }
 
 /** The form the way a YouCan order form reads: a plain column, and the bundles as a radio list. */
@@ -51,7 +88,7 @@ export const YOUCAN_FORM = { formStyle: 'compact', offerStyle: 'radio' } as cons
  * The saved sections with the YouCan form look put on every form block that has not had a look chosen yet.
  * Returns null when there is nothing to change — so a page the owner already styled is never touched.
  */
-export function restyled(sectionsJson: string | null): string | null {
+export function restyled(sectionsJson: string | null, title?: PageTitle): string | null {
   if (!sectionsJson) return null;
   let list: unknown;
   try {
@@ -61,7 +98,11 @@ export function restyled(sectionsJson: string | null): string | null {
   }
   if (!Array.isArray(list)) return null;
   let changed = false;
-  const next = list.map((s) => {
+  // The product's name above the posters — once: a page that already has it (or had it and lost it on purpose) keeps its own.
+  const hasTitle = list.some((s) => s && typeof s === 'object' && (s as { id?: string }).id === TITLE_ID);
+  const head = title && !hasTitle ? [JSON.parse(JSON.stringify(titleBlock(title)))] : [];
+  if (head.length) changed = true;
+  const next = [...head, ...list].map((s) => {
     if (s && typeof s === 'object' && (s as { type?: string }).type === 'form' && !('formStyle' in s) && !('offerStyle' in s)) {
       changed = true;
       return { ...s, ...YOUCAN_FORM };
@@ -102,9 +143,9 @@ export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?:
     });
     if (holder) {
       if (holder.companyId === companyId && holder.storeId === storeId && holder.productId === product.id) {
-        const next = opts.restyle && !holder.isPublished ? restyled(holder.sections) : null;
+        const next = opts.restyle && !holder.isPublished ? restyled(holder.sections, { name: item.pageName, line: item.strip }) : null;
         if (next) {
-          actions.push(`الصفحة /lp/${item.slug} (مسودة): شكل النموذج ← مضغوط + قائمة اختيار الكمية`);
+          actions.push(`الصفحة /lp/${item.slug} (مسودة): شكل النموذج ← مضغوط + قائمة اختيار الكمية، واسم المنتج فوق البوسترات`);
           if (opts.apply) {
             // `isPublished: false` in the WHERE: a page published a moment ago is never touched.
             await db.landingPage.updateMany({ where: { id: holder.id, isPublished: false }, data: { sections: next } });
@@ -142,7 +183,7 @@ export async function applyPages(deps: PagesDeps, opts: { apply: boolean; only?:
           productId: product.id,
           builderMode: 'BLOCKS',
           theme,
-          sections: JSON.stringify(sectionsFor(posters)),
+          sections: JSON.stringify(sectionsFor(posters, { name: item.pageName, line: item.strip })),
           isPublished: false,
           showInStore: false,
         },
