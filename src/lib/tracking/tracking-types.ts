@@ -133,6 +133,16 @@ export interface TrackingPixelView {
   /** Null for a company-wide pixel. Sent so a screen can say where it fires. */
   storeId?: string | null;
   countryId?: string | null;
+  /**
+   * THIS PIXEL'S PURCHASE COMES FROM THE SERVER, AT CONFIRMATION.
+   *
+   * True when the company has an enabled conversion named `Purchase` on «تأكّد الطلب» that this pixel can
+   * actually send (the pixel is on and holds its token). The browser then does NOT send Purchase to it — at
+   * the form's submit, or for an add-on — because Meta would count the submission and the confirmation as
+   * two purchases. Absent/false: the browser sends Purchase as it always did. Set by the server, never by
+   * the client.
+   */
+  purchaseOnServer?: boolean;
 }
 
 /** Neutral event payload — adapters map it to each platform's format. */

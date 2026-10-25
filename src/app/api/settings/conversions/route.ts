@@ -6,7 +6,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import {
-  CONVERSION_TRIGGERS, VALUE_SOURCES, validateEventName, collidesWithBrowserPixel,
+  CONVERSION_TRIGGERS, VALUE_SOURCES, validateEventName, collidesWithBrowserPixel, replacesBrowserPurchase,
   TRIGGER_AR, TRIGGER_HINT_AR, VALUE_SOURCE_AR, SUGGESTED_EVENT_NAMES,
   type ConversionTrigger, type ValueSource,
 } from '@/lib/conversions/types';
@@ -197,7 +197,11 @@ export async function POST(req: Request) {
       // want this; one who does not would otherwise discover it as a
       // doubled return on ad spend and scale a campaign on a number that
       // was never real.
-      warning: collidesWithBrowserPixel(eventName)
+      // The one combination that is meant: the page stops sending Purchase to this pixel by itself.
+      note: replacesBrowserPurchase(eventName, trigger)
+        ? 'الشراء صار يُحسب مرة واحدة عند تأكيد الطلب: الصفحة توقفت عن إرسال Purchase من المتصفح لهذا البكسل تلقائياً.'
+        : null,
+      warning: collidesWithBrowserPixel(eventName, trigger)
         ? `«${eventName}» هو نفس اسم حدث يرسله البكسل من المتصفح. ميتا ستعدّ الاثنين، وسيتضاعف الشراء المسجَّل. اختر اسماً خاصاً ما لم تكن تقصد ذلك.`
         : pixel.capiToken
           ? null
