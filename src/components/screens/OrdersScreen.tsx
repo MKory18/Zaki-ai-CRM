@@ -43,6 +43,7 @@ import { arDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { AdvancedGroup } from '@/components/ui/AdvancedGroup';
 import { ImportOrdersDialog } from '@/components/orders/ImportOrdersDialog';
+import { MigrateOrdersDialog } from '@/components/orders/MigrateOrdersDialog';
 import { SkeletonRows } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
@@ -59,6 +60,7 @@ export function OrdersScreen() {
   // one value, so every keystroke sent a request.
   const [searchInput, setSearchInput] = useState('');
   const [importing, setImporting] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [search, setSearch] = useState('');
   /*
     * TWO LINKS IN THE PRODUCT ALREADY POINT HERE WITH A FILTER ON THEM.
@@ -386,6 +388,8 @@ export function OrdersScreen() {
   const canExport = userCan(currentUser, 'reports.export');
   const canCreate = userCan(currentUser, 'orders.create');
   const canImport = userCan(currentUser, 'orders.import');
+  // The migration door writes confirmed, shipped orders with a past date — the owner's, as the door itself insists.
+  const canMigrate = canImport && userCan(currentUser, 'settings.manage');
   /*
    * «+ أنشئ» IN CTRL+K ARRIVES AS `?new=…` AND OPENS THE SAME THREE FORMS THE THREE BUTTONS IN THE HEADER OPEN — for whoever those
    * buttons are drawn for, and nobody else: a handler is passed only where its button is.
@@ -507,6 +511,13 @@ export function OrdersScreen() {
             >
               <RiUploadCloud2Line className="w-4 h-4" />
               <span>استيراد طلبات</span>
+            </Button>
+            )}
+
+            {canMigrate && (
+            <Button variant="outline" size="sm" onClick={() => setMigrating(true)} className="flex items-center space-x-1.5">
+              <RiUploadCloud2Line className="w-4 h-4" />
+              <span>ترحيل طلبات قديمة</span>
             </Button>
             )}
 
@@ -1097,6 +1108,16 @@ export function OrdersScreen() {
 
       {/* Reads the file, shows every row, then creates through the ordinary
           order door one at a time — see the dialog's own note. */}
+      {migrating && (
+        <MigrateOrdersDialog
+          onClose={() => setMigrating(false)}
+          onDone={() => {
+            setMigrating(false);
+            void loadOrders(1);
+          }}
+        />
+      )}
+
       {importing && (
         <ImportOrdersDialog
           onClose={() => setImporting(false)}

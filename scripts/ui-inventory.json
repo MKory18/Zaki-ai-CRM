@@ -329,6 +329,16 @@
     "links": 2,
     "tabs": 0
   },
+  "src/components/orders/MigrateOrdersDialog.tsx": {
+    "buttons": 3,
+    "inputs": 4,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 4,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/orders/OrderDetailModal.tsx": {
     "buttons": 7,
     "inputs": 1,
@@ -1060,12 +1070,12 @@
     "tabs": 0
   },
   "src/components/screens/OrdersScreen.tsx": {
-    "buttons": 16,
+    "buttons": 17,
     "inputs": 9,
     "columns": 0,
     "cards": 1,
     "modals": 0,
-    "icons": 16,
+    "icons": 17,
     "links": 0,
     "tabs": 0
   },
