@@ -284,6 +284,7 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
       data-look-font={t?.font ? '' : undefined}
       data-look-italic={t?.italic ? '' : undefined}
       data-look-weight={t?.weight ? '' : undefined}
+      data-look-pad={vars['--look-section-pad'] !== undefined ? '' : undefined}
     >
       {overlay > 0 && (
         <div
