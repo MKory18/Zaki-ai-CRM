@@ -571,6 +571,11 @@ const sticky = z.object({
    * as it always was. Off for anyone whose device asks for reduced motion. Additive: saved pages read `none`.
    */
   motion: z.enum(['none', 'bounce', 'sway']).default('none'),
+  /**
+   * How fast that movement goes — «اضف سرعة حركة الزر العائم». `normal` is the speed it always had, so a saved page
+   * reads exactly as before. Meaningless with `none`.
+   */
+  motionSpeed: z.enum(['slow', 'normal', 'fast']).default('normal'),
 });
 
 /**

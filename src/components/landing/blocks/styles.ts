@@ -961,8 +961,10 @@ export const BLOCK_CSS = `
   .lp-sticky-bar { transition: none; }
 }
 /* A movement that draws the eye, when the block asks for one — and none for a visitor whose device asks for less. */
-.lp-sticky[data-motion='bounce'] { animation: lp-bounce 1.8s ease-in-out infinite; }
-.lp-sticky[data-motion='sway'] { animation: lp-sway 2.2s ease-in-out infinite; }
+.lp-sticky[data-motion='bounce'] { animation: lp-bounce calc(1.8s * var(--look-k, 1)) ease-in-out infinite; }
+.lp-sticky[data-motion='sway'] { animation: lp-sway calc(2.2s * var(--look-k, 1)) ease-in-out infinite; }
+.lp-sticky[data-speed='slow'] { --look-k: 1.7; }
+.lp-sticky[data-speed='fast'] { --look-k: 0.55; }
 @keyframes lp-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes lp-sway { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @media (prefers-reduced-motion: reduce) { .lp-sticky[data-motion] { animation: none; } }
