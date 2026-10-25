@@ -42,6 +42,7 @@ export const PIXEL_PUBLIC_SELECT = {
   // Where it fires. Not a secret, and a settings screen that cannot show it
   // is a screen on which «كل المتاجر» and «هذا المتجر» look identical.
   storeId: true, countryId: true,
+  orderEvent: true, sendViewContent: true, sendInitiateCheckout: true,
 } as const;
 
 function toView(row: {
@@ -53,6 +54,9 @@ function toView(row: {
   enabled: boolean;
   storeId: string | null;
   countryId: string | null;
+  orderEvent?: string;
+  sendViewContent?: boolean;
+  sendInitiateCheckout?: boolean;
 }, purchaseOnServer = false): TrackingPixelView | null {
   const platform = row.platform as TrackingPlatform;
   const scope = row.scope as TrackingScope;
@@ -68,6 +72,11 @@ function toView(row: {
     storeId: row.storeId,
     countryId: row.countryId,
     ...(purchaseOnServer ? { purchaseOnServer: true } : {}),
+    // Only what differs from the default travels to the browser — a page with every pixel on its defaults ships
+    // exactly the bytes it did before these switches existed.
+    ...(row.orderEvent === 'Lead' ? { orderEvent: 'Lead' as const } : {}),
+    ...(row.sendViewContent === false ? { sendViewContent: false } : {}),
+    ...(row.sendInitiateCheckout === false ? { sendInitiateCheckout: false } : {}),
   };
 }
 
@@ -104,6 +113,7 @@ export async function pixelsWithServerPurchase(companyId: string): Promise<Set<s
 const SCOPE_COLUMNS = {
   id: true, platform: true, name: true, pixelId: true, scope: true,
   enabled: true, storeId: true, countryId: true,
+  orderEvent: true, sendViewContent: true, sendInitiateCheckout: true,
 } as const;
 
 export async function getCompanyTrackingPixels(companyId: string): Promise<TrackingPixelView[]> {

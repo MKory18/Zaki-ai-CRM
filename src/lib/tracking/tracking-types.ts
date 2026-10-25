@@ -21,7 +21,18 @@ export const TRACKING_SCOPES = ['GLOBAL', 'PUBLIC', 'LANDING_PAGES'] as const;
 export type TrackingScope = (typeof TRACKING_SCOPES)[number];
 
 /** Allowlisted, code-defined events — no user-defined event names, ever. */
-export const TRACKING_EVENTS = ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase'] as const;
+export const TRACKING_EVENTS = ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase', 'Lead'] as const;
+
+/**
+ * WHAT AN ORDER IS REPORTED AS — «شو الهدف الي بدك التحويل عليه».
+ *
+ * The order form always announces one moment: a real order, accepted by the server. Each pixel says what that moment
+ * is called on its platform — a purchase (the default, as it always was) or a lead, for a seller whose campaigns
+ * optimise on leads. `Lead` is never fired on its own; it is only what `Purchase` becomes for such a pixel.
+ */
+export const ORDER_EVENTS = ['Purchase', 'Lead'] as const;
+export type OrderEvent = (typeof ORDER_EVENTS)[number];
+export const ORDER_EVENT_AR: Record<OrderEvent, string> = { Purchase: 'شراء', Lead: 'عميل محتمل' };
 export type TrackingEventName = (typeof TRACKING_EVENTS)[number];
 
 /**
@@ -143,6 +154,11 @@ export interface TrackingPixelView {
    * the client.
    */
   purchaseOnServer?: boolean;
+  /** What an order is reported as on this pixel; absent = `Purchase`. */
+  orderEvent?: OrderEvent;
+  /** False only when the seller switched the event off for this pixel; absent = sent. */
+  sendViewContent?: boolean;
+  sendInitiateCheckout?: boolean;
 }
 
 /** Neutral event payload — adapters map it to each platform's format. */

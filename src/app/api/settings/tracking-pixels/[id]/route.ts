@@ -5,7 +5,7 @@ import { requireCompanyTenant } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
-import { maskPixelId, TRACKING_PLATFORMS, TRACKING_SCOPES } from '@/lib/tracking/tracking-types';
+import { maskPixelId, ORDER_EVENTS, TRACKING_PLATFORMS, TRACKING_SCOPES } from '@/lib/tracking/tracking-types';
 import { pixelIdHint, validateTrackingPixelId } from '@/lib/tracking/tracking-validation';
 import { zodMessage } from '@/lib/zod-message';
 import { resolvePixelScope } from '@/lib/tracking/pixel-scope';
@@ -35,6 +35,10 @@ const updateSchema = z.object({
    */
   storeId: z.string().uuid().nullish(),
   countryId: z.string().uuid().nullish(),
+  /** What an order is reported as on this pixel, and the two events a seller may switch off. */
+  orderEvent: z.enum(ORDER_EVENTS).optional(),
+  sendViewContent: z.boolean().optional(),
+  sendInitiateCheckout: z.boolean().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -69,7 +73,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         { status: 400 }
       );
     }
-    const { name, pixelId: rawPixelId, scope, enabled, platform } = parsed.data;
+    const { name, pixelId: rawPixelId, scope, enabled, platform, orderEvent, sendViewContent, sendInitiateCheckout } = parsed.data;
 
     // platform spoofing guard: the platform of an existing pixel is immutable
     if (platform !== undefined && platform !== pixel.platform) {
@@ -114,6 +118,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(scope !== undefined ? { scope } : {}),
         ...(enabled !== undefined ? { enabled } : {}),
         ...(nextScope ?? {}),
+        ...(orderEvent !== undefined ? { orderEvent } : {}),
+        ...(sendViewContent !== undefined ? { sendViewContent } : {}),
+        ...(sendInitiateCheckout !== undefined ? { sendInitiateCheckout } : {}),
       },
       // Never the whole row: it carries the encrypted Conversions API token.
       select: PIXEL_PUBLIC_SELECT,
@@ -133,6 +140,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // Where it USED to fire. Moving a pixel from one shop to another is
         // the change somebody will later need to date.
         storeId: pixel.storeId, countryId: pixel.countryId,
+        orderEvent: pixel.orderEvent, sendViewContent: pixel.sendViewContent, sendInitiateCheckout: pixel.sendInitiateCheckout,
       },
       newData: {
         name: updated.name,
@@ -140,6 +148,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         enabled: updated.enabled,
         storeId: updated.storeId,
         countryId: updated.countryId,
+        orderEvent: updated.orderEvent, sendViewContent: updated.sendViewContent, sendInitiateCheckout: updated.sendInitiateCheckout,
         pixelId: maskPixelId(updated.pixelId),
         by: user.name,
       },
