@@ -40,6 +40,7 @@ const NOT_THE_CUSTOMER_TABLE: [string, string][] = [
   ['src/app/api/users/[id]/profile/route.ts', 'one colleague reading or editing their own profile'],
   ['src/app/api/delivery-providers/route.ts', 'the courier company’s own contact details, which are on their invoices'],
   ['src/app/api/delivery-providers/[id]/route.ts', 'the courier company’s own contact details, one provider at a time'],
+  ['src/app/api/orders/import/migrate/route.ts', 'reads the phones of existing orders only to match the upload; the answer is file, line and reason — no contact detail leaves'],
   ['src/app/api/orders/import/route.ts', 'reads existing customers to match duplicates while importing; nothing is handed to a screen'],
   ['src/app/api/ai/confirmation/route.ts', 'one order’s context for the assistant — egress to a model provider, a different question from harvesting'],
   ['src/app/api/orders/[id]/confirmation/route.ts', 'a tab of an order whose detail route already counted that customer'],
