@@ -566,6 +566,11 @@ const sticky = z.object({
   text: z.string().max(40).default('اطلب الآن'),
   /** Show the current price on the button. */
   showPrice: z.boolean().default(true),
+  /**
+   * A gentle movement that draws the eye: `bounce` (up and down) or `sway` (side to side). `none` is the button
+   * as it always was. Off for anyone whose device asks for reduced motion. Additive: saved pages read `none`.
+   */
+  motion: z.enum(['none', 'bounce', 'sway']).default('none'),
 });
 
 /**

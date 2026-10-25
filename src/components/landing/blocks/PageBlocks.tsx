@@ -871,6 +871,7 @@ function Block({ section: s, ctx }: { section: LandingSection; ctx: BlockContext
           basePrice={ctx.price}
           currency={ctx.currency}
           whatsapp={ctx.whatsapp ?? null}
+          motion={s.motion}
         />
       );
   }
