@@ -207,6 +207,53 @@ describe('a bundle asked for twice', () => {
   });
 });
 
+describe('the gift costs what it costs', () => {
+  /**
+   * «عبوتان + الثالثة مجاناً»: the customer pays for two and three leave the shelf. The stock already counted three;
+   * the cost of goods counted two, so the profit on every bundle with a gift was too large by the gift. The internal
+   * door costs `quantity + gift`; this door now does too — and what the customer pays does not move.
+   */
+  beforeEach(() => {
+    db.offer.findMany.mockImplementation(async ({ where }: any) =>
+      where.productId === 'p-big'
+        ? [{
+            id: 'off-2-1', name: 'عبوتان + الثالثة مجاناً', quantity: 2, freeQuantity: 1,
+            sellingPrice: 20, compareAtPrice: null, isDefault: true, deliveryIncluded: true, endsAt: null,
+          }]
+        : []
+    );
+    // 100 units on hand at 4 each: the average a unit costs is 4.
+    db.productionBatch.findMany.mockImplementation(async () => [{ productId: 'p-big', quantityRemaining: 100, costPerUnit: 4 }]);
+  });
+
+  it('costs the free unit too: two paid + one gift at 4 each is 12, not 8', async () => {
+    await createPublicOrder(surface([P.big]) as never, body({ items: [{ productId: 'p-big', offerId: 'off-2-1', quantity: 1 }] }));
+    expect(items()[0].quantity).toBe(2);
+    expect(items()[0].freeQuantity).toBe(1);
+    expect(created().estimatedCostOfGoods).toBe(12);
+  });
+
+  it('and twice the bundle is six units of cost (four paid, two gifts)', async () => {
+    await createPublicOrder(surface([P.big]) as never, body({ items: [{ productId: 'p-big', offerId: 'off-2-1', quantity: 2 }] }));
+    expect(created().estimatedCostOfGoods).toBe(24);
+  });
+
+  it('NEGATIVE: what the customer pays does not move — the bundle price, the gift at zero', async () => {
+    await createPublicOrder(surface([P.big]) as never, body({ items: [{ productId: 'p-big', offerId: 'off-2-1', quantity: 1 }] }));
+    expect(created().totalAmount).toBe(20);
+  });
+
+  it('NEGATIVE: a bundle with no gift is costed exactly as before', async () => {
+    db.offer.findMany.mockImplementation(async ({ where }: any) =>
+      where.productId === 'p-big'
+        ? [{ id: 'off-2', name: 'عبوتان', quantity: 2, freeQuantity: 0, sellingPrice: 35, compareAtPrice: null, isDefault: true, deliveryIncluded: true, endsAt: null }]
+        : []
+    );
+    await createPublicOrder(surface([P.big]) as never, body({ items: [{ productId: 'p-big', offerId: 'off-2', quantity: 1 }] }));
+    expect(created().estimatedCostOfGoods).toBe(8);
+  });
+});
+
 describe('the door that sells one thing is untouched', () => {
   it('still writes one line, and the order is that line', async () => {
     const r = await createPublicOrder(surface([P.big]) as never, body());

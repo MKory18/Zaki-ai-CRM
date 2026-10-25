@@ -411,8 +411,17 @@ export async function createPublicOrder(
       unitCosts.set(line.product.id, (await productCost(db, companyId, line.product.id)).average);
     }
   }
+  /*
+   * ⚠️ THE GIFT COSTS WHAT IT COSTS — here as at the internal door.
+   *
+   * «عبوتان + الثالثة مجاناً» puts THREE units in the box: the stock is already told so (`quantity + freeQuantity`
+   * everywhere downstream), and this line costed only the two that were paid for. Every bundle with a gift sold
+   * through a landing page or a shop therefore reported a profit too large by exactly the cost of the gift. The
+   * internal door (`POST /api/orders`) has costed `quantity + gift` all along; the two doors now agree.
+   * Free to the customer is not free to the shop — the money the customer pays is untouched by this.
+   */
   const costOfGoods = lines.reduce(
-    (sum, l) => sum + (unitCosts.get(l.product.id) ?? 0) * l.quantity,
+    (sum, l) => sum + (unitCosts.get(l.product.id) ?? 0) * (l.quantity + l.freeQuantity),
     0
   );
 
