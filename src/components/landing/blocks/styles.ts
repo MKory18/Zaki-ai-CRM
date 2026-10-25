@@ -1159,6 +1159,8 @@ html [data-look-align] :is(h1, h2, h3, h4, p, div, section, ul, .lp-hero, .lp-h2
 html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
   color: var(--look-heading, inherit);
 }
+html [data-look-pad] .lp-section { padding-block: var(--look-section-pad); }
+html [data-look-pad] .lp-h2 { margin-bottom: var(--look-h2-gap); }
 html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {
   background: var(--look-btn-bg, var(--store-accent));
   color: var(--look-btn-fg, var(--store-accent-text));

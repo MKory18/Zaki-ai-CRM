@@ -37,6 +37,12 @@ const SPACE: Record<BlockLook['space'], string> = {
   roomy: 'clamp(36px, 9vw, 96px)',
 };
 
+/** Inside a section block: the padding above and below, and the gap under its heading. Unset = the block's own. */
+const INNER_PAD: Partial<Record<BlockLook['space'], { section: string; heading: string }>> = {
+  none: { section: '0', heading: '6px' },
+  tight: { section: '8px', heading: '10px' },
+};
+
 /** Text size, relative to the block's own base — never absolute px. */
 const SCALE: Record<NonNullable<BlockLook['text']>['scale'], string> = {
   xs: '0.8em',
@@ -159,6 +165,14 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
   if (b.wide) {
     vars['--look-btn-width'] = '100%';
     vars['--look-btn-display'] = 'block';
+  }
+  // «التباعد يتحكم بالحشوة الداخلية كمان، بلا = صفر». `outer` above is only the space AROUND the block; a section
+  // block keeps its own 30px inside and 18px under its heading, so «بلا» still left a tall white box. «بلا» and
+  // «ضيّق» now reach inside too; «عادي» and «واسع» leave the block's own padding exactly as it was.
+  const pad = INNER_PAD[l.space ?? 'normal'];
+  if (pad) {
+    vars['--look-section-pad'] = pad.section;
+    vars['--look-h2-gap'] = pad.heading;
   }
 
   return { outer, inner, overlay, vars };
