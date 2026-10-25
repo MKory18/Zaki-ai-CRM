@@ -62,16 +62,24 @@ export interface PhoneRule {
    * refuses — so the template's own example came back «فيه نقص».
    */
   sample: string;
+  /**
+   * Also accept a FOREIGN number — «زبون بالشمال السوري بخط تركي… لازم يقبل»، «هاي ارقام دول ثانية عادي».
+   *
+   * The north of Syria runs on Turkish lines, and customers abroad order for family at home, so a Syrian store
+   * refusing every number that is not Syrian refuses real customers. See `isForeignNumber` for the shape.
+   */
+  acceptsForeign?: boolean;
 }
 
 export const PHONE_RULES: Record<string, PhoneRule> = {
-  // Mobile 9XXXXXXXX, landlines 11/21/31/33/41/43/51/52/53 + subscriber.
+  // Mobile 9XXXXXXXX, landlines 11/21/31/33/41/43/51/52/53 + subscriber — and a foreign number beside them.
   SY: {
     dialCode: '963',
     national: /^(?:9\d{8}|(?:11|21|31|33|41|43|51|52|53)\d{6,7})$/,
     countryName: 'سوري',
     example: '09XXXXXXXX',
     sample: '0991234567',
+    acceptsForeign: true,
   },
   // Mobile 7[7-9]XXXXXXX, landlines 2/3/5/6 + 7 digits.
   JO: {
@@ -157,12 +165,31 @@ export function isValidPhoneFor(countryCode: string | null | undefined, raw: str
   const rule = ruleFor(countryCode);
   const digits = nationalDigits(text, rule?.dialCode);
   if (!rule) return digits.length >= 7 && digits.length <= 15;
-  return rule.national.test(digits);
+  return rule.national.test(digits) || (!!rule.acceptsForeign && isForeignNumber(text, rule));
+}
+
+/**
+ * A number that is not this country's but is a whole number of ANOTHER country — for a rule that `acceptsForeign`.
+ *
+ * Ten to fifteen digits (E.164 stops at fifteen) once a leading `+`/`00` and the trunk zeros are gone, not opening
+ * with this country's own dial code (that is a national number, judged by `national` alone), and not a national
+ * mobile with one digit too many — «09912345678» is a Syrian typo, not a foreign line. So «+90 5XX XXX XX XX»,
+ * «905XXXXXXXXX» and a ten-digit Turkish «5XXXXXXXXX» pass; an eight-digit stub does not.
+ */
+export function isForeignNumber(raw: string, rule: PhoneRule): boolean {
+  if (rule.national.test(nationalDigits(raw, rule.dialCode))) return false;
+  const digits = toLatinDigits(raw || '').replace(/\D/g, '').replace(/^0+/, '');
+  if (digits.length < 10 || digits.length > 15) return false;
+  if (digits.startsWith(rule.dialCode)) return false;
+  const mobileHead = rule.sample.replace(/^0/, '')[0];
+  if (digits.length <= rule.sample.length && digits.startsWith(mobileHead)) return false;
+  return true;
 }
 
 /** The message the visitor sees when their number does not fit. */
 export function phoneErrorFor(countryCode: string | null | undefined): string {
   const rule = ruleFor(countryCode);
+  if (rule?.acceptsForeign) return `يرجى إدخال رقم هاتف ${rule.countryName} صحيح، أو رقم دولي كامل برمز بلده.`;
   return rule
     ? `يرجى إدخال رقم هاتف ${rule.countryName} صحيح.`
     : 'يرجى إدخال رقم هاتف صحيح.';
