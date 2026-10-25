@@ -193,7 +193,38 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   }
   const companyId = lp.company!.id;
 
-  const [offers, recs] = await loadLpData(lp.id, companyId, lp.product?.id ?? null, lp.store?.country.minorUnit ?? 2);
+  const page = lp;
+  /*
+   * FOUR READS THAT DO NOT WAIT FOR EACH OTHER, ASKED AT ONCE.
+   *
+   * The offers, the country's cities, the selling currency and the page's pixels each needed only the page — and they
+   * ran one after another, every round trip to the database added to the time before a shopper on a Syrian phone saw
+   * anything. Same answers, same order of use; only the waiting is shared.
+   */
+  const [[offers, recs], regions, currency, trackingPixels] = await Promise.all([
+    loadLpData(page.id, companyId, page.product?.id ?? null, page.store?.country.minorUnit ?? 2),
+    // The cities offered and the phone format come from the country this page sells into — never a hard-coded list.
+    page.store
+      ? db.region
+          .findMany({
+            where: { countryId: page.store.countryId, isActive: true },
+            select: { name: true },
+            orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+          })
+          .then((rows) => rows.map((r) => r.name))
+      : Promise.resolve([] as string[]),
+    // The currency of the COUNTRY this page sells into, not of the company.
+    sellingCurrency(page.store, companyId),
+    // Server-resolved pixels of the page's company, re-validated before any script may load. A preview loads none: the
+    // seller checking their own page is not a PageView to report to their ad account. A campaign page may belong to no
+    // shop (`LandingPage.storeId` is nullable); then only company-wide pixels reach it.
+    previewing
+      ? Promise.resolve([] as Awaited<ReturnType<typeof getTrackingPixelsForPage>>)
+      : getTrackingPixelsForPage(companyId, 'LANDING_PAGES', {
+          storeId: page.storeId ?? null,
+          countryId: page.store?.countryId ?? null,
+        }),
+  ]);
   const previewToken = 'slug' in target && previewing ? target.previewToken : undefined;
   // A visitor has no session: every stored image this page shows goes out
   // through the public media route, naming this page (public-media.ts). A
@@ -219,24 +250,11 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
     }
   }
 
-  // The cities offered and the phone format come from the country this page
-  // sells into — never from a hard-coded list.
   const countryCode = lp.store?.country.code ?? null;
-  const regions = lp.store
-    ? (
-        await db.region.findMany({
-          where: { countryId: lp.store.countryId, isActive: true },
-          select: { name: true },
-          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-        })
-      ).map((r) => r.name)
-    : [];
 
   const rawSrc = `/lp/${encodeURIComponent(lp.slug)}/raw${previewToken ? `?p=${encodeURIComponent(previewToken)}` : ''}`;
   const productName = lp.product?.name || lp.name;
   const price = lp.product?.basePrice ?? 0;
-  // The currency of the COUNTRY this page sells into, not of the company.
-  const currency = await sellingCurrency(lp.store, companyId);
 
   // ── Form visibility rule ──
   //  - Legacy pages (NO data-zaki-* markers at all): the trusted OrderForm
@@ -249,16 +267,6 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   const usesBehaviorLayer = /data-zaki-(?:action|offer|order|position|product)/.test(html);
   const showOrderForm = usesBehaviorLayer ? detectOrderIntent(html) : true;
 
-  // ── Tracking — server-resolved pixels of the page's company, re-validated
-  // before any script may load. A preview loads none: the seller checking
-  // their own page is not a PageView to report to their ad account.
-  const trackingPixels = previewing ? [] : await getTrackingPixelsForPage(companyId, 'LANDING_PAGES', {
-        // A campaign page may belong to no shop — `LandingPage.storeId` is
-        // nullable. Then only company-wide pixels reach it, because there
-        // is no store and no country for a narrower scope to match.
-        storeId: lp.storeId ?? null,
-        countryId: lp.store?.countryId ?? null,
-      });
   const viewContent = lp.product
     ? { contentIds: [lp.product.id], contentName: lp.product.name || null, value: lp.product.basePrice ?? null, currency }
     : null;
