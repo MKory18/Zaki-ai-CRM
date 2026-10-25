@@ -39,7 +39,7 @@ describe('the offer list, as radios', () => {
     expect(radios).toHaveLength(3);
     expect(screen.getByText(/عبوتان\s*=/)).toBeTruthy();
     expect(screen.getByText(/35\s*USD/)).toBeTruthy();
-    expect(screen.getByText(/\+ 1 هدية مجانية/)).toBeTruthy();
+    expect(screen.getByText(/\+ هدية عبوة/)).toBeTruthy();
   });
 
   it('starts on the default bundle, and choosing another moves the selection', () => {
@@ -55,6 +55,41 @@ describe('the offer list, as radios', () => {
     expect(screen.queryAllByRole('radio')).toHaveLength(0);
     expect(screen.getByText('اختر العرض')).toBeTruthy();
     expect(screen.getAllByText(/اختر هذا العرض|العرض المختار/).length).toBeGreaterThan(0);
+  });
+
+  it('says «توصيل مجاني» on a bundle whose price already carries the delivery — and only on those', () => {
+    form({
+      offerStyle: 'radio',
+      offers: [
+        { ...offers[0], deliveryIncluded: true },
+        { ...offers[1], deliveryIncluded: false },
+        { ...offers[2] },
+      ],
+    });
+    const rows = [...document.querySelectorAll('.lp-radio')].map((r) => r.textContent ?? '');
+    expect(rows[0]).toContain('توصيل مجاني');
+    expect(rows[1]).not.toContain('توصيل مجاني');
+    // the server did not say: nothing is promised
+    expect(rows[2]).not.toContain('توصيل مجاني');
+  });
+
+  it('reads the way a YouCan row does — «السعر توصيل مجاني» · «السعر + هدية عبوة توصيل مجاني» — delivery last, after the price and the gift', () => {
+    form({ offerStyle: 'radio', offers: [{ ...offers[0], deliveryIncluded: true }, { ...offers[2], deliveryIncluded: true }] });
+    const rows = [...document.querySelectorAll('.lp-radio')].map((r) => (r.textContent ?? '').split(/\s+/).join(' ').trim());
+    expect(rows[0]).toBe('عبوة واحدة = 20 USD توصيل مجاني');
+    expect(rows[1]).toBe('قطعتان = 50 USD + هدية عبوة توصيل مجاني');
+  });
+
+  it('says the gift in a person’s words: «عبوة» · «عبوتان» · «5 عبوات» · «12 عبوة»', () => {
+    form({
+      offerStyle: 'radio',
+      offers: [1, 2, 5, 12].map((n) => ({ id: `g${n}`, name: 'x', quantity: 2, freeQuantity: n, price: 30, isDefault: false })),
+    });
+    const rows = [...document.querySelectorAll('.lp-radio')].map((r) => r.textContent ?? '');
+    expect(rows[0]).toContain('+ هدية عبوة');
+    expect(rows[1]).toContain('+ هدية عبوتان');
+    expect(rows[2]).toContain('+ هدية 5 عبوات');
+    expect(rows[3]).toContain('+ هدية 12 عبوة');
   });
 
   it('NEGATIVE: a page whose own offers block is the picker gets no second list, whatever the style', () => {

@@ -33,6 +33,8 @@ export interface OfferView {
   price: number;
   isDefault: boolean;
   isBest?: boolean; // flagged client-side: cheapest per unit
+  /** The price already carries the delivery fee — the customer pays nothing more for it. The server sends it; absent = say nothing. */
+  deliveryIncluded?: boolean;
 }
 
 export interface RecommendationView {
@@ -162,6 +164,8 @@ function campaignCode(): string {
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
+/** «عبوة» · «عبوتان» · «5 عبوات» · «12 عبوة» — the word a person would say for that many packs. */
+const packs = (n: number) => (n === 1 ? 'عبوة' : n === 2 ? 'عبوتان' : n <= 10 ? `${n} عبوات` : `${n} عبوة`);
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou }: OrderFormProps) {
@@ -772,7 +776,8 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                       />
                       <span>
                         {o.name} = <b dir="ltr">{fmt(o.price)} {currency}</b>
-                        {o.freeQuantity > 0 ? ` + ${o.freeQuantity} هدية مجانية` : ''}
+                        {o.freeQuantity > 0 ? ` + هدية ${packs(o.freeQuantity)}` : ''}
+                        {o.deliveryIncluded === true ? ' توصيل مجاني' : ''}
                       </span>
                     </label>
                   ))}
