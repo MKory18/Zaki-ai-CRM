@@ -53,7 +53,7 @@ export async function GET(req: Request) {
     const now = new Date();
     const parsed = trackingFilters(q);
     if (!parsed.ok) return NextResponse.json({ error: parsed.error, errorAr: parsed.errorAr }, { status: 400 });
-    const { status, task, courier, region, age, q: term } = parsed.applied;
+    const { status, task, courier, region, age, product, q: term } = parsed.applied;
 
     /*
      * ── AND THE DEFAULT CARRIES WHAT IS WAITING TO BE COLLECTED ──
@@ -97,7 +97,16 @@ export async function GET(req: Request) {
     // Every parcel the question matches is read lean and judged (the chips, the badge, the dropdowns' numbers, the
     // order); only the page's own parcels are read in full, below.
     const list = await readTrackingList(db, {
-      where: { companyId, storeId, AND: [...(statusClause ? [statusClause] : []), ...(term ? [searchWhere(term)] : [])] },
+      where: {
+        companyId,
+        storeId,
+        AND: [
+          ...(statusClause ? [statusClause] : []),
+          // THIS store's order for that product — the store is already in the WHERE, so another store's product id finds nothing.
+          ...(product ? [{ productId: product }] : []),
+          ...(term ? [searchWhere(term)] : []),
+        ],
+      },
       now,
       task,
       courier,

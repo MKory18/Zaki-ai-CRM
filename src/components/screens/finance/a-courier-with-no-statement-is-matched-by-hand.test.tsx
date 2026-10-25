@@ -87,6 +87,11 @@ const parcel = (ref: string, over: Record<string, unknown> = {}) => ({
 const delivered = (ref: string, over: Record<string, unknown> = {}) =>
   parcel(ref, { shippingStatus: 'DELIVERED', settlementStatus: 'UNSETTLED', ...over });
 
+const PRODUCTS = [
+  { id: 'prod-cream', name: 'كريم الندبات', basePrice: 20 },
+  { id: 'prod-hoodie', name: 'هودي بديل المازوت', basePrice: 25 },
+];
+
 const FACTS = {
   total: 9,
   tasks: { CANCELLED: 0, CHANGED: 0, FAILED: 0, RETURNING: 0, LATE: 0, NO_BARCODE: 0, COLLECT: 0 },
@@ -146,8 +151,11 @@ beforeEach(() => {
     if (u.pathname === '/api/finance/statements') return { statements: [] };
     if (u.pathname === '/api/ops/references') return { providers: [] };
     if (u.pathname === '/api/finance/wallets') return { wallets: [] };
+    if (u.pathname === '/api/products') return { products: PRODUCTS };
     const q = u.searchParams;
     let list = parcels;
+    if (q.get('status')) list = list.filter((p) => p.shippingStatus === q.get('status'));
+    if (q.get('product')) list = list.filter((p) => (p as { productId?: string }).productId === q.get('product'));
     if (q.get('courier')) list = list.filter((p) => p.deliveryProvider?.id === q.get('courier'));
     if (q.get('task') === 'COLLECT') {
       list = list.filter((p) => ['DELIVERED', 'PARTIALLY_DELIVERED'].includes(p.shippingStatus) && p.settlementStatus !== 'SETTLED');
@@ -220,8 +228,16 @@ describe('opening it', () => {
   });
 
   it('if the first answer fails, the reason is shown and the spinner stops — it does not turn for ever', async () => {
-    api.mockImplementationOnce(async () => {
-      throw new Error('تعذّر الوصول إلى الخادم');
+    // The FOLLOW-UP list's first answer fails — whichever request the screen happens to make first (the product
+    // list for the filter is another one).
+    const base = api.getMockImplementation()!;
+    let failed = false;
+    api.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (!failed && url.startsWith('/api/ops/tracking')) {
+        failed = true;
+        throw new Error('تعذّر الوصول إلى الخادم');
+      }
+      return base(url, init);
     });
     render(<ManualMatching />);
     expect(await screen.findByText('تعذّر الوصول إلى الخادم')).toBeTruthy();
@@ -232,7 +248,15 @@ describe('opening it', () => {
 
   it('while the first answer is on its way a spinner says so', async () => {
     let answer!: (v: unknown) => void;
-    api.mockImplementationOnce(() => new Promise((r) => (answer = r)));
+    const base = api.getMockImplementation()!;
+    let held = false;
+    api.mockImplementation((url: string, init?: RequestInit) => {
+      if (!held && url.startsWith('/api/ops/tracking')) {
+        held = true;
+        return new Promise((r) => (answer = r));
+      }
+      return base(url, init);
+    });
     render(<ManualMatching />);
     expect(await screen.findByText(/جارٍ التحميل/)).toBeTruthy();
     answer({ orders: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 1 }, facts: FACTS });
@@ -707,6 +731,69 @@ describe('narrowing it', () => {
     await waitFor(() => expect(gets().at(-1)!.get('task')).toBe('COLLECT'));
     await waitFor(() => expect(deskRow('M1')).toBeUndefined());
     expect(deskRow('D1')).toBeDefined();
+  });
+
+  it('«الحالة» asks the door for THAT shipping status, from page one — and «كل الحالات المفتوحة» asks for none', async () => {
+    parcels = [parcel('M1'), parcel('M2', { shippingStatus: 'OUT_FOR_DELIVERY' }), delivered('D1')];
+    await draw();
+    const options = within(screen.getByLabelText('الحالة')).getAllByRole('option').map((o) => o.textContent);
+    expect(options).toEqual(['كل الحالات المفتوحة', 'مشحون', 'خرج للتوصيل', 'بانتظار الاستلام', 'فشل التوصيل', 'طلب إرجاع', 'مسلَّم', 'مسلَّم جزئياً']);
+    choose('الحالة', 'OUT_FOR_DELIVERY');
+    await waitFor(() => expect(gets().at(-1)!.get('status')).toBe('OUT_FOR_DELIVERY'));
+    expect(gets().at(-1)!.get('page')).toBe('1');
+    await waitFor(() => expect(deskRow('M1')).toBeUndefined());
+    expect(deskRow('M2')).toBeDefined();
+    choose('الحالة', 'all');
+    await waitFor(() => expect(gets().at(-1)!.get('status')).toBeNull());
+    await waitFor(() => expect(deskRow('M1')).toBeDefined());
+  });
+
+  it('«المنتج» lists the store’s products, and choosing one asks the door for it — and only its parcels stay', async () => {
+    parcels = [parcel('M1', { productId: 'prod-cream' }), parcel('M2', { productId: 'prod-hoodie' })];
+    await draw();
+    await waitFor(() => expect(within(screen.getByLabelText('المنتج')).getAllByRole('option')).toHaveLength(3));
+    expect(within(screen.getByLabelText('المنتج')).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'كل المنتجات', 'كريم الندبات', 'هودي بديل المازوت',
+    ]);
+    choose('المنتج', 'prod-hoodie');
+    await waitFor(() => expect(gets().at(-1)!.get('product')).toBe('prod-hoodie'));
+    await waitFor(() => expect(deskRow('M1')).toBeUndefined());
+    expect(deskRow('M2')).toBeDefined();
+  });
+
+  it('a new status or product starts a new selection, and both ride together with the courier', async () => {
+    parcels = [parcel('M1', { productId: 'prod-cream' }), parcel('M2', { productId: 'prod-hoodie' })];
+    await draw();
+    await waitFor(() => expect(within(screen.getByLabelText('المنتج')).getAllByRole('option')).toHaveLength(3));
+    tick('M1');
+    choose('الحالة', 'SHIPPED');
+    await waitFor(() => expect(gets().at(-1)!.get('status')).toBe('SHIPPED'));
+    expect(ticked()).toEqual([]);
+    await waitFor(() => expect(box('M1')).not.toBeNull());
+    tick('M1');
+    choose('المنتج', 'prod-cream');
+    await waitFor(() => expect(gets().at(-1)!.get('product')).toBe('prod-cream'));
+    expect(ticked()).toEqual([]);
+    choose('جهة الشحن', A);
+    choose('الحالة', 'SHIPPED');
+    await waitFor(() => {
+      const last = gets().at(-1)!;
+      expect([last.get('courier'), last.get('status'), last.get('product')]).toEqual([A, 'SHIPPED', 'prod-cream']);
+    });
+  });
+
+  it('«إعادة تعيين» puts the status and the product back too — and counts them while they are chosen', async () => {
+    parcels = [parcel('M1', { productId: 'prod-cream' }), parcel('M2', { productId: 'prod-hoodie' })];
+    await draw();
+    await waitFor(() => expect(within(screen.getByLabelText('المنتج')).getAllByRole('option')).toHaveLength(3));
+    choose('الحالة', 'SHIPPED');
+    choose('المنتج', 'prod-cream');
+    await waitFor(() => expect(gets().at(-1)!.get('product')).toBe('prod-cream'));
+    fireEvent.click(screen.getByRole('button', { name: 'إعادة تعيين (2)' }));
+    await waitFor(() => expect(gets().at(-1)!.get('product')).toBeNull());
+    expect(gets().at(-1)!.get('status')).toBeNull();
+    expect((screen.getByLabelText('الحالة') as HTMLSelectElement).value).toBe('all');
+    expect((screen.getByLabelText('المنتج') as HTMLSelectElement).value).toBe('all');
   });
 
   it('a typed word is the door’s `q`', async () => {
