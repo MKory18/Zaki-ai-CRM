@@ -132,6 +132,14 @@ model TrackingPixel {
   /// is empty for almost everybody and the pixel id is used.
   capiDatasetId String?
 
+  /// WHAT AN ORDER IS REPORTED AS on this pixel — «شو الهدف الي بدك التحويل عليه». `Purchase` (as it always was)
+  /// or `Lead`. See `ORDER_EVENTS` in tracking-types.ts.
+  orderEvent           String  @default("Purchase")
+  /// Whether this pixel is told a product was viewed, and that the order form was started. On by default — the
+  /// events every pixel received before these switches existed.
+  sendViewContent      Boolean @default(true)
+  sendInitiateCheckout Boolean @default(true)
+
   company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   /// `Restrict`, not `Cascade`: deleting a store must not silently delete
   /// the pixel that was reporting its sales. Somebody has to decide where

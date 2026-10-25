@@ -1631,7 +1631,7 @@
   },
   "src/components/settings/TrackingPixelsSection.tsx": {
     "buttons": 5,
-    "inputs": 5,
+    "inputs": 7,
     "columns": 4,
     "cards": 0,
     "modals": 0,

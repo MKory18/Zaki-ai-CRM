@@ -132,14 +132,19 @@ export class TrackingEngine {
     if (event === 'ViewContent' && !Array.isArray(safe.content_ids)) return;
     for (const pixel of pixels) {
       if (!this.consent(pixel.platform, pixel.scope)) continue;
+      // The seller's own switches for this pixel: a view or a started form it was told not to report.
+      if (event === 'ViewContent' && pixel.sendViewContent === false) continue;
+      if (event === 'InitiateCheckout' && pixel.sendInitiateCheckout === false) continue;
       // The server sends this pixel's Purchase when the order is CONFIRMED; the browser must not send a second.
-      if (event === 'Purchase' && pixel.purchaseOnServer) continue;
+      // Only a Purchase: a pixel reporting orders as leads still hears its lead from the browser.
+      const reported: TrackingEventName = event === 'Purchase' && pixel.orderEvent === 'Lead' ? 'Lead' : event;
+      if (reported === 'Purchase' && pixel.purchaseOnServer) continue;
       // Purchase is once per order; ViewContent once per PRODUCT, so moving
       // from one product page to the next is a second view, not a repeat.
       const scope = event === 'ViewContent'
         ? (safe.content_ids as string[])[0]
         : (safe.order_id as string | undefined);
-      const key = trackingEventKey(pixel.platform, pixel.pixelId, event, scope);
+      const key = trackingEventKey(pixel.platform, pixel.pixelId, reported, scope);
       if (this.fired.has(key)) continue; // dedupe — never double-fire
       this.fired.add(key);
       // A pixel registered after the page started (a later navigation) is
@@ -148,7 +153,7 @@ export class TrackingEngine {
       try {
         // Adapters receive the SANITIZED payload — PII/tampered fields can
         // never reach a platform even if an adapter forgets to sanitize.
-        this.adapters[pixel.platform].track(event, safe, pixel.pixelId);
+        this.adapters[pixel.platform].track(reported, safe, pixel.pixelId);
       } catch {
         /* tracking is non-fatal */
       }

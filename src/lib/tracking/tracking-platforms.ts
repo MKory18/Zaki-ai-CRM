@@ -61,6 +61,7 @@ const META_EVENTS: Record<TrackingEventName, string | null> = {
   ViewContent: 'ViewContent',
   InitiateCheckout: 'InitiateCheckout',
   Purchase: 'Purchase',
+  Lead: 'Lead',
 };
 
 function metaParams(payload: TrackingPayload): Record<string, unknown> {
@@ -114,6 +115,7 @@ const TIKTOK_EVENTS: Record<TrackingEventName, string | null> = {
   ViewContent: 'ViewContent',
   InitiateCheckout: 'InitiateCheckout',
   Purchase: 'CompletePayment',
+  Lead: 'SubmitForm',
 };
 
 function tiktokParams(payload: TrackingPayload): Record<string, unknown> {
@@ -174,6 +176,7 @@ const SNAP_EVENTS: Record<TrackingEventName, string | null> = {
   ViewContent: 'VIEW_CONTENT',
   InitiateCheckout: 'START_CHECKOUT',
   Purchase: 'PURCHASE',
+  Lead: 'SIGN_UP',
 };
 
 function snapParams(payload: TrackingPayload): Record<string, unknown> {
@@ -229,6 +232,7 @@ const GOOGLE_EVENTS: Record<TrackingEventName, string | null> = {
   ViewContent: 'view_item',
   InitiateCheckout: 'begin_checkout',
   Purchase: 'purchase',
+  Lead: 'generate_lead',
 };
 
 export function googleParams(payload: TrackingPayload, tagId: string): Record<string, unknown> {

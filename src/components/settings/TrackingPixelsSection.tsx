@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useAsk, useConfirm } from '@/components/ui/Confirm';
 import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
-import { SCOPE_CHOICES, scopeChoice, type TrackingPlatform, type TrackingScope } from '@/lib/tracking/tracking-types';
+import { ORDER_EVENTS, ORDER_EVENT_AR, SCOPE_CHOICES, scopeChoice, type OrderEvent, type TrackingPlatform, type TrackingScope } from '@/lib/tracking/tracking-types';
 import { validateTrackingPixelId, pixelIdHint } from '@/lib/tracking/tracking-validation';
 import { RiAddCircleLine, RiAlertLine, RiDeleteBinLine, RiLoader4Line, RiPencilLine, RiRadarLine, RiSnapchatFill, RiTiktokFill } from '@remixicon/react';
 
@@ -35,6 +35,10 @@ interface PixelRow {
   /** Null + null = every store in the company. At most one is ever set. */
   storeId: string | null;
   countryId: string | null;
+  /** What an order is reported as on this pixel, and the two events a seller may switch off. */
+  orderEvent: OrderEvent;
+  sendViewContent: boolean;
+  sendInitiateCheckout: boolean;
 }
 
 interface StoreOption { id: string; name: string; countryId: string }
@@ -336,6 +340,40 @@ export function TrackingPixelsSection() {
                   )
                 }
               />
+
+              {/* «شو الهدف الي بدك التحويل عليه»: what an accepted order is reported as on this pixel, and the two
+                  earlier moments it may be told about. A visit (PageView) is always sent — a pixel without it is
+                  not a pixel to the platform. */}
+              <select
+                aria-label="الهدف عند الطلب"
+                title="بماذا يُبلَّغ هذا البكسل حين يصل طلب"
+                value={p.orderEvent ?? 'Purchase'}
+                disabled={!canEdit}
+                onChange={(e) =>
+                  void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ orderEvent: e.target.value }) }, 'حُفظ.')
+                }
+                className="h-11 md:h-8 rounded-md border border-[var(--sys-border-input)] bg-[var(--sys-card)] px-2 text-xs text-[var(--sys-foreground)] disabled:bg-[var(--sys-surface)]"
+              >
+                {ORDER_EVENTS.map((ev) => (
+                  <option key={ev} value={ev}>الطلب = {ORDER_EVENT_AR[ev]}</option>
+                ))}
+              </select>
+              {([
+                ['sendViewContent', 'مشاهدة المنتج'],
+                ['sendInitiateCheckout', 'بدء الطلب'],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="inline-flex min-h-11 md:min-h-0 items-center gap-1 text-xs text-[var(--sys-foreground)]">
+                  <input
+                    type="checkbox"
+                    checked={p[key] !== false}
+                    disabled={!canEdit}
+                    onChange={(e) =>
+                      void send(`/api/settings/tracking-pixels/${p.id}`, { method: 'PATCH', body: JSON.stringify({ [key]: e.target.checked }) }, 'حُفظ.')
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
 
               {canEdit && (
                 <div className="flex items-center gap-0.5">

@@ -270,3 +270,28 @@ describe('the Conversions API token never leaves the server', () => {
     }
   });
 });
+
+describe('PATCH — the goal of a pixel («شو الهدف الي بدك التحويل عليه»)', () => {
+  const req = (body: unknown) =>
+    new Request('http://localhost/api/settings/tracking-pixels/p1', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const stored = { id: 'p1', companyId: 'company-1', platform: 'META', name: 'A', pixelId: '123456789012345', scope: 'GLOBAL', enabled: true, orderEvent: 'Purchase', sendViewContent: true, sendInitiateCheckout: true };
+
+  it('saves a lead goal and the two switches, and audits what they were', async () => {
+    db.trackingPixel.findFirst.mockResolvedValue(stored);
+    db.trackingPixel.update.mockResolvedValue({ ...stored, orderEvent: 'Lead', sendViewContent: false });
+    const res = await PATCH(req({ orderEvent: 'Lead', sendViewContent: false }), { params: Promise.resolve({ id: 'p1' }) });
+    expect(res.status).toBe(200);
+    expect(db.trackingPixel.update.mock.calls.at(-1)?.[0].data).toMatchObject({ orderEvent: 'Lead', sendViewContent: false });
+    const audit = logAudit.mock.calls.at(-1)?.[0];
+    expect(audit.previousData).toMatchObject({ orderEvent: 'Purchase', sendViewContent: true });
+    expect(audit.newData).toMatchObject({ orderEvent: 'Lead', sendViewContent: false });
+  });
+
+  it('NEGATIVE: a goal that is not an order event (a page view) is refused and nothing is written', async () => {
+    db.trackingPixel.findFirst.mockResolvedValue(stored);
+    db.trackingPixel.update.mockClear();
+    const res = await PATCH(req({ orderEvent: 'PageView' }), { params: Promise.resolve({ id: 'p1' }) });
+    expect(res.status).toBe(400);
+    expect(db.trackingPixel.update).not.toHaveBeenCalled();
+  });
+});

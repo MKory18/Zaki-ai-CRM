@@ -218,6 +218,20 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   // per orderNumber (local ref + central engine) — re-renders never re-fire.
   const { trackEvent } = useTracking();
   const purchaseFiredRef = useRef<Set<string>>(new Set());
+  /*
+   * «بدء الطلب» (InitiateCheckout) — the moment a visitor starts filling the form, once per visit. It was sent from
+   * an HTML page's form only, so a block page (every page built in the editor) never reported it, and the seller's
+   * switch for it changed nothing there. The chosen offer's DB price is the value — never anything typed.
+   */
+  const checkoutStartedRef = useRef(false);
+  const startCheckout = () => {
+    if (checkoutStartedRef.current) return;
+    checkoutStartedRef.current = true;
+    const chosen = offers.find((o) => o.id === selectedOffer) || offers[0];
+    try {
+      trackEvent('InitiateCheckout', chosen ? { value: chosen.price, currency: currency || 'USD' } : {});
+    } catch { /* tracking is non-fatal */ }
+  };
 
   // Phase 2: offer picked from the custom HTML placeholder (bridge already
   // validated the id against this page's DB offers)
@@ -737,7 +751,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               )}
             </div>
           ) : (
-            <form onSubmit={onSubmit} noValidate className={formStyle === 'compact' ? 'px-5 py-6 lp-form-compact' : 'space-y-4 px-5 py-6'}>
+            <form onSubmit={onSubmit} onFocusCapture={startCheckout} noValidate className={formStyle === 'compact' ? 'px-5 py-6 lp-form-compact' : 'space-y-4 px-5 py-6'}>
               {/* ─── Offers (server-provided — replaces the quantity stepper) ─── */}
               {/* The page's own offers block is the picker; here it is a
                   dropdown, so the choice can still be changed at the last
