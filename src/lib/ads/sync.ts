@@ -47,11 +47,29 @@ export interface SpendSyncResult {
   message?: string;
 }
 
+/**
+ * THE OLDEST DAY META WILL ANSWER FOR — «ليش ما سحب الانفاق؟».
+ *
+ * Meta refuses the whole request when its start is more than 37 months back («(#3018) The start date of the time range
+ * cannot be beyond 37 months»). One old campaign on an account made every sync of that account fail, including the
+ * campaigns running today. 36 months leaves room for the month boundary; spend older than that Meta will not give.
+ */
+export function earliestAskable(today = new Date()): Date {
+  const d = new Date(today);
+  d.setUTCMonth(d.getUTCMonth() - 36);
+  return d;
+}
+
+const notBefore = (d: Date) => {
+  const floor = earliestAskable();
+  return d < floor ? floor : d;
+};
+
 /** A campaign with no end is still running; ask up to today. */
 function windowFor(c: { startDate: Date; endDate: Date | null }): { since: string; until: string } {
   const today = new Date();
   const end = c.endDate && c.endDate < today ? c.endDate : today;
-  return { since: adDate(c.startDate), until: adDate(end) };
+  return { since: adDate(notBefore(c.startDate)), until: adDate(end) };
 }
 
 export async function syncAdSpend(scope: {
@@ -104,9 +122,8 @@ export async function syncAdSpend(scope: {
       // ONCE. A call per campaign would multiply the rate limit by the
       // number of campaigns, which is how a sync starts failing the month
       // a shop gets busy.
-      const since = account.campaigns.reduce(
-        (min, c) => (c.startDate < min ? c.startDate : min),
-        account.campaigns[0].startDate
+      const since = notBefore(
+        account.campaigns.reduce((min, c) => (c.startDate < min ? c.startDate : min), account.campaigns[0].startDate)
       );
       const creds = readCredentials(token);
       const rows = await adapter.fetchSpend(creds, account.accountId, adDate(since), adDate(new Date()));

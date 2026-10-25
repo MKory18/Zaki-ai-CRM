@@ -17,6 +17,7 @@ import {
   productConflict,
 } from '@/lib/campaigns';
 import { zodMessage } from '@/lib/zod-message';
+import { publicOrigin } from '@/lib/passkey';
 
 /**
  * PAID CAMPAIGNS, AND WHAT CAME BACK FROM THEM.
@@ -68,7 +69,9 @@ export async function GET(req: Request) {
     const store = storeId
       ? await db.store.findFirst({ where: { id: storeId, companyId }, select: { slug: true } })
       : null;
-    const origin = new URL(req.url).origin;
+    // The PUBLIC address (APP_URL, or a trusted proxy's host) — not the request's: behind the proxy that is the
+    // container's own «0.0.0.0:3000», and an advert carrying it opens nothing.
+    const origin = publicOrigin(req);
 
     const list = campaigns.map((c) => {
       const row = byId.get(c.id) ?? null;
