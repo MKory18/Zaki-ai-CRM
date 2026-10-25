@@ -15,6 +15,27 @@
 export const CONVERSION_TRIGGERS = ['order.created', 'order.confirmed', 'order.delivered'] as const;
 export type ConversionTrigger = (typeof CONVERSION_TRIGGERS)[number];
 
+/**
+ * WHICH ORDERS A SERVER CONVERSION IS ABOUT — «بس طلبات صفحات الهبوط والمتجر، وطلبات الرسائل ما تنبعت».
+ *
+ * The pixel is a website pixel: Meta reads every event on it as a sale that came through the site. An order
+ * a moderator typed in from a chat, a call or a sheet did not, and sending it would credit the site's
+ * campaigns with sales the messages made. So only an order that came through a selling page is sent.
+ *
+ * The two spellings are what the public doors write into `Order.source` — the landing page's
+ * (`LANDING_PAGE_SOURCE` in `landing-pages.ts`) and the storefront's (written literally by its two order
+ * doors). Copied rather than imported to keep this file free of server code; a test pins both to the doors.
+ */
+export const LANDING_PAGE_ORDER_SOURCE = 'Landing Page';
+export const STOREFRONT_ORDER_SOURCE = 'Store';
+
+/** The kind of selling page an order came through, or null for one that came through no page at all. */
+export function salesPageOf(order: { source: string | null; landingPageId: string | null }): 'LANDING_PAGES' | 'PUBLIC' | null {
+  if (order.landingPageId || order.source === LANDING_PAGE_ORDER_SOURCE) return 'LANDING_PAGES';
+  if (order.source === STOREFRONT_ORDER_SOURCE) return 'PUBLIC';
+  return null;
+}
+
 export const TRIGGER_AR: Record<ConversionTrigger, string> = {
   'order.created': 'عبّأ النموذج وأرسله',
   'order.confirmed': 'تأكّد الطلب',

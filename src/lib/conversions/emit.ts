@@ -4,9 +4,10 @@ import { BACKOFF, MAX_ATTEMPTS } from '../apps/events';
 import { buildUserData, matchQuality } from './hash';
 import { sendEvents, explainCapiError, CapiError, type CapiEvent } from './meta-capi';
 import {
-  conversionEventId, isTooOldForMeta, META_EVENT_MAX_AGE_DAYS,
+  conversionEventId, isTooOldForMeta, META_EVENT_MAX_AGE_DAYS, salesPageOf,
   type ConversionTrigger,
 } from './types';
+import { pixelReaches, scopeServesPage } from '../tracking/tracking-types';
 
 /**
  * FROM A MOMENT IN AN ORDER TO A NUMBER IN ADS MANAGER.
@@ -34,7 +35,16 @@ export async function queueConversions(
   orderId: string
 ): Promise<number> {
   try {
-    const conversions = await db.customConversion.findMany({
+    // Only an order that came through a selling page — see `salesPageOf`.
+    // One typed in from a chat, a call or a sheet is owed nothing.
+    const order = await db.order.findFirst({
+      where: { id: orderId, companyId },
+      select: { source: true, landingPageId: true, storeId: true, countryId: true },
+    });
+    const page = order ? salesPageOf(order) : null;
+    if (!order || !page) return 0;
+
+    const candidates = await db.customConversion.findMany({
       where: {
         companyId,
         trigger,
@@ -44,8 +54,15 @@ export async function queueConversions(
         // every attempt and tells the seller nothing they can act on.
         pixel: { enabled: true, capiToken: { not: null } },
       },
-      select: { id: true },
+      select: { id: true, pixel: { select: { scope: true, storeId: true, countryId: true } } },
     });
+    // And only to a pixel that page loads: the same store/country rule and
+    // kind-of-page rule as the browser, so a store's pixel never hears about
+    // another store's sale.
+    const origin = { storeId: order.storeId, countryId: order.countryId };
+    const conversions = candidates.filter(
+      (c) => pixelReaches(c.pixel, origin) && scopeServesPage(c.pixel.scope, page)
+    );
     if (conversions.length === 0) return 0;
 
     const { count } = await db.conversionDelivery.createMany({

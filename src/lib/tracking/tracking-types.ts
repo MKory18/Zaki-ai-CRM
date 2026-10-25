@@ -212,13 +212,18 @@ export function filterPixelsForPage(
   pixels: TrackingPixelView[],
   page: TrackingPageContext
 ): TrackingPixelView[] {
-  return pixels.filter(
-    (p) =>
-      p.enabled &&
-      (p.scope === 'GLOBAL' ||
-        p.scope === page ||
-        (page === 'LANDING_PAGES' && p.scope === 'PUBLIC'))
-  );
+  return pixels.filter((p) => p.enabled && scopeServesPage(p.scope, page));
+}
+
+/**
+ * DOES A PIXEL OF THIS KIND-OF-PAGE SCOPE SERVE THIS KIND OF PAGE?
+ *
+ * One rule for the browser (which pixels a page loads) and the server (which
+ * pixels an order's conversion is sent to) — so a «landing pages only» pixel
+ * never hears about a storefront order from either side.
+ */
+export function scopeServesPage(scope: string, page: TrackingPageContext): boolean {
+  return scope === 'GLOBAL' || scope === page || (page === 'LANDING_PAGES' && scope === 'PUBLIC');
 }
 
 /** Dedupe key: platform + pixel + event (+ order for Purchase). */
