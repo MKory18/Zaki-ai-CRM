@@ -231,6 +231,10 @@ export function fillTemplate(body: string, ctx: FillContext): string {
 export function waNumber(raw: string, countryCode?: string | null): string {
   let digits = (raw || '').replace(/\D/g, '');
   if (!digits) return '';
+  // Already international — eleven digits or more with no trunk zero is a number carrying its own country code
+  // (a Turkish line in the north of Syria: «905XXXXXXXXX»). Prefixing the store's code made it «963905…», nobody.
+  if (digits.startsWith('00')) return digits.slice(2);
+  if (digits.length >= 11 && !digits.startsWith('0')) return digits;
   if (countryCode) {
     const cc = countryCode.replace(/\D/g, '');
     if (cc && !digits.startsWith(cc)) {

@@ -1,4 +1,4 @@
-import { canonicalPhone, ruleFor } from './phone-rules';
+import { canonicalPhone, isForeignNumber, ruleFor } from './phone-rules';
 
 /**
  * PHONE STORAGE — one canonical form for the whole system.
@@ -36,6 +36,9 @@ export function formatPhoneNumber(phone: string, countryCode?: string | null): s
 
   // Every country the rules know writes the national number behind a single
   // trunk zero; without a known country the number is left as typed.
-  if (!ruleFor(countryCode)) return phone;
+  const rule = ruleFor(countryCode);
+  if (!rule) return phone;
+  // A foreign line kept whole (`acceptsForeign`) reads with its own code, not behind this country's trunk zero.
+  if (rule.acceptsForeign && isForeignNumber(canonical, rule)) return `+${canonical}`;
   return `0${canonical}`;
 }
