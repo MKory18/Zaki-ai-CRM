@@ -80,7 +80,7 @@ export function CourierFees({
 }) {
   const toast = useToast();
   const [data, setData] = useState<FeesData | null>(null);
-  const [draft, setDraft] = useState<Record<string, { fee: string; lateThresholdDays: string; returnFee: string }>>({});
+  const [draft, setDraft] = useState<Record<string, { fee: string; lateThresholdDays: string; returnFee: string; courierCityId: string }>>({});
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -138,6 +138,7 @@ export function CourierFees({
         fee: current ? String(current.fee) : '',
         lateThresholdDays: current ? String(current.lateThresholdDays) : '',
         returnFee: current ? String(current.returnFee) : '',
+        courierCityId: current?.courierCityId ? String(current.courierCityId) : '',
       }
     );
   };
@@ -171,6 +172,15 @@ export function CourierFees({
       return;
     }
 
+    // The courier's own id for the region, typed from their list. Empty = leave what is stored; anything but a positive
+    // whole number is refused here rather than sent, because their API would refuse the shipment later.
+    const code = d.courierCityId.trim();
+    const courierCityId = code === '' ? undefined : Number(code);
+    if (courierCityId !== undefined && !(Number.isInteger(courierCityId) && courierCityId > 0)) {
+      toast.failed('رمز الشركة غير صالح — رقم صحيح من قائمتهم');
+      return;
+    }
+
     // Changing an existing fee is an override: the API demands a reason, and
     // it is collected in a real dialog rather than a browser prompt.
     if (current && current.fee !== fee && !reason) {
@@ -192,6 +202,7 @@ export function CourierFees({
           // ABSENT on the wire. A typed `0` is sent as `0`.
           lateThresholdDays,
           returnFee,
+          courierCityId,
           reason,
         }),
       });
@@ -330,25 +341,24 @@ export function CourierFees({
             {
               key: 'courierId',
               label: 'رمزها عند الشركة',
-              // Read-only: their id, not ours to invent. A blank one means
-              // their API will refuse the shipment, and that is better seen
-              // here than when a parcel fails to book.
-              render: (r) =>
-                feeFor(r.id)?.courierCityId ? (
-                  <span className="text-xs text-[var(--sys-muted-foreground)]" dir="ltr">
-                    {feeFor(r.id)!.courierCityId}
-                  </span>
-                ) : (
-                  // «We do not have their id» — not «they do not serve it».
-                  // Those are different claims, and only the courier can
-                  // make the second one.
-                  <span
-                    title="لا نملك رمز هذه المحافظة لدى الشركة — بدونه لا تُنشأ الشحنة آلياً. اطلبه منهم أو ارفع قائمة مناطقهم."
-                    className="inline-flex items-center gap-1 rounded-sm border border-[var(--sys-warning)] bg-[var(--sys-warning-soft)] px-2 py-0.5 text-xs text-[var(--sys-warning)]"
-                  >
-                    بلا رمز
-                  </span>
-                ),
+              // Their id, typed from THEIR list (the villages sheet they send) — never invented. Saved with the row's
+              // «تحديث». An empty box is the warning it always was: without it their API refuses the shipment.
+              render: (r) => (
+                <input
+                  value={draftFor(r.id).courierCityId}
+                  onChange={(e) => setField(r.id, { courierCityId: e.target.value })}
+                  aria-label={`رمز ${r.name} عند الشركة`}
+                  placeholder="بلا رمز"
+                  title="رمز هذه المحافظة لدى الشركة، من قائمة مناطقهم — بدونه لا تُنشأ الشحنة آلياً."
+                  type="number"
+                  min={1}
+                  step={1}
+                  dir="ltr"
+                  className={`h-11 w-28 rounded-lg border bg-[var(--sys-card)] px-2 text-sm md:h-10 ${
+                    draftFor(r.id).courierCityId ? 'border-[var(--sys-border-input)]' : 'border-[var(--sys-warning)]'
+                  }`}
+                />
+              ),
             },
           ]}
           actions={(r) => (
