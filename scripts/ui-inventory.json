@@ -1491,7 +1491,7 @@
   },
   "src/components/settings/CourierFees.tsx": {
     "buttons": 6,
-    "inputs": 7,
+    "inputs": 8,
     "columns": 5,
     "cards": 0,
     "modals": 2,

@@ -268,3 +268,38 @@ describe('the default is written down once', () => {
     expect(form).toMatch(/setReturnFee\] = useState\(''\)/);
   });
 });
+
+describe('the courier’s own code for the region — «انا ليش ما بقدر ادخل الرموز؟»', () => {
+  beforeEach(() => db.deliveryFee.findFirst.mockResolvedValue({ ...STORED, courierCityId: null }));
+
+  it('a typed code is written, and the audit says what it was and what it became', async () => {
+    const res = await put({ deliveryProviderId: COURIER, regionId: REGION, fee: 2.5, courierCityId: 445053 });
+    expect(res.status).toBe(200);
+    expect(wroteUpdate().courierCityId).toBe(445053);
+    const audit = logAudit.mock.calls[0][0];
+    expect(audit.previousData.courierCityId).toBeNull();
+    expect(audit.newData.courierCityId).toBe(445053);
+  });
+
+  it('NEGATIVE: an absent code is not written — the stored one survives', async () => {
+    db.deliveryFee.findFirst.mockResolvedValue({ ...STORED, courierCityId: 705991 });
+    await put({ deliveryProviderId: COURIER, regionId: REGION, fee: 2.5 });
+    expect(Object.keys(wroteUpdate())).not.toContain('courierCityId');
+  });
+
+  it('a stated null clears it', async () => {
+    db.deliveryFee.findFirst.mockResolvedValue({ ...STORED, courierCityId: 705991 });
+    await put({ deliveryProviderId: COURIER, regionId: REGION, fee: 2.5, courierCityId: null });
+    expect(wroteUpdate().courierCityId).toBeNull();
+  });
+
+  it('NEGATIVE: zero, a negative, a fraction or text is refused and nothing is written', async () => {
+    for (const bad of [0, -5, 1.5, '445053']) {
+      vi.clearAllMocks();
+      requireContext.mockResolvedValue({ user: { id: 'u1', name: 'Ops', role: 'ADMIN', status: 'ACTIVE' }, companyId: 'co1', countryId: 'jo', storeId: 'st1' });
+      const res = await put({ deliveryProviderId: COURIER, regionId: REGION, fee: 2.5, courierCityId: bad });
+      expect(res.status, String(bad)).toBe(400);
+      expect(db.deliveryFee.update).not.toHaveBeenCalled();
+    }
+  });
+});

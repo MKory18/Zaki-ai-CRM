@@ -41,6 +41,14 @@ const upsertSchema = z.object({
    */
   lateThresholdDays: z.number().int().min(0).max(90).optional(),
   returnFee: z.number().min(0).max(1_000_000).optional(),
+  /**
+   * THE COURIER'S OWN ID FOR THIS REGION — «انا ليش ما بقدر ادخل الرموز؟».
+   *
+   * It was read-only, filled only by a script on the server, so a seller holding the courier's own list could not type
+   * it in. Typed here now, from that list: absent keeps what is stored, a number writes it, `null` clears it. A
+   * positive whole number — their API refuses anything else.
+   */
+  courierCityId: z.number().int().positive().max(2_147_483_647).nullable().optional(),
   isActive: z.boolean().default(true),
   /** Required when an existing fee changes — written to the audit log. */
   reason: z.string().trim().max(300).optional(),
@@ -128,6 +136,7 @@ export async function PUT(req: Request) {
     const stated = {
       ...(input.lateThresholdDays === undefined ? {} : { lateThresholdDays: input.lateThresholdDays }),
       ...(input.returnFee === undefined ? {} : { returnFee: input.returnFee }),
+      ...(input.courierCityId === undefined ? {} : { courierCityId: input.courierCityId }),
     };
 
     const saved = existing
@@ -158,7 +167,7 @@ export async function PUT(req: Request) {
       entity: 'DeliveryFee',
       entityId: saved.id,
       previousData: existing
-        ? { fee: Number(existing.fee), lateThresholdDays: existing.lateThresholdDays, returnFee: Number(existing.returnFee) }
+        ? { fee: Number(existing.fee), lateThresholdDays: existing.lateThresholdDays, returnFee: Number(existing.returnFee), courierCityId: existing.courierCityId }
         : undefined,
       // READ OFF THE SAVED ROW, NOT OFF THE REQUEST. A field the request
       // left out is decided by the column (on a create) or kept as it was
@@ -167,6 +176,7 @@ export async function PUT(req: Request) {
       newData: {
         courier: provider.name, region: region.name,
         fee: Number(saved.fee), lateThresholdDays: saved.lateThresholdDays, returnFee: Number(saved.returnFee),
+        courierCityId: saved.courierCityId,
         reason: input.reason ?? null,
       },
     });
