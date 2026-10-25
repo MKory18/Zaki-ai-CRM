@@ -46,9 +46,9 @@ describe('the speed of the floating button', () => {
   });
 
   it('the sheet stretches the same movement: slower is longer, faster is shorter, normal is the old timing', () => {
-    expect(BLOCK_CSS).toContain("animation: lp-bounce calc(1.8s * var(--lp-k, 1)) ease-in-out infinite;");
-    expect(BLOCK_CSS).toContain("animation: lp-sway calc(2.2s * var(--lp-k, 1)) ease-in-out infinite;");
-    const k = (speed: string) => Number(BLOCK_CSS.match(new RegExp(`data-speed='${speed}'\\] \\{ --lp-k: ([0-9.]+); \\}`))?.[1]);
+    expect(BLOCK_CSS).toContain("animation: lp-bounce calc(1.8s * var(--look-k, 1)) ease-in-out infinite;");
+    expect(BLOCK_CSS).toContain("animation: lp-sway calc(2.2s * var(--look-k, 1)) ease-in-out infinite;");
+    const k = (speed: string) => Number(BLOCK_CSS.match(new RegExp(`data-speed='${speed}'\\] \\{ --look-k: ([0-9.]+); \\}`))?.[1]);
     expect(k('slow')).toBeGreaterThan(1);
     expect(k('fast')).toBeLessThan(1);
   });
