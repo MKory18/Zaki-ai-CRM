@@ -80,3 +80,41 @@ describe('the ad link', () => {
     expect(src).not.toContain('new URL(req.url).origin');
   });
 });
+
+describe('how many times Meta is asked', () => {
+  it('once for the account, then once per DISTINCT campaign window — not once per campaign', async () => {
+    // Six campaigns: two start on the account’s earliest day and run on (the wide window), four share two windows.
+    const ended = new Date('2026-10-10');
+    db.adAccount.findMany.mockResolvedValue([
+      account([
+        { id: 'a', externalId: 'ext-a', startDate: new Date('2026-09-01') },
+        { id: 'b', externalId: 'ext-b', startDate: new Date('2026-09-01') },
+        { id: 'c', externalId: 'ext-c', startDate: new Date('2026-09-15'), endDate: ended },
+        { id: 'd', externalId: 'ext-d', startDate: new Date('2026-09-15'), endDate: ended },
+        { id: 'e', externalId: 'ext-e', startDate: new Date('2026-10-01') },
+        { id: 'f', externalId: 'ext-f', startDate: new Date('2026-10-01') },
+      ]),
+    ]);
+    fetchSpend.mockImplementation(async () => ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => ({ campaignId: `ext-${x}`, spend: 7 })));
+    const result = await syncAdSpend({ companyId: 'co', storeId: 'st' });
+    expect(result.accounts[0].error).toBeNull();
+    // 1 wide + 2 distinct windows (09-15→10-10, 10-01→today) — six campaigns, three calls.
+    expect(fetchSpend).toHaveBeenCalledTimes(3);
+    expect(db.campaign.update).toHaveBeenCalledTimes(6);
+  });
+
+  it('NEGATIVE: a campaign whose window differs still gets the spend of ITS window, not the account-wide figure', async () => {
+    db.adAccount.findMany.mockResolvedValue([
+      account([
+        { id: 'a', externalId: 'ext-a', startDate: new Date('2026-09-01') },
+        { id: 'c', externalId: 'ext-c', startDate: new Date('2026-09-15'), endDate: new Date('2026-10-10') },
+      ]),
+    ]);
+    fetchSpend.mockImplementation(async (_c: unknown, _a: unknown, since: string) =>
+      since === '2026-09-01' ? [{ campaignId: 'ext-a', spend: 50 }, { campaignId: 'ext-c', spend: 99 }] : [{ campaignId: 'ext-c', spend: 30 }]
+    );
+    await syncAdSpend({ companyId: 'co', storeId: 'st' });
+    const wrote = Object.fromEntries(db.campaign.update.mock.calls.map((c: any[]) => [c[0].where.id, c[0].data.spend]));
+    expect(wrote).toEqual({ a: 50, c: 30 });
+  });
+});

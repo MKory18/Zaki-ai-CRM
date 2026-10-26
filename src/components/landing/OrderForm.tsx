@@ -224,10 +224,15 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
    * switch for it changed nothing there. The chosen offer's DB price is the value — never anything typed.
    */
   const checkoutStartedRef = useRef(false);
-  const startCheckout = () => {
+  const startCheckout = (e?: React.FocusEvent<HTMLFormElement>) => {
     if (checkoutStartedRef.current) return;
     checkoutStartedRef.current = true;
-    const chosen = offers.find((o) => o.id === selectedOffer) || offers[0];
+    // When the first touch is picking a bundle, focus lands before the change is committed, so the state still holds
+    // the old offer. Read the one being picked from the field itself (it can only name one of this page's offers) —
+    // measured: picking «عبوتين» first reported 12, not 20.
+    const target = e?.target as HTMLInputElement | HTMLSelectElement | undefined;
+    const picked = target && (target.type === 'radio' || target.tagName === 'SELECT') ? offers.find((o) => o.id === target.value) : undefined;
+    const chosen = picked || offers.find((o) => o.id === selectedOffer) || offers[0];
     try {
       trackEvent('InitiateCheckout', chosen ? { value: chosen.price, currency: currency || 'USD' } : {});
     } catch { /* tracking is non-fatal */ }
