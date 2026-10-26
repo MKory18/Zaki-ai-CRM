@@ -40,7 +40,10 @@ describe('«رقم المرجع والمبلغ المتوقع عند الاست�
 describe('«زر تأكيد اختياري عبر واتساب برسالة معبّاة»', () => {
   it('is drawn only when the shop has a number', () => {
     const src = form();
-    expect(src).toContain('{whatsappHref(whatsapp) && result.orderNumber && (');
+    // The block may now switch it off (`whatsappAfter`) — but with no number there is still no button.
+    expect(src).toContain('const waBase = whatsappHref(whatsapp);');
+    expect(src).toContain("afterOrderWhatsapp?.enabled !== false && waBase && result.orderNumber");
+    expect(src).toContain('{waAfter && (');
     // A button that opens WhatsApp with nothing behind it is worse than
     // none.
     expect(whatsappHref(null)).toBeNull();
@@ -51,8 +54,10 @@ describe('«زر تأكيد اختياري عبر واتساب برسالة مع
   it('and the message is already written, carrying the order number', () => {
     // «برسالة معبّاة» — so the person on the other end is not asking
     // «شو رقم طلبك؟» first.
-    expect(form()).toContain('text=${encodeURIComponent(');
-    expect(form()).toContain('بدّي أأكّد طلبي رقم ${result.orderNumber}');
+    // The words are the seller's now (`whatsappMessage`), and `{رقم_الطلب}` becomes the number; the default is the
+    // sentence it always was. Behaviour is drawn in after-the-order-is-the-sellers.test.tsx.
+    expect(form()).toContain('text=${encodeURIComponent(afterOrderMessage(afterOrderWhatsapp?.message, result.orderNumber))}');
+    expect(form()).toContain("'مرحباً، بدّي أأكّد طلبي رقم {رقم_الطلب}'");
   });
 
   it('and it is optional: the order is placed with or without it', () => {
@@ -60,12 +65,12 @@ describe('«زر تأكيد اختياري عبر واتساب برسالة مع
     // the submit path mentions it.
     const src = form();
     const success = src.slice(src.indexOf("state === 'success' ? ("));
-    expect(success).toContain('whatsappHref(whatsapp)');
+    expect(success).toContain('{waAfter && (');
   });
 
   it('the shop’s number reaches it from both doors', () => {
     expect(stripComments(repoFile('src/components/landing/LandingPageView.tsx')))
-      .toContain('whatsapp={lp.store?.supportPhone');
+      .toContain('whatsapp={formChoices?.whatsappNumber?.trim() || lp.store?.supportPhone || null}');
     expect(stripComments(repoFile('src/app/s/[store]/p/[sku]/page.tsx')))
       .toContain('whatsapp={store.supportPhone}');
   });

@@ -801,6 +801,7 @@ export function LandingPageEditorScreen() {
             // proposes words for the blocks that are already there and never
             // rearranges them — see AiCopyPanel.
             productId={lp.product?.id ?? lp.productId ?? null}
+            pageId={lpId}
             store={lp.store ? { name: lp.store.name, logo: lp.store.logo ?? null, phone: lp.store.supportPhone ?? null } : null}
             currency={previewData?.currency || 'USD'}
             offers={previewData?.offers || []}

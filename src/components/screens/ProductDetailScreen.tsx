@@ -444,7 +444,8 @@ export function ProductDetailScreen() {
           </CardContent>
         </Card>
 
-        {/* Offers — edited here, read everywhere. */}
+        {/* Offers — edited here, read everywhere. The anchor is where «بعد الطلب» in the page editor sends you. */}
+        <div id="offers" style={{ scrollMarginTop: 80 }} />
         <ProductOffers
           productId={productId}
           basePrice={product.basePrice ?? 0}

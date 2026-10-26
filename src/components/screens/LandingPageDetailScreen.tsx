@@ -469,7 +469,8 @@ export function LandingPageDetailScreen() {
               </CardContent>
             </Card>
 
-            {/* ─── Recommended products ─── */}
+            {/* ─── Recommended products ─── (the anchor «بعد الطلب» in the editor links to) */}
+            <div id="recommendations" style={{ scrollMarginTop: 80 }} />
             <Card>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">

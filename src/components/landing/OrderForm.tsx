@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { whatsappHref } from '@/lib/store-contact';
+import { leaveFor } from '@/lib/leave-for';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
 /**
@@ -129,6 +130,17 @@ interface OrderFormProps {
    * shown under it either way: they are the system's, not copy.
    */
   thankYou?: { title: string; message: string };
+  /**
+   * The WhatsApp button after the order, as the form block sets it: on/off, its words, the message (`{رقم_الطلب}`
+   * becomes the number) and whether WhatsApp opens by itself. Absent = the button as it always was.
+   */
+  afterOrderWhatsapp?: { enabled?: boolean; label?: string; message?: string; autoOpen?: boolean };
+}
+
+/** The message the customer sends, with the order number put in. */
+export function afterOrderMessage(template: string | undefined, orderNumber: string): string {
+  const t = template?.trim() || 'مرحباً، بدّي أأكّد طلبي رقم {رقم_الطلب}';
+  return t.includes('{رقم_الطلب}') ? t.split('{رقم_الطلب}').join(orderNumber) : `${t} — ${orderNumber}`;
 }
 
 /**
@@ -168,12 +180,24 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 const packs = (n: number) => (n === 1 ? 'عبوة' : n === 2 ? 'عبوتان' : n <= 10 ? `${n} عبوات` : `${n} عبوة`);
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou, afterOrderWhatsapp }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ orderNumber: string | null; addonToken: string | null }>({ orderNumber: null, addonToken: null });
+  // The WhatsApp link after the order — only when the block leaves it on, there is a number, and an order exists.
+  const waBase = whatsappHref(whatsapp);
+  const waAfter =
+    afterOrderWhatsapp?.enabled !== false && waBase && result.orderNumber
+      ? `${waBase}?text=${encodeURIComponent(afterOrderMessage(afterOrderWhatsapp?.message, result.orderNumber))}`
+      : null;
+  // «يحولو ع الواتس» — only when the seller chose it: a moment to read «تم تسجيل طلبك», then WhatsApp.
+  useEffect(() => {
+    if (state !== 'success' || !waAfter || !afterOrderWhatsapp?.autoOpen) return;
+    const t = window.setTimeout(() => leaveFor(waAfter), 3000);
+    return () => window.clearTimeout(t);
+  }, [state, waAfter, afterOrderWhatsapp?.autoOpen]);
   /**
    * «العرض بعد الطلب», as the server answered it — the offer, and how long
    * it may still be taken.
@@ -590,16 +614,14 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 the message carries the order number, so the person on the
                 other end is not asking «شو رقم طلبك؟» first.
               */}
-              {whatsappHref(whatsapp) && result.orderNumber && (
+              {waAfter && (
                 <a
-                  href={`${whatsappHref(whatsapp)}?text=${encodeURIComponent(
-                    `مرحباً، بدّي أأكّد طلبي رقم ${result.orderNumber}`
-                  )}`}
+                  href={waAfter}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-[#e3e8ef] px-5 py-3 text-sm font-bold text-[#121926] hover:border-[var(--store-accent,#b8256e)]"
                 >
-                  أكّد طلبك على واتساب
+                  {afterOrderWhatsapp?.label?.trim() || 'أكّد طلبك على واتساب'}
                 </a>
               )}
 
