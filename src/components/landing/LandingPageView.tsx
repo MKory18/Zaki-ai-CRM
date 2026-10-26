@@ -342,60 +342,48 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
     const href = fontHref(theme.font ?? DEFAULT_THEME.font, ...sections.map((b) => b.look?.text?.font));
     // The store's own uploaded faces — filtered by the page's store, never
     // by the company: a font licensed to one brand is not the next brand's.
-    const storeFonts = await loadStoreFonts(lp.storeId);
-    // Real stock of THIS store, for the one block allowed to mention it.
-    // Unknown stays unknown: the block renders nothing rather than inventing.
-    let stock: number | null = null;
-    if (lp.product) {
-      stock = await availableStock(db, companyId, lp.product.id, undefined, lp.storeId).catch(() => null);
-    }
-
-    /**
-     * THE BUYERS' OWN RATINGS, AND THE OFFER'S OWN ENDING.
-     *
-     * Owner decision D8, both halves, and both READ FROM THE SERVER rather
-     * than stored in a block. A rating copied into a page would be wrong
-     * the moment a moderator hid it; an end date copied into a page would
-     * be a second source of truth for when the price stops.
-     *
-     * Asked only when the page actually has the block that uses it — a page
-     * with no reviews block pays no query, which is the same bargain the
-     * stock read above makes.
-     */
-    let reviews: Awaited<ReturnType<typeof shownReviews>> | null = null;
-    if (lp.product && sections.some((s) => s.type === 'reviews' && s.enabled)) {
-      reviews = await shownReviews({
-        companyId,
-        productId: lp.product.id,
-        reviewMode: lp.product.reviewMode,
-      }).catch(() => null);
-    }
-
-    let offerEndsAt: string | null = null;
-    if (lp.product && sections.some((s) => s.type === 'urgency' && s.enabled && s.countdown === 'offer')) {
-      const endsAt = await offerEndings(db, companyId, { productId: lp.product.id }).catch(() => []);
-      offerEndsAt = countdownEnd({ endsAt, now: new Date() })?.toISOString() ?? null;
-    }
-
-    /*
-     * ── THE SELLING BLOCKS' FACTS ──
-     *
-     * «صف ثقة (دفع عند الاستلام · مدّة التوصيل · إرجاع/ضمان فقط إذا البائع
-     * حدّده)». Resolved HERE, where the shop is known, and handed to the
-     * renderer as sentences — so the renderer has no way to invent one and
-     * the two claims that must be earned are earned in one place.
-     *
-     * The guarantee comes from the page's own objections block: it is the
-     * seller's words about their own guarantee, and it beats a link to a
-     * policy page.
-     */
     const objections = sections.find((s) => s.type === 'objections' && s.enabled);
-    const facts = await sellingFacts({
-      companyId,
-      storeId: lp.storeId ?? null,
-      storeSlug: lp.store?.slug ?? null,
-      guarantee: objections && objections.type === 'objections' ? objections.guarantee : null,
-    });
+    const product = lp.product;
+    /*
+     * FIVE READS THAT DO NOT WAIT FOR EACH OTHER, ASKED AT ONCE — the same bargain as the four above.
+     *
+     * The store's fonts, the stock, the ratings, the offer's ending and the trust row each need only the page and its
+     * blocks; they ran one after another, five round trips to the database before a shopper saw anything. Same
+     * questions, same «asked only when the page has the block» rule, same fallbacks; only the waiting is shared.
+     *
+     *   · The store's own uploaded faces — filtered by the page's store, never by the company: a font licensed to one
+     *     brand is not the next brand's.
+     *   · Real stock of THIS store, for the one block allowed to mention it. Unknown stays unknown: the block renders
+     *     nothing rather than inventing.
+     *   · THE BUYERS' OWN RATINGS, AND THE OFFER'S OWN ENDING — owner decision D8, both READ FROM THE SERVER rather
+     *     than stored in a block. A rating copied into a page would be wrong the moment a moderator hid it; an end
+     *     date copied into a page would be a second source of truth for when the price stops. Asked only when the
+     *     page actually has the block that uses it.
+     *   · THE SELLING BLOCKS' FACTS — «صف ثقة (دفع عند الاستلام · مدّة التوصيل · إرجاع/ضمان فقط إذا البائع حدّده)».
+     *     Resolved HERE, where the shop is known, and handed to the renderer as sentences — so the renderer has no way
+     *     to invent one. The guarantee comes from the page's own objections block: the seller's words about their own
+     *     guarantee beat a link to a policy page.
+     */
+    const [storeFonts, stock, reviews, offerEndsAt, facts] = await Promise.all([
+      loadStoreFonts(lp.storeId),
+      product
+        ? availableStock(db, companyId, product.id, undefined, lp.storeId).catch(() => null)
+        : Promise.resolve(null as number | null),
+      product && sections.some((s) => s.type === 'reviews' && s.enabled)
+        ? shownReviews({ companyId, productId: product.id, reviewMode: product.reviewMode }).catch(() => null)
+        : Promise.resolve(null as Awaited<ReturnType<typeof shownReviews>> | null),
+      product && sections.some((s) => s.type === 'urgency' && s.enabled && s.countdown === 'offer')
+        ? offerEndings(db, companyId, { productId: product.id })
+            .catch(() => [])
+            .then((endsAt) => countdownEnd({ endsAt, now: new Date() })?.toISOString() ?? null)
+        : Promise.resolve(null as string | null),
+      sellingFacts({
+        companyId,
+        storeId: lp.storeId ?? null,
+        storeSlug: lp.store?.slug ?? null,
+        guarantee: objections && objections.type === 'objections' ? objections.guarantee : null,
+      }),
+    ]);
     // The look, derived from the template the seller chose — never stored
     // beside it. `familyOf` says why at length.
     const family = familyOf(parseStoreTheme(lp.store?.theme).template);
