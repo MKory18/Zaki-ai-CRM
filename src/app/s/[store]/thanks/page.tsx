@@ -25,8 +25,10 @@ import { WHAT_HAPPENS_NEXT_AR } from '@/lib/order-tracking';
  * contradicting itself between two screens the same customer opens four
  * minutes apart.
  *
- * The Lead event fires here — the same pixel component the rest of the
- * public side uses, never a second script.
+ * The store's pixels load here for the page view — the same pixel
+ * component the rest of the public side uses, never a second script. The
+ * sale itself was reported by the checkout, which had the server's amount;
+ * this page has only a reference it may not look up.
  */
 export const dynamic = 'force-dynamic';
 
