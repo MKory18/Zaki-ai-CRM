@@ -271,6 +271,13 @@ const RENDERED_BY_NOTHING: Record<string, string> = {
    */
   'src/components/dashboard/MissionCard.tsx:MissionCardView':
     'النصف المرسوم من بطاقة «مهمّتك الجاية» — يُصدَّر ليصيّره اختبارُها بمهمّة جاهزة بلا جلسة؛ `MissionCard` نفسها هي ما تستخدمه الشاشة.',
+
+  /*
+   * Same shape as `MissionCardView`: rendered by its own file (the «إضافة استثناء» dialog of UserDetailScreen), and
+   * exported so its test can draw the list with a role already in hand, without faking the whole user page.
+   */
+  'src/components/screens/UserDetailScreen.tsx:PermissionPicker':
+    'قائمة الصلاحيات بنافذة «إضافة استثناء» — ترسمها شاشة المستخدم نفسها، وتُصدَّر ليرسمها اختبارُها بدور جاهز بلا صفحة كاملة.',
 };
 
 describe('كلُّ مكوّنٍ إمّا تعرضه شاشة أو يُقال إنه بُني ولم يُوصَل', () => {
