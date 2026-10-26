@@ -11,7 +11,7 @@ import { ASSIGNABLE_ROLES, UserRole, UserStatus } from '@/types/auth';
 import { logAudit } from '@/lib/audit';
 import { can, requirePermission } from '@/lib/authorization';
 import { isPrivilegedRoleName } from '@/lib/role-names';
-import { canConferRole } from '@/lib/user-permissions';
+import { canActOnUser, canConferRole } from '@/lib/user-permissions';
 import { parseHhMm, parseRestDays } from '@/lib/employee-shift';
 import { money } from '@/lib/numeric-input';
 
@@ -62,6 +62,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Only SUPER_ADMIN may assign the SUPER_ADMIN role to anyone
     if (action === 'assignRole' && role === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
+    }
+    // And not on an account that holds powers this admin lacks — suspending,
+    // signing out, deleting, re-roling, re-activating or resetting it alike
+    // (see canActOnUser). Re-roling is also checked against the NEW role below.
+    //
+    // Except the clerical record (`updateContact`: phone, shift, rest days):
+    // that is not power over anybody, and holding it back stopped an admin
+    // correcting a supervisor's phone the day the owner unticked one key on
+    // the admin. The pay inside the same action keeps its own key, payroll.pay.
+    if (action !== 'updateContact') {
+      const acting = await canActOnUser(admin, target);
+      if (!acting.ok) {
+        return NextResponse.json({ error: acting.error }, { status: acting.status });
+      }
     }
 
     const updateData: Record<string, unknown> = {};
@@ -266,6 +280,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       // pound wallet at all, and the cash leaves another one at a rate the
       // owner writes then (commission-payout.ts).
       if ('commissionCurrency' in body) {
+        // Every accrual is booked in it, so it is pay — the same key as the
+        // salary below, not «تعديل المستخدمين».
+        if (!can(admin, 'payroll.pay')) {
+          const refusal = forbiddenAr('Forbidden: missing required permission payroll.pay');
+          return NextResponse.json({ error: refusal, errorAr: refusal }, { status: 403 });
+        }
         const raw = typeof body.commissionCurrency === 'string' ? body.commissionCurrency.trim().toUpperCase() : '';
         if (raw && !/^[A-Z]{3}$/.test(raw)) {
           return NextResponse.json({ error: 'رمز العملة ثلاثة أحرف (ISO)' }, { status: 400 });

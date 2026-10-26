@@ -12,7 +12,7 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
     region: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     store: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     storePage: { createMany: vi.fn() },
-    user: { findFirst: vi.fn() },
+    user: { findFirst: vi.fn(), findUnique: vi.fn(async (): Promise<unknown> => null) },
     userCountryAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
     userStoreAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn(), count: vi.fn() },
     $transaction: vi.fn(),
@@ -24,12 +24,18 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
+const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async (..._a: unknown[]) => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
 vi.mock('@/lib/authorization', () => ({
   requirePermission: (...a: unknown[]) => requirePermission(...a),
   can: (...a: unknown[]) => can(...a),
 }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
+// Acting on a more senior account is its own test (people-act-within-their-reach).
+vi.mock('@/lib/user-permissions', async (orig) => ({
+  ...(await orig<typeof import('@/lib/user-permissions')>()),
+  canActOnUser: (...a: unknown[]) => reach.canActOnUser(...a),
+}));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 import * as countriesRoute from '@/app/api/geo/countries/route';
@@ -245,6 +251,16 @@ describe('PUT /api/users/:id/geo-access', () => {
     db.store.count.mockResolvedValue(0);
     const res = await geoAccessRoute.PUT(req({ countryIds: [JO], storeIds: [STORE_SY] }, 'PUT'), params('u-agent'));
     expect(res.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('an account holding powers the geo manager lacks: refused, and nothing written', async () => {
+    db.user.findUnique.mockResolvedValue({ id: 'u-admin', role: 'COMPANY_ADMIN', roleId: 'r-admin' });
+    reach.canActOnUser.mockResolvedValueOnce({ ok: false, status: 403, error: 'لا يمكنك إدارة هذا الحساب' });
+    db.country.count.mockResolvedValue(1);
+    db.store.count.mockResolvedValue(1);
+    const res = await geoAccessRoute.PUT(req({ countryIds: [JO], storeIds: [STORE_JO] }, 'PUT'), params('u-admin'));
+    expect(res.status).toBe(403);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 

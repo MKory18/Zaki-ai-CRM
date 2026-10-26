@@ -1,3 +1,5 @@
+import { keyScopeLacks, mayMintForCompany, scopeBeyondMinter } from '@/lib/v1/token-granter';
+import { catalogItem } from '@/lib/permission-catalog';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -61,7 +63,7 @@ const revokeSchema = z.object({ id: z.string().uuid() });
 export async function GET() {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('apps.manage');
+    const viewer = await requirePermission('apps.manage');
 
     const rows = await db.systemToken.findMany({
       where: { companyId },
@@ -87,7 +89,13 @@ export async function GET() {
     return NextResponse.json({
       // What the screen offers, from the one list that defines them, so a new
       // scope never has to be typed into a component as well.
-      scopeCatalog: V1_SCOPES.map((key) => ({ key, ar: V1_SCOPE_AR[key] })),
+      // And which of them THIS person may put on a key, with the key they lack —
+      // said before «أنشئ المفتاح», not after it (token-granter.ts).
+      scopeCatalog: V1_SCOPES.map((key) => {
+        const lacks = keyScopeLacks(viewer, key);
+        return { key, ar: V1_SCOPE_AR[key], mintable: !lacks, ...(lacks ? { needsAr: catalogLabel(lacks) } : {}) };
+      }),
+      mayMint: mayMintForCompany(viewer),
       repliesScopes: REPLIES_SCOPES,
       // The systems a key may be made for, each with the scopes it starts
       // from — the media buyer's three, read-only, beside the replies five.
@@ -122,13 +130,25 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('apps.manage');
+    const minter = await requirePermission('apps.manage');
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const v = { ...parsed.data, rateLimitPerMin: parsed.data.rateLimitPerMin ?? defaultRateFor(parsed.data.system) };
+
+    // A key reads every store: its minter must see every store (token-granter.ts).
+    if (!mayMintForCompany(minter)) {
+      const msg = 'مفتاح الـAPI بيقرا الشركة كلها، فإصداره بدّه دخول كل الدول والمتاجر.';
+      return NextResponse.json({ error: msg, errorAr: msg, code: 'MINTER_NOT_ALL_STORES' }, { status: 403 });
+    }
+    // Not a key to more than the person minting it holds (token-granter.ts).
+    const beyond = scopeBeyondMinter(minter, v.scopes);
+    if (beyond) {
+      const msg = `لا يمكنك إصدار مفتاح بصلاحية «${V1_SCOPE_AR[beyond.scope]}» — تحتاج «${catalogLabel(beyond.key)}» بنطاق كامل.`;
+      return NextResponse.json({ error: msg, errorAr: msg, code: 'SCOPE_BEYOND_MINTER' }, { status: 403 });
+    }
 
     const minted = mintToken();
     const expiresAt = new Date(Date.now() + v.days * 24 * 60 * 60 * 1000);
@@ -212,4 +232,9 @@ export async function DELETE(req: Request) {
   } catch (error) {
     return apiErrorResponse(error);
   }
+}
+
+/** A key's Arabic name for the refusal, or the key itself if the catalog has none. */
+function catalogLabel(key: string): string {
+  return catalogItem(key)?.ar ?? key;
 }

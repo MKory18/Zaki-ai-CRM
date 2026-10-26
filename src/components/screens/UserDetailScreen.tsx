@@ -148,7 +148,10 @@ export function UserDetailScreen() {
     }
   };
   const [roleError, setRoleError] = useState<string | null>(null);
-  const canAssignRole = userCan(currentUser, 'users.edit');
+  // The server says whether this viewer may act on this account (canActOnUser);
+  // every control that acts on it is drawn from that, with one line saying why not.
+  const mayManage = user?.mayManage !== false;
+  const canAssignRole = userCan(currentUser, 'users.edit') && mayManage;
 
   useEffect(() => {
     if (!userId) return;
@@ -302,7 +305,8 @@ export function UserDetailScreen() {
                 <UserCommissionCurrency
                   userId={userId}
                   initial={user.commissionCurrency ?? null}
-                  canEdit={userCan(currentUser, 'users.edit')}
+                  // Pay, like the salary below — the server asks the same key, on the employee door (users.edit).
+                  canEdit={userCan(currentUser, 'payroll.pay') && userCan(currentUser, 'users.edit')}
                 />
               )}
               {/* When they start and when they hand over. Lateness — and
@@ -591,13 +595,17 @@ export function UserDetailScreen() {
         </Card>
 
         {/* Where this person may work — the access API had no screen before this. */}
+        {!mayManage && user?.manageRefusal && (
+          <p className="text-xs text-[var(--sys-muted-foreground)]">{user.manageRefusal}</p>
+        )}
+
         {userId && userCan(currentUser, 'geo.manage') && (
-          <UserGeoAccessSection userId={userId} canEdit={userCan(currentUser, 'geo.manage')} />
+          <UserGeoAccessSection userId={userId} canEdit={userCan(currentUser, 'geo.manage') && mayManage} />
         )}
 
         {/* Effective permissions + user overrides (Phase 5) — gated server-side by users.view/users.edit */}
         {userCan(currentUser, 'users.view') && userId && (
-          <UserPermissionsSection userId={userId} canEdit={userCan(currentUser, 'users.edit')} />
+          <UserPermissionsSection userId={userId} canEdit={userCan(currentUser, 'users.edit') && mayManage} />
         )}
 
         {/* Workload */}

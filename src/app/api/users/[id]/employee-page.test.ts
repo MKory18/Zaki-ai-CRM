@@ -27,7 +27,11 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/authorization', () => ({
   requirePermission: async () => actor.current,
 }));
-vi.mock('@/lib/user-permissions', () => ({ canConferRole: (...a: unknown[]) => canConferRole(...a) }));
+// Acting on a more senior account is its own test (people-act-within-their-reach).
+vi.mock('@/lib/user-permissions', () => ({
+  canConferRole: (...a: unknown[]) => canConferRole(...a),
+  canActOnUser: async () => ({ ok: true }),
+}));
 
 import { PATCH } from './route';
 
