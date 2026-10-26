@@ -38,7 +38,9 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
-const as = vi.hoisted(() => ({ user: { value: { id: 'u1', role: 'COMPANY_ADMIN', permissions: [] as string[] } } }));
+// A company admin who HOLDS the box: the screen asks the server's question (`userCan`), and the server lets no role
+// through by name — only SUPER_ADMIN holds everything.
+const as = vi.hoisted(() => ({ user: { value: { id: 'u1', role: 'COMPANY_ADMIN', permissions: ['products.view', 'products.edit', 'products.upload_images'] as string[] } } }));
 vi.mock('@/context/AppContext', () => ({ useApp: () => ({ currentUser: as.user.value, locale: 'ar', t: {} }) }));
 vi.mock('@/components/ui/Confirm', () => ({
   useConfirm: () => async () => confirmAnswer.value,
@@ -46,8 +48,10 @@ vi.mock('@/components/ui/Confirm', () => ({
 }));
 // The cards beside the gallery have their own tests; here they are markers that say whether they were mounted.
 vi.mock('@/components/products/ProductHeadline', () => ({ ProductHeadline: () => <div data-testid="headline" /> }));
+const stockProps = vi.hoisted(() => ({ value: null as null | { canReceive: boolean; canProduce: boolean } }));
 vi.mock('@/components/products/ProductStock', () => ({
-  ProductStock: () => {
+  ProductStock: (p: { canReceive: boolean; canProduce: boolean }) => {
+    stockProps.value = { canReceive: p.canReceive, canProduce: p.canProduce };
     useEffect(() => {
       mounts.stock += 1;
     }, []);
@@ -87,7 +91,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mounts.stock = 0;
   confirmAnswer.value = true;
-  as.user.value = { id: 'u1', role: 'COMPANY_ADMIN', permissions: [] };
+  as.user.value = { id: 'u1', role: 'COMPANY_ADMIN', permissions: ['products.view', 'products.edit', 'products.upload_images'] };
   current = productWith([]);
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
     if (init?.method === 'DELETE' || init?.method === 'PATCH' || init?.method === 'POST') return respond({ ok: true });
@@ -224,5 +228,37 @@ describe('the cards that were blank are on the page, for THIS product', () => {
     expect(src).not.toMatch(/product\.orders/);
     expect(src).not.toContain('متوسط تكلفة الوحدة');
     expect(src).not.toMatch(/رفع صور جديدة/);
+  });
+});
+
+/*
+ * «في صلاحيات ظاهرة انها منسوبة لكن بالواقع مش موجودة». Each control asks the key its own server route checks — no
+ * role is let through by name. The pictures are `products.upload_images` (api/products/[id]/images); the stock
+ * shortcut lands on /inventory/balances or /manufacturing, guarded by inventory and production keys.
+ */
+describe('each control asks the server’s own question', () => {
+  it('the pictures follow «رفع صور المنتجات», not «تعديل المنتجات»', async () => {
+    as.user.value = { id: 'u3', role: 'COMPANY_ADMIN', permissions: ['products.view', 'products.upload_images'] };
+    await draw();
+    expect(screen.getByRole('button', { name: 'رفع صور' })).toBeTruthy();
+  });
+
+  it('NEGATIVE: editing the product without the pictures box shows no upload', async () => {
+    as.user.value = { id: 'u4', role: 'COMPANY_ADMIN', permissions: ['products.view', 'products.edit'] };
+    await draw();
+    expect(screen.queryByRole('button', { name: 'رفع صور' })).toBeNull();
+    expect(document.querySelectorAll('input[type="file"]')).toHaveLength(0);
+  });
+
+  it('the stock shortcut follows the stock and production keys', async () => {
+    as.user.value = { id: 'u5', role: 'MANAGER', permissions: ['products.view', 'inventory.view', 'inventory.adjust'] };
+    await draw();
+    expect(stockProps.value).toEqual({ canReceive: true, canProduce: false });
+  });
+
+  it('NEGATIVE: «تعديل المنتجات» alone opens neither stock door', async () => {
+    as.user.value = { id: 'u6', role: 'COMPANY_ADMIN', permissions: ['products.view', 'products.edit'] };
+    await draw();
+    expect(stockProps.value).toEqual({ canReceive: false, canProduce: false });
   });
 });

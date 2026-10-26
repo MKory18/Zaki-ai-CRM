@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { arTime } from '@/lib/format';
 import { Money } from '@/components/ui/Money';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
+import { userCan } from '@/lib/can';
 
 interface Conversation {
   id: string;
@@ -66,10 +67,10 @@ export function WhatsAppInboxScreen() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
-  const canSend = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.send');
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.manage');
-  const canAssign = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.assign');
-  const canView = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.view');
+  const canSend = userCan(currentUser, 'whatsapp.send');
+  const canManage = userCan(currentUser, 'whatsapp.manage');
+  const canAssign = userCan(currentUser, 'whatsapp.assign');
+  const canView = userCan(currentUser, 'whatsapp.view');
 
   /*
    * Which conversation is open, readable from a callback that outlived the

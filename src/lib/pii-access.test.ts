@@ -144,7 +144,9 @@ describe('the alert itself', () => {
   });
 
   it('tells the people who can act, not everyone who can read', () => {
-    expect(alert).toMatch(/audience: \{ permission: 'users\.manage' \}/);
+    // `users.edit` — who can grant and revoke access. It named `users.manage`, a key pruned from the catalog that
+    // nobody can be given, so only the SUPER_ADMINs ever heard of a harvest.
+    expect(alert).toMatch(/audience: \{ permission: 'users\.edit' \}/);
   });
 
   it('does not tell the person being watched', () => {

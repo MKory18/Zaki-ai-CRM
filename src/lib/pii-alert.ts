@@ -13,9 +13,11 @@ import type { SessionUser } from '@/types/auth';
  * afterwards. The notification is the ALERT — it is for the people who
  * could act today, and it is allowed to be missed.
  *
- * Told to holders of `users.manage`: whoever can grant and revoke access
+ * Told to holders of `users.edit`: whoever can grant and revoke access
  * is who can do something about somebody reading everything, and they are
- * the smallest audience that fits. Not `audit.view`, which is a reading
+ * the smallest audience that fits. (It named `users.manage`, a key pruned
+ * from the catalog — nobody can be given it, so the alert reached the
+ * SUPER_ADMINs alone.) Not `audit.view`, which is a reading
  * permission and would tell people who cannot act.
  *
  * NEVER THROWS, and never blocks the response it is attached to. A person
@@ -59,12 +61,12 @@ export async function announceBulkCustomerView(input: {
       // The actor is not told about their own reading: an alert that
       // announces itself to the person it is watching is a tip-off.
       actorId: input.user.id,
-      audience: { permission: 'users.manage' },
+      audience: { permission: 'users.edit' },
       title: 'اطّلاعٌ واسعٌ على بيانات العملاء',
       message,
       type: 'SYSTEM_ALERT',
       // `linkFor` drops a link the recipient's own guard would refuse, so
-      // someone holding `users.manage` without `audit.view` gets the alert
+      // someone holding `users.edit` without `audit.view` gets the alert
       // with no link rather than a click into a 403.
       link: '/control/audit',
     });

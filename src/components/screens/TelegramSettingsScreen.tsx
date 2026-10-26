@@ -11,6 +11,7 @@ import { TelegramSourcesCard } from '@/components/settings/TelegramSourcesCard';
 import { RiCheckboxCircleLine, RiCloseCircleLine, RiFileCopyLine, RiRefreshLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
+import { userCan } from '@/lib/can';
 
 /** `embedded` — a card of «الربط» (`/settings/links`): no page padding, a section heading instead of the page header. */
 export function TelegramSettingsScreen({ embedded = false }: { embedded?: boolean } = {}) {
@@ -22,7 +23,7 @@ export function TelegramSettingsScreen({ embedded = false }: { embedded?: boolea
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('telegram.manage');
+  const canManage = userCan(currentUser, 'telegram.manage');
 
   const load = useCallback(async () => {
     setLoading(true);

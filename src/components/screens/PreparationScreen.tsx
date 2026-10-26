@@ -12,6 +12,7 @@ import { RiArchiveDrawerLine, RiArrowDownSLine, RiArrowLeftSLine, RiCloseCircleL
 import { Rows } from '@/components/ui/Rows';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { MissionDone, NextStepButton } from '@/components/ui/NextStep';
+import { userCan } from '@/lib/can';
 
 /**
  * /ops/preparation — grouped BY PRODUCT, collapsible. Orders, required,
@@ -70,10 +71,8 @@ export function PreparationScreen() {
    * packer would be two buttons that can only ever produce a red error.
    */
   const { currentUser } = useApp();
-  const perms = currentUser?.permissions ?? [];
-  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN';
-  const mayOpenOrder = isAdmin || perms.includes('orders.view');
-  const mayCancel = isAdmin || perms.includes('orders.unlock');
+  const mayOpenOrder = userCan(currentUser, 'orders.view');
+  const mayCancel = userCan(currentUser, 'orders.unlock');
 
   const load = useCallback(async () => {
     try {
