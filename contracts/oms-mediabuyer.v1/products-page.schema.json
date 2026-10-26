@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "zaki/oms-mediabuyer.v1/products-page",
+  "title": "GET /api/v1/products?fields=… (v1)",
+  "description": "الكتالوج. بلا fields الرد هو نفسه تبع نظام الردود حرفياً. الحقول الاختيارية بتنضاف بس لما تنطلب: aliases و price_options بصلاحية products.read، والباقي بصلاحية products.costs.read (وإلا 403 SCOPE_MISSING). إضافة حقل اختياري = v1؛ حذف أو تغيير اسم أو نوع = v2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "price",
+          "currency",
+          "wholesale_price",
+          "discount_cap",
+          "stock_status",
+          "offers",
+          "complements"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "wholesale_price": {
+            "type": "null"
+          },
+          "discount_cap": {
+            "type": "null"
+          },
+          "stock_status": {
+            "type": "string",
+            "enum": [
+              "IN_STOCK",
+              "LOW_STOCK",
+              "OUT_OF_STOCK"
+            ]
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "quantity",
+                "price",
+                "saving",
+                "remaining_qty",
+                "expires_at"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "price": {
+                  "type": "string",
+                  "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+                },
+                "saving": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "remaining_qty": {
+                  "type": "null"
+                },
+                "expires_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "complements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "fields=aliases · products.read"
+          },
+          "price_options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "quantity",
+                "price"
+              ],
+              "properties": {
+                "title": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "price": {
+                  "type": "string",
+                  "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+                }
+              }
+            },
+            "description": "fields=price_options · products.read · الأول دايماً سعر القطعة"
+          },
+          "unit_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fields=unit_cost_usd · products.costs.read · null لما المتجر مش بالدولار أو ما في مخزون بتكلفة"
+          },
+          "stock_days": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fields=stock_days · products.costs.read"
+          },
+          "delivery_fee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fields=delivery_fee · products.costs.read · null: الأجرة بالـ OMS حسب الشركة والمنطقة مش حسب المنتج"
+          },
+          "return_fee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fields=return_fee · products.costs.read · null: نفس السبب"
+          },
+          "cod_fee_pct": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+\\.[0-9]{1,4}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "fields=cod_fee_pct · products.costs.read · null: ما في نسبة بالـ OMS"
+          }
+        }
+      }
+    }
+  }
+}

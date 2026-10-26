@@ -10,6 +10,8 @@ import {
   REPLIES_SCOPES,
   TOKEN_DAYS,
   V1_SCOPES,
+  V1_SYSTEMS,
+  defaultRateFor,
   V1_SCOPE_AR,
   mintToken,
   parseScopes,
@@ -48,7 +50,9 @@ const createSchema = z.object({
   name: z.string().trim().min(2, 'الاسم قصير جداً').max(60),
   system: z.string().trim().min(2).max(40).default('replies'),
   scopes: z.array(z.enum(V1_SCOPES)).min(1, 'اختر صلاحية واحدة على الأقل'),
-  rateLimitPerMin: z.number().int().min(1).max(600).default(60),
+  // Omitted → the system's own default (`defaultRateFor`): 30 for the media
+  // buyer, 60 for the replies system.
+  rateLimitPerMin: z.number().int().min(1).max(600).optional(),
   days: z.number().int().min(1).max(365).default(TOKEN_DAYS),
 });
 
@@ -85,6 +89,9 @@ export async function GET() {
       // scope never has to be typed into a component as well.
       scopeCatalog: V1_SCOPES.map((key) => ({ key, ar: V1_SCOPE_AR[key] })),
       repliesScopes: REPLIES_SCOPES,
+      // The systems a key may be made for, each with the scopes it starts
+      // from — the media buyer's three, read-only, beside the replies five.
+      systems: V1_SYSTEMS.map((s) => ({ key: s.key, ar: s.ar, scopes: s.scopes, rateLimitPerMin: s.rateLimitPerMin })),
       defaultDays: TOKEN_DAYS,
       tokens: rows.map((t) => ({
         id: t.id,
@@ -121,7 +128,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
-    const v = parsed.data;
+    const v = { ...parsed.data, rateLimitPerMin: parsed.data.rateLimitPerMin ?? defaultRateFor(parsed.data.system) };
 
     const minted = mintToken();
     const expiresAt = new Date(Date.now() + v.days * 24 * 60 * 60 * 1000);

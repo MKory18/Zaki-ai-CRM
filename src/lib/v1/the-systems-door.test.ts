@@ -84,11 +84,14 @@ function handlers(): Handler[] {
 }
 
 describe('the door was found at all — a sweep over nothing proves nothing', () => {
-  it('has the five endpoints the contract names', () => {
+  it('has the five endpoints the contract names, and the media buyer’s one read', () => {
+    // The sixth (2026-10-26) is `orders/attribution`, read-only, for the
+    // media buyer — `the-media-buyers-door.test.ts` holds what it answers.
     expect(ROUTES).toEqual([
       'src/app/api/v1/customers/lookup/route.ts',
       'src/app/api/v1/orders/[id]/notes/route.ts',
       'src/app/api/v1/orders/[id]/route.ts',
+      'src/app/api/v1/orders/attribution/route.ts',
       'src/app/api/v1/orders/route.ts',
       'src/app/api/v1/products/route.ts',
     ]);
@@ -98,14 +101,18 @@ describe('the door was found at all — a sweep over nothing proves nothing', ()
     expect(handlers().length).toBeGreaterThanOrEqual(5);
   });
 
-  it('and the five scopes, and not a sixth', () => {
+  it('and the five replies scopes, plus the media buyer’s two read-only ones, and not an eighth', () => {
     // «صلاحيات توكن الردود: products.read · customers.lookup · orders.create
-    // · orders.read · orders.note — ولا شي غيرها.»
+    // · orders.read · orders.note — ولا شي غيرها.» — still exactly those five
+    // on the replies key (`REPLIES_SCOPES`); the two added on 2026-10-26 are
+    // the media buyer's and grant no write.
     expect([...V1_SCOPES].sort()).toEqual([
       'customers.lookup',
+      'orders.attribution.read',
       'orders.create',
       'orders.note',
       'orders.read',
+      'products.costs.read',
       'products.read',
     ]);
   });

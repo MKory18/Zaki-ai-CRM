@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "code": "TRF01",
+      "name": "ماء الكمأة",
+      "price": "20.00",
+      "currency": "USD",
+      "wholesale_price": null,
+      "discount_cap": null,
+      "stock_status": "IN_STOCK",
+      "offers": [
+        {
+          "title": "2 قطع",
+          "quantity": 2,
+          "price": "35.00",
+          "saving": "5.00",
+          "remaining_qty": null,
+          "expires_at": null
+        }
+      ],
+      "complements": [],
+      "aliases": [
+        "KamaaEye"
+      ],
+      "price_options": [
+        {
+          "title": null,
+          "quantity": 1,
+          "price": "20.00"
+        },
+        {
+          "title": "2 قطع",
+          "quantity": 2,
+          "price": "35.00"
+        }
+      ],
+      "unit_cost_usd": "3.25",
+      "stock_days": 12.5,
+      "delivery_fee": null,
+      "return_fee": null,
+      "cod_fee_pct": null
+    }
+  ]
+}
