@@ -62,3 +62,42 @@ export async function recordLandingView(view: {
     /* counting is never worth a failed page */
   }
 }
+
+/**
+ * THE SAME VISIT, COUNTED BY THE BROWSER — beside `recordLandingView`, never instead of it (yet).
+ *
+ * «ابني كاش الصفحة، وخلي العدّ بالطريقتين أسبوع قبل ما نبدّل». A cached page is not built per visit, so the server can
+ * no longer count it there; the page itself reports that it opened. For one week both counts run, into two tables of
+ * the same shape, and the owner compares them before the switch. The statement is `recordLandingView`'s, on the other
+ * table — a table name cannot be a bound parameter, so it is written out rather than interpolated.
+ */
+export async function recordBrowserView(view: {
+  companyId: string;
+  storeId: string | null;
+  landingPageId: string;
+  campaignId: string | null;
+  device: DeviceClass;
+  at?: Date;
+}): Promise<void> {
+  try {
+    await db.$executeRaw`
+      INSERT INTO "landing_page_browser_views" ("id", "companyId", "storeId", "landingPageId", "day", "device", "campaignId", "count")
+      VALUES (${randomUUID()}, ${view.companyId}, ${view.storeId}, ${view.landingPageId},
+              ${localDay(view.at)}::date, ${view.device}, ${view.campaignId ?? ''}, 1)
+      ON CONFLICT ("landingPageId", "day", "device", "campaignId")
+      DO UPDATE SET "count" = "landing_page_browser_views"."count" + 1`;
+  } catch {
+    /* counting is never worth a failed page */
+  }
+}
+
+/**
+ * A request the browser made AHEAD of a visit — Meta's in-app preload, a speculative prefetch — and not a visit.
+ *
+ * Meta sends `X-Purpose: preview`; Chrome's speculation rules send `Sec-Purpose: prefetch`; older browsers `Purpose`.
+ * A page loaded that way may never be seen, so it is not counted by the browser's count.
+ */
+export function isPrefetch(headers: Headers): boolean {
+  return [headers.get('sec-purpose'), headers.get('purpose'), headers.get('x-purpose'), headers.get('x-moz')]
+    .some((v) => !!v && /prefetch|preview|prerender/i.test(v));
+}

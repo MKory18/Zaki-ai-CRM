@@ -1709,6 +1709,7 @@ model LandingPage {
   recommendations LandingPageRecommendation[]
   addOns          OrderAddOn[]
   views           LandingPageView[]
+  browserViews    LandingPageBrowserView[]
   // Geo context (Stage 2): orders from this page land in this store.
   storeId         String?
   store           Store?                      @relation("StorePages", fields: [storeId], references: [id], onDelete: Restrict)
@@ -3631,6 +3632,29 @@ model LandingPageView {
   @@unique([landingPageId, day, device, campaignId])
   @@index([companyId, storeId, day])
   @@map("landing_page_views")
+}
+
+/// THE SAME VISITS, COUNTED BY THE BROWSER.
+///
+/// The exact shape of `LandingPageView`, written by `/api/public/lp-view` when the page has opened in a visitor's
+/// browser. Counted beside the server's rows for a week, so the owner can compare the two before the page is cached —
+/// a cached page is not built per visit, so the server can no longer count it. Read by nothing that computes money.
+model LandingPageBrowserView {
+  id            String   @id @default(uuid())
+  companyId     String
+  storeId       String?
+  landingPageId String
+  day           DateTime @db.Date
+  /// mobile | tablet | desktop
+  device        String
+  campaignId    String   @default("")
+  count         Int      @default(0)
+
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+
+  @@unique([landingPageId, day, device, campaignId])
+  @@index([companyId, storeId, day])
+  @@map("landing_page_browser_views")
 }
 
 /// A REGISTERED AUTHENTICATOR — a fingerprint, a face, a security key.

@@ -11,6 +11,7 @@ const { db } = vi.hoisted(() => ({
   db: {
     $executeRaw: vi.fn(),
     landingPageView: { groupBy: vi.fn(), findFirst: vi.fn() },
+    landingPageBrowserView: { findFirst: vi.fn(async () => null), groupBy: vi.fn(async () => []) },
     order: { groupBy: vi.fn() },
     landingPage: { findMany: vi.fn() },
     campaign: { findMany: vi.fn() },

@@ -1,0 +1,60 @@
+import { db } from '@/lib/db';
+import { deviceClassOf, isPrefetch, recordBrowserView } from '@/lib/landing-views';
+import { resolveCampaign } from '@/lib/campaigns-server';
+import { getClientIp, rateLimit } from '@/lib/rate-limit';
+
+/**
+ * POST /api/public/lp-view — «الصفحة انفتحت عند الزائر».
+ *
+ * Sent once by a landing page as it opens in a visitor's browser (`BrowserVisit`), with `navigator.sendBeacon`. It is
+ * the count a CACHED page will rely on, run for a week beside the server's count (`recordLandingView`) so the two can be
+ * compared before the switch. It writes only `landing_page_browser_views`; the server's rows and the lifetime
+ * `viewsCount` are not touched here.
+ *
+ * The same rules as the server's count, and the two it could not have: a link-preview crawler is not a visitor
+ * (`deviceClassOf`), and neither is a request made AHEAD of a visit (Meta's preload, a prefetch — `isPrefetch`). Only a
+ * published page counts, so a preview or an unpublished draft never does.
+ *
+ * Always 204 and never a reason: a beacon has nobody to read an answer, and a page that cannot be counted must never
+ * look broken.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CODE = /^[A-Za-z0-9_-]{1,40}$/;
+const done = () => new Response(null, { status: 204 });
+
+export async function POST(req: Request) {
+  try {
+    if (isPrefetch(req.headers)) return done();
+    const device = deviceClassOf(req.headers.get('user-agent'));
+    if (!device) return done();
+
+    // `sendBeacon` posts a string as text/plain; read the body as text whatever it says it is.
+    const raw = (await req.text()).slice(0, 500);
+    let body: { p?: unknown; c?: unknown } = {};
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      return done();
+    }
+    const pageId = typeof body.p === 'string' && UUID.test(body.p) ? body.p : null;
+    if (!pageId) return done();
+    const code = typeof body.c === 'string' && CODE.test(body.c) ? body.c : null;
+
+    // A flood from one address is not a crowd. Only when the address is known: behind no trusted proxy every visitor
+    // shares one bucket, and a limit there would stop counting the busy hour an advert brings.
+    const ip = getClientIp(req);
+    if (ip !== 'local' && !rateLimit(`lp_view:${ip}:${pageId}`, 60, 60_000).allowed) return done();
+
+    const page = await db.landingPage.findFirst({
+      where: { id: pageId, isPublished: true },
+      select: { id: true, companyId: true, storeId: true },
+    });
+    if (!page) return done();
+
+    const campaignId = code && page.storeId ? await resolveCampaign(page.companyId, page.storeId, code) : null;
+    await recordBrowserView({ companyId: page.companyId, storeId: page.storeId, landingPageId: page.id, campaignId, device });
+    return done();
+  } catch {
+    return done();
+  }
+}
