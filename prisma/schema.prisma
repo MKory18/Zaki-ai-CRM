@@ -1083,6 +1083,7 @@ model Order {
   @@unique([companyId, orderNumber])
   @@unique([companyId, merchantRef])
   @@index([companyId, createdAt]) // hot path: list ordering + prev/next navigation + analytics windows
+  @@index([companyId, updatedAt]) // the media buyer's hourly read pages by updatedAt (/api/v1/orders/attribution)
   @@index([companyId, status])
   @@index([companyId, confirmationStatus, claimedById])
   @@index([companyId, nextFollowUpAt])

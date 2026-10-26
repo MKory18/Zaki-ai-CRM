@@ -108,11 +108,11 @@ describe('the door was found at all — a sweep over nothing proves nothing', ()
     // the media buyer's and grant no write.
     expect([...V1_SCOPES].sort()).toEqual([
       'customers.lookup',
-      'orders.attribution',
+      'orders.attribution.read',
       'orders.create',
       'orders.note',
       'orders.read',
-      'products.costs',
+      'products.costs.read',
       'products.read',
     ]);
   });

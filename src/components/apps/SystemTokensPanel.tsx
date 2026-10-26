@@ -49,6 +49,7 @@ interface SystemChoice {
   key: string;
   ar: string;
   scopes: string[];
+  rateLimitPerMin: number;
 }
 
 interface Shelf {
@@ -264,7 +265,8 @@ export function SystemTokensPanel() {
             </div>
           </div>
           <p className="text-xs text-[var(--sys-muted)]">
-            ينتهي بعد {shelf.defaultDays} يوماً، وبحدّ ستين طلباً في الدقيقة.
+            ينتهي بعد {shelf.defaultDays} يوماً، وبحدّ{' '}
+            {shelf.systems.find((s) => s.key === system)?.rateLimitPerMin ?? 60} طلباً في الدقيقة.
           </p>
           <Button size="sm" onClick={create} disabled={chosen.length === 0}>
             أنشئ المفتاح

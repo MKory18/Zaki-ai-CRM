@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "zaki/oms-mediabuyer.v1/attribution-page",
+  "title": "GET /api/v1/orders/attribution — صفحة واحدة (v1)",
+  "description": "الـ OMS ← الميديا باير، قراءة بس. صلاحية orders.attribution.read. الاستعلام: updated_since (إلزامي، ISO، ما بيرجع أكتر من 31 يوم) · cursor (من next_cursor) · limit (≤ 200). ولا اسم ولا هاتف ولا عنوان زبون بأي حقل. إضافة حقل اختياري = v1؛ حذف أو تغيير اسم أو نوع = v2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items",
+    "next_cursor"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "order_id",
+          "product_code",
+          "country",
+          "channel",
+          "ad_id",
+          "adset_id",
+          "campaign_id",
+          "ad_name",
+          "landing_page",
+          "status",
+          "created_at",
+          "confirmed_at",
+          "shipped_at",
+          "delivered_at",
+          "returned_at",
+          "canceled_at",
+          "order_value",
+          "collected",
+          "currency",
+          "is_fake",
+          "first_contact_at",
+          "capi_ref"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "product_code": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "channel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adset_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ad_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "landing_page": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "confirmed",
+              "shipped",
+              "delivered",
+              "returned",
+              "canceled"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shipped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canceled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_value": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+          },
+          "collected": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{2,3}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "is_fake": {
+            "type": "boolean"
+          },
+          "first_contact_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capi_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^enc:[A-Za-z0-9_-]+$",
+                "description": "مرجع مشفّر مبهم — أبداً هاتف أو اسم مقروء. هلأ دايماً null لحد قرار المالك."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

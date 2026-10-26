@@ -1,7 +1,8 @@
-# `contracts/` — copies, never sources
+# `contracts/` — copies, never sources (one exception, named below)
 
 Everything under this directory is a **verbatim copy** of a contract that
-lives somewhere else. It is here so this repository's tests can prove it
+lives somewhere else — except `oms-mediabuyer.v1/`, whose source IS this
+repository (see its own README). It is here so this repository's tests can prove it
 keeps its side of the bargain — not so anybody can change the bargain.
 
 ## `oms-app-events.v1/`
@@ -31,3 +32,10 @@ with the body unchanged, and every golden body validates.
 `src/lib/apps/contract.ts` reads these files and validates against them. It
 is **not application code** — nothing ships it, the same arrangement
 `src/lib/guard-source.ts` has.
+
+## `oms-mediabuyer.v1/` — the one this repository owns
+
+What the OMS answers the media buyer (`zaki-mediabuyer`), read only. Here it
+is the SOURCE; the media buyer holds the verbatim copy. Same growth rule:
+an optional field is v1, anything else is v2. Its own README lists the rules
+and the tests.

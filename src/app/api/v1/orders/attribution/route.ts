@@ -18,7 +18,7 @@ import {
  * mapping, the moments, the money, and above all the absence of the
  * customer.
  *
- * Its own scope, `orders.attribution`: the replies system holds
+ * Its own scope, `orders.attribution.read`: the replies system holds
  * `orders.read` to ask after ONE order it raised, and must not be able to
  * page through every order the company has because a second system needed
  * to.
@@ -26,7 +26,7 @@ import {
 export async function GET(req: Request) {
   const requestId = requestIdOf(req);
   try {
-    const caller = await requireSystemToken(req, 'orders.attribution');
+    const caller = await requireSystemToken(req, 'orders.attribution.read');
     const { searchParams } = new URL(req.url);
 
     const since = readSince(searchParams.get('updated_since'));

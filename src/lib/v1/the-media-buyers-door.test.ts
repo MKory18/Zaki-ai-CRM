@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -41,10 +41,14 @@ vi.mock('@/lib/reservation', () => ({
   reservedElsewhere: (...a: unknown[]) => h.reservedElsewhere(...a),
 }));
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { validate } from '../apps/contract';
 import { GET as getAttribution } from '@/app/api/v1/orders/attribution/route';
 import { GET as getProducts } from '@/app/api/v1/products/route';
 import { CORE_STATES } from '../order-state';
-import { ATTRIBUTION_SELECT, STATUS_OF, decodeCursor, encodeCursor } from './attribution';
+import { ATTRIBUTION_SELECT, MAX_WINDOW_DAYS, STATUS_OF, decodeCursor, encodeCursor } from './attribution';
+import { PRODUCT_FIELDS } from './product-figures';
 import { MEDIABUYER_SCOPES, REPLIES_SCOPES, V1_SCOPES, V1_SYSTEMS } from './system-token';
 
 /** The fields the media buyer's adapter parses (`zaki-mediabuyer/src/adapters/oms.ts`) plus `first_contact_at`. */
@@ -109,6 +113,10 @@ const SINCE = '/api/v1/orders/attribution?updated_since=2026-10-26T00:00:00Z';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The 31-day window is measured from «now»: the clock is pinned so the
+  // fixed dates below stay inside it whatever day the suite runs.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-26T12:00:00Z'));
   h.rateLimit.mockReturnValue({ allowed: true, remaining: 59, retryAfterSec: 0 });
   h.db.systemToken.update.mockResolvedValue({});
   h.db.systemToken.findUnique.mockResolvedValue(tokenRow(MEDIABUYER_SCOPES));
@@ -118,6 +126,10 @@ beforeEach(() => {
   h.activeOffersFor.mockResolvedValue([]);
   h.availableStock.mockResolvedValue(20);
   h.reservedElsewhere.mockResolvedValue(0);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('the attribution answer is the contract, field for field', () => {
@@ -283,9 +295,9 @@ describe('the cursor walks every order once', () => {
     expect(h.db.order.findMany).not.toHaveBeenCalled();
   });
 
-  it('a page is never larger than 500, whatever is asked', async () => {
+  it('a page is never larger than 200, whatever is asked', async () => {
     await getAttribution(call(`${SINCE}&limit=100000`));
-    expect(h.db.order.findMany.mock.calls[0][0].take).toBe(501);
+    expect(h.db.order.findMany.mock.calls[0][0].take).toBe(201);
   });
 });
 
@@ -312,7 +324,7 @@ describe('each key reads what it was given and nothing else', () => {
     expect(res.status).toBe(403);
     expect((await res.json()).error).toMatchObject({
       code: 'SCOPE_MISSING',
-      details: { required: 'orders.attribution' },
+      details: { required: 'orders.attribution.read' },
     });
     expect(h.db.order.findMany).not.toHaveBeenCalled();
   });
@@ -322,25 +334,25 @@ describe('each key reads what it was given and nothing else', () => {
     for (const f of ['unit_cost_usd', 'stock_days', 'delivery_fee', 'return_fee', 'cod_fee_pct']) {
       const res = await getProducts(call(`/api/v1/products?fields=code,name,${f}`));
       expect(res.status, f).toBe(403);
-      expect((await res.json()).error.details.required).toBe('products.costs');
+      expect((await res.json()).error.details.required).toBe('products.costs.read');
     }
     expect(h.db.product.findMany).not.toHaveBeenCalled();
   });
 
   it('the media buyer’s key is read-only: three scopes, none that writes or looks up a number', () => {
-    expect([...MEDIABUYER_SCOPES].sort()).toEqual(['orders.attribution', 'products.costs', 'products.read']);
+    expect([...MEDIABUYER_SCOPES].sort()).toEqual(['orders.attribution.read', 'products.costs.read', 'products.read']);
     for (const s of ['orders.create', 'orders.note', 'customers.lookup', 'orders.read']) {
       expect(MEDIABUYER_SCOPES).not.toContain(s);
     }
     // And the replies system did not gain the new two.
-    expect(REPLIES_SCOPES).not.toContain('orders.attribution');
-    expect(REPLIES_SCOPES).not.toContain('products.costs');
+    expect(REPLIES_SCOPES).not.toContain('orders.attribution.read');
+    expect(REPLIES_SCOPES).not.toContain('products.costs.read');
     for (const s of MEDIABUYER_SCOPES) expect(V1_SCOPES).toContain(s);
     expect(V1_SYSTEMS.map((s) => s.key)).toEqual(['replies', 'mediabuyer']);
   });
 
-  it('a key with orders.attribution alone may not read the catalogue', async () => {
-    h.db.systemToken.findUnique.mockResolvedValue(tokenRow(['orders.attribution']));
+  it('a key with orders.attribution.read alone may not read the catalogue', async () => {
+    h.db.systemToken.findUnique.mockResolvedValue(tokenRow(['orders.attribution.read']));
     const res = await getProducts(call('/api/v1/products'));
     expect(res.status).toBe(403);
   });
@@ -417,5 +429,157 @@ describe('the catalogue’s ?fields= adds, and never takes away', () => {
     h.db.product.findMany.mockResolvedValue([product]);
     const [item] = (await (await getProducts(call('/api/v1/products?fields=unit_cost_usd'))).json()).items;
     expect(item.unit_cost_usd).toBeNull();
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * THE OWNER'S SAFETY RULES (2026-10-26): «بدنا حل جذري… ما بدنا نخرب ع حالنا»
+ * ───────────────────────────────────────────────────────────────────────── */
+
+describe('it cannot overload production', () => {
+  it('updated_since more than 31 days back is refused before any query', async () => {
+    const old = new Date(Date.now() - (MAX_WINDOW_DAYS + 1) * 86_400_000).toISOString();
+    const res = await getAttribution(call(`/api/v1/orders/attribution?updated_since=${old}`));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.details).toEqual({ field: 'updated_since', max_days: 31 });
+    expect(h.db.order.findMany).not.toHaveBeenCalled();
+  });
+
+  it('just inside 31 days is still allowed', async () => {
+    const edge = new Date(Date.now() - MAX_WINDOW_DAYS * 86_400_000 + 1000).toISOString();
+    expect((await getAttribution(call(`/api/v1/orders/attribution?updated_since=${edge}`))).status).toBe(200);
+  });
+
+  it('the key’s own allowance is enforced: over it is 429 with Retry-After, and no query', async () => {
+    h.rateLimit.mockReturnValue({ allowed: false, remaining: 0, retryAfterSec: 42 });
+    h.db.systemToken.findUnique.mockResolvedValue(tokenRow(MEDIABUYER_SCOPES, { rateLimitPerMin: 30 }));
+    const res = await getAttribution(call(SINCE));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('42');
+    expect(h.rateLimit).toHaveBeenCalledWith('v1:tok_mb', 30, 60_000);
+    expect(h.db.order.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('stopping the key stops every call on the next request', () => {
+  it('a key revoked between two calls: the first is answered, the second refused at both doors', async () => {
+    expect((await getAttribution(call(SINCE))).status).toBe(200);
+    h.db.systemToken.findUnique.mockResolvedValue(tokenRow(MEDIABUYER_SCOPES, { revokedAt: new Date() }));
+    h.db.order.findMany.mockClear();
+    for (const res of [await getAttribution(call(SINCE)), await getProducts(call('/api/v1/products'))]) {
+      expect(res.status).toBe(401);
+      expect((await res.json()).error.code).toBe('TOKEN_INVALID');
+    }
+    expect(h.db.order.findMany).not.toHaveBeenCalled();
+    expect(h.db.product.findMany).not.toHaveBeenCalled();
+  });
+
+  it('and an expired key the same', async () => {
+    h.db.systemToken.findUnique.mockResolvedValue(tokenRow(MEDIABUYER_SCOPES, { expiresAt: new Date(Date.now() - 1000) }));
+    expect((await getAttribution(call(SINCE))).status).toBe(401);
+  });
+});
+
+describe('no customer data, ever — under any key name, at any depth', () => {
+  const FORBIDDEN_KEY = /^(?:name|full_?name|customer\w*|phone|raw_?phone|alt_?phone|address|delivery_?address|city|email)$/i;
+  const keysDeep = (v: unknown, out: string[] = []): string[] => {
+    if (Array.isArray(v)) v.forEach((x) => keysDeep(x, out));
+    else if (v && typeof v === 'object') {
+      for (const [k, x] of Object.entries(v)) {
+        out.push(k);
+        keysDeep(x, out);
+      }
+    }
+    return out;
+  };
+
+  it('the attribution answer carries no name, phone, address, rawPhone or altPhone key', async () => {
+    h.db.order.findMany.mockResolvedValue([
+      orderRow({
+        customer: { fullName: 'أبو أحمد', phone: '0936654998', rawPhone: '0936654998', altPhone: '0944000000', address: 'حلب' },
+      }),
+    ]);
+    const body = await (await getAttribution(call(SINCE))).json();
+    expect(keysDeep(body).filter((k) => FORBIDDEN_KEY.test(k))).toEqual([]);
+    expect(JSON.stringify(body)).not.toMatch(/09[0-9]{8}|\+?9639[0-9]{8}/);
+  });
+
+  it('and capi_ref is opaque: null, or an enc: reference — never a readable number', async () => {
+    const { items } = await (await getAttribution(call(SINCE))).json();
+    for (const i of items) expect(i.capi_ref === null || /^enc:[A-Za-z0-9_-]+$/.test(i.capi_ref)).toBe(true);
+  });
+});
+
+describe('the frozen contract — contracts/oms-mediabuyer.v1', () => {
+  type Schema = Record<string, unknown>;
+  const DIR = join(process.cwd(), 'contracts', 'oms-mediabuyer.v1');
+  const file = (n: string) => JSON.parse(readFileSync(join(DIR, n), 'utf8'));
+
+  /** `validate` does not descend into `items`; this walks the arrays it skips. */
+  const arrays = (schema: Schema, value: unknown, path: string): string[] => {
+    const errs: string[] = [];
+    if (schema.type === 'array' && Array.isArray(value) && schema.items) {
+      value.forEach((el, i) => {
+        const sub = schema.items as Schema;
+        errs.push(...validate(sub, el, `${path}[${i}]`), ...arrays(sub, el, `${path}[${i}]`));
+      });
+    } else if (schema.type === 'object' && value && typeof value === 'object') {
+      for (const [k, sub] of Object.entries((schema.properties ?? {}) as Record<string, Schema>)) {
+        if (k in (value as object)) errs.push(...arrays(sub, (value as Record<string, unknown>)[k], `${path}.${k}`));
+      }
+    }
+    return errs;
+  };
+  const check = (schema: Schema, value: unknown) => [...validate(schema, value), ...arrays(schema, value, 'root')];
+
+  const ATTR = file('attribution-page.schema.json');
+  const PROD = file('products-page.schema.json');
+
+  it('the golden pages fit their schemas', () => {
+    expect(check(ATTR, file('attribution-page.example.json'))).toEqual([]);
+    expect(check(PROD, file('products-page.example.json'))).toEqual([]);
+  });
+
+  it('and the checker is not vacuous: a field too many, a field missing, a wrong type all fail', () => {
+    const page = file('attribution-page.example.json');
+    const first = page.items[0];
+    expect(check(ATTR, { ...page, items: [{ ...first, phone: '0936654998' }] }).length).toBeGreaterThan(0);
+    const noStatus = { ...first };
+    delete noStatus.status;
+    expect(check(ATTR, { ...page, items: [noStatus] }).length).toBeGreaterThan(0);
+    expect(check(ATTR, { ...page, items: [{ ...first, order_value: 20 }] }).length).toBeGreaterThan(0);
+    expect(check(ATTR, { ...page, items: [{ ...first, capi_ref: '0936654998' }] }).length).toBeGreaterThan(0);
+  });
+
+  it('what the door answers today fits the contract — every kind of order', async () => {
+    h.db.order.findMany.mockResolvedValue([
+      orderRow(),
+      orderRow({
+        id: 'b',
+        shippingStatus: 'PARTIALLY_DELIVERED',
+        collectedAmount: { toString: () => '12.5' },
+        deliveredAt: new Date('2026-10-26T06:00:00Z'),
+      }),
+      orderRow({ id: 'c', confirmationStatus: 'REJECTED', rejectionReason: 'FAKE_ORDER', adId: null, campaign: null, landingPage: null, contactAttempts: [] }),
+      orderRow({ id: 'd', currency: 'JOD', store: { country: { code: 'JO', timezone: 'Asia/Amman', minorUnit: 3 } }, totalAmount: 25 }),
+    ]);
+    expect(check(ATTR, await (await getAttribution(call(SINCE))).json())).toEqual([]);
+  });
+
+  it('and so does the catalogue, without fields and with every one', async () => {
+    h.db.product.findMany.mockResolvedValue([
+      { id: 'p1', sku: 'TRF01', name: 'ماء الكمأة', nameEn: 'KamaaEye', basePrice: 20, storeId: 's1', store: { country: { currencyCode: 'USD', minorUnit: 2 } } },
+    ]);
+    h.activeOffersFor.mockResolvedValue([{ name: '2 قطع', quantity: 2, price: 35, listPrice: 40, endsAt: null }]);
+    h.db.order.findFirst.mockResolvedValue(null);
+    h.db.orderItem.findMany.mockResolvedValue([]);
+    expect(check(PROD, await (await getProducts(call('/api/v1/products'))).json())).toEqual([]);
+    const all = `/api/v1/products?fields=code,name,${PRODUCT_FIELDS.join(',')}`;
+    expect(check(PROD, await (await getProducts(call(all))).json())).toEqual([]);
+  });
+
+  it('every optional field the door can add is declared in the contract', () => {
+    const declared = Object.keys(PROD.properties.items.items.properties);
+    for (const f of PRODUCT_FIELDS) expect(declared, f).toContain(f);
   });
 });

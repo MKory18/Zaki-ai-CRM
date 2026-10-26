@@ -62,9 +62,18 @@ export const STATUS_OF: Record<CoreState, AttributionStatus> = {
   VOIDED: 'canceled',
 };
 
-/** A page is this many orders unless the caller asks for fewer. */
+/**
+ * THE CAPS — so a sync can never be the thing that hangs production.
+ *
+ * The owner's rule (2026-10-26): «بدنا حل جذري… ما بدنا نخرب ع حالنا». One
+ * call reads at most 200 orders over at most 31 days, through the
+ * `(companyId, updatedAt)` index, and a key is held to its own per-minute
+ * allowance (30 for the media buyer — `V1_SYSTEMS`). A full re-read of
+ * history is not a thing this door does.
+ */
 export const PAGE_DEFAULT = 200;
-export const PAGE_MAX = 500;
+export const PAGE_MAX = 200;
+export const MAX_WINDOW_DAYS = 31;
 
 /**
  * THE CURSOR — where the last page stopped, as (updatedAt, id).
@@ -95,12 +104,22 @@ export function decodeCursor(raw: string): { updatedAt: Date; id: string } {
   });
 }
 
-/** `updated_since`, required: a sync with no starting point would read the whole history every hour. */
-export function readSince(raw: string | null): Date {
+/**
+ * `updated_since`, required and at most `MAX_WINDOW_DAYS` back: a sync with
+ * no starting point, or one starting a year ago, would read the whole
+ * history in one breath.
+ */
+export function readSince(raw: string | null, now: Date = new Date()): Date {
   const at = raw ? new Date(raw) : null;
   if (!at || Number.isNaN(at.getTime())) {
     throw new V1Fault(422, V1_CODE.VALIDATION_FAILED, 'updated_since must be an ISO 8601 date-time', {
       field: 'updated_since',
+    });
+  }
+  if (now.getTime() - at.getTime() > MAX_WINDOW_DAYS * 86_400_000) {
+    throw new V1Fault(422, V1_CODE.VALIDATION_FAILED, `updated_since may be at most ${MAX_WINDOW_DAYS} days back`, {
+      field: 'updated_since',
+      max_days: MAX_WINDOW_DAYS,
     });
   }
   return at;

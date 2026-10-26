@@ -36,7 +36,7 @@ import { productFigures, readFields, requireCostScope } from '@/lib/v1/product-f
  * Without `fields` the answer is byte-for-byte what it was. With it, the
  * named optional fields are ADDED to each item — never instead of one:
  * `aliases` and `price_options` under `products.read`, and the cost and
- * shelf figures only under `products.costs` (`src/lib/v1/product-figures.ts`,
+ * shelf figures only under `products.costs.read` (`src/lib/v1/product-figures.ts`,
  * which says where each comes from and which have no single source).
  */
 

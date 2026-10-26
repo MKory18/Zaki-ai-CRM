@@ -32,7 +32,7 @@ import type { SystemCaller } from './system-token';
  *
  * The catalogue was built «بلا تكلفة ولا مخزون رقمي حساس» for the replies
  * system, and that stays true for it: asking for any of these without
- * `products.costs` is refused, not quietly answered.
+ * `products.costs.read` is refused, not quietly answered.
  */
 
 /** The optional fields the catalogue may be asked for. Anything else in `fields` is ignored. */
@@ -66,12 +66,12 @@ export function readFields(raw: string | null): Set<ProductField> {
   return out;
 }
 
-/** Refuses a cost field to a key that was not granted `products.costs`. */
+/** Refuses a cost field to a key that was not granted `products.costs.read`. */
 export function requireCostScope(caller: SystemCaller, wanted: Set<ProductField>): void {
   const asked = [...wanted].filter((f) => COST_FIELDS.has(f));
-  if (asked.length > 0 && !caller.scopes.includes('products.costs')) {
-    throw new V1Fault(403, V1_CODE.SCOPE_MISSING, 'The token lacks the scope products.costs', {
-      required: 'products.costs',
+  if (asked.length > 0 && !caller.scopes.includes('products.costs.read')) {
+    throw new V1Fault(403, V1_CODE.SCOPE_MISSING, 'The token lacks the scope products.costs.read', {
+      required: 'products.costs.read',
       fields: asked,
     });
   }

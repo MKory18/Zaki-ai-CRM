@@ -1,0 +1,53 @@
+{
+  "items": [
+    {
+      "order_id": "0b6c2a8e-5f1d-4c1e-9a7b-2d3e4f5a6b7c",
+      "product_code": "TRF01",
+      "country": "SY",
+      "channel": "landing_page",
+      "ad_id": "120211000000000001",
+      "adset_id": null,
+      "campaign_id": "120210000000000009",
+      "ad_name": null,
+      "landing_page": "https://crm.zakiai.io/lp/kamaa-eye-water",
+      "status": "confirmed",
+      "created_at": "2026-10-26T07:00:00+03:00",
+      "confirmed_at": "2026-10-26T08:00:00+03:00",
+      "shipped_at": null,
+      "delivered_at": null,
+      "returned_at": null,
+      "canceled_at": null,
+      "order_value": "20.00",
+      "collected": null,
+      "currency": "USD",
+      "is_fake": false,
+      "first_contact_at": "2026-10-26T07:30:00+03:00",
+      "capi_ref": null
+    },
+    {
+      "order_id": "7c1d9e2f-0a3b-4c5d-8e6f-1a2b3c4d5e6f",
+      "product_code": "TIN01",
+      "country": "JO",
+      "channel": "whatsapp",
+      "ad_id": null,
+      "adset_id": null,
+      "campaign_id": null,
+      "ad_name": null,
+      "landing_page": null,
+      "status": "delivered",
+      "created_at": "2026-10-24T10:15:00+03:00",
+      "confirmed_at": "2026-10-24T11:00:00+03:00",
+      "shipped_at": "2026-10-25T09:00:00+03:00",
+      "delivered_at": "2026-10-26T13:40:00+03:00",
+      "returned_at": null,
+      "canceled_at": null,
+      "order_value": "25.000",
+      "collected": "18.500",
+      "currency": "JOD",
+      "is_fake": false,
+      "first_contact_at": null,
+      "capi_ref": null
+    }
+  ],
+  "next_cursor": "eyJ1IjoiMjAyNi0xMC0yNlQxMDo0MDowMC4wMDBaIiwiaSI6IjdjMWQ5ZTJmIn0"
+}

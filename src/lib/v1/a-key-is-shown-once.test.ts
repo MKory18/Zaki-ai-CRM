@@ -242,13 +242,25 @@ describe('what the list says about each key', () => {
     expect([...shelf.repliesScopes].sort()).toEqual([...REPLIES_SCOPES].sort());
     // And each system a key may be made for, with the scopes it starts from.
     expect(shelf.systems).toEqual([
-      { key: 'replies', ar: 'نظام الردود', scopes: REPLIES_SCOPES },
-      { key: 'mediabuyer', ar: 'الميديا باير', scopes: MEDIABUYER_SCOPES },
+      { key: 'replies', ar: 'نظام الردود', scopes: REPLIES_SCOPES, rateLimitPerMin: 60 },
+      { key: 'mediabuyer', ar: 'الميديا باير', scopes: MEDIABUYER_SCOPES, rateLimitPerMin: 30 },
     ]);
     // Each with Arabic, because a checkbox labelled `orders.note` is a
     // checkbox a seller does not tick.
     for (const s of shelf.scopeCatalog as { ar: string }[]) {
       expect(s.ar).toMatch(/[؀-ۿ]/);
     }
+  });
+});
+
+describe('a key starts with its own system’s allowance', () => {
+  it('the media buyer’s key is held to thirty a minute unless somebody chooses otherwise', async () => {
+    await POST(body({ name: 'الميديا باير', system: 'mediabuyer', scopes: MEDIABUYER_SCOPES }));
+    expect(h.db.systemToken.create.mock.calls[0][0].data.rateLimitPerMin).toBe(30);
+  });
+
+  it('and the replies system keeps its sixty', async () => {
+    await POST(body({ name: 'نظام الردود', scopes: REPLIES_SCOPES }));
+    expect(h.db.systemToken.create.mock.calls[0][0].data.rateLimitPerMin).toBe(60);
   });
 });
