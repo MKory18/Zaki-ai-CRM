@@ -19,6 +19,7 @@ import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { authorize, can, getPermissionScope } from '@/lib/authorization';
+import { maySeeOrderCost, projectOrder } from '@/lib/order-projection';
 import { MAX_REASON, MIN_REASON, reasonRefusal } from '@/lib/order-edit-reason';
 import { CHANGEABLE_FIELDS, CHANGE_FIELD_AR } from '@/lib/change-request-fields';
 import { TERMINAL_CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
@@ -421,7 +422,11 @@ export async function GET(
     });
 
     return NextResponse.json({
-      order: { ...order, state, zone: getZone(state), commission, closing },
+      // Cost, profit and other people's commission only to those whose screens show money — see order-projection.ts.
+      order: projectOrder(
+        { ...order, state, zone: getZone(state), commission: maySeeOrderCost(user) ? commission : undefined, closing },
+        user,
+      ),
       // The store's own currency, so the detail screen shows the same money
       // the list does instead of a hard-coded dollar sign.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },

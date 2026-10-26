@@ -704,7 +704,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
               </div>
 
               {/* Costs are ours, not the customer's — kept apart so the column
-                  above never reads as a sum that includes them. */}
+                  above never reads as a sum that includes them. And only to
+                  the finance key: the server sends them to nobody else. */}
+              {userCan(currentUser, 'finance.view') && (
               <div className="mt-2 rounded-lg border border-[var(--sys-border)] divide-y divide-[var(--sys-border)]">
                 <p className="text-xs font-bold text-[var(--sys-muted-foreground)] px-2.5 py-1.5 bg-[var(--sys-surface)] rounded-t-lg">
                   تكاليفنا على هذا الطلب
@@ -718,6 +720,7 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
                   <span className="text-[var(--sys-foreground)]" dir="ltr">{money(order.commission ?? 0)}</span>
                 </div>
               </div>
+              )}
             </div>
           </div>
 
