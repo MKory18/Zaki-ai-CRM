@@ -99,8 +99,9 @@ function expandLegacyKey(legacy: string): string[] {
     'users.manage': ['users.view', 'users.create', 'users.edit', 'users.delete'],
     'users.manage_roles': ['roles.view', 'roles.edit'],
     'moderators.manage': ['users.view', 'users.edit'],
-    // SETTINGS
-    'settings.manage': ['settings.edit'],
+    // SETTINGS — the legacy key meant both: the general settings AND the
+    // sensitive ones, which are their own box since the alias went (RV149).
+    'settings.manage': ['settings.edit', 'settings.manage'],
     // CRM
     'crm.view': ['crm.view', 'crm.contacts.view', 'crm.companies.view', 'crm.leads.view', 'crm.deals.view', 'crm.tasks.view', 'crm.invoices.view'],
     'crm.manage': [
