@@ -1769,6 +1769,9 @@ model OrderAddOn {
   /// (`status: INACTIVE`), and this record of what was sold must survive
   /// whatever later happens to the configuration it was sold from.
   offerId       String?
+  /// Units this add-on holds on the shelf — the same meaning as `OrderItem.reservedQty`. Reserved with the order's
+  /// lines at confirmation, released with them, cleared when the goods leave (`consumeOrderStock`).
+  reservedQty   Int      @default(0)
   createdAt     DateTime @default(now())
 
   company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)

@@ -469,6 +469,8 @@ function ledger(opts: { orderStore: string | null; shelf: Row[]; alreadySold?: b
       }),
       update: async () => ({}),
     },
+    // An order with no add-ons, unless a test says otherwise — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: { updateMany: async () => ({ count: 0 }) },
     productionBatch: {
       findMany: async ({ where, orderBy }: any) => {

@@ -52,7 +52,7 @@ const { makeDb, requireContext, assertOrderAccess, authorize, can, getPermission
  */
 vi.mock('@/lib/db', () => {
   const forward = (model: string, method: string) => (args: unknown) => makeDb.current[model][method](args);
-  const models = ['order', 'orderItem', 'customer', 'productionBatch', 'inventoryMovement', 'orderStatusLog', 'orderActivity'];
+  const models = ['order', 'orderItem', 'orderAddOn', 'customer', 'productionBatch', 'inventoryMovement', 'orderStatusLog', 'orderActivity'];
   const methods = ['findFirst', 'findUnique', 'findMany', 'create', 'createMany', 'update', 'updateMany', 'deleteMany', 'aggregate', 'count'];
   const db: Record<string, unknown> = {
     $transaction: (fn: (tx: unknown) => unknown) => fn(db),
@@ -189,6 +189,8 @@ function world(opts: {
         store: { country: { minorUnit: 2 } },
       }),
     },
+    // An order with no add-ons, unless a test says otherwise — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: {
       updateMany: async () => ({ count: 0 }),
       deleteMany: async () => ({ count: 0 }),
