@@ -3,6 +3,7 @@ import { manageableUserWhere } from '@/lib/manageable-user';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { can, requirePermission } from '@/lib/authorization';
+import { canActOnUser } from '@/lib/user-permissions';
 
 
 /**
@@ -21,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       // three more times on the sibling routes, with one of the four wrong.
       where: manageableUserWhere(viewer, id),
       select: {
-        id: true, name: true, email: true, role: true, status: true,
+        id: true, name: true, email: true, role: true, roleId: true, status: true,
         lastLoginAt: true, createdAt: true, phone: true, commissionRate: true,
         companyId: true,
         // The field on the screen was writeable and never read back: it
@@ -65,10 +66,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // whole company's salaries — and once it is in the response it is in
     // the browser, whatever the screen chooses to draw.
     const maySeePay = can(viewer, 'payroll.view');
-    const { salaryAmount, salaryCurrency, ...rest } = user;
+    const { salaryAmount, salaryCurrency, roleId, ...rest } = user;
+
+    // Whether this viewer may act on the account at all (canActOnUser): the
+    // screen draws its controls from this, so the rule is seen before a press
+    // rather than met as a refusal after a confirm.
+    const reach = await canActOnUser(viewer, { id: user.id, role: user.role, roleId });
 
     return NextResponse.json({
       ...rest,
+      mayManage: reach.ok,
+      ...(reach.ok ? {} : { manageRefusal: reach.error }),
       ...(maySeePay
         ? { salaryAmount: salaryAmount === null ? null : Number(salaryAmount), salaryCurrency }
         : {}),

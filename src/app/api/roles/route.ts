@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
 import { isReservedRoleName } from '@/lib/role-names';
-import { granterHoldsAll } from '@/lib/user-permissions';
+import { granterHoldsAll, roleScopeRefusal } from '@/lib/user-permissions';
 
 // Allowed canonical keys — built from the UI catalog (single source of truth).
 const ALLOWED_KEYS: Set<string> = new Set(
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     // Granter-must-hold (same rule as PATCH): a created role must never carry
     // keys/scope-strengths the actor does not hold — the role could otherwise
     // be assigned to anyone (incl. via role-deletion replacement).
-    const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY' })));
+    const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY', scopeIds: p.scopeIds })));
     if (grantError) {
       return NextResponse.json({ error: grantError }, { status: 403 });
     }
@@ -135,6 +135,10 @@ export async function POST(req: Request) {
     } else {
       return NextResponse.json({ error: 'غير مسموح' }, { status: 403 });
     }
+
+    // The ids in a CATEGORY/SPECIFIC scope are this company's, and the scope is one the key offers.
+    const scopeRefusal = await roleScopeRefusal(companyId, permissions);
+    if (scopeRefusal) return NextResponse.json({ error: scopeRefusal }, { status: 400 });
 
     const duplicate = await db.role.findFirst({ where: { companyId, name: name.trim() }, select: { id: true } });
     if (duplicate) {

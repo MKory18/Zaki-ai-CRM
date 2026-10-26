@@ -126,3 +126,38 @@ describe('a role this score does not measure', () => {
     expect(body.rank).toBeNull();
   });
 });
+
+/**
+ * WHAT A COLLEAGUE IS OWED IS PAY, NOT A SCORE.
+ *
+ * «مراقبة الفريق» opens somebody else's card for their scores; it handed
+ * over what the business owes them too. Their own card still carries it.
+ */
+describe('the money owed, on somebody else’s card', () => {
+  beforeEach(() => {
+    db.user.findFirst.mockResolvedValue({ id: OTHER, name: 'ليلى', role: 'CONFIRMATION_AGENT', commissionCurrency: null });
+    peersOf.mockResolvedValue([{ id: OTHER, name: 'ليلى' }]);
+    scoreRole.mockResolvedValue([ROW(OTHER, 60, 1)]);
+  });
+
+  it('is not on it for the team key alone — and the ledger is not even asked', async () => {
+    can.mockImplementation((_u: unknown, k: string) => k === 'team.monitor');
+    const body = await (await card(OTHER)).json();
+    expect(body.owed).toBeNull();
+    expect(owedTo).not.toHaveBeenCalled();
+    expect(body.score).toBeTruthy();
+  });
+
+  it('is on it for payroll', async () => {
+    can.mockImplementation((_u: unknown, k: string) => k === 'team.monitor' || k === 'payroll.view');
+    const body = await (await card(OTHER)).json();
+    expect(body.owed).toEqual([{ currencyCode: 'SYP', amount: 500, entries: ['e1'] }]);
+  });
+
+  it('and always on my own', async () => {
+    db.user.findFirst.mockResolvedValue({ id: ME, name: 'سارة', role: 'CONFIRMATION_AGENT', commissionCurrency: null });
+    scoreRole.mockResolvedValue([ROW(ME, 71, 2)]);
+    const body = await (await card()).json();
+    expect(body.owed).toEqual([{ currencyCode: 'SYP', amount: 500, entries: ['e1'] }]);
+  });
+});

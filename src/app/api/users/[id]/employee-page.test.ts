@@ -27,7 +27,11 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/authorization', () => ({
   requirePermission: async () => actor.current,
 }));
-vi.mock('@/lib/user-permissions', () => ({ canConferRole: (...a: unknown[]) => canConferRole(...a) }));
+// Acting on a more senior account is its own test (people-act-within-their-reach).
+vi.mock('@/lib/user-permissions', () => ({
+  canConferRole: (...a: unknown[]) => canConferRole(...a),
+  canActOnUser: async () => ({ ok: true }),
+}));
 
 import { PATCH } from './route';
 
@@ -112,6 +116,23 @@ describe('the phone', () => {
       expect((await patch({ action: 'updateContact', phone: bad })).status).toBe(400);
     }
     expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  /**
+   * AND IT IS NOT WIPED BY A CARD THAT DOES NOT SEND IT.
+   *
+   * The shift, salary and commission-currency cards save through the same
+   * action without a phone, and an absent phone read as «cleared»: every one
+   * of those saves wiped the employee's number. Absent means untouched.
+   */
+  it('a save that does not carry the phone leaves it as it was', async () => {
+    db.user.findUnique.mockResolvedValue({
+      id: 'u2', name: 'سارة', email: 's@x.com', role: 'CONFIRMATION_AGENT', roleId: 'role-agent',
+      status: 'ACTIVE', companyId: 'c1', phone: '0791234567', assignedBy: null,
+    });
+    const res = await patch({ action: 'updateContact', shiftStart: '10:00', shiftEnd: '18:00' });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(db.user.update.mock.calls[0][0].data).not.toHaveProperty('phone');
   });
 });
 

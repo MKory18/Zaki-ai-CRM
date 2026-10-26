@@ -498,7 +498,8 @@ const read = (rel: string) =>
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
-const RATE_DOORS = ['src/app/api/users/route.ts', 'src/app/api/moderators/route.ts'];
+// One door: `/api/moderators` POST is closed (410) and writes no rate.
+const RATE_DOORS = ['src/app/api/users/route.ts'];
 const PRICE_DOORS = ['src/app/api/products/route.ts', 'src/app/api/products/[id]/route.ts'];
 
 describe('no door carries a second rule for a column it shares', () => {

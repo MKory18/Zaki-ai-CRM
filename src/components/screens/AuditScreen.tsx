@@ -36,6 +36,8 @@ interface Row {
   newData: string | null;
   createdAt: string;
   user: { id: string; name: string; role: string } | null;
+  /** The server took the amounts out: this reader has no «عرض الرواتب». */
+  payWithheld?: true;
 }
 interface Facts {
   users: { id: string; name: string; count: number }[];
@@ -160,14 +162,21 @@ export function AuditScreen() {
                 {
                   key: 'what',
                   label: 'التفاصيل',
-                  render: (l) =>
-                    l.newData ? (
-                      <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded-lg">
-                        {summariseChange(l.newData)}
-                      </span>
-                    ) : (
-                      '—'
-                    ),
+                  render: (l) => (
+                    <>
+                      {l.newData ? (
+                        <span title={l.newData} className="bg-[var(--sys-surface)] px-2 py-0.5 rounded-lg">
+                          {summariseChange(l.newData)}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                      {/* Said, so a missing amount does not read as a missing record. */}
+                      {l.payWithheld && (
+                        <span className="block text-xs text-[var(--sys-muted)]">المبالغ لا تظهر إلا لمن معه صلاحية «عرض الرواتب».</span>
+                      )}
+                    </>
+                  ),
                 },
               ]}
               empty={

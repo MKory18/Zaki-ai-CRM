@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { manageableUserWhere, USER_NOT_FOUND } from '@/lib/manageable-user';
+import { canActOnUser } from '@/lib/user-permissions';
 import type { SessionUser } from '@/types/auth';
 import { firstIssue, geoAccessSchema } from '@/lib/geo-schemas';
 import { currentGeoAccess, geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
@@ -50,6 +51,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { user, companyId } = await requireCompanyTenant();
     await requirePermission('geo.manage');
     if (!(await manageable(user, id))) return NextResponse.json({ error: USER_NOT_FOUND }, { status: 404 });
+    // Which countries and stores somebody reaches is power over their work:
+    // not on an account whose role carries powers this person lacks.
+    const target = await db.user.findUnique({ where: { id }, select: { id: true, role: true, roleId: true } });
+    if (target) {
+      const acting = await canActOnUser(user, target);
+      if (!acting.ok) return NextResponse.json({ error: acting.error }, { status: acting.status });
+    }
 
     const parsed = geoAccessSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: firstIssue(parsed.error) }, { status: 400 });
