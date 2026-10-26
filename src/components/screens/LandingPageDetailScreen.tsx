@@ -190,6 +190,20 @@ export function LandingPageDetailScreen() {
     } finally { setRecSaving(false); }
   };
 
+  // The one line the customer reads under the suggestion. Saved when the field is left;
+  // blank goes back to the start of the product's description.
+  const saveRecommendationBlurb = async (recId: string, before: string | null, value: string) => {
+    const blurb = value.trim();
+    if (blurb === (before ?? '')) return;
+    try {
+      await crmApi(`/api/landing-pages/${lpId}/recommendations/${recId}`, { method: 'PATCH', body: JSON.stringify({ blurb: blurb || null }) });
+      await loadRecs();
+      await refreshPreview();
+    } catch (e: any) {
+      void tell({ title: 'تعذّر حفظ وصف المنتج المقترح', body: e.message, tone: 'danger' });
+    }
+  };
+
   const deleteRecommendation = async (recId: string) => {
     try {
       await crmApi(`/api/landing-pages/${lpId}/recommendations/${recId}`, { method: 'DELETE' });
@@ -478,7 +492,7 @@ export function LandingPageDetailScreen() {
                     <RiGiftLine className="w-4 h-4 text-[var(--sys-primary)]" /> المنتجات المقترحة بعد الطلب
                   </h3>
                 </div>
-                <p className="text-xs text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة.</p>
+                <p className="text-xs text-[var(--sys-muted-foreground)]">تظهر في شاشة النجاح بعد الطلب — يمكن للعميل إضافتها إلى نفس الطلب خلال 30 دقيقة. تحت كل منتج سطر قصير (اكتبه أو بيُأخذ من وصف المنتج)، ورابط «شوف المنتج» لصفحته إذا إله صفحة منشورة.</p>
                 <div className="flex gap-2">
                   {/*
                     The same 114-row dropdown, a second time on this screen —
@@ -510,12 +524,22 @@ export function LandingPageDetailScreen() {
                 ) : (
                   <div className="space-y-1.5">
                     {recs.map((r: any, i: number) => (
-                      <div key={r.id} className="flex items-center gap-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
-                        <span className="text-xs text-[var(--sys-muted)]">{i + 1}.</span>
-                        <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
-                        <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
-                        {!r.isActive && <span className="text-xs text-[var(--sys-warning)]">معطّل</span>}
-                        <button aria-label="حذف" title="حذف" onClick={() => deleteRecommendation(r.id)} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
+                      <div key={r.id} className="space-y-1.5 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[var(--sys-muted)]">{i + 1}.</span>
+                          <span className="flex-1 truncate text-sm text-[var(--sys-heading)]">{r.product?.name}</span>
+                          <span className="text-xs font-bold text-[var(--sys-primary)]" dir="ltr">{r.product?.basePrice ?? '—'}</span>
+                          {!r.isActive && <span className="text-xs text-[var(--sys-warning)]">معطّل</span>}
+                          <button aria-label="حذف" title="حذف" onClick={() => deleteRecommendation(r.id)} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded-lg hover:bg-[var(--sys-destructive-soft)] text-[var(--sys-destructive)]"><RiDeleteBinLine className="w-4 h-4" /></button>
+                        </div>
+                        <Input
+                          key={`${r.id}:${r.blurb ?? ''}`}
+                          aria-label={`سطر قصير تحت ${r.product?.name ?? 'المنتج'}`}
+                          defaultValue={r.blurb ?? ''}
+                          maxLength={140}
+                          placeholder={r.product?.description ? `فاضي = «${String(r.product.description).slice(0, 50)}…»` : 'سطر قصير يشوّق الزبون — مثلاً: بيخلّي شعرك ناعم من أول غسلة'}
+                          onBlur={(e) => saveRecommendationBlurb(r.id, r.blurb ?? null, e.target.value)}
+                        />
                       </div>
                     ))}
                   </div>

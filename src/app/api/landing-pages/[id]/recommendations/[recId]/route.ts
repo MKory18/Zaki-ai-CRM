@@ -7,6 +7,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { count } from '@/lib/numeric-input';
+import { BLURB_MAX } from '@/lib/recommendation-view';
 
 interface Ctx {
   params: Promise<{ id: string; recId: string }>;
@@ -26,6 +27,8 @@ interface Ctx {
 const patchSchema = z.object({
   sortOrder: count(999).optional(),
   isActive: z.boolean().optional(),
+  // Absent leaves the line alone; blank or null clears it back to the description.
+  blurb: z.string().trim().max(BLURB_MAX).nullable().optional().transform((v) => (v === undefined ? undefined : v || null)),
 });
 
 export async function PATCH(req: Request, ctx: Ctx) {

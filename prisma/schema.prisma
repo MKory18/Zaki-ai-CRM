@@ -1734,6 +1734,9 @@ model LandingPageRecommendation {
   productId     String
   sortOrder     Int      @default(0)
   isActive      Boolean  @default(true)
+  /// One short line the seller writes for this suggestion on this page.
+  /// Null: the screen reads the start of the product's description instead.
+  blurb         String?  @db.VarChar(140)
   createdAt     DateTime @default(now())
 
   landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)

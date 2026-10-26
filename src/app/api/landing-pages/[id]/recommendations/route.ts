@@ -7,6 +7,7 @@ import { requirePermission } from '@/lib/authorization';
 import { apiError } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { count } from '@/lib/numeric-input';
+import { BLURB_MAX } from '@/lib/recommendation-view';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -22,7 +23,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     const recommendations = await db.landingPageRecommendation.findMany({
       where: { landingPageId: id },
       orderBy: { sortOrder: 'asc' },
-      include: { product: { select: { id: true, name: true, basePrice: true, image: true } } },
+      include: { product: { select: { id: true, name: true, basePrice: true, image: true, description: true } } },
     });
     return NextResponse.json({ recommendations });
   } catch (error) {
@@ -48,6 +49,8 @@ const createSchema = z.object({
   productId: z.string().min(10).max(64),
   sortOrder: count(999).optional().default(0),
   isActive: z.boolean().optional().default(true),
+  // The seller's one line for this suggestion; blank means "use the product's description".
+  blurb: z.string().trim().max(BLURB_MAX).nullable().optional().transform((v) => v || null),
 });
 
 export async function POST(req: Request, ctx: Ctx) {
@@ -77,6 +80,7 @@ export async function POST(req: Request, ctx: Ctx) {
           productId: v.productId,
           sortOrder: v.sortOrder,
           isActive: v.isActive,
+          blurb: v.blurb,
         },
         include: { product: { select: { id: true, name: true, basePrice: true, image: true } } },
       });

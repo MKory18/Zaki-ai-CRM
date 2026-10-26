@@ -75,7 +75,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const source = await db.landingPage.findFirst({
       where: { id, companyId, ...(storeId ? { storeId } : {}) },
       include: {
-        recommendations: { select: { productId: true, sortOrder: true, isActive: true } },
+        recommendations: { select: { productId: true, sortOrder: true, isActive: true, blurb: true } },
       },
     });
     if (!source) return NextResponse.json({ error: 'الصفحة غير موجودة' }, { status: 404 });
@@ -118,6 +118,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
             productId: r.productId,
             sortOrder: r.sortOrder,
             isActive: r.isActive,
+            blurb: r.blurb,
           })),
         });
       }
