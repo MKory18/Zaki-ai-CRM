@@ -133,3 +133,30 @@ describe('the browser’s count — «خلي العدّ بالطريقتين أ�
     expect(() => new Function(js)).not.toThrow();
   });
 });
+
+describe('the cached page — built once for every visitor', () => {
+  it('is not counted by the server, and its script reports the visit as the official one', async () => {
+    const tree = await LandingPageView({ target: { slug: 'offer', cached: true } });
+    await settle();
+    expect(db.landingPage.update).not.toHaveBeenCalled();
+    expect(recordLandingView).not.toHaveBeenCalled();
+    const scripts = findAll(tree, BrowserVisit);
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0].props.official).toBe(true);
+  });
+
+  it('NEGATIVE: a page built per request keeps the server count, and its script stays a comparison', async () => {
+    const tree = await LandingPageView({ target: { slug: 'offer' } });
+    await settle();
+    expect(db.landingPage.update).toHaveBeenCalledTimes(1);
+    expect(findAll(tree, BrowserVisit)[0].props.official).toBe(false);
+  });
+
+  it('only the official script says so to the endpoint', () => {
+    const html = (official: boolean) =>
+      (BrowserVisit({ pageId: 'lp1', official }) as { props: { dangerouslySetInnerHTML: { __html: string } } }).props
+        .dangerouslySetInnerHTML.__html;
+    expect(html(true)).toContain(',o:1');
+    expect(html(false)).not.toContain('o:1');
+  });
+});

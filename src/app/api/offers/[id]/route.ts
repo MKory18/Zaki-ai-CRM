@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
@@ -87,6 +88,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       newData: offer,
     });
 
+    await refreshLandingPages({ productId: offer.productId, companyId });
     return NextResponse.json({ success: true, offer });
   } catch (error) {
     return apiErrorResponse(error);
@@ -120,6 +122,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
         previousData: existing,
         newData: { ...offer, reason: `linked to ${usedBy} order(s)` },
       });
+      // A retired offer leaves the page as surely as a deleted one: rebuild the cached pages now.
+      await refreshLandingPages({ productId: existing.productId, companyId });
       return NextResponse.json({
         success: true,
         retired: true,
@@ -137,6 +141,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
       previousData: existing,
     });
 
+    await refreshLandingPages({ productId: existing.productId, companyId });
     return NextResponse.json({ success: true });
   } catch (error) {
     return apiErrorResponse(error);

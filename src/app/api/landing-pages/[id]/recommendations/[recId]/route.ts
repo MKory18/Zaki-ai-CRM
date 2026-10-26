@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -45,6 +46,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!existing) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
     const rec = await db.landingPageRecommendation.update({ where: { id: existing.id }, data: parsed.data });
+    await refreshLandingPages({ pageId: id });
     return NextResponse.json({ success: true, recommendation: rec });
   } catch (error) {
     const { body, status } = apiError(error);
@@ -65,6 +67,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     if (!existing) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
     await db.landingPageRecommendation.delete({ where: { id: existing.id } });
+    await refreshLandingPages({ pageId: id });
     return NextResponse.json({ success: true });
   } catch (error) {
     const { body, status } = apiError(error);

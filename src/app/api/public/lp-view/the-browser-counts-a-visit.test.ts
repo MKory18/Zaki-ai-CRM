@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * «خلي العدّ بالطريقتين أسبوع» — the browser's count of a visit, beside the server's.
@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 const { db, recordBrowserView, recordLandingView, resolveCampaign, ip } = vi.hoisted(() => ({
-  db: { landingPage: { findFirst: vi.fn() } },
+  db: { landingPage: { findFirst: vi.fn(), update: vi.fn() } },
   recordBrowserView: vi.fn(),
   recordLandingView: vi.fn(),
   resolveCampaign: vi.fn(async () => 'cmp1'),
@@ -93,5 +93,30 @@ describe('a flood from one address', () => {
   it('NEGATIVE: behind no trusted proxy every visitor shares one address, so the busy hour is never cut', async () => {
     for (let i = 0; i < 80; i++) await send(JSON.stringify({ p: PAGE }));
     expect(recordBrowserView).toHaveBeenCalledTimes(80);
+  });
+});
+
+describe('once the owner turns the cache on', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('the cached page’s visit is ALSO written where the server’s count goes — so every screen keeps reading visits', async () => {
+    vi.stubEnv('LP_PAGE_CACHE', '1');
+    await send(JSON.stringify({ p: PAGE, c: 'RAM', o: 1 }));
+    expect(recordBrowserView).toHaveBeenCalledTimes(1);
+    expect(db.landingPage.update).toHaveBeenCalledWith({ where: { id: PAGE }, data: { viewsCount: { increment: 1 } } });
+    expect(recordLandingView).toHaveBeenCalledWith(expect.objectContaining({ landingPageId: PAGE, campaignId: 'cmp1', device: 'mobile' }));
+  });
+
+  it('NEGATIVE: a page built per request (no o:1) was already counted by the server — never twice', async () => {
+    vi.stubEnv('LP_PAGE_CACHE', '1');
+    await send(JSON.stringify({ p: PAGE }));
+    expect(recordLandingView).not.toHaveBeenCalled();
+    expect(db.landingPage.update).not.toHaveBeenCalled();
+  });
+
+  it('NEGATIVE: with the switch off, even o:1 stays a comparison', async () => {
+    await send(JSON.stringify({ p: PAGE, o: 1 }));
+    expect(recordBrowserView).toHaveBeenCalledTimes(1);
+    expect(recordLandingView).not.toHaveBeenCalled();
   });
 });

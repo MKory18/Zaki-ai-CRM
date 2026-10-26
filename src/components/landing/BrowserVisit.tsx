@@ -12,12 +12,16 @@
  *   · `sendBeacon` where it exists — it outlives the page being closed — and a `keepalive` fetch where it does not.
  *
  * Rendered only for a visit: the seller's preview leaves it out, and the endpoint refuses an unpublished page anyway.
+ *
+ * `official` is set by the CACHED page only: that render has no server count, so its beacon is the visit itself
+ * (`o:1`). A page built per request was already counted by the server, and its beacon stays a comparison — so turning
+ * the cache on can never count one visit twice.
  */
-export function BrowserVisit({ pageId }: { pageId: string }) {
+export function BrowserVisit({ pageId, official = false }: { pageId: string; official?: boolean }) {
   const id = JSON.stringify(pageId);
   const js =
     `(function(){try{var u='/api/public/lp-view';var send=function(){` +
-    `var b=JSON.stringify({p:${id},c:new URLSearchParams(location.search).get('c')});` +
+    `var b=JSON.stringify({p:${id},c:new URLSearchParams(location.search).get('c')${official ? ',o:1' : ''}});` +
     `if(navigator.sendBeacon&&navigator.sendBeacon(u,b))return;` +
     `fetch(u,{method:'POST',body:b,keepalive:true}).catch(function(){})};` +
     `if(document.prerendering){document.addEventListener('prerenderingchange',send,{once:true})}else{send()}` +

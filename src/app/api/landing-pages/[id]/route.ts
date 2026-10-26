@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -230,6 +231,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
        * a surprise.
        */
       if (parsed.data.isPublished === true && !lp.isPublished) await publishContent(lp.id);
+      // Whatever changed — the name, the slug, published or taken down, the product — the cached page is rebuilt now:
+      // under both slugs, so an old address stops showing the page the moment it moves.
+      await refreshLandingPages({ slugs: [lp.slug, updated.slug] });
 
       if (updated.slug !== lp.slug) {
         // ── The advertisement is still pointing at the old address ──
@@ -308,6 +312,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     }
 
     await db.landingPage.delete({ where: { id: lp.id } });
+    // A deleted page must stop being served from the cache at once, not a minute later.
+    await refreshLandingPages({ slugs: [lp.slug] });
     await forgetPageHosts(lp);
     await logAudit({
       companyId,
