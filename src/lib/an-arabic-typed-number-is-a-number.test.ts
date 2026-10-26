@@ -95,8 +95,8 @@ describe('a phone number typed on an Arabic keypad', () => {
 describe('the blacklist, reached with an Arabic-typed number', () => {
   it('asks the database for the canonical number instead of returning early', async () => {
     const { activeBlock } = await import('./blacklist');
-    const findFirst = vi.fn(async (args: { where: { phone: string } }) =>
-      args.where.phone === '966793918'
+    const findFirst = vi.fn(async (args: { where: { phone: { in: string[] } } }) =>
+      args.where.phone.in.includes('966793918')
         ? { id: 'b1', phone: '966793918', name: null, reason: 'ر', createdAt: new Date(), blockedById: 'u1' }
         : null
     );
@@ -106,7 +106,7 @@ describe('the blacklist, reached with an Arabic-typed number', () => {
 
     // THE QUERY FIRST: it was sent at all, and it carries the Latin form.
     expect(findFirst, 'لم يُسأَلِ السجلُّ أصلاً — الرجوعُ المبكِّرُ هو الثقب').toHaveBeenCalledTimes(1);
-    expect(findFirst.mock.calls[0][0].where).toMatchObject({ phone: '966793918', releasedAt: null });
+    expect(findFirst.mock.calls[0][0].where).toMatchObject({ phone: { in: ['966793918'] }, releasedAt: null });
     // And only then: the block is found, which it was not before.
     expect(hit?.phone).toBe('966793918');
   });

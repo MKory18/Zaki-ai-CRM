@@ -93,7 +93,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { companyId, storeId, country } = await requireContext();
     await requirePermission('orders.create');
 
     const form = await req.formData().catch(() => null);
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     }
 
     const buf = Buffer.from(await file.arrayBuffer());
-    const parsed = parseOrderSheet(buf);
+    const parsed = parseOrderSheet(buf, country.code);
 
     if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
     if (parsed.missingRequired.length > 0) {

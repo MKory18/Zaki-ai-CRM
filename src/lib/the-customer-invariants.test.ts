@@ -137,7 +137,7 @@ describe('3 · the person is one person, across the stores', () => {
     const bl = stripComments(repoFile('src/lib/blacklist.ts'));
     const fn = bl.slice(bl.indexOf('export async function activeBlock('));
     const body = fn.slice(0, fn.indexOf('\n}'));
-    expect(body).toMatch(/where: \{ companyId, phone, releasedAt: null \}/);
+    expect(body).toMatch(/where: \{ companyId, phone: \{ in: keys \}, releasedAt: null \}/);
     expect(body).not.toMatch(/storeId/);
   });
 });

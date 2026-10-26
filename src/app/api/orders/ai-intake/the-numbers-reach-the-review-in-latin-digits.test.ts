@@ -133,8 +133,8 @@ describe('the assistant read the text', () => {
   it('and the duplicate check still asks about the one number a customer is stored under — nothing about it moved', async () => {
     await preview('x');
     const where = db.customer.findFirst.mock.calls[0][0].where;
-    expect(where.phone).toBe(normalizePhoneNumber('0791234567'));
-    expect(NON_LATIN.test(String(where.phone))).toBe(false);
+    expect(where.phone.in).toContain(normalizePhoneNumber('0791234567'));
+    expect(NON_LATIN.test(where.phone.in.join(''))).toBe(false);
   });
 
   it('and nothing in what comes back is in another script — whatever the model wrote', async () => {

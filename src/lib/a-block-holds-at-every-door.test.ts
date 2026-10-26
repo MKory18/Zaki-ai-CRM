@@ -104,7 +104,8 @@ describe('what a blocked visitor is told', () => {
     const fn = src.slice(src.indexOf('export async function activeBlock('));
     const body = fn.slice(0, fn.indexOf('\n}'));
     expect(body).toContain('canonicalPhone(');
-    expect(body).toMatch(/phone,\s*releasedAt: null/);
+    // Every stored form of the number (RV136 keeps a foreign number's code), never one spelling of it.
+    expect(body).toMatch(/phone: \{ in: keys \},\s*releasedAt: null/);
   });
 
   it('and it covers the whole company — every store and every country of it', () => {

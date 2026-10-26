@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       if (file.size > MAX_BYTES) return NextResponse.json({ error: `«${file.name}» أكبر من 4 ميجابايت` }, { status: 413 });
       const bytes = Buffer.from(await file.arrayBuffer());
       if (!looksLikeXlsx(bytes)) return NextResponse.json({ error: `«${file.name}» ليس ملف إكسل (xlsx)` }, { status: 400 });
-      const read = readMigrationSheet(readXlsxRows(bytes), file.name, dates[i]);
+      const read = readMigrationSheet(readXlsxRows(bytes), file.name, dates[i], country.code);
       if (read.missing.length) {
         return NextResponse.json({ error: `«${file.name}» ينقصه: ${read.missing.join('، ')}`, code: 'MISSING_COLUMNS' }, { status: 400 });
       }

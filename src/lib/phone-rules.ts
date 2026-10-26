@@ -212,8 +212,17 @@ const DIAL_CODES = [...new Set(Object.values(PHONE_RULES).map((r) => r.dialCode)
  * (a leading + or 00). Otherwise a local Syrian 0966… would be mistaken for
  * a Saudi +966… — so the explicit marker is what licenses the strip, and a
  * plain local number just loses its trunk zero.
+ *
+ * AND WITH THE STORE'S COUNTRY, ONLY THAT COUNTRY'S CODE IS STRIPPED (RV136).
+ * «احفظو بالرمز… بدايتو 00 او +». Stripping every code in the table turned a
+ * Jordanian line ordering from a Syrian store, «+962 79 123 4567», into
+ * `791234567` — shown as «0791234567», a Syrian-looking number that is
+ * nobody, and messaged as «963791…». Given the country, a foreign number
+ * written with + or 00 keeps its code: `962791234567`. Without one (a search,
+ * a company-wide lookup) the old reading stands, and `phoneKeys` is what lets
+ * the two forms find each other.
  */
-export function canonicalPhone(raw: string | null | undefined): string {
+export function canonicalPhone(raw: string | null | undefined, countryCode?: string | null): string {
   // The script conversion comes first, so «٠٩٩١٢٣٤٥٦٧» is a number and not
   // the empty string — which is what `/\D/` made of it, and what then made
   // `activeBlock` skip the blacklist for anyone who typed in Arabic.
@@ -226,7 +235,10 @@ export function canonicalPhone(raw: string | null | undefined): string {
   const international = text.startsWith('+') || digits.startsWith('00');
   let rest = digits.startsWith('00') ? digits.slice(2) : digits;
 
-  if (international) {
+  const own = ruleFor(countryCode)?.dialCode;
+  if (international && own) {
+    if (rest.startsWith(own) && rest.length - own.length >= 6) rest = rest.slice(own.length);
+  } else if (international) {
     for (const code of DIAL_CODES) {
       if (rest.startsWith(code) && rest.length - code.length >= 6) {
         rest = rest.slice(code.length);
@@ -237,4 +249,31 @@ export function canonicalPhone(raw: string | null | undefined): string {
 
   // The trunk zero is a dialing convention, not part of the number.
   return rest.replace(/^0+/, '');
+}
+
+/**
+ * Every stored form one number may have — for MATCHING a person, never for storing one.
+ *
+ * Before RV136 a foreign number was stored without its code (`791234567`); from it on, with it (`962791234567`). A
+ * customer or a block written in the old form must still be found by the new one, so a number of eleven digits or
+ * more — a national number is ten at most — is also read as written internationally. A Turkish line keeps its code
+ * either way: `90` is in no table.
+ */
+export function phoneKeys(canonical: string): string[] {
+  if (!canonical) return [];
+  const stripped = canonical.length >= 11 ? canonicalPhone(`+${canonical}`) : canonical;
+  return stripped === canonical ? [canonical] : [canonical, stripped];
+}
+
+/**
+ * The stored forms to look for when no store is known (a company-wide lookup): the code-less reading, and — for a
+ * number written with + or 00 — the whole number with its code, which is how a store abroad of it now keeps it.
+ */
+export function phoneKeysAnyStore(raw: string | null | undefined): string[] {
+  const legacy = canonicalPhone(raw);
+  const text = toLatinDigits(String(raw ?? '')).trim();
+  const digits = text.replace(/\D/g, '');
+  const international = text.startsWith('+') || digits.startsWith('00');
+  const whole = international ? digits.replace(/^00/, '').replace(/^0+/, '') : legacy;
+  return [...new Set([...phoneKeys(whole), ...phoneKeys(legacy)])];
 }
