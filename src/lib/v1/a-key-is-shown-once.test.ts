@@ -39,6 +39,8 @@ vi.mock('@/lib/authorization', () => ({
   requirePermission: (p: string) => h.requirePermission(p),
   // The minter holds every key at full scope here; minting beyond one's keys is its own test.
   getPermissionScope: () => ({ scope: 'ALL_COMPANY' }),
+  // …and reaches every store (geo.manage), which minting needs.
+  can: () => true,
 }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => h.logAudit(...a) }));
 

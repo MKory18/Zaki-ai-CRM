@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { arDate, arDateTime } from '@/lib/format';
 import { userCan } from '@/lib/can';
+import { apiJson } from '@/lib/api-client';
 import { CreateUserModal } from './users/CreateUserModal';
 import { useConfirm } from '@/components/ui/Confirm';
 import { ASSIGNABLE_ROLES, ROLE_LABELS as ROLE_LABELS_AR, USER_STATUSES } from '@/types/auth';
@@ -76,6 +77,8 @@ export function UsersScreen() {
   useCreateIntent({ user: userCan(currentUser, 'users.create') ? () => setCreateOpen(true) : undefined });
   const confirm = useConfirm();
   const [manageUser, setManageUser] = useState<any>(null);
+  /** Whether this viewer may act on the account being managed — the server's answer (canActOnUser). */
+  const [manageReach, setManageReach] = useState<{ ok: boolean; why?: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   // Critical-action confirmation (suspend/disable/role change)
@@ -140,6 +143,12 @@ export function UsersScreen() {
     setManageUser(u);
     setModalError(null);
     setPendingAction(null);
+    setManageReach(null);
+    // Asked when the panel opens, so a suspend or a sign-out this person may
+    // not do is not offered, rather than refused after its confirmation.
+    void apiJson<{ mayManage?: boolean; manageRefusal?: string }>(`/api/users/${u.id}/profile`)
+      .then((p) => setManageReach({ ok: p.mayManage !== false, why: p.manageRefusal }))
+      .catch(() => setManageReach(null));
   };
 
   /** Critical actions require explicit confirmation (Decision 7 safety) */
@@ -443,7 +452,12 @@ export function UsersScreen() {
               <span>تغيير الدور والصلاحيات والوصول ←</span>
             </a>
 
-            {/* Status actions */}
+            {manageReach && !manageReach.ok && (
+              <p className="text-xs text-[var(--sys-muted-foreground)]">{manageReach.why}</p>
+            )}
+
+            {/* Status actions — only for an account this person may act on. */}
+            {manageReach?.ok !== false && (
             <div className="border border-[var(--sys-border)] rounded-lg p-4 space-y-3 bg-[var(--sys-surface)]">
               <h4 className="text-xs font-bold text-[var(--sys-foreground)]">حالة الحساب</h4>
               <div className="flex flex-wrap gap-2">
@@ -504,6 +518,7 @@ export function UsersScreen() {
                 إيقاف/تعطيل الحساب ينهي جميع الجلسات النشطة فوراً عبر إبطال التوكن الحالي.
               </p>
             </div>
+            )}
           </div>
         )}
       </Modal>

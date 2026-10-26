@@ -22,7 +22,7 @@ const { db, requireCompanyTenant, requirePermission } = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/db', () => ({ db, default: db }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
-// The reader holds «عرض الرواتب» here; the pay redaction is its own test (pay-stays-with-payroll).
+// The reader holds «عرض الرواتب» here; the pay redaction is its own test (people-act-within-their-reach, the-people-doors-wiring).
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a), can: () => true }));
 
 import { GET } from '@/app/api/audit-logs/route';

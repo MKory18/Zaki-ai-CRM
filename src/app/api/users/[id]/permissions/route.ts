@@ -3,15 +3,15 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { computeEffectiveGrants } from '@/lib/permissions-core';
-import { getPermissionScope } from '@/lib/authorization';
 import { ALL_CATALOG_KEYS, catalogItem } from '@/lib/permission-catalog';
 import { logAudit } from '@/lib/audit';
 import {
   PERMISSION_TARGET_SELECT,
   canActOnUser,
   denyRemovalRefusal,
+  heldOrCovered,
+  keyLabel,
   loadPermissionTarget,
-  OPERATIONAL_KEYS,
   superAdminOverrideGuard,
   PermissionTargetUser,
 } from '@/lib/user-permissions';
@@ -192,12 +192,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // at ALL_COMPANY scope (or be SUPER_ADMIN). DENY rows grant nothing. ──
     for (const o of parsed) {
       if (o.effect !== 'ALLOW') continue;
-      // The shift-work keys, as the role door already lets them through.
-      if (OPERATIONAL_KEYS.has(o.permission)) continue;
-      const granterScope = getPermissionScope(admin, o.permission);
+      // The broader view tier covers the narrower one, as in every granting door.
+      const granterScope = heldOrCovered(admin, o.permission);
       if (!granterScope || granterScope.scope !== 'ALL_COMPANY') {
         return NextResponse.json(
-          { error: 'لا يمكنك منح صلاحية لا تملكها بنطاق كامل' },
+          { error: `لا يمكنك منح «${keyLabel(o.permission)}» — لا تملكها بنطاق كامل` },
           { status: 403 }
         );
       }

@@ -173,7 +173,7 @@ export function AuditScreen() {
                       )}
                       {/* Said, so a missing amount does not read as a missing record. */}
                       {l.payWithheld && (
-                        <span className="block text-xs text-[var(--sys-muted)]">المبالغ مخفية — بمفتاح «عرض الرواتب».</span>
+                        <span className="block text-xs text-[var(--sys-muted)]">المبالغ لا تظهر إلا لمن معه صلاحية «عرض الرواتب».</span>
                       )}
                     </>
                   ),

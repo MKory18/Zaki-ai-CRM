@@ -127,8 +127,8 @@ export async function POST() {
     await requireCompanyTenant();
     return NextResponse.json(
       {
-        error: 'هالباب انسكّر — الموظف الجديد من شاشة «المستخدمين».',
-        errorAr: 'هالباب انسكّر — الموظف الجديد من شاشة «المستخدمين».',
+        error: 'هالباب انسكّر — الموظف الجديد من شاشة «الموظفين».',
+        errorAr: 'هالباب انسكّر — الموظف الجديد من شاشة «الموظفين».',
         code: 'GONE',
       },
       { status: 410 }

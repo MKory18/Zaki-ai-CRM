@@ -18,7 +18,7 @@ const h = vi.hoisted(() => ({
   db: {
     systemToken: { findMany: vi.fn(), create: vi.fn() },
     auditLog: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
-    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), count: vi.fn() },
     role: { findFirst: vi.fn(), findUnique: vi.fn() },
     rolePermission: { findMany: vi.fn() },
     $transaction: vi.fn(),
@@ -40,15 +40,21 @@ vi.mock('@/lib/authorization', () => ({
 }));
 vi.mock('@/lib/audit', () => ({ logAudit: vi.fn(), redactCustomerForAudit: (c: unknown) => c }));
 vi.mock('@/lib/geo-access', () => ({ geoAccessError: async () => null, replaceGeoAccess: vi.fn() }));
-vi.mock('@/lib/role-names', () => ({ isPrivilegedRoleName: () => false, isReservedRoleName: () => false }));
+vi.mock('@/lib/role-names', async (orig) => ({
+  ...(await orig<typeof import('@/lib/role-names')>()),
+  isPrivilegedRoleName: () => false,
+  isReservedRoleName: () => false,
+}));
 
 import { POST as mint } from './route';
 import { GET as auditLogs } from '@/app/api/audit-logs/route';
 import { POST as createUser } from '@/app/api/users/route';
+import { GET as tokenShelf } from './route';
+import { PATCH as editRole, DELETE as deleteRole } from '@/app/api/roles/[id]/route';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.held.keys = { 'apps.manage': 'ALL_COMPANY', 'products.view': 'ALL_COMPANY' };
+  h.held.keys = { 'apps.manage': 'ALL_COMPANY', 'products.view': 'ALL_COMPANY', 'geo.manage': 'ALL_COMPANY' };
   h.db.systemToken.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => ({ id: 't1', createdAt: new Date(), ...data }));
 });
 
@@ -106,7 +112,7 @@ describe('creating an account by role name', () => {
     h.db.user.findUnique.mockResolvedValue(null);
     h.db.user.create.mockResolvedValue({ id: 'u-new', role: 'CONFIRMATION_SUPERVISOR', status: 'ACTIVE' });
     h.db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => fn(h.db));
-    h.db.role.findFirst.mockResolvedValue({ id: 'sys-supervisor' });
+    h.db.role.findFirst.mockResolvedValue({ id: 'sys-supervisor', _count: { permissions: 2 } });
   });
 
   it('checks the system template the engine will grant: refused when it carries what the creator lacks', async () => {
@@ -130,5 +136,61 @@ describe('creating an account by role name', () => {
     ]);
     const res = await create('CONFIRMATION_SUPERVISOR');
     expect(res.status, await res.clone().text()).toBeLessThan(300);
+  });
+});
+
+describe('minting needs every store', () => {
+  it('a minter confined to some stores is refused — a key reads them all', async () => {
+    h.held.keys = { 'apps.manage': 'ALL_COMPANY', 'products.view': 'ALL_COMPANY' };
+    const res = await mint(new Request('http://x', { method: 'POST', body: JSON.stringify({ name: 'الردود', system: 'replies', scopes: ['products.read'], days: 90 }) }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe('MINTER_NOT_ALL_STORES');
+    expect(h.db.systemToken.create).not.toHaveBeenCalled();
+  });
+
+  it('the shelf says, per scope, what this person may put on a key — before «أنشئ»', async () => {
+    h.db.systemToken.findMany.mockResolvedValue([]);
+    const shelf = await (await tokenShelf()).json();
+    const costs = shelf.scopeCatalog.find((s: { key: string }) => s.key === 'products.costs.read');
+    expect(costs.mintable).toBe(false);
+    expect(costs.needsAr).toBeTruthy();
+    expect(shelf.scopeCatalog.find((s: { key: string }) => s.key === 'products.read').mintable).toBe(true);
+    expect(shelf.mayMint).toBe(true);
+  });
+});
+
+describe('a role as it stands, before it is rewritten or emptied', () => {
+  const ROLE = {
+    id: 'r-admins', name: 'مدراء الفروع', companyId: 'c1', isSystem: false,
+    permissions: [
+      { permission: 'orders.view', scope: 'ALL_COMPANY', scopeIds: null },
+      { permission: 'finance.view', scope: 'ALL_COMPANY', scopeIds: null },
+    ],
+  };
+  beforeEach(() => {
+    h.db.role.findUnique.mockResolvedValue(ROLE);
+    h.db.rolePermission.findMany.mockResolvedValue(ROLE.permissions);
+  });
+
+  it('saving it without «عرض المالية» — the one key the editor lacks — is refused: it would strip it from everyone on the role', async () => {
+    h.held.keys = { 'roles.edit': 'ALL_COMPANY', 'orders.view': 'ALL_COMPANY' };
+    const res = await editRole(
+      new Request('http://x', { method: 'PATCH', body: JSON.stringify({ permissions: [{ permission: 'orders.view', scope: 'ALL_COMPANY' }] }) }),
+      { params: Promise.resolve({ id: 'r-admins' }) },
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toContain('عرض المالية');
+  });
+
+  it('moving everybody off it, by someone who could not have given it: refused', async () => {
+    h.held.keys = { 'roles.delete': 'ALL_COMPANY', 'orders.view': 'ALL_COMPANY' };
+    h.db.user.count.mockResolvedValue(3);
+    h.db.role.findUnique.mockImplementation(async ({ where }: { where: { id: string } }) =>
+      where.id === 'r-admins' ? ROLE : { id: 'r-weak', name: 'ضعيف', companyId: 'c1', isSystem: false, permissions: [] },
+    );
+    const res = await deleteRole(new Request('http://x/api/roles/r-admins?replacementRoleId=r-weak', { method: 'DELETE' }), {
+      params: Promise.resolve({ id: 'r-admins' }),
+    });
+    expect(res.status).toBe(403);
   });
 });

@@ -53,7 +53,10 @@ interface SystemChoice {
 }
 
 interface Shelf {
-  scopeCatalog: { key: string; ar: string }[];
+  /** `mintable` false: this person lacks the key it stands for (`needsAr`). */
+  scopeCatalog: { key: string; ar: string; mintable?: boolean; needsAr?: string }[];
+  /** False when the person does not reach every store: a key reads them all. */
+  mayMint?: boolean;
   repliesScopes: string[];
   systems: SystemChoice[];
   defaultDays: number;
@@ -85,7 +88,9 @@ export function SystemTokensPanel() {
       // The replies system's five scopes are the default selection: that is
       // what this door was built for, and a person who wants fewer unticks
       // them rather than hunting for the right five.
-      setChosen((already) => (already.length ? already : s.repliesScopes));
+      // Only what this person may put on a key: a pre-ticked scope they lack
+      // would be refused at «أنشئ», after the work of naming the key.
+      setChosen((already) => (already.length ? already : s.repliesScopes.filter((k) => mintableIn(s, k))));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تحميل المفاتيح');
     }
@@ -115,8 +120,8 @@ export function SystemTokensPanel() {
   const pickSystem = useCallback((s: SystemChoice) => {
     setSystem(s.key);
     setName(s.ar);
-    setChosen(s.scopes);
-  }, []);
+    setChosen(s.scopes.filter((k) => !shelf || mintableIn(shelf, k)));
+  }, [shelf]);
 
   const revoke = useCallback(
     async (id: string, name: string) => {
@@ -247,11 +252,14 @@ export function SystemTokensPanel() {
               {shelf.scopeCatalog.map((s) => (
                 <label
                   key={s.key}
+                  // A scope this person lacks the key for is shown, and says why, rather than failing later.
+                  title={s.mintable === false ? `يحتاج «${s.needsAr}» بنطاق كامل` : undefined}
                   className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--sys-border)] px-2.5 py-1 text-xs md:min-h-0"
                 >
                   <input
                     type="checkbox"
                     name={`scope-${s.key}`}
+                    disabled={s.mintable === false}
                     checked={chosen.includes(s.key)}
                     onChange={(e) =>
                       setChosen((was) =>
@@ -264,11 +272,25 @@ export function SystemTokensPanel() {
               ))}
             </div>
           </div>
+          {shelf.scopeCatalog.some((s) => s.mintable === false) && (
+            <p className="text-xs text-[var(--sys-muted)]">
+              مش متاح لك:{' '}
+              {shelf.scopeCatalog
+                .filter((s) => s.mintable === false)
+                .map((s) => `${s.ar} (يحتاج «${s.needsAr}»)`)
+                .join('، ')}
+            </p>
+          )}
+          {shelf.mayMint === false && (
+            <p className="text-xs text-[var(--sys-warning)]">
+              المفتاح بيقرا الشركة كلها، فإصداره بدّه دخول كل الدول والمتاجر.
+            </p>
+          )}
           <p className="text-xs text-[var(--sys-muted)]">
             ينتهي بعد {shelf.defaultDays} يوماً، وبحدّ{' '}
             {shelf.systems.find((s) => s.key === system)?.rateLimitPerMin ?? 60} طلباً في الدقيقة.
           </p>
-          <Button size="sm" onClick={create} disabled={chosen.length === 0}>
+          <Button size="sm" onClick={create} disabled={chosen.length === 0 || shelf.mayMint === false}>
             أنشئ المفتاح
           </Button>
         </div>
@@ -330,4 +352,9 @@ export function SystemTokensPanel() {
       )}
     </section>
   );
+}
+
+/** May this person put this scope on a key (the door says, per scope). */
+function mintableIn(shelf: Shelf, key: string): boolean {
+  return shelf.scopeCatalog.find((s) => s.key === key)?.mintable !== false;
 }

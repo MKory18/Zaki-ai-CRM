@@ -80,6 +80,15 @@ describe('an account the actor may not act on', () => {
   });
 });
 
+describe('the clerical record', () => {
+  it('a phone correction is not held by the reach rule — it is not power over anybody', async () => {
+    canActOnUser.mockResolvedValue({ ok: false, status: 403, error: 'لا يمكنك إدارة هذا الحساب' });
+    const res = await patch({ action: 'updateContact', phone: '0790000000' });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(canActOnUser).not.toHaveBeenCalled();
+  });
+});
+
 describe('the commission currency', () => {
   it('is refused on «تعديل المستخدمين» alone — it is pay', async () => {
     const res = await patch({ action: 'updateContact', phone: '0790000000', commissionCurrency: 'SYP' });
@@ -118,6 +127,13 @@ describe('removing one exception', () => {
     expect(db.userPermission.delete).toHaveBeenCalled();
   });
 
+  it('an account out of reach: no exception of theirs is removed', async () => {
+    canActOnUser.mockResolvedValue({ ok: false, status: 403, error: 'لا يمكنك إدارة هذا الحساب' });
+    db.userPermission.findUnique.mockResolvedValue({ permission: 'finance.view', effect: 'ALLOW', scope: 'ALL_COMPANY', scopeIds: null });
+    expect((await remove('finance.view')).status).toBe(403);
+    expect(db.userPermission.delete).not.toHaveBeenCalled();
+  });
+
   it('removing an ALLOW takes a key away, and needs no such holding', async () => {
     db.userPermission.findUnique.mockResolvedValue({ permission: 'finance.view', effect: 'ALLOW', scope: 'ALL_COMPANY', scopeIds: null });
     expect((await remove('finance.view')).status).toBeLessThan(300);
@@ -150,9 +166,30 @@ describe('replacing the exceptions wholesale', () => {
     expect((await replace([])).status).toBeLessThan(300);
   });
 
-  it('the shift-work keys may be ALLOWed without holding them, as roles give them', async () => {
+  /*
+   * REVERSED ON PURPOSE, after the independent review: a per-person
+   * exception gets NO shift-work exemption. «إشكالات التأكيد» on one person
+   * opens the customers of every issue, and the role door's reason (hiring
+   * an agent is not working the queue) does not apply to one exception.
+   */
+  it('a shift-work key on one person needs the granter to hold it, like any exception', async () => {
     db.userPermission.findMany.mockResolvedValue([]);
-    const res = await replace([{ permission: 'confirmation.pull', effect: 'ALLOW', scope: 'ALL_COMPANY' }]);
+    const res = await replace([{ permission: 'confirmation.issues', effect: 'ALLOW', scope: 'ALL_COMPANY' }]);
+    expect(res.status).toBe(403);
+    expect(db.userPermission.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('the broader customer view covers the basic one, as in every granting door', async () => {
+    held.keys = ['users.edit', 'customers.view'];
+    db.userPermission.findMany.mockResolvedValue([]);
+    const res = await replace([{ permission: 'customers.view_basic', effect: 'ALLOW', scope: 'ALL_COMPANY' }]);
     expect(res.status, await res.clone().text()).toBeLessThan(300);
+  });
+
+  it('an account out of reach: refused before anything is written', async () => {
+    canActOnUser.mockResolvedValue({ ok: false, status: 403, error: 'لا يمكنك إدارة هذا الحساب' });
+    const res = await replace([{ permission: 'finance.view', effect: 'DENY' }]);
+    expect(res.status).toBe(403);
+    expect(db.userPermission.deleteMany).not.toHaveBeenCalled();
   });
 });

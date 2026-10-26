@@ -43,7 +43,7 @@ describe('POST /api/moderators', () => {
     const body = await res.json();
     expect(res.status).toBe(410);
     expect(body.code).toBe('GONE');
-    expect(body.errorAr).toContain('المستخدمين');
+    expect(body.errorAr).toContain('الموظفين');
   });
 
   it('creates nothing and hashes nothing', async () => {

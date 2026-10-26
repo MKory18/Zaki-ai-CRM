@@ -38,6 +38,9 @@ const { db, requireContext, logAudit } = vi.hoisted(() => ({
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
+// The reach rule (canActOnUser): open by default; its refusal is asked below.
+const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async () => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
+vi.mock('@/lib/user-permissions', () => ({ canActOnUser: (...a: unknown[]) => reach.canActOnUser(...a) }));
 // Surfaced rather than swallowed: an unexpected throw should fail an
 // assertion with its message in the body, not look like a tidy refusal.
 vi.mock('@/lib/api-error', () => ({
@@ -138,6 +141,19 @@ describe('and the door still does its job', () => {
       tokenVersion: { increment: 1 },
     });
     expect(db.twoFactorRecoveryCode.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('an employee holding powers the resetter lacks: refused, and nothing is cleared', async () => {
+    // A company admin the owner restricted, resetting the other company admin:
+    // the reset-role check lets them through, the reach rule does not.
+    requireContext.mockResolvedValue({ user: admin('COMPANY_ADMIN', COMPANY), companyId: COMPANY });
+    db.user.findFirst.mockResolvedValue(target('COMPANY_ADMIN', COMPANY));
+    reach.canActOnUser.mockResolvedValueOnce({ ok: false, status: 403, error: 'لا يمكنك إدارة هذا الحساب' });
+    const res = await press('target-1');
+    expect(reach.canActOnUser).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(403);
+    expect(db.user.update).not.toHaveBeenCalled();
+    expect(db.twoFactorRecoveryCode.deleteMany).not.toHaveBeenCalled();
   });
 
   it('and the platform owner may reset another SUPER_ADMIN — the rule is rank, not a wall', async () => {

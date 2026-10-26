@@ -112,8 +112,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (grantError) {
         return NextResponse.json({ error: grantError }, { status: 403 });
       }
-      // The ids are the ROLE's company's, and the scope is one the key offers.
-      const scopeRefusal = await roleScopeRefusal(role.companyId ?? admin.companyId ?? null, permissions);
+      /*
+       * AND THE ROLE AS IT STANDS, BEFORE IT IS REWRITTEN.
+       *
+       * Every account bound to the role gets what it is saved with. Checking
+       * only the new matrix let somebody who lacks a key save the role
+       * WITHOUT it — every save they could make removed it — and strip it
+       * from every account on the role: the effect canActOnUser now stops on
+       * one account at a time. You may rewrite a role only if you could have
+       * given it as it is (canConferRole on its current rows).
+       */
+      const current = await canConferRole(admin, { id: role.id, name: role.name });
+      if (!current.ok) return NextResponse.json({ error: current.error }, { status: current.status });
+      // The ids are the ROLE's company's, and the scope is one the key offers —
+      // for what is NEW in this save; a row already on the role is not re-judged.
+      const scopeRefusal = await roleScopeRefusal(role.companyId ?? admin.companyId ?? null, permissions, role.permissions);
       if (scopeRefusal) return NextResponse.json({ error: scopeRefusal }, { status: 400 });
     }
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
@@ -211,6 +224,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       if (isPrivilegedRoleName(replacement.name) && admin.role !== 'SUPER_ADMIN') {
         return NextResponse.json({ error: 'غير مسموح باستخدام دور المدير الأعلى كبديل' }, { status: 403 });
       }
+      // Moving everybody off a role acts on every one of them: not by
+      // somebody who could not have given that role (the same rule as
+      // rewriting it, and as acting on one account).
+      const leaving = await canConferRole(admin, { id: role.id, name: role.name });
+      if (!leaving.ok) return NextResponse.json({ error: leaving.error }, { status: leaving.status });
       // Conferral policy: reassignment confers the replacement's full canonical
       // matrix onto every bound user — the actor must be able to grant it
       // (granter-must-hold). replacement.name is never a security authority.

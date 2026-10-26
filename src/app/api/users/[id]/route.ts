@@ -63,12 +63,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (action === 'assignRole' && role === 'SUPER_ADMIN' && admin.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'فقط المدير الأعلى يمكنه تعيين رتبة المدير الأعلى' }, { status: 403 });
     }
-    // And not on an account whose role carries powers this admin lacks —
-    // suspending, signing out, deleting, re-roling or re-activating it alike
+    // And not on an account that holds powers this admin lacks — suspending,
+    // signing out, deleting, re-roling, re-activating or resetting it alike
     // (see canActOnUser). Re-roling is also checked against the NEW role below.
-    const acting = await canActOnUser(admin, target);
-    if (!acting.ok) {
-      return NextResponse.json({ error: acting.error }, { status: acting.status });
+    //
+    // Except the clerical record (`updateContact`: phone, shift, rest days):
+    // that is not power over anybody, and holding it back stopped an admin
+    // correcting a supervisor's phone the day the owner unticked one key on
+    // the admin. The pay inside the same action keeps its own key, payroll.pay.
+    if (action !== 'updateContact') {
+      const acting = await canActOnUser(admin, target);
+      if (!acting.ok) {
+        return NextResponse.json({ error: acting.error }, { status: acting.status });
+      }
     }
 
     const updateData: Record<string, unknown> = {};
@@ -268,10 +275,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // Every accrual is booked in it, so it is pay — the same key as the
         // salary below, not «تعديل المستخدمين».
         if (!can(admin, 'payroll.pay')) {
-          return NextResponse.json(
-            { error: 'Forbidden: missing required permission payroll.pay', errorAr: forbiddenAr('Forbidden: missing required permission payroll.pay') },
-            { status: 403 }
-          );
+          const refusal = forbiddenAr('Forbidden: missing required permission payroll.pay');
+          return NextResponse.json({ error: refusal, errorAr: refusal }, { status: 403 });
         }
         const raw = typeof body.commissionCurrency === 'string' ? body.commissionCurrency.trim().toUpperCase() : '';
         if (raw && !/^[A-Z]{3}$/.test(raw)) {

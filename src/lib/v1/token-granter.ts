@@ -1,4 +1,5 @@
 import { getPermissionScope } from '@/lib/authorization';
+import { seesAllCountries } from '@/lib/geo-context';
 import type { SessionUser } from '@/types/auth';
 import type { V1Scope } from './system-token';
 
@@ -35,4 +36,25 @@ export function scopeBeyondMinter(actor: SessionUser, scopes: readonly V1Scope[]
     }
   }
   return null;
+}
+
+/** The first key a scope needs that this person does not hold at full scope — or null. */
+export function keyScopeLacks(actor: SessionUser, scope: V1Scope): string | null {
+  for (const key of NEEDS[scope] ?? []) {
+    if (getPermissionScope(actor, key)?.scope !== 'ALL_COMPANY') return key;
+  }
+  return null;
+}
+
+/**
+ * AND A KEY READS THE WHOLE COMPANY, SO ITS MINTER MUST SEE THE WHOLE COMPANY.
+ *
+ * No v1 door is narrowed to a store: a key with «سؤال عن رقم زبون» answers
+ * for every store and every country. A manager confined to one store, who
+ * holds the matching keys inside it, could mint a key that reads all the
+ * others. So minting needs every country (seesAllCountries) — the owner, or
+ * whoever he gave «إدارة الدول والمتاجر».
+ */
+export function mayMintForCompany(actor: SessionUser): boolean {
+  return seesAllCountries(actor);
 }
