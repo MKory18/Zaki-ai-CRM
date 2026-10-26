@@ -305,8 +305,8 @@ export const BLOCK_CSS = `
   justify-content: center;
   margin-top: 1px;
 }
-.lp-benefits strong { display: block; font-size: 14.5px; font-weight: 800; }
-.lp-benefits p { font-size: 13px; color: var(--store-muted); margin-top: 2px; }
+.lp-benefits strong { display: block; font-size: .906em; font-weight: 800; }
+.lp-benefits strong + p { font-size: .8125em; color: var(--store-muted); margin-top: 2px; }
 
 /* ── gallery ── */
 .lp-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -661,9 +661,6 @@ export const BLOCK_CSS = `
   border-radius: calc(var(--store-radius) / 1.6);
 }
 .lp-countdown i { color: var(--store-accent); font-style: normal; font-weight: 900; }
-/* Days are named, not counted in hours: «96:00:00» is unreadable on a phone
-   and reads as a machine, while «4 أيام» is what the offer actually says. */
-.lp-countdown-days { padding-inline: 10px; }
 .lp-countdown-over { font-size: 13px; color: var(--store-muted); }
 .lp-stock { font-size: 13px; color: var(--store-muted); }
 .lp-stock strong { color: var(--store-accent); font-weight: 900; }
@@ -845,19 +842,21 @@ export const BLOCK_CSS = `
 .lp-trust > a {
   flex: 1 1 140px;
   display: grid;
-  justify-items: center;
+  justify-items: var(--look-justify, center);
   gap: 3px;
   text-align: center;
   background: var(--store-card);
   border: 1px solid var(--store-border);
   border-radius: var(--store-radius);
   padding: 14px 10px;
-  color: var(--store-accent);
 }
-.lp-trust strong { font-size: 13px; font-weight: 800; color: var(--store-text); }
-.lp-trust span { font-size: 11.5px; color: var(--store-muted); }
+/* The card carries no colour of its own: the icon is the accent (inline, in PageBlocks), and the words follow the
+   block's «لون النص» — a card in the accent turned every chosen colour into the accent. Sizes in em, so «أكبر» and
+   «أصغر» scale the pair together instead of shrinking the title under its own subtitle. */
+.lp-trust strong { font-size: .8125em; font-weight: 800; color: var(--store-text); }
+.lp-trust strong + span { font-size: .71875em; color: var(--store-muted); }
 /* The one item that is a page to open rather than a sentence to read. */
-.lp-trust > a { text-decoration: none; }
+.lp-trust > a { text-decoration: none; color: inherit; }
 .lp-trust > a span { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 
 /* ── footer ── */
@@ -935,18 +934,12 @@ export const BLOCK_CSS = `
   border-radius: var(--store-radius);
   box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .45);
 }
+/* Its display, colours, padding and size come from the two html .lp-root rules near the end of this sheet, which
+   always win inside .lp-root — the only place StickyCta is drawn. The copies that stood here could never apply. */
 .lp-sticky {
   flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: var(--store-accent);
-  color: var(--store-accent-text);
-  font-size: 15px;
   font-weight: 800;
   text-decoration: none;
-  padding: 13px 22px;
   border-radius: var(--store-radius);
   box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .45);
 }
@@ -1144,12 +1137,14 @@ export const BLOCK_CSS = `
    (0,2,1) — ':is()' takes its most specific argument, and '.lp-h1' is only
    a class — so this won, forced 'inherit', and a heading colour set beside
    a body colour silently did nothing. One rule per question. */
-html [data-look-color] :is(p, span, li, a, strong, em, blockquote, figcaption):not(.lp-cta):not(.lp-btn) {
+/* Not the buttons, not a word the seller coloured by hand ([data-c]), not an item title ([data-it] — the heading
+   colour owns those, below), and not anything on an accent-filled shape ([data-ink]), whose ink is part of it. */
+html [data-look-color] :is(p, span, li, a, strong, em, b, blockquote, figcaption, th, td, dd):not(.lp-cta, .lp-btn, .lp-sticky, .lp-sticky-wa, [data-c], [data-it], [data-ink], [data-ink] *) {
   color: inherit;
 }
 [data-look-size] :is(h1, .lp-h1) { font-size: 2.1em; }
 [data-look-size] :is(h2, .lp-h2) { font-size: 1.5em; }
-[data-look-size] :is(h3, .lp-h3) { font-size: 1.2em; }
+[data-look-size] h3 { font-size: 1.2em; }
 [data-look-size] :is(p, span, li, a) { font-size: 1em; }
 /* Same problem as the colour: .lp-hero and .lp-h2 set text-align with a
    class, so a plain descendant rule tied and lost on source order. */
@@ -1172,6 +1167,12 @@ html [data-look-align] :is(h1, h2, h3, h4, p, div, section, ul, .lp-hero, .lp-h2
 html .lp-root :is(h1, h2, h3, h4, .lp-h1, .lp-h2) {
   color: var(--look-heading, inherit);
 }
+/* An item's own title — a benefit's name, a question, a step — is a heading to the seller. Only once a colour was
+   chosen, so a page nobody styled keeps each title's own colour. */
+html [data-look-it] [data-it] { color: var(--look-heading, inherit); }
+/* «عريض» and «كامل» widen the block; its own max-width held it at the normal width whatever was chosen. A ceiling
+   all the same, so a page whose template chose «كامل» still reads as lines, not as one line across a wide screen. */
+[data-look-wide] :is(.lp-section, .lp-trust, .lp-hero, .lp-urgency) { max-width: min(100%, 75rem); }
 html [data-look-pad] .lp-section { padding-block: var(--look-section-pad); }
 html [data-look-pad] .lp-h2 { margin-bottom: var(--look-h2-gap); }
 html .lp-root :is(.lp-cta, .lp-btn, .lp-sticky) {

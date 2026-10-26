@@ -686,6 +686,9 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   return (
     <section
       id="zaki-order-form"
+      // The form card keeps its own ink: a block colour chosen for the form block reaches its title, not the white
+      // card, the fields or the red errors.
+      data-ink=""
       dir={dir}
       className="w-full bg-[var(--store-page,#f7f7f8)] px-4 py-10 sm:px-6"
       aria-label="نموذج الطلب"
@@ -707,7 +710,9 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--store-accent-text,#697586)] opacity-75">
               {state === 'success' ? 'طلبك' : 'اطلب الآن'}
             </p>
-            <h2 className="mt-1 text-xl font-bold text-[var(--store-accent-text,#ffffff)]">{productName}</h2>
+            {/* Inline, because the page's heading rule (html .lp-root h2 → the block's heading colour) outranks a class
+                and repainted the name on its accent band. */}
+            <h2 className="mt-1 text-xl font-bold" style={{ color: 'var(--store-accent-text, #ffffff)' }}>{productName}</h2>
             <p className="mt-1 text-2xl font-extrabold text-[var(--store-accent-text,#b8256e)]" dir="ltr">
               {fmt(state === 'success' && totals ? totals.total : offer ? offer.price : basePrice)} {currency}
             </p>

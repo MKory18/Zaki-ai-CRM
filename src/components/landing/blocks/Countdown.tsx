@@ -89,7 +89,7 @@ export function Countdown({
   const pad = (n: number) => String(n).padStart(2, '0');
 
   return (
-    <div className="lp-countdown" dir="ltr" role="timer" aria-live="off">
+    <div className="lp-countdown" dir="ltr" role="timer" aria-live="off" data-ink="">
       {h > 0 && (
         <>
           <span>{pad(h)}</span>
