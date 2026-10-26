@@ -2,22 +2,19 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { ORDER_ACCESS_STATUS, assertOrderAccess } from '@/lib/rbac';
-import { isValidTransition, CONTACT_RESULTS, REJECTION_REASONS } from '@/lib/confirmation-workflow';
-import { logAudit } from '@/lib/audit';
+import { CONTACT_RESULTS, REJECTION_REASONS } from '@/lib/confirmation-workflow';
 import { apiError } from '@/lib/api-error';
 import { can, authorize } from '@/lib/authorization';
 import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
-import { STATUS_VALUE_AR } from '@/lib/order-timeline';
 
 /**
- * POST /api/orders/[id]/call-logs — record a call + optionally drive workflow.
+ * POST /api/orders/[id]/call-logs — record a call. A result that would move
+ * the order is refused (USE_CONFIRMATION_DOOR): status is the confirmation door's.
  *
  * SECURITY (Phase S):
  *  - Permission required: orders.edit with scope evaluation
  *    (ASSIGNED scope enforces own-assignment).
  *  - Order access via assertOrderAccess (company isolation + role assignment scope).
- *  - Status changes here follow the SAME controlled transition map as the
- *    confirmation workflow — a call log can no longer bypass separation of duties.
  *  - moderatorId on the log is ALWAYS the authenticated user (server-derived).
  */
 export async function POST(
@@ -128,68 +125,30 @@ export async function POST(
     else if (result === 'CALLBACK_REQUESTED') mappedStatus = 'CONTACTING';
 
     const statusWillChange = !!(mappedStatus && mappedStatus !== order.status);
+    /*
+     * A CALL IS RECORDED HERE; AN ORDER IS CONFIRMED AT THE CONFIRMATION DOOR.
+     *
+     * This door used to confirm and reject too — with `orders.confirm`, but
+     * without that door's rules: no stock reserved on «مؤكد», none released
+     * on «مرفوض», no editing lock, no contact-first. Its form went from the
+     * order window long ago (OrderDetailModal says so) and nothing calls it
+     * for a status. So a result that would move the order is refused, in
+     * words that say where to go, and nothing is written — not even the call,
+     * because a call logged as «confirmed» on an order that is not would be a
+     * second record that disagrees with the first.
+     */
     if (statusWillChange) {
-      // Separation of duties: status change requires confirmation authority —
-      // the call is still recorded, but the order status is NOT changed.
-      if (!authorize(user, 'orders.confirm', order).allowed) {
-        const log = await db.$transaction(async (tx) => {
-          const created = await tx.callLog.create({
-            data: {
-              companyId,
-              orderId: id,
-              moderatorId: user.id,
-              callDate: callAt,
-              result,
-              notes: notes?.trim() || null,
-              nextFollowUpDate: nextFollowUp,
-            },
-          });
-          await tx.orderActivity.create({
-            data: {
-              companyId, orderId: id, userId: user.id, action: 'CALL_MADE',
-              metadata: JSON.stringify({ callResult: result, notes: notes || '', caller: user.name, statusChangeBlocked: true }),
-            },
-          });
-          return created;
-        });
-        return NextResponse.json({
-          success: true,
-          callLog: log,
-          warning: 'Call recorded. Status change requires confirmation permission.',
-        });
-      }
-
-      // Scope already enforced by authorize('orders.edit', order) above
-      // (ASSIGNED scope only passes for orders the user owns/claimed/assigned).
-
-      // Workflow transition validation (same rules as the confirmation API).
-      // The legacy combined status is mapped from confirmationStatus equivalents;
-      // legacy values (CONTACTING) are logged but skip the strict map.
-      const confirmEquiv = mappedStatus === 'CONTACTING' ? null : mappedStatus;
-      if (confirmEquiv && !isValidTransition(order.confirmationStatus, confirmEquiv)) {
-        return NextResponse.json(
-          {
-            error: `Invalid workflow transition: ${order.confirmationStatus} → ${confirmEquiv}`,
-            errorAr: `لا يمكن الانتقال من «${STATUS_VALUE_AR[order.confirmationStatus] ?? order.confirmationStatus}» إلى «${STATUS_VALUE_AR[confirmEquiv] ?? confirmEquiv}».`,
-            code: 'INVALID_TRANSITION',
-          },
-          { status: 409 }
-        );
-      }
+      return NextResponse.json(
+        {
+          error: 'تغيير حالة الطلب من شاشة التأكيد — هون بينسجّل الاتصال بس.',
+          errorAr: 'تغيير حالة الطلب من شاشة التأكيد — هون بينسجّل الاتصال بس.',
+          code: 'USE_CONFIRMATION_DOOR',
+        },
+        { status: 409 }
+      );
     }
 
-    const statusLogData =
-      statusWillChange && mappedStatus && mappedStatus !== 'CONTACTING'
-        ? {
-            companyId, orderId: id, statusType: 'CONFIRMATION',
-            previousValue: order.confirmationStatus, newValue: mappedStatus,
-            changedById: user.id, changedByRole: user.role,
-            note: notes?.trim() || null,
-          }
-        : null;
-
     const callLog = await db.$transaction(async (tx) => {
-      // 1. The call log itself
       const log = await tx.callLog.create({
         data: {
           companyId,           // session-derived
@@ -201,74 +160,15 @@ export async function POST(
           nextFollowUpDate: nextFollowUp,
         },
       });
-
-      if (statusWillChange && mappedStatus) {
-        // 2. Versioned order update with mapped workflow fields
-        const versioned = await tx.order.updateMany({
-          where: { id, version: order.version },
-          data: {
-            status: mappedStatus,
-            ...(mappedStatus === 'CONFIRMED'
-              ? { confirmedAt: new Date(), confirmationStatus: 'CONFIRMED', confirmedById: user.id, version: { increment: 1 } }
-              : mappedStatus === 'REJECTED'
-              ? {
-                  confirmationStatus: 'REJECTED',
-                  // The reason the caller gave, or the one this result already
-                  // IS. It used to write `'OTHER'` for every rejection logged
-                  // from a call — the one value that says nothing — while the
-                  // confirmation screen two clicks away refused to close an
-                  // order without a structured reason. One door demanded it
-                  // and another invented it, and the analysis of why orders
-                  // are lost reads both.
-                  rejectionReason: result === 'WRONG_NUMBER' ? 'WRONG_NUMBER' : (rejectionReason as string),
-                  rejectionNote: notes?.trim() || null,
-                  version: { increment: 1 },
-                }
-              : mappedStatus === 'POSTPONED' && nextFollowUp
-              ? { confirmationStatus: 'POSTPONED', postponedUntil: nextFollowUp, nextFollowUpAt: nextFollowUp, followUpStatus: 'SCHEDULED', followUpReason: 'POSTPONED', version: { increment: 1 } }
-              : mappedStatus === 'NO_ANSWER'
-              ? { confirmationStatus: 'NO_ANSWER', version: { increment: 1 } }
-              : { version: { increment: 1 } }),
-          },
-        });
-        if (versioned.count !== 1) {
-          throw new Error('VERSION_CONFLICT: This order was updated by another user. Please refresh before saving.');
-        }
-
-        // 3. Activity
-        await tx.orderActivity.create({
-          data: {
-            companyId,
-            orderId: id,
-            userId: user.id,
-            action: 'CALL_MADE',
-            previousStatus: order.status,
-            newStatus: mappedStatus,
-            metadata: JSON.stringify({ callResult: result, notes: notes || '', caller: user.name }),
-          },
-        });
-
-        // 4. Status log
-        if (statusLogData) {
-          await tx.orderStatusLog.create({ data: statusLogData });
-        }
-
-        await logAudit({
-          companyId, userId: user.id, action: 'ORDER_STATUS_CHANGED', entity: 'Order', entityId: id,
-          previousData: { status: order.status }, newData: { status: mappedStatus, via: 'call-log', caller: user.name },
-        });
-      } else {
-        await tx.orderActivity.create({
-          data: {
-            companyId,
-            orderId: id,
-            userId: user.id,
-            action: 'CALL_MADE',
-            metadata: JSON.stringify({ callResult: result, notes: notes || '', caller: user.name }),
-          },
-        });
-      }
-
+      await tx.orderActivity.create({
+        data: {
+          companyId,
+          orderId: id,
+          userId: user.id,
+          action: 'CALL_MADE',
+          metadata: JSON.stringify({ callResult: result, notes: notes || '', caller: user.name }),
+        },
+      });
       return log;
     });
 

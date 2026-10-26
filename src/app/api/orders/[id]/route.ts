@@ -778,8 +778,23 @@ export async function PATCH(
         updateData.source = channel.name;
       }
     }
+    /*
+     * THE TRACKING NUMBER HAS ONE DOOR, AND IT IS NOT THIS ONE.
+     *
+     * This field wrote `trackingNumber` on `orders.edit` alone: no shipping
+     * key, no «before it ships» rule, no check that another parcel does not
+     * already carry the number. The shipping door (`POST …/shipping`,
+     * update_tracking) has all three, and no screen sends the field here.
+     */
     if (trackingCode !== undefined) {
-      updateData.trackingNumber = trackingCode || null;
+      return NextResponse.json(
+        {
+          error: 'رقم التتبّع بيتغيّر من شاشة الشحن.',
+          errorAr: 'رقم التتبّع بيتغيّر من شاشة الشحن.',
+          code: 'TRACKING_VIA_SHIPPING',
+        },
+        { status: 400 }
+      );
     }
 
     // Shipping and delivery cost belong to the shipping authority, not to
@@ -967,7 +982,15 @@ export async function PATCH(
        */
       (TERMINAL_CONFIRMATION_STATUSES as string[]).includes(existing.confirmationStatus)
     ) {
-      const asked = CHANGEABLE_FIELDS.filter(
+      /*
+       * `items` TOO — the order's lines are the same product, quantity and
+       * price as the single fields, said for more than one line. The list
+       * above held only the single fields, so a confirmed order's lines could
+       * be replaced directly whenever nothing on them was reserved yet. The
+       * lines card already turns a confirmed order's save into a request;
+       * this is the server saying the same.
+       */
+      const asked = [...CHANGEABLE_FIELDS, 'items' as const].filter(
         (f) => (data as Record<string, unknown>)[f] !== undefined
       );
       if (asked.length > 0) {
@@ -976,7 +999,7 @@ export async function PATCH(
             errorAr: 'الطلب مؤكَّد — التعديل بيصير بطلب تعديل.',
             code: 'CHANGE_REQUEST_REQUIRED',
             fields: asked,
-            fieldsAr: asked.map((f) => CHANGE_FIELD_AR[f]),
+            fieldsAr: asked.map((f) => (f === 'items' ? 'أسطر الطلب' : CHANGE_FIELD_AR[f])),
           },
           { status: 409 }
         );

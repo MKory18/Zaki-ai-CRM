@@ -422,7 +422,7 @@ const REACHED_BUT_UNSEEN: Record<string, string> = {
 const NO_CALLER_FOUND: Record<string, string> = {
   '/api/orders/[id]/finance': 'لقطةُ مالِ الطلبِ ودفترُه — لا نافذةَ تطلبها، وشاشةُ الطلب تقرأ /api/orders/[id] وحدها',
   '/api/orders/[id]/call-logs': 'المسارُ باقٍ وتعليقُ OrderDetailModal نفسه يقول إنه عاش هناك ولم يرسمه شيء',
-  '/api/orders/follow-ups': 'طوابيرُ المتابعةِ المحسوبةُ بساعةِ الخادم — لا شاشةَ تسألها، ولا اختبارَ يذكرها',
+  '/api/orders/follow-ups': 'مسكَّر (410) — طوابيرُ المتابعةِ صارت بشاشات التأكيد، والبابُ كان بلا صلاحية ويقرّر بأسماء الأدوار',
   /*
    * `/api/orders/confirmation/performance` — STILL UNCALLED, BUT NO LONGER
    * «الطريقُ الأقدمُ لنفسِ الأرقام».
