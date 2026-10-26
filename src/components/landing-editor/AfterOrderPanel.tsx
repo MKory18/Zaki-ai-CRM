@@ -49,7 +49,7 @@ function Choices<T extends string>({ label, value, options, onPick }: { label: s
             type="button"
             onClick={() => onPick(v)}
             className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-              value === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+              value === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
             }`}
           >
             {text}
