@@ -209,30 +209,30 @@ export const syncCourierStatus: JobDefinition = {
         continue;
       }
 
-      const where = {
-        companyId: provider.companyId,
-        deliveryProviderId: provider.id,
-        trackingNumber: { not: null },
-        shippingStatus: { in: ['READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY'] },
-      };
-      const select = {
-        id: true, trackingNumber: true, shippingStatus: true, companyId: true, storeId: true,
-        orderNumber: true, trackingMissCount: true, trackingMissingSince: true,
-        trackingMissingAlertedAt: true,
-        // Read so the status's own timestamp is stamped when it is still empty (apply-event).
-        shippedAt: true, outForDeliveryAt: true, failedAt: true,
-      } as const;
+      // One read, its `where` written in place: a-bench-is-not-the-business finds this site by reading it.
+      const page = (after?: string) =>
+        db.order.findMany({
+          where: {
+            companyId: provider.companyId,
+            deliveryProviderId: provider.id,
+            trackingNumber: { not: null },
+            shippingStatus: { in: ['READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY'] },
+            ...(after ? { id: { gt: after } } : {}),
+          },
+          select: {
+            id: true, trackingNumber: true, shippingStatus: true, companyId: true, storeId: true,
+            orderNumber: true, trackingMissCount: true, trackingMissingSince: true,
+            trackingMissingAlertedAt: true,
+            // Read so the status's own timestamp is stamped when it is still empty (apply-event).
+            shippedAt: true, outForDeliveryAt: true, failedAt: true,
+          },
+          orderBy: { id: 'asc' },
+          take: POLL_BATCH,
+        });
       const after = pollCursor.get(provider.id);
-      let inTransit = await db.order.findMany({
-        where: { ...where, ...(after ? { id: { gt: after } } : {}) },
-        select,
-        orderBy: { id: 'asc' },
-        take: POLL_BATCH,
-      });
-      if (inTransit.length === 0 && after) {
-        // Past the end: start again from the top.
-        inTransit = await db.order.findMany({ where, select, orderBy: { id: 'asc' }, take: POLL_BATCH });
-      }
+      let inTransit = await page(after);
+      // Past the end: start again from the top.
+      if (inTransit.length === 0 && after) inTransit = await page();
       if (inTransit.length === POLL_BATCH) pollCursor.set(provider.id, inTransit[inTransit.length - 1].id);
       else pollCursor.delete(provider.id);
       if (inTransit.length === 0) continue;
