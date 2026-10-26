@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { inStore } from '@/lib/store-filter';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
@@ -52,7 +53,7 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { companyId, country } = await requireContext();
+    const { companyId, storeId, country } = await requireContext();
     const assistant = assistantByKey('landing_copy')!;
     await requirePermission(assistant.needs);
 
@@ -67,7 +68,8 @@ export async function POST(req: Request) {
      * apart is the leak.
      */
     const product = await db.product.findFirst({
-      where: { id: parsed.data.productId, companyId },
+      // This store's product, as the products screen reads it — not any id in the company.
+      where: { id: parsed.data.productId, ...inStore(companyId, storeId) },
       select: {
         id: true,
         name: true,

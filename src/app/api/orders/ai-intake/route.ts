@@ -23,6 +23,7 @@ import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE }
 import { zodMessage } from '@/lib/zod-message';
 import { AiEndpointMissing, AiNotConfigured, AiNotLocal, aiChat, aiSettings } from '@/lib/ai-provider';
 import { resolvePrompt } from '@/lib/ai-prompts';
+import { projectOrder } from '@/lib/order-projection';
 
 /**
  * POST /api/orders/ai-intake
@@ -486,7 +487,9 @@ export async function POST(req: Request) {
       // believe it was.
       return NextResponse.json({
         success: true,
-        order,
+        // The created row, as this person may read it: no cost of goods to a
+        // reader without «عرض المالية» (order-projection.ts).
+        order: projectOrder(order, user),
         ...(entry.capFull ? { notice: ENTRY_CAP_FULL_MESSAGE } : {}),
       });
     }

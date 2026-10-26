@@ -40,6 +40,7 @@ const { db, requireContext, requirePermission, aiChat, describeRoute, customerHi
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
+vi.mock('@/lib/rbac', () => ({ orderVisibilityWhere: () => ({}) }));
 vi.mock('@/lib/ai-provider', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   aiChat: (...a: unknown[]) => aiChat(...a),

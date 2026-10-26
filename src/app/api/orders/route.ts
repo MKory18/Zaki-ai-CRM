@@ -764,7 +764,9 @@ export async function POST(req: Request) {
      */
     return NextResponse.json({
       success: true,
-      order,
+      // The created row, as this person may read it: no cost of goods to a
+      // reader without «عرض المالية» (order-projection.ts).
+      order: projectOrder(order, user),
       ...(entry.capFull ? { notice: ENTRY_CAP_FULL_MESSAGE } : {}),
     });
   } catch (error) {
