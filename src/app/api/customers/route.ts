@@ -261,6 +261,27 @@ export async function POST(req: Request) {
      */
     const existing = await findCustomer(db, companyId, storeId, normalizedPhone);
     if (existing) {
+      /*
+       * «ALREADY HERE» IS NOT «HERE IS THEIR FILE».
+       *
+       * Typing a phone number into «عميل جديد» used to hand back the whole
+       * row of whoever had it — address, notes, counters and every order
+       * with its amount — to anyone allowed to ADD a customer. The screen
+       * only says «موجود مسبقاً». The file is the address book's, within
+       * its scope; everyone else learns that the person exists, and who.
+       */
+      const book = getPermissionScope(user, 'customers.view');
+      const mayRead =
+        book?.scope === 'ALL_COMPANY' ||
+        (book?.scope === 'OWN' &&
+          !!(await db.order.findFirst({ where: { companyId, customerId: existing.id, moderatorId: user.id }, select: { id: true } })));
+      if (!mayRead) {
+        return NextResponse.json({
+          isExisting: true,
+          message: 'Customer already exists. Reusing profile to prevent duplication.',
+          customer: { id: existing.id, fullName: existing.fullName },
+        });
+      }
       const withOrders = await db.customer.findFirst({
         where: { id: existing.id },
         include: {

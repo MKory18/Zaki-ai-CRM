@@ -26,7 +26,7 @@ describe('the order detail computes the two stages', () => {
   it('and hands the verdict to the screen', () => {
     const src = route();
     expect(src).toMatch(/const closing = closingStages\(\{/);
-    expect(src).toMatch(/zone: getZone\(state\), commission, closing \}/);
+    expect(src).toMatch(/zone: getZone\(state\), commission: maySeeOrderCost\(user\) \? commission : undefined, closing \}/);
   });
 
   it('without a second opinion of its own about what «closed» means', () => {

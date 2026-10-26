@@ -11,15 +11,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * counts taken from the courier's own statements.
  */
 
-const { db, requireContext, requirePermission } = vi.hoisted(() => ({
+const { db, requireContext, assertOrderReadable } = vi.hoisted(() => ({
   db: { order: { findFirst: vi.fn(), groupBy: vi.fn() } },
   requireContext: vi.fn(),
-  requirePermission: vi.fn(),
+  assertOrderReadable: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
-vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
+vi.mock('@/lib/rbac', () => ({
+  assertOrderReadable: (...a: unknown[]) => assertOrderReadable(...a),
+  ORDER_ACCESS_STATUS: { NOT_FOUND: 404, WRONG_COMPANY: 404, NOT_ASSIGNED: 404 },
+}));
 
 import { GET } from './route';
 
@@ -64,7 +67,7 @@ const call = () => GET(new Request('http://x'), { params: Promise.resolve({ id: 
 beforeEach(() => {
   vi.resetAllMocks();
   requireContext.mockResolvedValue({ user: { id: 'u1' }, companyId: 'c1', storeId: 's1' });
-  requirePermission.mockResolvedValue(undefined);
+  assertOrderReadable.mockResolvedValue({ allowed: true });
   db.order.findFirst.mockResolvedValue(ORDER);
   db.order.groupBy.mockResolvedValueOnce(CONCLUDED).mockResolvedValueOnce(RETURNED);
 });
@@ -108,9 +111,17 @@ describe('GET /api/orders/:id/shape-risk', () => {
     expect(body.levers.some((l: { dimension: string }) => l.dimension === 'payment')).toBe(false);
   });
 
-  it('asks for the permission before it counts anything', async () => {
+  it('opens the order through the reader’s own envelope before it counts anything', async () => {
     await call();
-    expect(requirePermission).toHaveBeenCalledWith('orders.view');
+    expect(assertOrderReadable).toHaveBeenCalledWith('o1', { id: 'u1' }, { companyId: 'c1', storeId: 's1' }, 'orders.view');
+  });
+
+  it('an order outside the reader’s envelope gets nothing — not even its product or region', async () => {
+    assertOrderReadable.mockResolvedValue({ allowed: false, reason: 'NOT_FOUND' });
+    const res = await call();
+    expect(res.status).toBe(404);
+    expect(db.order.findFirst).not.toHaveBeenCalled();
+    expect(db.order.groupBy).not.toHaveBeenCalled();
   });
 
   it('reads only inside this company and this store', async () => {
