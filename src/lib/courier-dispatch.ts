@@ -3,6 +3,7 @@ import { adapterFor } from './couriers';
 import { courierBelongsToStore } from './courier-scope';
 import { isOutcomeUnknown } from './couriers/types';
 import { logAudit } from './audit';
+import { formatPhoneNumber } from './phone';
 
 /**
  * HANDING THE ORDERS TO THE COURIER.
@@ -156,6 +157,7 @@ export async function dispatchBatch(input: {
       customer: { select: { fullName: true, rawPhone: true, phone: true, altPhone: true, address: true } },
       regionId: true,
       region: { select: { name: true } },
+      store: { select: { country: { select: { code: true } } } },
     },
     orderBy: { orderNumber: 'asc' },
   });
@@ -235,7 +237,13 @@ export async function dispatchBatch(input: {
           // The phone AS TYPED: couriers dial it, and a normalized form can
           // lose the leading zero their system expects.
           phone: order.customer?.rawPhone || order.customer?.phone || '',
-          altPhone: order.customer?.altPhone ?? null,
+          // The second number has no as-typed copy: the storefront stores it
+          // canonical, its trunk zero stripped («0988777666» → «988777666»).
+          // Written back in the store country's dialling form, as a driver
+          // dials it; a number already typed with its zero comes out unchanged.
+          altPhone: order.customer?.altPhone
+            ? formatPhoneNumber(order.customer.altPhone, order.store?.country?.code)
+            : null,
           address: order.customer?.address ?? '',
           regionName: order.region?.name ?? null,
         },

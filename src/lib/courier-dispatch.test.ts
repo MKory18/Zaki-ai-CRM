@@ -392,4 +392,16 @@ describe('a region with no courier id', () => {
     await dispatchBatch(input);
     expect(createShipment.mock.calls[0][0].customer.altPhone).toBe('0988777666');
   });
+
+  it('a second phone stored without its zero (the storefront form) reaches them as it is dialled', async () => {
+    db.order.findMany.mockResolvedValue([
+      order({
+        regionId: 'r-dam',
+        store: { country: { code: 'SY' } },
+        customer: { fullName: 'زبون', rawPhone: '0999111222', phone: '999111222', altPhone: '988777666', address: 'شارع' },
+      }),
+    ]);
+    await dispatchBatch(input);
+    expect(createShipment.mock.calls[0][0].customer.altPhone).toBe('0988777666');
+  });
 });
