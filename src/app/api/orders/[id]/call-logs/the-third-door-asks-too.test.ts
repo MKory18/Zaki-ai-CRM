@@ -108,6 +108,8 @@ describe('recording a call from the order window', () => {
 
   it('and works with it, as it did before', async () => {
     holding('orders.edit', 'orders.view', 'orders.contact_log');
+    // A call that leaves the order where it is: the only kind this door writes now.
+    assertOrderAccess.mockResolvedValue({ allowed: true, order: { ...ORDER, status: 'NO_ANSWER' } });
 
     const res = await recordCall();
     expect(res.status, await res.clone().text()).toBeLessThan(400);
@@ -122,5 +124,41 @@ describe('recording a call from the order window', () => {
     const res = await recordCall();
     expect(res.status).toBe(403);
     expect(db.callLog.create).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * AND IT NO LONGER MOVES THE ORDER.
+ *
+ * «مؤكد» from here wrote CONFIRMED with no stock reserved, «مرفوض» released
+ * nothing, and neither asked for the editing lock — the confirmation door's
+ * rules, skipped by a door nothing on screen calls any more. A result that
+ * would move the order is refused with the way to the right door, and
+ * nothing at all is written — even for someone who may confirm.
+ */
+describe('a result that would move the order', () => {
+  const call = (result: string, extra: Record<string, unknown> = {}) =>
+    POST(
+      new Request('http://localhost/api/orders/o1/call-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result, ...extra }),
+      }),
+      { params: Promise.resolve({ id: 'o1' }) }
+    );
+
+  it.each([
+    ['CONFIRMED', {}],
+    ['REJECTED', { rejectionReason: 'PRICE_TOO_HIGH' }],
+    ['NO_ANSWER', {}],
+  ])('«%s» is sent to the confirmation door, and nothing is written', async (result, extra) => {
+    holding('orders.edit', 'orders.view', 'orders.contact_log', 'orders.confirm');
+    const res = await call(result, extra);
+    const body = await res.json();
+    expect(res.status, JSON.stringify(body)).toBe(409);
+    expect(body.code).toBe('USE_CONFIRMATION_DOOR');
+    expect(db.callLog.create).not.toHaveBeenCalled();
+    expect(db.order.update).not.toHaveBeenCalled();
+    expect(db.orderStatusLog.create).not.toHaveBeenCalled();
   });
 });

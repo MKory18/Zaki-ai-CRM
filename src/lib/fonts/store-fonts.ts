@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { LOCAL_STORAGE_DIR, STORAGE_PROVIDER } from '@/lib/storage';
 import { readFontFacts, looksRestricted, type FontFacts } from './font-file';
+import { cssString } from './css-string';
 
 /**
  * A store's own typefaces: stored, named and served.
@@ -118,7 +119,12 @@ export function describeFont(buffer: Buffer, originalName: string): Omit<Uploade
   // A woff2 keeps its tables Brotli-compressed, so the family has to come
   // from the filename — with the weight taken off it, or every weight
   // becomes a family of its own.
-  const family = facts.family || familyFromFileName(originalName) || 'خط مرفوع';
+  // Markup and control characters off the name before it is stored: it is
+  // drawn into every page's stylesheet, and cssString at the drawing is the
+  // guard — this is the second one, so a row written before the fix and a
+  // future caller that forgets the first are both covered.
+  const family =
+    (facts.family || familyFromFileName(originalName) || '').replace(/[<>\u0000-\u001f\u007f]/g, '').trim() || 'خط مرفوع';
   const weight = facts.family ? facts.weight : (weightFromFileName(originalName) ?? 400);
   const italic = facts.italic || /italic|oblique/i.test(originalName);
 
@@ -163,26 +169,9 @@ export function fontMime(format: string): string {
   return MIME[format] || 'application/octet-stream';
 }
 
-/**
- * A string safe to put inside a CSS rule that lives inside a <style> tag.
- *
- * JSON.stringify quotes and escapes for CSS correctly — a `"` becomes `\"`,
- * which CSS reads as an escaped quote, so the string cannot be closed early.
- *
- * What it does NOT handle is the tag around the stylesheet. A family called
- * `</style><img onerror=...>` is still a valid CSS string, and still ends
- * the style element the moment the browser's HTML parser sees it — the CSS
- * was never the way out, the markup was. So `<` and `>` become CSS hex
- * escapes, which render identically and cannot close a tag.
- *
- * This matters because the value came from the `name` table of a file a
- * seller uploaded, which is to say from anywhere at all.
- */
-export function cssString(value: string): string {
-  return JSON.stringify(String(value))
-    .replace(/</g, '\\3c ')
-    .replace(/>/g, '\\3e ');
-}
+// Pure, and in a file of its own so the editor (a client component) can use
+// the same escape without importing this server-only module.
+export { cssString };
 
 /**
  * The @font-face rules for a store's uploaded faces.

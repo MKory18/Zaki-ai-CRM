@@ -6,6 +6,7 @@ import {
   Monitor, Smartphone, X, LayoutTemplate, AlertTriangle, Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { cssString } from '@/lib/fonts/css-string';
 import { LookControls } from '@/components/landing/blocks/LookControls';
 import { useInlineEdit } from '@/components/landing/blocks/useInlineEdit';
 import { Input } from '@/components/ui/Input';
@@ -143,7 +144,7 @@ export function BlockBuilder(props: Props) {
     const faces = storeFonts
       .map(
         (f) =>
-          `@font-face{font-family:${JSON.stringify(f.family)};src:url(${JSON.stringify(f.url)}) format(${JSON.stringify(f.format)});font-weight:${f.weight};font-style:${f.italic ? 'italic' : 'normal'};font-display:swap;}`
+          `@font-face{font-family:${cssString(f.family)};src:url(${cssString(f.url)}) format(${cssString(f.format)});font-weight:${f.weight};font-style:${f.italic ? 'italic' : 'normal'};font-display:swap;}`
       )
       .join('\n');
     // Same variable mapping the published page emits, so `u:<key>` resolves
@@ -151,7 +152,7 @@ export function BlockBuilder(props: Props) {
     const seen = new Set<string>();
     const vars = storeFonts
       .filter((f) => !seen.has(f.key) && seen.add(f.key))
-      .map((f) => `--store-uf-${f.key}: ${JSON.stringify(f.family)}, system-ui, sans-serif;`)
+      .map((f) => `--store-uf-${f.key}: ${cssString(f.family)}, system-ui, sans-serif;`)
       .join(' ');
     return `${faces}
 .lp-root, .zaki-font-panel { ${vars} }`;

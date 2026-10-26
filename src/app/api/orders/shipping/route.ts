@@ -1,112 +1,35 @@
-import { whereDelivered } from '@/lib/order-state';
-import { readLimit, readPage } from '@/lib/numeric-input';
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { can } from '@/lib/authorization';
-import { noteCustomersHandedOut } from '@/lib/pii-alert';
-
+import { apiErrorResponse } from '@/lib/api-error';
 
 /**
- * GET /api/orders/shipping — server-enforced shipping queues + dashboard counters.
+ * GET /api/orders/shipping — CLOSED (410), and why it is closed rather than
+ * fixed.
  *
- * Query: queue = ready | packing | pickup | shipped | out | failed |
- *               return_requested | returned | no_provider | all
- *        providerId, page, limit
- * Server decides which queues/visibility a role gets (frontend never authorizes).
+ * It was the shipping queues before the shipping screens existed. Nothing
+ * calls it now: «الشحن الجديد», «الدفعات» and «التتبّع» each read their own
+ * door under `/api/ops/*`. What it still did was answer anyone holding
+ * `orders.view` with every queue's customers — names, phones, addresses —
+ * narrowed to their own orders only for three role NAMES, so a custom role
+ * built from the same keys read everything.
+ *
+ * Fixing a door nobody walks through would mean keeping a second copy of
+ * the shipping rules in step with the first for ever. So it answers 410 with
+ * where to go, and the git history keeps what it was. The sub-route
+ * `/api/orders/shipping/performance` is a different door and still works.
  */
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { user, companyId, storeId } = await requireContext();
-    const { searchParams } = new URL(req.url);
-    const queue = searchParams.get('queue') || 'all';
-    const providerId = searchParams.get('providerId')?.trim();
-    const page = readPage(searchParams);
-    const limit = readLimit(searchParams, 50, 100);
-
-    // Canonical keys only — view_assigned is a legacy alias for orders.view
-    const mayViewShipping =
-      can(user, 'orders.change_status') ||
-      can(user, 'orders.view');
-    if (!mayViewShipping) {
-      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحياتك. راجع مدير النظام إن كان من عملك.' }, { status: 403 });
-    }
-
-    const base: Record<string, unknown> = { companyId, storeId };
-    // Self-scoped roles (incl. MODERATOR) see only their own orders
-    if (['CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'MODERATOR'].includes(user.role)) {
-      base.OR = [{ claimedById: user.id }, { assignedToId: user.id }, { currentOwnerId: user.id }, { moderatorId: user.id }];
-    }
-
-    const queueMap: Record<string, string[]> = {
-      ready: ['READY_FOR_SHIPPING'],
-      packing: ['PACKING'],
-      pickup: ['READY_FOR_PICKUP'],
-      shipped: ['SHIPPED'],
-      out: ['OUT_FOR_DELIVERY'],
-      failed: ['FAILED_DELIVERY'],
-      return_requested: ['RETURN_REQUESTED'],
-      returned: ['RETURNED'],
-      // everything in the shipping pipeline except terminal
-      all: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY', 'RETURN_REQUESTED', 'RETURNED'],
-    };
-
-    const where: Record<string, unknown> = { ...base };
-    if (queue === 'no_provider') {
-      where.shippingStatus = { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] };
-      where.deliveryProviderId = null;
-    } else if (queueMap[queue]) {
-      where.shippingStatus = { in: queueMap[queue] };
-    } else {
-      // unknown queue → safe default
-      where.shippingStatus = { in: queueMap.all };
-    }
-    if (providerId) where.deliveryProviderId = providerId;
-
-    const [total, orders] = await Promise.all([
-      db.order.count({ where: where as any }),
-      db.order.findMany({
-        where: where as any,
-        include: {
-          customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true, address: true } },
-          product: { select: { id: true, name: true, image: true } },
-          deliveryProvider: { select: { id: true, name: true, code: true } },
-          shippingBatch: { select: { id: true, batchNumber: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    ]);
-
-    // Dashboard counters (company-wide, one round trip)
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
-    const [ready, packing, pickup, shipped, out, failedToday, deliveredToday, returned, noProvider] = await Promise.all([
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'READY_FOR_SHIPPING' } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'PACKING' } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'READY_FOR_PICKUP' } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'SHIPPED' } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'OUT_FOR_DELIVERY' } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: 'FAILED_DELIVERY', failedAt: { gte: startOfToday } } }),
-      // A partial delivery is a delivery: the tile under-counted on exactly
-      // the days partials happened.
-      db.order.count({ where: { companyId, storeId, ...whereDelivered(), deliveredAt: { gte: startOfToday } } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['RETURN_REQUESTED', 'RETURNED'] } } }),
-      db.order.count({ where: { companyId, storeId, shippingStatus: { in: ['READY_FOR_SHIPPING', 'PACKING', 'READY_FOR_PICKUP'] }, deliveryProviderId: null } }),
-    ]);
-
-    // Contact details left the building; the tally is the person's, not
-    // this screen's. See noteCustomersHandedOut.
-    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة الشحن', rows: orders });
-
-    return NextResponse.json({
-      orders,
-      dashboard: { ready, packing, pickup, shipped, out, failedToday, deliveredToday, returned, noProvider },
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'حدث خطأ داخلي' }, { status: 400 });
+    await requireContext();
+    return NextResponse.json(
+      {
+        error: 'هالباب انسكّر — طوابير الشحن بشاشات الشحن الجديد والدفعات والتتبّع.',
+        errorAr: 'هالباب انسكّر — طوابير الشحن بشاشات الشحن الجديد والدفعات والتتبّع.',
+        code: 'GONE',
+      },
+      { status: 410 }
+    );
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

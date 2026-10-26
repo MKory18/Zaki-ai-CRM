@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { fontFaceCss } from './store-fonts';
+import { cssString, fontFaceCss } from './store-fonts';
 
 /**
  * A store's uploaded faces, ready to put on a page.
@@ -50,7 +50,14 @@ export function groupFamilies(rows: Row[]): StoreFontFamily[] {
         family: r.family,
         // A generic fallback, never another uploaded face: falling back to
         // one the seller also uploaded hides the fact that a weight failed.
-        stack: `${JSON.stringify(r.family)}, system-ui, sans-serif`,
+        //
+        // cssString, NOT JSON.stringify: this lands in the page's <style>
+        // through the custom properties below, and a family name read from
+        // an uploaded file's name table can be `x</style><script>…` — a
+        // valid CSS string that ends the style element and runs on our own
+        // origin, the owner's preview included. The @font-face rules were
+        // escaped; this line was not.
+        stack: `${cssString(r.family)}, system-ui, sans-serif`,
         weights: [],
         restricted: false,
         attested: true,
