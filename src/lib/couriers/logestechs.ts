@@ -51,6 +51,28 @@ export interface LogesTechsConfig {
 const DEFAULT_BASE = 'https://apisv2.logestechs.com/api';
 
 /**
+ * THE ADDRESS EVERY REQUEST STARTS WITH — NEVER EMPTY.
+ *
+ * The settings screen says «رابط الـAPI (اتركه فارغاً للافتراضي)», and a box left empty is saved as `''`, not as
+ * nothing. `'' ?? DEFAULT_BASE` is `''`, so every request went out as a bare path — «Failed to parse URL from
+ * /ship/request/by-email» on every parcel of a batch, and on the city lookup before it. Blank means the official
+ * address; an address typed without its scheme gets `https://`; anything that still is not an absolute http(s)
+ * address falls back to the official one rather than sending a request that cannot leave the building.
+ */
+export function logesTechsBase(raw: string | null | undefined): string {
+  const typed = (raw ?? '').trim();
+  if (!typed) return DEFAULT_BASE;
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(typed) ? typed : `https://${typed}`;
+  try {
+    const url = new URL(withScheme);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return DEFAULT_BASE;
+    return withScheme.replace(/\/+$/, '');
+  } catch {
+    return DEFAULT_BASE;
+  }
+}
+
+/**
  * NO REQUEST WAITS FOREVER.
  *
  * `fetch` has no timeout of its own: a server that accepts the connection
@@ -159,7 +181,7 @@ export class LogesTechsAdapter implements CourierAdapter {
   private readonly timeoutMs: number;
 
   constructor(readonly config: LogesTechsConfig) {
-    this.base = (config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, '');
+    this.base = logesTechsBase(config.baseUrl);
     this.http = config.fetchImpl ?? fetch;
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }

@@ -82,7 +82,17 @@ const credentialsSchema = z.object({
   senderBusiness: z.string().max(120).optional(),
   originAddress: z.string().max(200).optional(),
   originAddress2: z.string().max(200).optional(),
-  baseUrl: z.string().max(300).optional(),
+  // «اتركه فارغاً للافتراضي»: an empty box is stored as nothing, so the adapter uses the official address; a typed
+  // one must be an absolute http(s) address — a bare path or a typo would send every parcel nowhere.
+  baseUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .transform((v) => (v ? v : undefined))
+    .refine((v) => v === undefined || /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(v), {
+      message: 'رابط الـAPI لازم يبلّش بـ https:// — أو اتركه فاضي للعنوان الرسمي',
+    }),
   serviceTypeId: count(2_147_483_647).optional(),
   vehicleTypeId: count(2_147_483_647).optional(),
   parcelTypeId: count(2_147_483_647).optional(),
