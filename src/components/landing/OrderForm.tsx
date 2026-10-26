@@ -137,6 +137,17 @@ interface OrderFormProps {
   afterOrderWhatsapp?: { enabled?: boolean; label?: string; message?: string; autoOpen?: boolean };
   /** The words on the submit button, as the form block sets them; the price follows. Absent = «تأكيد الطلب». */
   submitLabel?: string;
+  /**
+   * The thank-you screen's offers, as the form block's «بعد الطلب» shapes them (`landing-sections.ts`). Absent, the
+   * screen is the one it always was: both at once, no strip, the card and the list.
+   */
+  afterOrderLook?: {
+    flow?: 'together' | 'sequence';
+    banner?: 'none' | 'congrats' | 'countdown';
+    bannerText?: string;
+    upsellLook?: 'card' | 'banner' | 'compact';
+    crossSellLook?: 'list' | 'cards';
+  };
 }
 
 /** The message the customer sends, with the order number put in. */
@@ -182,7 +193,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 const packs = (n: number) => (n === 1 ? 'عبوة' : n === 2 ? 'عبوتان' : n <= 10 ? `${n} عبوات` : `${n} عبوة`);
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou, afterOrderWhatsapp, submitLabel }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou, afterOrderWhatsapp, submitLabel, afterOrderLook }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -239,6 +250,20 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
    * no second visit to remember.
    */
   const [offerRefused, setOfferRefused] = useState(false);
+  /*
+   * THE REAL WINDOW, COUNTED DOWN — the form block's «عدّاد». It starts when the order's answer arrives and counts the
+   * minutes the server sent, which are the minutes `postOrderGate` will enforce; at zero the offers leave the screen,
+   * because the server would refuse them anyway. Never an invented deadline: no window, no countdown.
+   */
+  const [offersFrom, setOffersFrom] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const look = {
+    flow: afterOrderLook?.flow ?? 'together',
+    banner: afterOrderLook?.banner ?? 'none',
+    bannerText: afterOrderLook?.bannerText?.trim() || 'مبروك! حابين نهديك عرض خاص قبل ما نجهّز طلبك',
+    upsell: afterOrderLook?.upsellLook ?? 'card',
+    crossSell: afterOrderLook?.crossSellLook ?? 'list',
+  };
   // Global tracking: Purchase — ONLY after the server confirms a real order,
   // with the SERVER-AUTHORITATIVE total/currency from the response. Deduped
   // per orderNumber (local ref + central engine) — re-renders never re-fire.
@@ -380,6 +405,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
         setPostOrderState('idle');
         setPostOrderRefused(false);
         setPostOrderMsg(null);
+        setOffersFrom(Date.now());
           // Purchase — ONLY after the server confirms a real order, with the
           // SERVER-AUTHORITATIVE total/currency from the response.
           if (json?.orderNumber && typeof window !== 'undefined') {
@@ -536,6 +562,21 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     }
   }
 
+  // One tick a second, only while a countdown is on the screen — nothing runs on a page that shows none.
+  const counting = look.banner === 'countdown' && offersFrom !== null && postOrder.windowMinutes > 0;
+  useEffect(() => {
+    if (!counting) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [counting]);
+  const secondsLeft = counting ? Math.max(0, Math.ceil((offersFrom! + postOrder.windowMinutes * 60_000 - now) / 1000)) : null;
+  const windowOver = secondsLeft === 0;
+  const clock = secondsLeft === null ? '' : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  // «ورا بعض»: the suggestions wait until the offer is answered — added, refused, or gone.
+  const upsellOpen = !!postOrder.offer && !postOrderRefused && (postOrderState === 'idle' || postOrderState === 'adding');
+  const showCrossSell = !offerRefused && !windowOver && recommendations.length > 0 && (look.flow === 'together' || !upsellOpen);
+  const showUpsell = !!postOrder.offer && !postOrderRefused && !windowOver;
+
   const inputCls =
     'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[var(--store-accent-border,#e8b9d0)] focus:border-[var(--store-accent,#b8256e)] transition-colors';
   const labelCls = 'block text-sm font-semibold text-[#364152] mb-1.5';
@@ -645,12 +686,25 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 server sent one. No «آخر قطعة», no fabricated countdown.
                 ═══════════════════════════════════════════════════════════
               */}
-              {postOrder.offer && !postOrderRefused && (
-                <div className="mt-6 rounded-xl border border-[var(--store-accent,#b8256e)] bg-white p-4 text-center">
-                  <p className="text-sm font-bold text-[#121926]">
+              {/* «شريط: مبروك، حابين نهديك عرض — أو عدّاد». Only while there is something to offer. */}
+              {look.banner !== 'none' && (showUpsell || showCrossSell) && (look.banner === 'congrats' || clock) && (
+                <p className="lp-after-banner" role="status">
+                  {look.banner === 'countdown' ? (
+                    <>⏳ العرض متاح لمدة <b dir="ltr">{clock}</b></>
+                  ) : (
+                    look.bannerText
+                  )}
+                </p>
+              )}
+              {windowOver && (postOrder.offer || recommendations.length > 0) && (
+                <p className="lp-after-banner">انتهت مهلة الإضافة على هذا الطلب — حكي معنا وبنزيدها لك.</p>
+              )}
+              {showUpsell && postOrder.offer && (
+                <div className="lp-upsell mt-6 rounded-xl border border-[var(--store-accent,#b8256e)] bg-white p-4 text-center" data-look={look.upsell}>
+                  <p className="lp-upsell-title text-sm font-bold text-[#121926]">
                     {postOrderState === 'added' ? 'تمت الإضافة إلى طلبك ✅' : `${postOrder.offer.name} — زيدها لطلبك؟`}
                   </p>
-                  <p className="mt-2 text-lg font-bold text-[var(--store-accent,#b8256e)]" dir="ltr">
+                  <p className="lp-upsell-price mt-2 text-lg font-bold text-[var(--store-accent,#b8256e)]" dir="ltr">
                     {fmt(postOrder.offer.price)} {currency}
                     {postOrder.offer.listPrice !== null && (
                       <span className="ms-2 text-sm font-semibold text-[#9aa4b2] line-through">
@@ -658,7 +712,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                       </span>
                     )}
                   </p>
-                  <p className="mt-1 text-xs text-[#697586]">
+                  <p className="lp-upsell-note mt-1 text-xs text-[#697586]">
                     {postOrder.offer.quantity} قطعة
                     {postOrder.offer.freeQuantity > 0 && ` + ${postOrder.offer.freeQuantity} مجاناً`}
                     {' — تدفعها عند الاستلام مع طلبك، بدون توصيل إضافي.'}
@@ -669,12 +723,12 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                       صار على نفس الطلب — ما في طلب ثاني ولا توصيل ثاني.
                     </p>
                   ) : postOrderState === 'gone' ? null : (
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className="lp-upsell-actions mt-4 flex flex-col gap-2">
                       <button
                         type="button"
                         onClick={addPostOrderOffer}
                         disabled={postOrderState === 'adding'}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--store-accent,#b8256e)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--store-accent-dark,#a01f5f)] disabled:opacity-60 active:scale-95"
+                        className="lp-upsell-yes inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--store-accent,#b8256e)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--store-accent-dark,#a01f5f)] disabled:opacity-60 active:scale-95"
                       >
                         {postOrderState === 'adding' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'آه، زيدها لطلبي'}
                       </button>
@@ -701,7 +755,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                     <p className="mt-3 text-xs text-rose-600">{postOrderMsg}</p>
                   )}
 
-                  {postOrderState === 'idle' && postOrder.windowMinutes > 0 && (
+                  {postOrderState === 'idle' && postOrder.windowMinutes > 0 && look.banner !== 'countdown' && (
                     // The real rule, in the server's own number. It is the
                     // window `postOrderGate` will measure, not a decoration.
                     <p className="mt-3 text-[11px] text-[#9aa4b2]">
@@ -712,17 +766,17 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               )}
 
               {/* Post-order upsells */}
-              {!offerRefused && recommendations.length > 0 && (
+              {showCrossSell && (
                 <div className="mt-6 rounded-xl border border-[#e3e8ef] bg-[#f8fafc] p-4 text-start">
                   <p className="mb-3 text-center text-sm font-bold text-[#121926]">
                     🔥 عرض خاص لك — أضفها إلى طلبك الآن
                   </p>
-                  <div className="space-y-2">
+                  <div className="lp-xsell-items space-y-2" data-look={look.crossSell}>
                     {recommendations.map((rec) => {
                       const st = addons[rec.id];
                       return (
                         <div key={rec.id} className="flex items-center gap-3 rounded-xl border border-[#e3e8ef] bg-white p-3">
-                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f1f3f6]">
+                          <div className="lp-xsell-thumb h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f1f3f6]">
                             {rec.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={rec.image} alt={rec.name} className="h-full w-full object-cover" />

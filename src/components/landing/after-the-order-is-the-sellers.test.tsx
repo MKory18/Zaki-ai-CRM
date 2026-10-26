@@ -84,7 +84,23 @@ describe('the thank-you screen', () => {
 });
 
 describe('the editor panel', () => {
-  const section = { whatsappAfter: true, whatsappLabel: 'أكّد طلبك على واتساب', whatsappMessage: 'طلبي {رقم_الطلب}', whatsappNumber: '', whatsappAutoOpen: false };
+  const section = {
+    whatsappAfter: true, whatsappLabel: 'أكّد طلبك على واتساب', whatsappMessage: 'طلبي {رقم_الطلب}', whatsappNumber: '', whatsappAutoOpen: false,
+    afterOrderFlow: 'together' as const, afterOrderBanner: 'none' as const, afterOrderBannerText: 'مبروك!', upsellLook: 'card' as const, crossSellLook: 'list' as const,
+  };
+
+  it('the shapes of the thank-you offers are the seller’s to pick — order, strip, upsell, cross-sell', () => {
+    apiJson.mockResolvedValue({});
+    const patch = vi.fn();
+    render(<AfterOrderPanel section={section} patch={patch} ctx={{ productId: null, pageId: null, storePhone: null }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ورا بعض' }));
+    fireEvent.click(screen.getByRole('button', { name: 'عدّاد' }));
+    fireEvent.click(screen.getByRole('button', { name: 'شريط ملوّن' }));
+    fireEvent.click(screen.getByRole('button', { name: 'بطاقات' }));
+    expect(patch.mock.calls.map((c) => c[0])).toEqual([
+      { afterOrderFlow: 'sequence' }, { afterOrderBanner: 'countdown' }, { upsellLook: 'banner' }, { crossSellLook: 'cards' },
+    ]);
+  });
 
   it('says whether the upsell and the suggestions are on, and links to where they are set', async () => {
     apiJson.mockImplementation(async (url: string) =>

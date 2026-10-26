@@ -330,6 +330,17 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
             : undefined
         }
         submitLabel={formChoices?.submitLabel}
+        afterOrderLook={
+          formChoices
+            ? {
+                flow: formChoices.afterOrderFlow,
+                banner: formChoices.afterOrderBanner,
+                bannerText: formChoices.afterOrderBannerText,
+                upsellLook: formChoices.upsellLook,
+                crossSellLook: formChoices.crossSellLook,
+              }
+            : undefined
+        }
         showOfferPicker={!pageHasOffersBlock}
         formStyle={formChoices?.formStyle}
         offerStyle={formChoices?.offerStyle}

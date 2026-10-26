@@ -505,6 +505,22 @@ const form = z.object({
    * default is what it always said, so a saved page reads as before.
    */
   submitLabel: z.string().max(40).default('تأكيد الطلب'),
+  /**
+   * THE THANK-YOU SCREEN'S OFFERS — HOW THEY ARE SHOWN. Every default is the screen as it always was, so a saved page
+   * reads as before.
+   *
+   *   · `afterOrderFlow` — «يكونو يا مع بعض الأب سيل والكروس سيل، يا ورا بعض». `together` shows both at once;
+   *     `sequence` shows the suggested products only once the «زيد علبة» offer is answered (added, refused, gone).
+   *   · `afterOrderBanner` — «شريط: مبروك، حابين نهديك عرض — أو عدّاد». `congrats` is a strip in the seller's words;
+   *     `countdown` counts down the REAL window the server enforces (`postOrderGate`), never an invented one.
+   *   · `upsellLook` / `crossSellLook` — the shapes of the two: a card, a full-width strip or one compact row; a list
+   *     of rows or a grid of cards.
+   */
+  afterOrderFlow: z.enum(['together', 'sequence']).default('together'),
+  afterOrderBanner: z.enum(['none', 'congrats', 'countdown']).default('none'),
+  afterOrderBannerText: z.string().max(80).default('مبروك! حابين نهديك عرض خاص قبل ما نجهّز طلبك'),
+  upsellLook: z.enum(['card', 'banner', 'compact']).default('card'),
+  crossSellLook: z.enum(['list', 'cards']).default('list'),
 });
 
 /** The three reassurances under the button. */
