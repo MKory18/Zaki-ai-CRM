@@ -51,7 +51,11 @@ vi.mock('@/lib/authorization', () => ({
   // that is asserted separately below, so the default here is «held».
   can: () => true,
 }));
-vi.mock('@/lib/user-permissions', () => ({ canConferRole: (...a: unknown[]) => canConferRole(...a) }));
+// Acting on a more senior account is its own test (people-act-within-their-reach).
+vi.mock('@/lib/user-permissions', () => ({
+  canConferRole: (...a: unknown[]) => canConferRole(...a),
+  canActOnUser: async () => ({ ok: true }),
+}));
 
 import { PATCH } from './route';
 

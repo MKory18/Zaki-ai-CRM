@@ -22,7 +22,8 @@ const { db, requireCompanyTenant, requirePermission } = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/db', () => ({ db, default: db }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
-vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
+// The reader holds «عرض الرواتب» here; the pay redaction is its own test (pay-stays-with-payroll).
+vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a), can: () => true }));
 
 import { GET } from '@/app/api/audit-logs/route';
 import { auditWhere, describeAction, entityHref, entityLabel, readAuditQuery, summariseChange } from './audit-view';

@@ -134,7 +134,6 @@ const READS_ONLY: Record<string, string> = {
   'src/app/api/finance/statements/route.ts': 'إجمالي كشف المندوب، لا إجمالي طلب',
   'src/app/api/finance/statements/[id]/route.ts': 'إجمالي كشف المندوب في سجلّ إلغاء الاستيراد، لا إجمالي طلب',
   'src/app/api/growth/storefronts/route.ts': 'إيراد كل واجهة — قراءة',
-  'src/app/api/moderators/route.ts': 'مبيعات كل موظّفة — قراءة',
   'src/app/api/offers/route.ts': 'سعر العرض نفسه، وهو إدخال البائع لا حساب',
   /*
    * `src/app/api/offers/[id]/route.ts` was here, for the same reason as the

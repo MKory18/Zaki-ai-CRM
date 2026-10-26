@@ -12,7 +12,7 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
     region: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     store: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     storePage: { createMany: vi.fn() },
-    user: { findFirst: vi.fn() },
+    user: { findFirst: vi.fn(), findUnique: vi.fn(async () => null) },
     userCountryAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
     userStoreAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn(), count: vi.fn() },
     $transaction: vi.fn(),
@@ -30,6 +30,11 @@ vi.mock('@/lib/authorization', () => ({
   can: (...a: unknown[]) => can(...a),
 }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
+// Acting on a more senior account is its own test (people-act-within-their-reach).
+vi.mock('@/lib/user-permissions', async (orig) => ({
+  ...(await orig<typeof import('@/lib/user-permissions')>()),
+  canActOnUser: async () => ({ ok: true }),
+}));
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 import * as countriesRoute from '@/app/api/geo/countries/route';

@@ -1,3 +1,5 @@
+import { scopeBeyondMinter } from '@/lib/v1/token-granter';
+import { catalogItem } from '@/lib/permission-catalog';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -122,13 +124,20 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('apps.manage');
+    const minter = await requirePermission('apps.manage');
 
     const parsed = createSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: zodMessage(parsed.error) }, { status: 400 });
     }
     const v = { ...parsed.data, rateLimitPerMin: parsed.data.rateLimitPerMin ?? defaultRateFor(parsed.data.system) };
+
+    // Not a key to more than the person minting it holds (token-granter.ts).
+    const beyond = scopeBeyondMinter(minter, v.scopes);
+    if (beyond) {
+      const msg = `لا يمكنك إصدار مفتاح بصلاحية «${V1_SCOPE_AR[beyond.scope]}» — تحتاج «${catalogLabel(beyond.key)}» بنطاق كامل.`;
+      return NextResponse.json({ error: msg, errorAr: msg, code: 'SCOPE_BEYOND_MINTER' }, { status: 403 });
+    }
 
     const minted = mintToken();
     const expiresAt = new Date(Date.now() + v.days * 24 * 60 * 60 * 1000);
@@ -212,4 +221,9 @@ export async function DELETE(req: Request) {
   } catch (error) {
     return apiErrorResponse(error);
   }
+}
+
+/** A key's Arabic name for the refusal, or the key itself if the catalog has none. */
+function catalogLabel(key: string): string {
+  return catalogItem(key)?.ar ?? key;
 }

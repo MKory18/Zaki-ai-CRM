@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
 import { PERMISSION_MODULES } from '@/lib/permission-catalog';
 import { isReservedRoleName, isPrivilegedRoleName, normalizeRoleName } from '@/lib/role-names';
-import { granterHoldsAll, canConferRole } from '@/lib/user-permissions';
+import { granterHoldsAll, canConferRole, roleScopeRefusal } from '@/lib/user-permissions';
 
 const ALLOWED_KEYS: Set<string> = new Set(
   PERMISSION_MODULES.flatMap((m) => m.items.map((i) => i.key))
@@ -108,10 +108,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       // scope) into ANY role — their own role or someone else's — that they
       // do not themselves hold. Blocks self-escalation via the role matrix
       // and cross-user conferral alike. Runs BEFORE any DB write.
-      const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY' })));
+      const grantError = granterHoldsAll(admin, permissions.map((p) => ({ permission: p.permission, scope: p.scope ?? 'ALL_COMPANY', scopeIds: p.scopeIds })));
       if (grantError) {
         return NextResponse.json({ error: grantError }, { status: 403 });
       }
+      // The ids are the ROLE's company's, and the scope is one the key offers.
+      const scopeRefusal = await roleScopeRefusal(role.companyId ?? admin.companyId ?? null, permissions);
+      if (scopeRefusal) return NextResponse.json({ error: scopeRefusal }, { status: 400 });
     }
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
       return NextResponse.json({ error: 'اسم الدور غير صالح' }, { status: 400 });

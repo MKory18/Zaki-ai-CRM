@@ -8,7 +8,10 @@ import { ALL_CATALOG_KEYS, catalogItem } from '@/lib/permission-catalog';
 import { logAudit } from '@/lib/audit';
 import {
   PERMISSION_TARGET_SELECT,
+  canActOnUser,
+  denyRemovalRefusal,
   loadPermissionTarget,
+  OPERATIONAL_KEYS,
   superAdminOverrideGuard,
   PermissionTargetUser,
 } from '@/lib/user-permissions';
@@ -176,6 +179,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const superBlock = superAdminOverrideGuard(target);
     if (superBlock) return superBlock;
 
+    // Not on an account whose role carries powers this admin lacks.
+    const acting = await canActOnUser(admin, target);
+    if (!acting.ok) return NextResponse.json({ error: acting.error }, { status: acting.status });
+
     const body = await req.json().catch(() => null);
     const validated = validateOverrideInputs(body?.overrides);
     if (!validated.ok) return validated.response;
@@ -185,6 +192,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // at ALL_COMPANY scope (or be SUPER_ADMIN). DENY rows grant nothing. ──
     for (const o of parsed) {
       if (o.effect !== 'ALLOW') continue;
+      // The shift-work keys, as the role door already lets them through.
+      if (OPERATIONAL_KEYS.has(o.permission)) continue;
       const granterScope = getPermissionScope(admin, o.permission);
       if (!granterScope || granterScope.scope !== 'ALL_COMPANY') {
         return NextResponse.json(
@@ -226,6 +235,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const beforeRows = await db.userPermission.findMany({ where: { userId: target.id } });
     const before = new Map(beforeRows.map((r) => [r.permission, r]));
     const after = new Map(parsed.map((o) => [o.permission, o]));
+
+    // A DENY that this replacement drops gives the key back — a grant, held
+    // to the same rule as an ALLOW (denyRemovalRefusal).
+    const droppedDenies = beforeRows
+      .filter((r) => r.effect === 'DENY' && after.get(r.permission)?.effect !== 'DENY')
+      .map((r) => r.permission);
+    const denyRefusal = denyRemovalRefusal(admin, droppedDenies);
+    if (denyRefusal) return NextResponse.json({ error: denyRefusal }, { status: 403 });
 
     await db.$transaction(async (tx) => {
       await tx.userPermission.deleteMany({ where: { userId: target.id } });

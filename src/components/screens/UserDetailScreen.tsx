@@ -302,7 +302,8 @@ export function UserDetailScreen() {
                 <UserCommissionCurrency
                   userId={userId}
                   initial={user.commissionCurrency ?? null}
-                  canEdit={userCan(currentUser, 'users.edit')}
+                  // Pay, like the salary below — the server asks the same key.
+                  canEdit={userCan(currentUser, 'payroll.pay')}
                 />
               )}
               {/* When they start and when they hand over. Lateness — and

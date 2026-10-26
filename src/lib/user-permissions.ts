@@ -20,6 +20,7 @@ import { db } from './db';
 import { ROLE_PERMISSIONS, SessionUser, UserRole } from '../types/auth';
 import { getPermissionScope } from './authorization';
 import { legacyEffectiveKeys, catalogExtensionKeys } from './permissions-core';
+import { catalogItem } from './permission-catalog';
 
 /** Shape of the target user needed by the permission override routes. */
 export interface PermissionTargetUser {
@@ -96,6 +97,18 @@ export function superAdminOverrideGuard(target: { role: string }): NextResponse 
 }
 
 /**
+ * The keys of doing a shift's work, which grant no power over anyone — so
+ * they are conferrable without being held (see granterHoldsAll). The
+ * per-person exception door applies the same exemption: a supervisor who
+ * may hire an agent may also give one agent «سحب الطلب التالي».
+ */
+export const OPERATIONAL_KEYS: ReadonlySet<string> = new Set([
+  'confirmation.pull',   // take the next order from the pool
+  'confirmation.work',   // work the orders you are holding
+  'confirmation.issues', // flag a problem on one of them
+]);
+
+/**
  * Granter-must-hold rule for ROLE-MATRIX writes (POST /roles, PATCH /roles/:id):
  * the actor may only place a permission into a role if they themselves hold
  * that key, and only at a scope they hold at equal strength or ALL_COMPANY
@@ -106,7 +119,7 @@ export function superAdminOverrideGuard(target: { role: string }): NextResponse 
  */
 export function granterHoldsAll(
   actor: SessionUser,
-  grants: Array<{ permission: string; scope?: string }>
+  grants: Array<{ permission: string; scope?: string; scopeIds?: unknown }>
 ): string | null {
   // Visibility-tier coverage: holding a broader view tier covers its narrower
   // tier (customers.view ⊇ customers.view_basic) — conferring a role that
@@ -127,14 +140,8 @@ export function granterHoldsAll(
   // So these keys are conferrable without holding them. Everything else still
   // obeys the granter-must-hold rule: no key that reaches money, settings,
   // other people's accounts, or a decision over somebody else's work is here.
-  const OPERATIONAL = new Set([
-    'confirmation.pull',   // take the next order from the pool
-    'confirmation.work',   // work the orders you are holding
-    'confirmation.issues', // flag a problem on one of them
-  ]);
-
   for (const g of grants) {
-    if (OPERATIONAL.has(g.permission)) continue;
+    if (OPERATIONAL_KEYS.has(g.permission)) continue;
     const requested = g.scope ?? 'ALL_COMPANY';
     let held = getPermissionScope(actor, g.permission);
     if (!held && COVERAGE[g.permission]) {
@@ -147,6 +154,57 @@ export function granterHoldsAll(
     if (!ok) {
       return 'لا يمكنك منح صلاحية لا تملكها بنطاق كامل';
     }
+    /*
+     * AND NOT WIDER THAN THE IDS YOU HOLD.
+     *
+     * A CATEGORY or SPECIFIC grant passed when the scope's NAME matched, so
+     * somebody who may edit the products of one category could place «every
+     * category» — any ids at all — into a role. Below full scope, the ids
+     * asked for must be among the ids held.
+     */
+    if (held && held.scope !== 'ALL_COMPANY' && (requested === 'CATEGORY' || requested === 'SPECIFIC')) {
+      const mine = new Set(idsOf(held.scopeIds));
+      if (!idsOf(g.scopeIds).every((id) => mine.has(id))) {
+        return 'لا يمكنك منح نطاق أوسع من نطاقك — بعض الأصناف أو المنتجات ليست ضمن صلاحيتك';
+      }
+    }
+  }
+  return null;
+}
+
+/** The ids of a CATEGORY/SPECIFIC scope, as strings; anything else is none. */
+function idsOf(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+}
+
+/**
+ * A ROLE'S SCOPE IDS, CHECKED AS THE EXCEPTION DOOR CHECKS THEM.
+ *
+ * The roles doors stored `scopeIds` as they came: not checked against the
+ * company's own categories and products, and a scope a key does not even
+ * offer (CATEGORY on a key that knows only ALL and OWN) was written as
+ * readily as one it does. The per-person exception door already refused
+ * both; the role doors now say the same. Returns the Arabic refusal, or null.
+ */
+export async function roleScopeRefusal(
+  companyId: string | null,
+  grants: Array<{ permission: string; scope?: string; scopeIds?: unknown }>
+): Promise<string | null> {
+  for (const g of grants) {
+    const scope = g.scope ?? 'ALL_COMPANY';
+    const offered = catalogItem(g.permission)?.scopes;
+    if (offered && scope !== 'ALL_COMPANY' && !(offered as readonly string[]).includes(scope)) {
+      return `النطاق غير متاح لهذه الصلاحية: ${catalogItem(g.permission)?.ar ?? g.permission}`;
+    }
+    if (scope !== 'CATEGORY' && scope !== 'SPECIFIC') continue;
+    const ids = idsOf(g.scopeIds);
+    if (ids.length === 0) continue;
+    if (!companyId) return 'نطاق يحتوي موارد من شركة أخرى';
+    const found =
+      scope === 'CATEGORY'
+        ? await db.category.count({ where: { id: { in: ids }, companyId } })
+        : await db.product.count({ where: { id: { in: ids }, companyId } });
+    if (found !== new Set(ids).size) return 'نطاق يحتوي موارد من شركة أخرى';
   }
   return null;
 }
@@ -159,13 +217,15 @@ export function granterHoldsAll(
  */
 export async function roleConferralGrants(
   role: { id?: string | null; name: string }
-): Promise<Array<{ permission: string; scope: string }> | null> {
+): Promise<Array<{ permission: string; scope: string; scopeIds?: unknown }> | null> {
   if (role.id) {
     const rows = await db.rolePermission.findMany({
       where: { roleId: role.id },
-      select: { permission: true, scope: true },
+      select: { permission: true, scope: true, scopeIds: true },
     });
-    return rows.map((r) => ({ permission: r.permission, scope: (r.scope as string) ?? 'ALL_COMPANY' }));
+    // The ids travel with the scope, so conferring a role cannot hand out
+    // categories or products the person conferring it does not hold.
+    return rows.map((r) => ({ permission: r.permission, scope: (r.scope as string) ?? 'ALL_COMPANY', scopeIds: r.scopeIds }));
   }
   const legacy = (ROLE_PERMISSIONS as Record<string, string[]>)[role.name];
   if (!legacy) return null;
@@ -194,4 +254,65 @@ export async function canConferRole(
   }
   const err = granterHoldsAll(actor, grants);
   return err ? { ok: false, error: err, status: 403 } : { ok: true };
+}
+
+/**
+ * The role a user's grants actually come from — the same lookup the engine
+ * makes (permissions-core: `roleRows`): their role row when they have one,
+ * otherwise the SYSTEM template of that name, otherwise the in-code matrix.
+ */
+export async function roleRefOf(user: { roleId?: string | null; role: string }): Promise<{ id: string | null; name: string }> {
+  if (user.roleId) return { id: user.roleId, name: user.role };
+  const system = await db.role.findFirst({ where: { companyId: null, name: user.role }, select: { id: true } });
+  return { id: system?.id ?? null, name: user.role };
+}
+
+/**
+ * MAY THIS PERSON ACT ON THAT ACCOUNT AT ALL.
+ *
+ * `users.edit` let its holder suspend, disable, re-activate, sign out,
+ * delete, re-role or re-permission ANY account in the company; the only one
+ * protected was a SUPER_ADMIN. So a manager could suspend the company admin,
+ * or DENY them «المالية», and nothing asked whether the manager held the
+ * powers they were taking away.
+ *
+ * The rule is the conferral rule, read the other way: you may act on an
+ * account only if you could have given it its role — that is, you hold every
+ * key the role carries (the shift-work keys aside). Acting on yourself is
+ * governed by each action's own self-guard, not by this.
+ */
+export async function canActOnUser(
+  actor: SessionUser,
+  target: { id: string; roleId?: string | null; role: string }
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  if (actor.role === 'SUPER_ADMIN') return { ok: true };
+  if (target.id === actor.id) return { ok: true };
+  const conferral = await canConferRole(actor, await roleRefOf(target));
+  if (conferral.ok) return conferral;
+  return {
+    ok: false,
+    status: 403,
+    error: 'لا يمكنك إدارة حساب دوره أوسع من صلاحياتك — هذا لمن يملك كل صلاحيات دوره.',
+  };
+}
+
+/**
+ * REMOVING A «منع» IS GRANTING.
+ *
+ * A DENY takes a key away from what the role gives; deleting the DENY gives
+ * it back. The exception door checked only the ALLOW rows it was writing, so
+ * a full replacement that simply left a DENY out — or the single-row delete,
+ * which checked nothing — handed the key back without asking whether the
+ * person doing it held it. The same granter-must-hold rule as an ALLOW.
+ * Returns the Arabic refusal, or null.
+ */
+export function denyRemovalRefusal(actor: SessionUser, removedDenyKeys: readonly string[]): string | null {
+  for (const key of removedDenyKeys) {
+    if (OPERATIONAL_KEYS.has(key)) continue;
+    const held = getPermissionScope(actor, key);
+    if (!held || held.scope !== 'ALL_COMPANY') {
+      return 'إزالة «منع» تعني منح الصلاحية من جديد — لا يمكنك منح صلاحية لا تملكها بنطاق كامل';
+    }
+  }
+  return null;
 }

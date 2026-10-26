@@ -2,12 +2,9 @@
 import { NextResponse } from 'next/server';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
-import { requireCompanyTenant, hashPassword } from '@/lib/auth';
-import { logAudit } from '@/lib/audit';
+import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
 import { commissionByUserForOrders } from '@/lib/commission';
-import { COMMISSION_RATE_REFUSAL, readCommissionRate } from '@/lib/user-commission-rate';
-import { newStaffTheme } from '@/lib/system-themes';
 
 export async function GET() {
   try {
@@ -114,84 +111,29 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+/**
+ * POST /api/moderators — CLOSED (410), and why it is closed rather than fixed.
+ *
+ * It created an ACTIVE moderator on «إنشاء المستخدمين» alone, and was the
+ * second door for that: `POST /api/users` checks that the creator holds every
+ * key the role carries (canConferRole), checks the password's strength, and
+ * records who placed the account. This one did none of it — and answered
+ * with the whole new row, password hash included. Nothing calls it any more
+ * (the order form only reads the list, with GET above), so it answers 410
+ * with where to go, and the git history keeps what it was.
+ */
+export async function POST() {
   try {
-    const { user, companyId } = await requireCompanyTenant();
-    await requirePermission('users.create');
-
-    const body = await req.json();
-    const { name, email, phone, commissionRate, password } = body;
-
-    if (!name || !email) {
-      return NextResponse.json({ error: 'Name and Email are required', errorAr: 'الاسم والبريد مطلوبان.' }, { status: 400 });
-    }
-
-    /**
-     * THE RATE IS READ BY THE RULE THE OTHER DOOR USES — ONCE, HERE.
-     *
-     * This used to be `parseFloat(commissionRate) || 5.0` down in the
-     * `create` block, with nothing validating it above: an empty box, a
-     * non-numeric box, and a moderator somebody deliberately set to **0**
-     * all stored five percent. `/api/users` has always validated the same
-     * column properly, so one column had two doors and two rules, and the
-     * 5.0 was written in neither the schema nor the other door.
-     *
-     * Refused HERE rather than at the write: nothing is looked up and no
-     * password is hashed for a request that was never going to be stored.
-     */
-    const rate = readCommissionRate(commissionRate);
-    if (rate === null) {
-      return NextResponse.json({ error: COMMISSION_RATE_REFUSAL }, { status: 400 });
-    }
-
-    const existing = await db.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: 'User with this email already exists', errorAr: 'هذا البريد مستعملٌ لحسابٍ آخر. ابحذ عنه في قائمة الموطّفين.' }, { status: 400 });
-    }
-
-// Phase S: no default passwords - a password is mandatory
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Password is required (min 8 chars)', errorAr: 'كلمة المرور مطلوبة — ثمانية أحرف على الأقلّ.' }, { status: 400 });
-    }
-    const pwdHash = await hashPassword(password);
-
-    const moderator = await db.user.create({
-      data: {
-        companyId,
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone?.trim() || null,
-        role: 'MODERATOR',
-        // The validated number, as typed. A zero stays a zero.
-        commissionRate: rate,
-        passwordHash: pwdHash,
-        status: 'ACTIVE',
-        /*
-         * «ليل» is the first look a NEW member of staff opens on — the
-         * owner's Phase 3 brief. The column already existed; only the
-         * creation path writes the default, and the picker overwrites it.
-         * A moderator made here is given the legacy role string and no
-         * role row, so there is no published role look to defer to — the
-         * case `newStaffTheme(null)` answers with «ليل».
-         */
-        systemTheme: newStaffTheme(null),
+    await requireCompanyTenant();
+    return NextResponse.json(
+      {
+        error: 'هالباب انسكّر — الموظف الجديد من شاشة «المستخدمين».',
+        errorAr: 'هالباب انسكّر — الموظف الجديد من شاشة «المستخدمين».',
+        code: 'GONE',
       },
-    });
-
-    await logAudit({
-      companyId,
-      userId: user.id,
-      action: 'MODERATOR_CREATED',
-      entity: 'User',
-      entityId: moderator.id,
-      newData: { id: moderator.id, name: moderator.name, email: moderator.email },
-    });
-
-    return NextResponse.json({ success: true, moderator });
-  } catch (error: any) {
+      { status: 410 }
+    );
+  } catch (error) {
     return apiErrorResponse(error);
   }
 }

@@ -3,7 +3,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requirePermission } from '@/lib/authorization';
 import { logAudit } from '@/lib/audit';
-import { loadPermissionTarget, superAdminOverrideGuard } from '@/lib/user-permissions';
+import { canActOnUser, denyRemovalRefusal, loadPermissionTarget, superAdminOverrideGuard } from '@/lib/user-permissions';
 
 /**
  * DELETE /api/users/:id/permissions/:permission — remove a single override row
@@ -30,11 +30,20 @@ export async function DELETE(
     const superBlock = superAdminOverrideGuard(target);
     if (superBlock) return superBlock;
 
+    // Not on an account whose role carries powers this admin lacks.
+    const acting = await canActOnUser(admin, target);
+    if (!acting.ok) return NextResponse.json({ error: acting.error }, { status: acting.status });
+
     const existing = await db.userPermission.findUnique({
       where: { userId_permission: { userId: id, permission } },
     });
     if (!existing) {
       return NextResponse.json({ error: 'لا يوجد استثناء لهذه الصلاحية' }, { status: 404 });
+    }
+    // Deleting a DENY hands the key back: it asked nothing before.
+    if (existing.effect === 'DENY') {
+      const refusal = denyRemovalRefusal(admin, [existing.permission]);
+      if (refusal) return NextResponse.json({ error: refusal }, { status: 403 });
     }
 
     await db.$transaction([

@@ -37,6 +37,8 @@ vi.mock('@/lib/db', () => ({ db: h.db }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: () => h.requireCompanyTenant() }));
 vi.mock('@/lib/authorization', () => ({
   requirePermission: (p: string) => h.requirePermission(p),
+  // The minter holds every key at full scope here; minting beyond one's keys is its own test.
+  getPermissionScope: () => ({ scope: 'ALL_COMPANY' }),
 }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => h.logAudit(...a) }));
 

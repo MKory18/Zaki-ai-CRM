@@ -1,0 +1,134 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+/**
+ * THREE DOORS, ASKED THE RULES BEFORE THEY WRITE.
+ *
+ * The rules are tested in src/lib/people-act-within-their-reach. Here, that
+ * the doors actually ask them:
+ *
+ *   · minting an API key wider than the minter holds is refused, and no key exists;
+ *   · the audit log takes the amounts out of pay rows for a reader without
+ *     «عرض الرواتب», and leaves them for one with it;
+ *   · creating an account by role NAME checks the system template the engine
+ *     will grant — not the in-code matrix, empty for the supervisor and the
+ *     warehouse, which let the check pass with nothing to check.
+ */
+
+const h = vi.hoisted(() => ({
+  db: {
+    systemToken: { findMany: vi.fn(), create: vi.fn() },
+    auditLog: { count: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    role: { findFirst: vi.fn(), findUnique: vi.fn() },
+    rolePermission: { findMany: vi.fn() },
+    $transaction: vi.fn(),
+  },
+  held: { keys: {} as Record<string, string> },
+  actor: { id: 'u1', role: 'COMPANY_ADMIN', companyId: 'c1', status: 'ACTIVE', name: 'أ' } as Record<string, unknown>,
+}));
+
+vi.mock('@/lib/db', () => ({ db: h.db }));
+vi.mock('@/lib/auth', () => ({
+  requireCompanyTenant: async () => ({ user: h.actor, companyId: 'c1' }),
+  hashPassword: async () => 'hashed',
+  resolveSingleCompanyId: async () => 'c1',
+}));
+vi.mock('@/lib/authorization', () => ({
+  requirePermission: async () => h.actor,
+  can: (_u: unknown, k: string) => k in h.held.keys,
+  getPermissionScope: (_u: unknown, k: string) => (k in h.held.keys ? { scope: h.held.keys[k] } : null),
+}));
+vi.mock('@/lib/audit', () => ({ logAudit: vi.fn(), redactCustomerForAudit: (c: unknown) => c }));
+vi.mock('@/lib/geo-access', () => ({ geoAccessError: async () => null, replaceGeoAccess: vi.fn() }));
+vi.mock('@/lib/role-names', () => ({ isPrivilegedRoleName: () => false, isReservedRoleName: () => false }));
+
+import { POST as mint } from './route';
+import { GET as auditLogs } from '@/app/api/audit-logs/route';
+import { POST as createUser } from '@/app/api/users/route';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.held.keys = { 'apps.manage': 'ALL_COMPANY', 'products.view': 'ALL_COMPANY' };
+  h.db.systemToken.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => ({ id: 't1', createdAt: new Date(), ...data }));
+});
+
+describe('minting an API key', () => {
+  const asks = (scopes: string[]) =>
+    mint(new Request('http://x', { method: 'POST', body: JSON.stringify({ name: 'الميديا باير', system: 'mediabuyer', scopes, days: 90 }) }));
+
+  it('a key to the cost of goods, minted without «عرض المالية»: refused, and no key exists', async () => {
+    const res = await asks(['products.read', 'products.costs.read']);
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('SCOPE_BEYOND_MINTER');
+    expect(body.errorAr).toContain('قراءة تكلفة المنتج');
+    expect(h.db.systemToken.create).not.toHaveBeenCalled();
+  });
+
+  it('the same key, minted by somebody who holds both', async () => {
+    h.held.keys['finance.view'] = 'ALL_COMPANY';
+    const res = await asks(['products.read', 'products.costs.read']);
+    expect(res.status, await res.clone().text()).toBeLessThan(300);
+    expect(h.db.systemToken.create).toHaveBeenCalled();
+  });
+});
+
+describe('the audit log', () => {
+  beforeEach(() => {
+    h.db.auditLog.count.mockResolvedValue(1);
+    h.db.auditLog.groupBy.mockResolvedValue([]);
+    h.db.user.findMany.mockResolvedValue([]);
+    h.db.auditLog.findMany.mockResolvedValue([
+      { id: 'a1', action: 'SALARY_PAID', entity: 'Payslip', entityId: 'p1', previousData: null, newData: JSON.stringify({ month: '2026-10', net: 380, paid: 380 }), createdAt: new Date(), user: null },
+    ]);
+  });
+  const read = async () => (await (await auditLogs(new Request('http://x/api/audit-logs'))).json()).logs[0];
+
+  it('a payslip row without «عرض الرواتب»: the row, without its amounts', async () => {
+    h.held.keys = { 'audit.view': 'ALL_COMPANY' };
+    const row = await read();
+    expect(row.action).toBe('SALARY_PAID');
+    expect(row.payWithheld).toBe(true);
+    expect(JSON.parse(row.newData)).toEqual({ month: '2026-10' });
+  });
+
+  it('with it: the amounts', async () => {
+    h.held.keys = { 'audit.view': 'ALL_COMPANY', 'payroll.view': 'ALL_COMPANY' };
+    expect(JSON.parse((await read()).newData).net).toBe(380);
+  });
+});
+
+describe('creating an account by role name', () => {
+  const create = (role: string) =>
+    createUser(new Request('http://x', { method: 'POST', body: JSON.stringify({ name: 'موظف جديد', email: 'n@x.test', password: 'Passw0rdOk', role }) }));
+
+  beforeEach(() => {
+    h.db.user.findUnique.mockResolvedValue(null);
+    h.db.user.create.mockResolvedValue({ id: 'u-new', role: 'CONFIRMATION_SUPERVISOR', status: 'ACTIVE' });
+    h.db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => fn(h.db));
+    h.db.role.findFirst.mockResolvedValue({ id: 'sys-supervisor' });
+  });
+
+  it('checks the system template the engine will grant: refused when it carries what the creator lacks', async () => {
+    h.held.keys = { 'users.create': 'ALL_COMPANY' };
+    h.db.rolePermission.findMany.mockResolvedValue([
+      { permission: 'confirmation.supervise', scope: 'ALL_COMPANY', scopeIds: null },
+      { permission: 'control.change_requests', scope: 'ALL_COMPANY', scopeIds: null },
+    ]);
+    const res = await create('CONFIRMATION_SUPERVISOR');
+    expect(res.status).toBe(403);
+    expect(h.db.role.findFirst.mock.calls[0][0].where).toEqual({ companyId: null, name: 'CONFIRMATION_SUPERVISOR' });
+    expect(h.db.rolePermission.findMany.mock.calls[0][0].where).toEqual({ roleId: 'sys-supervisor' });
+    expect(h.db.user.create).not.toHaveBeenCalled();
+  });
+
+  it('and lets the creator through who holds it all', async () => {
+    h.held.keys = { 'users.create': 'ALL_COMPANY', 'confirmation.supervise': 'ALL_COMPANY', 'control.change_requests': 'ALL_COMPANY' };
+    h.db.rolePermission.findMany.mockResolvedValue([
+      { permission: 'confirmation.supervise', scope: 'ALL_COMPANY', scopeIds: null },
+      { permission: 'control.change_requests', scope: 'ALL_COMPANY', scopeIds: null },
+    ]);
+    const res = await create('CONFIRMATION_SUPERVISOR');
+    expect(res.status, await res.clone().text()).toBeLessThan(300);
+  });
+});
