@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
+import { geoReach } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { firstIssue, storeCreateSchema } from '@/lib/geo-schemas';
@@ -20,11 +21,21 @@ import { seedPagesFor } from '@/lib/store-pages';
 export async function GET(req: Request) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('geo.view');
+    const viewer = await requirePermission('geo.view');
+    // Only the stores this person reaches, unless they see every country (geoReach).
+    const reach = await geoReach(viewer, companyId);
 
     const countryId = new URL(req.url).searchParams.get('countryId');
     const stores = await db.store.findMany({
-      where: { companyId, ...(countryId ? { countryId } : {}) },
+      where: {
+        companyId,
+        AND: [
+          countryId ? { countryId } : {},
+          // A country outside their reach lists nothing, not their other countries' stores.
+          reach ? { countryId: { in: reach.countryIds } } : {},
+          reach?.storeIds ? { id: { in: reach.storeIds } } : {},
+        ],
+      },
       orderBy: { name: 'asc' },
     });
     return NextResponse.json({ stores });

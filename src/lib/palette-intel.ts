@@ -300,10 +300,24 @@ export async function paletteCounts(
    * column the orders list filters by — so pressing the row shows a list
    * whose length is the number that was just printed.
    */
+  //
+  // And only the products this person may see, as the products list reads
+  // them: none without «عرض المنتجات», and only their categories or named
+  // products when that is their scope. The palette found any product of the
+  // store by name, for anyone.
+  const productScope = getPermissionScope(user, 'products.view');
+  if (!productScope) return [];
+  const narrowed =
+    productScope.scope === 'CATEGORY'
+      ? { categoryId: { in: idsOf(productScope.scopeIds) } }
+      : productScope.scope === 'SPECIFIC'
+        ? { id: { in: idsOf(productScope.scopeIds) } }
+        : {};
   const products = await db.product.findMany({
     where: {
       companyId: scope.companyId,
       OR: [{ storeId: scope.storeId }, { storeId: null }],
+      ...narrowed,
       name: typed(text),
     },
     orderBy: { name: 'asc' },
@@ -361,3 +375,8 @@ export const TODAY_SYSTEM_PROMPT = [
   'لا تذكر أسماء أشخاص ولا أرقام هواتف ولا عناوين — لم تُعطَ أيّاً منها.',
   'جملتان أو ثلاث، بلا عناوين وبلا قوائم.',
 ].join('\n');
+
+/** The ids of a CATEGORY/SPECIFIC scope, as strings. */
+function idsOf(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+}

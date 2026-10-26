@@ -4,8 +4,9 @@
  */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
-import { requirePermission } from '@/lib/authorization';
+import { requireContext } from '@/lib/geo-context';
+import { can, requirePermission } from '@/lib/authorization';
+import { telegramStoreWhere } from '@/lib/telegram/store-scope';
 import { apiErrorResponse } from '@/lib/api-error';
 import { readLimit } from '@/lib/numeric-input';
 
@@ -13,7 +14,7 @@ const STATUSES = ['PENDING', 'PROCESSED', 'IGNORED', 'NEEDS_REVIEW', 'FAILED'] a
 
 export async function GET(req: Request) {
   try {
-    const { companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('telegram.view');
 
     const { searchParams } = new URL(req.url);
@@ -29,6 +30,9 @@ export async function GET(req: Request) {
     const messages = await db.telegramMessage.findMany({
       where: {
         companyId,
+        // This store's sources only — each source feeds ONE store, and the
+        // raw text carries the customer's name, phone and address.
+        ...telegramStoreWhere(storeId, can(user, 'telegram.manage')),
         ...(status && (STATUSES as readonly string[]).includes(status) ? { processingStatus: status } : {}),
       },
       orderBy: { createdAt: 'desc' },

@@ -153,6 +153,8 @@ export async function recordPartialDelivery(
   tx: Tx,
   input: {
     companyId: string;
+    /** The caller's store: an order of another store of the company is not found. */
+    storeId?: string | null;
     orderId: string;
     lines: DeliveredLine[];
     minorUnit: number;
@@ -163,7 +165,7 @@ export async function recordPartialDelivery(
   }
 ): Promise<PartialOutcome> {
   const order = await tx.order.findFirst({
-    where: { id: input.orderId, companyId: input.companyId },
+    where: { id: input.orderId, companyId: input.companyId, ...(input.storeId ? { storeId: input.storeId } : {}) },
     select: {
       id: true, orderNumber: true, shippingStatus: true, deliveryFee: true, customerId: true,
       priceIncludesDelivery: true, deliveredAt: true, returnedAt: true, deliveryProviderId: true,

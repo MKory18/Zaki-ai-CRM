@@ -18,8 +18,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
-    const product = await db.product.findUnique({
-      where: { id },
+    // This store's product, as editing it already asks (inStore below in
+    // PATCH) — an id of another store of the company used to open it here.
+    const product = await db.product.findFirst({
+      where: { id, ...inStore(companyId, storeId) },
       include: {
         images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },
         // The category's QUESTIONS travel with the product's answers.
@@ -310,8 +312,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
 
-    const product = await db.product.findUnique({
-      where: { id },
+    // This store's product only, the same reach as editing it.
+    const product = await db.product.findFirst({
+      where: { id, ...inStore(companyId, storeId) },
       include: { orders: { take: 1 }, images: true },
     });
     if (!product || product.companyId !== companyId) {

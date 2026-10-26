@@ -4,7 +4,8 @@
  */
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
+import { requireContext } from '@/lib/geo-context';
+import { telegramStoreWhere } from '@/lib/telegram/store-scope';
 import { requirePermission } from '@/lib/authorization';
 import { processStoredMessage } from '@/lib/telegram/inbound';
 import { apiErrorResponse } from '@/lib/api-error';
@@ -12,11 +13,12 @@ import { apiErrorResponse } from '@/lib/api-error';
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId } = await requireCompanyTenant();
+    const { companyId, storeId } = await requireContext();
     await requirePermission('telegram.manage');
 
-    const message = await db.telegramMessage.findUnique({ where: { id } });
-    if (!message || message.companyId !== companyId) {
+    // A message of this store's sources (or of no store — the manager's to place).
+    const message = await db.telegramMessage.findFirst({ where: { id, companyId, ...telegramStoreWhere(storeId, true) } });
+    if (!message) {
       return NextResponse.json({ error: 'غير موجودة' }, { status: 404 });
     }
     if (message.processingStatus === 'PROCESSED') {

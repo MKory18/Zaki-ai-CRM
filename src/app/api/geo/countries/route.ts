@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
 import { requirePermission } from '@/lib/authorization';
+import { geoReach } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { apiErrorResponse } from '@/lib/api-error';
 import { countryCreateSchema, firstIssue } from '@/lib/geo-schemas';
@@ -17,13 +18,16 @@ import { countryCreateSchema, firstIssue } from '@/lib/geo-schemas';
 export async function GET() {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('geo.view');
+    const viewer = await requirePermission('geo.view');
+    // Only what this person reaches, unless they see every country (geoReach).
+    const reach = await geoReach(viewer, companyId);
 
     const countries = await db.country.findMany({
-      where: { companyId },
+      where: { companyId, ...(reach ? { id: { in: reach.countryIds } } : {}) },
       orderBy: { name: 'asc' },
       include: {
         stores: {
+          ...(reach?.storeIds ? { where: { id: { in: reach.storeIds } } } : {}),
           orderBy: { name: 'asc' },
           select: {
             id: true, name: true, slug: true, logo: true, favicon: true, status: true, type: true, priceIncludesDelivery: true,
