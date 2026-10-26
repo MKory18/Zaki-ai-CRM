@@ -26,7 +26,7 @@ import { userCan } from './can';
 import { attachGrants, can, getPermissionScope } from './authorization';
 import { ALL_CATALOG_KEYS } from './permission-catalog';
 import { LEGACY_ALIAS } from './permission-aliases';
-import { legacyEffectiveKeys } from './permissions-core';
+import { computeEffectiveGrants, legacyEffectiveKeys, type GrantSource } from './permissions-core';
 import type { SessionUser } from '@/types/auth';
 
 const person = (keys: string[]): SessionUser =>
@@ -56,9 +56,21 @@ describe('the server and the screen', () => {
     expect(can(onServer(['settings.manage']), 'settings.edit')).toBe(false);
   });
 
-  it('NEGATIVE: a «منع» on the sensitive box counts — the person holding «تعديل» is refused', () => {
-    // A DENY removes the key from the grants (permissions-core); what is left is settings.edit.
-    expect(can(onServer(['settings.edit']), 'settings.manage')).toBe(false);
+  it('NEGATIVE: a «منع» on the sensitive box counts — through the real engine, role holding both', async () => {
+    // The role as the migration leaves it, and the owner's «منع» on the sensitive box.
+    const source: GrantSource = {
+      roleRows: async () => [
+        { permission: 'settings.edit', scope: 'ALL_COMPANY', scopeIds: null },
+        { permission: 'settings.manage', scope: 'ALL_COMPANY', scopeIds: null },
+      ],
+      overrideRows: async () => [{ permission: 'settings.manage', effect: 'DENY', scope: null, scopeIds: null }],
+    };
+    const g = await computeEffectiveGrants({ id: 'u1', role: 'MANAGER', roleId: 'r1' } as never, source);
+    const user = attachGrants(person(Object.keys(g.grants)), g);
+    expect(can(user, 'settings.manage')).toBe(false);
+    expect(userCan(person(Object.keys(g.grants)), 'settings.manage')).toBe(false);
+    // and «تعديل» is still theirs
+    expect(can(user, 'settings.edit')).toBe(true);
   });
 
   it('only the one alias went: «analytics.view» still reaches «reports.view» (not part of this ruling)', () => {
@@ -122,9 +134,16 @@ describe('the migration: nobody loses a door, nobody gains one', () => {
     // denied «تعديل» today would GAIN the sensitive doors (the harness showed exactly that).
     expect(deny).toBeLessThan(roles);
     const s = statements[deny];
-    expect(s, 'only where the role is about to receive it').toMatch(/AND EXISTS \([\s\S]*'settings\.edit'/);
-    expect(s, 'and did not already hold it — that person passed yesterday').toMatch(/AND NOT EXISTS \([\s\S]*'settings\.manage'/);
-    expect(s, 'the role read the way the engine reads it: roleId, else the system template by name').toContain(`r."companyId" IS NULL AND r."name" = u."role"`);
+    // The two sub-questions, each on its own: «does the role hold settings.edit» and «did it already hold settings.manage».
+    const [, holdsEdit, alreadyManage] = s.split(/AND (?:NOT )?EXISTS \(/);
+    expect(s.indexOf('AND EXISTS ('), 'the EXISTS comes first').toBeLessThan(s.indexOf('AND NOT EXISTS ('));
+    expect(holdsEdit, 'only where the role is about to receive it').toContain(`rp."permission" = 'settings.edit'`);
+    expect(alreadyManage, 'and did not already hold it — that person passed yesterday').toContain(`rp."permission" = 'settings.manage'`);
+    // Both read the role the way the engine reads it: the roleId, else the system template named like the role.
+    for (const sub of [holdsEdit, alreadyManage]) {
+      expect(sub).toContain(`(u."roleId" IS NOT NULL AND r."id" = u."roleId")`);
+      expect(sub).toContain(`(u."roleId" IS NULL AND r."companyId" IS NULL AND r."name" = u."role")`);
+    }
   });
 
   it('writes nothing for SUPER_ADMIN, who passes everything anyway', () => {
