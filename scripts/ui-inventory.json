@@ -1739,6 +1739,16 @@
     "links": 0,
     "tabs": 0
   },
+  "src/components/shell/InstallApp.tsx": {
+    "buttons": 4,
+    "inputs": 0,
+    "columns": 0,
+    "cards": 0,
+    "modals": 1,
+    "icons": 3,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/shell/MobileNav.tsx": {
     "buttons": 3,
     "inputs": 0,
