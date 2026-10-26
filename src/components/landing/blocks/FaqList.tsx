@@ -14,7 +14,7 @@ export function FaqList({ items }: { items: { q: string; a: string }[] }) {
         return (
           <div key={i} className={isOpen ? 'lp-faq-item lp-faq-open' : 'lp-faq-item'}>
             <button type="button" onClick={() => setOpen(isOpen ? null : i)} aria-expanded={isOpen}>
-              <span>{item.q}</span>
+              <span data-it="">{item.q}</span>
               <ChevronDown size={16} />
             </button>
             {isOpen && item.a && <p>{item.a}</p>}

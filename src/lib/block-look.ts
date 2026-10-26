@@ -1,4 +1,4 @@
-import type { BlockLook } from './landing-sections';
+import type { BlockLook, SectionType } from './landing-sections';
 import { FONTS, stackFor } from './landing-theme';
 
 /**
@@ -137,6 +137,8 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
     textAlign: ALIGN[l.align ?? 'center'] as React.CSSProperties['textAlign'],
     position: 'relative',
   };
+  // A grid of cards (the trust row) lines its items up by justify-items, which text-align does not reach.
+  const justify = l.align && l.align !== 'center' ? ALIGN[l.align] : '';
 
   if (t.scale && t.scale !== 'm') inner.fontSize = SCALE[t.scale];
   if (t.weight) inner.fontWeight = WEIGHT[t.weight];
@@ -149,6 +151,7 @@ export function lookStyles(look: BlockLook | undefined): LookStyles {
   else if (overlay > 0) inner.color = '#ffffff';
 
   const vars: Record<string, string> = {};
+  if (justify) vars['--look-justify'] = justify;
   // A heading is its own decision; unset, it simply follows the body.
   const heading = safeColor(t.headingColor);
   if (heading) vars['--look-heading'] = heading;
@@ -213,4 +216,66 @@ export function isPlainLook(look: BlockLook | undefined): boolean {
     (!t || (!t.font && (!t.scale || t.scale === 'm') && !t.weight && !t.italic && !t.color && !t.headingColor)) &&
     (!b || (!b.fill && !b.label && (!b.size || b.size === 'm') && !b.wide))
   );
+}
+
+/**
+ * WHICH PARTS OF THE PANEL MEAN ANYTHING ON WHICH BLOCK.
+ *
+ * The panel offered «الزر» on a trust row and «لون العناوين» on an announcement bar — controls that changed a value
+ * and nothing on the page. A part that is off for a block is still shown (marked, not removed), and pressing it says
+ * why instead of pretending.
+ *
+ *   button    — the block draws a button the look reaches (.lp-cta / .lp-sticky).
+ *   heading   — the block has a heading or item titles (h1–h4 or [data-it]).
+ *   text      — the block has words the font, weight and italic reach.
+ *   textColor — and the text colour too (the floating button's words take theirs from «الزر»).
+ *   box       — width, alignment, spacing and background.
+ *
+ * The thank-you block is all off: its look never reaches the published thank-you screen.
+ */
+export interface LookParts {
+  box: boolean;
+  text: boolean;
+  textColor: boolean;
+  heading: boolean;
+  button: boolean;
+}
+
+const NO_HEADING: readonly SectionType[] = ['announcement', 'urgency', 'sticky', 'thankyou'];
+const HAS_BUTTON: readonly SectionType[] = ['hero', 'sticky'];
+
+export function lookParts(type: SectionType): LookParts {
+  if (type === 'thankyou') return { box: false, text: false, textColor: false, heading: false, button: false };
+  // The floating button is fixed to the screen: no box around it, and its words' colour is the button's own.
+  if (type === 'sticky') return { box: false, text: true, textColor: false, heading: false, button: true };
+  return { box: true, text: true, textColor: true, heading: !NO_HEADING.includes(type), button: HAS_BUTTON.includes(type) };
+}
+
+/** Why a part does nothing on this block, in the seller's words. */
+export function lookPartReason(type: SectionType, part: keyof LookParts): string {
+  if (type === 'thankyou') return 'شكل صفحة الشكر ما بيوصل للصفحة المنشورة — بيتغيّر من قسم «بعد الطلب» بالنموذج.';
+  if (part === 'button') {
+    return type === 'form'
+      ? 'زر الطلب بياخد اللون الأساسي للصفحة — بيتغيّر من ألوان الصفحة.'
+      : 'هالقسم ما فيه زر.';
+  }
+  if (part === 'heading') return 'هالقسم ما فيه عناوين — لونه من «لون النص».';
+  if (part === 'textColor') return 'لون كلمات الزر من تبويب «الزر».';
+  return type === 'sticky' ? 'الزر العائم مثبّت أسفل الشاشة — ما إله اتساع ولا خلفية.' : 'هالخيار ما بيأثّر على هالقسم.';
+}
+
+/**
+ * A look pasted onto a block keeps only the parts that mean something there. «لصق الشكل» wrote a background and a
+ * width onto the floating button — values its panel no longer offers to undo.
+ */
+export function lookForType(type: SectionType, look: BlockLook, defaults: BlockLook): BlockLook {
+  const p = lookParts(type);
+  return {
+    ...look,
+    ...(p.box ? {} : { width: defaults.width, align: defaults.align, space: defaults.space, background: defaults.background }),
+    text: p.text
+      ? { ...look.text, ...(p.textColor ? {} : { color: defaults.text.color }), ...(p.heading ? {} : { headingColor: defaults.text.headingColor }) }
+      : defaults.text,
+    button: p.button ? look.button : defaults.button,
+  };
 }

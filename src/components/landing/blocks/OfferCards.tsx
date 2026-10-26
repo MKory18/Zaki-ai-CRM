@@ -58,7 +58,7 @@ export function OfferCards({ offers, currency }: { offers: Offer[]; currency: st
           >
             <span className="lp-offer-name">
               {o.name}
-              {best?.id === o.id && <b className="lp-offer-tag">الأوفر</b>}
+              {best?.id === o.id && <b className="lp-offer-tag" data-ink="">الأوفر</b>}
             </span>
             <span className="lp-offer-qty">
               {o.quantity} قطعة

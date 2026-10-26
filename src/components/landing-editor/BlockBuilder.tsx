@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Eye, EyeOff, Trash2, Plus, Minus, Upload, Loader2, GripVertical,
   Monitor, Smartphone, X, LayoutTemplate, AlertTriangle, Wrench,
@@ -11,7 +11,7 @@ import { useInlineEdit } from '@/components/landing/blocks/useInlineEdit';
 import { Input } from '@/components/ui/Input';
 import {
   type LandingSection, type SectionType,
-  SECTION_LABEL, SECTION_HINT, SINGLETON, newSection,
+  SECTION_LABEL, SECTION_HINT, SINGLETON, LOCKED_SECTIONS, newSection,
 } from '@/lib/landing-sections';
 import {
   type LandingTheme, type FontValue, DEFAULT_THEME, MOODS, FONTS, paletteFor, paletteVars, isValidHex,
@@ -34,6 +34,8 @@ import {
 // `@/lib/reviews` and NOT `@/lib/product-reviews`: this is a client
 // component, and the service half of that pair imports Prisma.
 import { MANUAL_SOURCES, REVIEW_SOURCE_LABEL } from '@/lib/reviews';
+import type { SellingFamily } from '@/lib/selling-blocks';
+import { lookForType } from '@/lib/block-look';
 
 /**
  * The block builder.
@@ -68,6 +70,8 @@ interface Props {
   store?: { name: string; logo: string | null; phone: string | null } | null;
   currency: string;
   offers: { id: string; name: string; quantity: number; freeQuantity: number; price: number; compareAtPrice?: number | null; isDefault?: boolean }[];
+  /** The store's family (عيادة · عطّار · ترند): the preview wears it, as the published page does. */
+  family?: SellingFamily | null;
 }
 
 /** A palette the seller can start from instead of hunting for a hex. */
@@ -90,6 +94,8 @@ export function BlockBuilder(props: Props) {
    * survives a reload is a clipboard nobody remembers filling.
    */
   const [copiedLook, setCopiedLook] = useState<LandingSection['look'] | null>(null);
+  // Which block it was copied from: that block says «نُسخ» and does not offer to paste onto itself.
+  const [copiedFromId, setCopiedFromId] = useState<string | null>(null);
 
   /**
    * How large the page is drawn, NOT how large it is.
@@ -169,6 +175,7 @@ export function BlockBuilder(props: Props) {
     ];
   }, [storeFonts]);
 
+
   const patch = (id: string, fields: Record<string, unknown>) =>
     onSections(sections.map((s) => (s.id === id ? ({ ...s, ...fields } as LandingSection) : s)));
 
@@ -194,6 +201,19 @@ export function BlockBuilder(props: Props) {
   /** Which row is under the cursor right now, for the drop line. */
   /** Each block's row in the side list, so a click on the page can reach it. */
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  /*
+   * The preview's own scroller, and where the clicked block stood before its bar moved.
+   *
+   * The block's bar sits IN the page now, so selecting a block further down removed the old bar above it and the
+   * clicked block jumped up by the bar's height, out from under the cursor. The block is put back where it was.
+   */
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<{ id: string; top: number } | null>(null);
+  const selectBlock = (id: string) => {
+    const el = canvas?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`);
+    anchorRef.current = el ? { id, top: el.getBoundingClientRect().top } : null;
+    setOpenId(id);
+  };
   /**
    * The preview surface, held in STATE rather than a ref.
    *
@@ -203,6 +223,16 @@ export function BlockBuilder(props: Props) {
    * ref that sets state re-runs it the moment the element exists.
    */
   const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const a = anchorRef.current;
+    anchorRef.current = null;
+    if (!a || a.id !== openId) return;
+    const el = canvas?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(a.id)}"]`);
+    const scroller = scrollerRef.current;
+    if (!el || !scroller) return;
+    const moved = el.getBoundingClientRect().top - a.top;
+    if (moved) scroller.scrollTop += moved;
+  }, [openId, canvas]);
 
   /** The block whose look the bar above the page is editing. */
   const openBlock = sections.find((b) => b.id === openId) ?? null;
@@ -636,29 +666,45 @@ export function BlockBuilder(props: Props) {
                     <span className="block text-xs text-[var(--sys-muted)]">{SECTION_HINT[s.type]}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => patch(s.id, { enabled: !s.enabled })}
-                    title={s.enabled ? 'إخفاء' : 'إظهار'}
-                    className="cursor-pointer p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
-                  >
-                    {s.enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  </button>
-                  {/* The form is what makes this a landing page; it can be
-                      moved but not removed. */}
-                  {s.type !== 'form' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSections(sections.filter((x) => x.id !== s.id));
-                        if (openId === s.id) setOpenId(null);
-                      }}
-                      title="حذف"
-                      aria-label="احذف هذا القسم"
-                      className="cursor-pointer p-1 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  {/*
+                    The same rules and the same icons as the bar on the block. The list let the form and the floating
+                    button be «hidden» (and the floating button deleted) while the public page re-enables both, and its
+                    eye showed the state where the bar's shows the action. Now: the icon is the action, and a block the
+                    page is never without says so instead of pretending.
+                  */}
+                  {LOCKED_SECTIONS.includes(s.type) ? (
+                    <span title="قسم أساسي — ما بينخفى ولا بينحذف" className="flex items-center gap-0.5 text-[var(--sys-muted)]">
+                      <button type="button" disabled aria-label="قسم أساسي — ما بينخفى" className="p-1 opacity-40">
+                        <EyeOff className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" disabled aria-label="قسم أساسي — ما بينحذف" className="p-1 opacity-40">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => patch(s.id, { enabled: !s.enabled })}
+                        title={s.enabled ? 'إخفاء' : 'إظهار'}
+                        aria-label={s.enabled ? 'إخفاء' : 'إظهار'}
+                        className="cursor-pointer p-1 text-[var(--sys-muted-foreground)] hover:text-[var(--sys-primary)]"
+                      >
+                        {s.enabled ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSections(sections.filter((x) => x.id !== s.id));
+                          if (openId === s.id) setOpenId(null);
+                        }}
+                        title="حذف"
+                        aria-label="احذف هذا القسم"
+                        className="cursor-pointer p-1 text-[var(--sys-muted)] hover:text-[var(--sys-destructive)]"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
 
@@ -706,6 +752,9 @@ export function BlockBuilder(props: Props) {
       {/* ─── Live preview, drawn by the public renderer ─── */}
       <div
         className={`${previewPaneClass(pane)} min-h-[500px] flex-col overflow-hidden rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]`}
+        /* As tall as the screen, so its scroller is what scrolls: with no height the pane grew to the whole page, the
+           WINDOW scrolled, and neither the block bar's sticky nor the floating button's «fixed» had anything to hold. */
+        style={{ height: 'calc(100dvh - 6rem)', position: 'sticky', top: '1rem' }}
       >
         <div className="flex items-center justify-between border-b border-[var(--sys-border)] px-3 py-2">
           <span className="text-xs font-semibold text-[var(--sys-heading)]">معاينة مباشرة</span>
@@ -767,15 +816,20 @@ export function BlockBuilder(props: Props) {
           behaves here exactly as it does on a phone.
         */}
         <div
+          ref={scrollerRef}
           className="flex flex-1 justify-center overflow-auto bg-[var(--sys-surface)] p-3"
-          style={{ transform: 'translateZ(0)' }}
+          // minHeight 0: a flex child does not shrink below its content without it, and the pane's height would be lost.
+          style={{ transform: 'translateZ(0)', minHeight: 0 }}
         >
           <div
             ref={setCanvas}
-            className="lp-root overflow-hidden rounded-lg border border-[var(--sys-border)] shadow-raised"
+            className="lp-root rounded-lg border border-[var(--sys-border)] shadow-raised"
             dir="rtl"
             style={{
               ...(paletteVars(palette) as React.CSSProperties),
+              // `clip`, not `hidden`: hidden makes the canvas a scroll container, and the block panel's
+              // `position: sticky` then stuck to the canvas (which never scrolls) instead of to the preview.
+              overflow: 'clip',
               width: device === 'mobile' ? 390 : '100%',
               maxWidth: '100%',
               // `zoom` and not `transform: scale`: scale leaves the element
@@ -789,6 +843,9 @@ export function BlockBuilder(props: Props) {
                 stack HERE and looked like the picker doing nothing. */}
             {fontLink && <link rel="stylesheet" href={fontLink} />}
             <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
+            {/* The family wrapper the published page puts around its blocks (LandingPageView) — without it the
+                preview drew every page in the family-less shape and the published one looked different. */}
+            <div className={props.family ? 'lp-family' : undefined} data-family={props.family ?? undefined}>
             <PageBlocks
               sections={sections}
               /**
@@ -806,7 +863,7 @@ export function BlockBuilder(props: Props) {
                 // that block's row — and since the controls moved onto the
                 // block, all that scroll did was yank the page away from the
                 // thing just clicked.
-                onSelect: setOpenId,
+                onSelect: selectBlock,
                 onMove: (id, by) => {
                   const i = sections.findIndex((x) => x.id === id);
                   if (i >= 0) moveTo(i, i + by);
@@ -827,6 +884,8 @@ export function BlockBuilder(props: Props) {
                 toolbar: (b) => (
                   <LookControls
                     look={b.look}
+                    type={b.type}
+                    fonts={fontChoices}
                     onChange={(look) => patch(b.id, { look })}
                     onUpload={async (file) => {
                       // The builder's uploader takes a FileList; a
@@ -841,6 +900,8 @@ export function BlockBuilder(props: Props) {
                 ),
                 onEdit: (id) => {
                   setOpenId(id);
+                  // On a phone the fields are the other pane: «تعديل» opens it, or the pencil did nothing visible.
+                  setPane('edit');
                   requestAnimationFrame(() =>
                     rowRefs.current[id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
                   );
@@ -854,12 +915,20 @@ export function BlockBuilder(props: Props) {
                  */
                 onCopyLook: (id) => {
                   const b = sections.find((x) => x.id === id);
-                  if (b) setCopiedLook(b.look);
+                  if (b) {
+                    setCopiedLook(b.look);
+                    setCopiedFromId(id);
+                  }
                 },
                 onPasteLook: (id) => {
-                  if (copiedLook) patch(id, { look: copiedLook });
+                  const b = sections.find((x) => x.id === id);
+                  // Only the parts that mean something on THIS block — a background pasted onto the floating button
+                  // was a value its panel no longer offers to undo.
+                  if (copiedLook && b) patch(id, { look: lookForType(b.type, copiedLook, newSection(b.type).look!) });
                 },
                 hasCopiedLook: Boolean(copiedLook),
+                copiedFromId,
+                zoom,
                 canDuplicate: (b) => !SINGLETON.includes(b.type),
                 onDuplicate: (id) => {
                   const i = sections.findIndex((x) => x.id === id);
@@ -892,8 +961,10 @@ export function BlockBuilder(props: Props) {
                 form: <FormPlaceholder />,
                 building: true,
                 store: props.store ?? null,
+                family: props.family ?? undefined,
               }}
             />
+            </div>
           </div>
         </div>
       </div>

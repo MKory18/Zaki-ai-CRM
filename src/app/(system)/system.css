@@ -315,7 +315,9 @@ html[lang="ar"] h3,
 html[lang="ar"] h4,
 html[lang="ar"] h5,
 html[lang="ar"] h6,
-html[lang="ar"] strong {
+/* Not inside a seller's page (.lp-root — the builder's preview): there a <strong> is the page's own words, and the
+   dashboard's heading colour made the preview differ from the published page. :where() adds no specificity. */
+html[lang="ar"] strong:where(:not(.lp-root *)) {
   color: var(--sys-heading);
 }
 html[lang="ar"] table,

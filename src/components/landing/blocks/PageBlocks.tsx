@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, Palette as PaletteIcon, Paintbrush } from 'lucide-react';
+import { Check, Star, ShieldCheck, Truck, Wallet, Phone, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Pencil, CopyPlus, ClipboardCopy, ClipboardPaste } from 'lucide-react';
 import { COD_LINE, LOCKED_SECTIONS, type LandingSection } from '@/lib/landing-sections';
 import { lowStock, offersCountAr, trustRow, type SellingFamily, type TrustItem } from '@/lib/selling-blocks';
 import { lookStyles, isPlainLook } from '@/lib/block-look';
@@ -191,6 +191,10 @@ export interface BlockSelection {
   onPasteLook?: (id: string) => void;
   /** Whether anything has been copied yet — the paste button says so. */
   hasCopiedLook?: boolean;
+  /** The block the copied look came from: it shows «نُسخ» and offers no paste onto itself. */
+  copiedFromId?: string | null;
+  /** The preview's zoom — the bar is drawn at its own size whatever the page is zoomed to. */
+  zoom?: number;
   /** False for a block the page may only hold one of. */
   canDuplicate?: (s: LandingSection) => boolean;
   /** The look controls, rendered in the same bar as the handles. */
@@ -282,6 +286,9 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
          the block stylesheet. Absent when nothing was chosen, so a page
          nobody has styled renders exactly as it always did. */
       data-look-color={inner.color ? '' : undefined}
+      /* An item title follows a chosen colour — the heading colour, or the text colour when only that was chosen. */
+      data-look-it={inner.color || vars['--look-heading'] ? '' : undefined}
+      data-look-wide={section.look?.width === 'wide' || section.look?.width === 'full' ? '' : undefined}
       data-look-size={t?.scale && t.scale !== 'm' ? '' : undefined}
       data-look-align={section.look?.align && section.look.align !== 'center' ? '' : undefined}
       data-look-font={t?.font ? '' : undefined}
@@ -303,14 +310,24 @@ function Dressed({ section, children }: { section: LandingSection; children: Rea
 function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx: BlockContext; lead?: boolean }) {
   switch (s.type) {
     case 'announcement':
-      return s.text ? <div className="lp-announce" data-edit="text" {...rich(s.text)} /> : null;
+      // In the builder an empty bar is a place to type, not nothing: with no box there was no outline, no panel and
+      // no way to find the block on the page at all.
+      if (!s.text) return ctx.building ? <SlotFrame label="شريط إعلان — اكتب جملة قصيرة" /> : null;
+      // The bar's words follow a colour the seller CHOSE — not the automatic white a photo background sets, because
+      // the bar itself is an opaque accent strip.
+      return (
+        <div className="lp-announce" data-edit="text" style={s.look?.text?.color ? { color: 'inherit' } : undefined} {...rich(s.text)} />
+      );
 
     case 'hero':
       return <Hero section={s} ctx={ctx} />;
 
     case 'slider': {
       const images = s.images.filter(Boolean);
-      if (!images.length) return null;
+      if (!images.length) {
+        if (!ctx.building) return null;
+        return <Section title={s.title}><SlotFrame label="صور متحركة — ارفع صورة أو أكثر" /></Section>;
+      }
       return (
         <Section title={s.title}>
           <Slider images={images} autoplay={s.autoplay} seconds={s.seconds} />
@@ -361,7 +378,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
                   <Check size={15} strokeWidth={3} />
                 </span>
                 <div>
-                  <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+                  <strong data-it="" data-edit={`items.${i}.title`} {...rich(item.title)} />
                   {item.text && <p data-edit={`items.${i}.text`} {...rich(item.text)} />}
                 </div>
               </li>
@@ -465,11 +482,11 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
                 // A link, not a button: the page is rendered on the server,
                 // and a shopper with no JavaScript still gets to browse.
                 return href ? (
-                  <a key={c.id} href={href} className={cls} aria-current={on ? 'true' : undefined}>
+                  <a key={c.id} href={href} className={cls} aria-current={on ? 'true' : undefined} data-ink={on ? '' : undefined}>
                     {c.name}
                   </a>
                 ) : (
-                  <span key={c.id} className={cls}>{c.name}</span>
+                  <span key={c.id} className={cls} data-ink={on ? '' : undefined}>{c.name}</span>
                 );
               })}
             </div>
@@ -482,7 +499,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
                       built is a different thing from a catalogue product,
                       and a shopper who cannot tell them apart cannot tell
                       why one of them carries an offer. */}
-                  {it.kind === 'page' && <span className="lp-catalog-tag">عرض خاص</span>}
+                  {it.kind === 'page' && <span className="lp-catalog-tag" data-ink="">عرض خاص</span>}
                   {it.image ? (
                     // The seller's own uploads; next/image would need every
                     // host allow-listed, and a blocked image is worse than an
@@ -697,7 +714,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i}>
-                  <th scope="row">{r.aspect}</th>
+                  <th scope="row" data-it="">{r.aspect}</th>
                   <td className="lp-compare-ours">{r.ours}</td>
                   <td>{r.theirs}</td>
                 </tr>
@@ -720,7 +737,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
           <ol className="lp-timeline">
             {points.map((p, i) => (
               <li key={i}>
-                <span className="lp-timeline-when">{p.when}</span>
+                <span className="lp-timeline-when" data-it="">{p.when}</span>
                 <span className="lp-timeline-what">{p.what}</span>
               </li>
             ))}
@@ -747,7 +764,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
           <ol className="lp-quiz">
             {questions.map((q, i) => (
               <li key={i}>
-                <p className="lp-quiz-ask">{q.ask}</p>
+                <p className="lp-quiz-ask" data-it="">{q.ask}</p>
                 <div className="lp-quiz-options">
                   {q.options.filter(Boolean).map((o, j) => (
                     <span key={j} className="lp-quiz-option">{o}</span>
@@ -773,7 +790,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
           <div className="lp-objections">
             {items.map((item, i) => (
               <div key={i} className="lp-objection">
-                <p className="lp-objection-doubt">{item.doubt}</p>
+                <p className="lp-objection-doubt" data-it="">{item.doubt}</p>
                 <p className="lp-objection-answer">{item.answer}</p>
               </div>
             ))}
@@ -797,7 +814,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
             <ol className="lp-mechanism">
               {steps.map((x, i) => (
                 <li key={i}>
-                  <span className="lp-mechanism-step">{x.title}</span>
+                  <span className="lp-mechanism-step" data-it="">{x.title}</span>
                   <span className="lp-mechanism-text">{x.text}</span>
                 </li>
               ))}
@@ -807,7 +824,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
             <dl className="lp-ingredients">
               {ingredients.map((x, i) => (
                 <div key={i}>
-                  <dt>{x.name}</dt>
+                  <dt data-it="">{x.name}</dt>
                   <dd>{x.does}</dd>
                 </div>
               ))}
@@ -893,8 +910,11 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
     }
 
     case 'sticky':
-      // Fixed to the bottom of the screen, wherever it sits in the order.
+      // Fixed to the bottom of the screen, wherever it sits in the order. In the builder it also gets a strip WHERE
+      // IT SITS, so selecting it gives an outline and a panel there — not around a button floating somewhere else.
       return (
+        <>
+        {ctx.building && <SlotFrame label="الزر العائم — بيطفو أسفل الشاشة للزائر" />}
         <StickyCta
           text={s.text}
           showPrice={s.showPrice}
@@ -905,6 +925,7 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
           motion={s.motion}
           motionSpeed={s.motionSpeed}
         />
+        </>
       );
   }
 }
@@ -1028,7 +1049,9 @@ function Hero({ section: s, ctx }: { section: Extract<LandingSection, { type: 'h
         stays the seller's.
       */}
       {selected && ctx.offers.length > 0 && (
-        <OrderCta className="lp-hero-offers">
+        // A filled shape (the pale tint, or the accent on trend): its words keep their own ink in every family — a
+        // hero text colour (three templates set one) made the bundle name vanish on the pale pill.
+        <OrderCta className="lp-hero-offers" data-ink="">
           <b>{selected.name}</b>
           {selected.freeQuantity > 0 && <em>+{selected.freeQuantity} مجاناً</em>}
           {ctx.offers.length > 1 && <span>{offersCountAr(ctx.offers.length)} — اختر عرضك</span>}
@@ -1080,8 +1103,8 @@ function Trust({ section: s, ctx }: { section: Extract<LandingSection, { type: '
           const Icon = icons[i % icons.length];
           return (
             <div key={i}>
-              <Icon size={18} />
-              <strong data-edit={`items.${i}.title`} {...rich(item.title)} />
+              <Icon size={18} style={{ color: 'var(--store-accent)' }} />
+              <strong data-it="" data-edit={`items.${i}.title`} {...rich(item.title)} />
               {item.text && <span data-edit={`items.${i}.text`} {...rich(item.text)} />}
             </div>
           );
@@ -1100,8 +1123,8 @@ function Trust({ section: s, ctx }: { section: Extract<LandingSection, { type: '
         const Icon = f.key === 'cod' ? Wallet : f.key === 'delivery' ? Truck : ShieldCheck;
         const body = (
           <>
-            <Icon size={18} />
-            <strong>{f.title}</strong>
+            <Icon size={18} style={{ color: 'var(--store-accent)' }} />
+            <strong data-it="">{f.title}</strong>
             <span>{f.text}</span>
           </>
         );
@@ -1196,6 +1219,7 @@ function Selectable({
 }) {
   const active = selection.activeId === s.id;
   const off = !s.enabled;
+  const copiedHere = selection.copiedFromId === s.id;
 
   return (
     <div
@@ -1207,6 +1231,9 @@ function Selectable({
         selection.onSelect(s.id);
       }}
       onKeyDown={(e) => {
+        // Only the block itself: Enter on a button, a select or a colour input INSIDE it is that control's own key —
+        // swallowing it here left every control in the bar dead to the keyboard.
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           selection.onSelect(s.id);
@@ -1215,7 +1242,6 @@ function Selectable({
       className={`group relative cursor-pointer outline-none transition-[box-shadow] ${
         active ? 'z-10 shadow-[inset_0_0_0_2px_#b8256e]' : 'hover:shadow-[inset_0_0_0_2px_#f2c9dd]'
       }`}
-      style={off ? { opacity: 0.45 } : undefined}
     >
       {/* The name, on hover or while selected — placed inside the block so a
           tall one is still labelled where the cursor is. */}
@@ -1228,16 +1254,21 @@ function Selectable({
         {off && ' — مخفي'}
       </span>
 
-      {/* ONE bar, on the block. A strip pinned to the top of the editor
-          scrolled away the moment the page did, so styling a block halfway
-          down meant scrolling back up to reach its controls. Here it
-          travels with what it changes and is never not there. */}
+      {/* A hidden block dims its CONTENT — the panel stays readable. */}
+      <div style={off ? { opacity: 0.45 } : undefined}>{children}</div>
+
+      {/*
+        ONE bar, on the block — and now IN the page, after the block, not floating over the next one.
+
+        It was absolute under the block: it covered the block below, was cut off on the last block, sat off-screen on
+        a block taller than the window, and jumped sideways as its tabs opened. In the flow it makes room for itself;
+        `sticky` to the bottom keeps it on screen while a tall block is scrolled; and it is drawn at its own size
+        whatever the preview is zoomed to.
+      */}
       {active && (
-        <span
-          /* BELOW the block, not on it. On it, a short block was covered
-             entirely by its own controls and the words could not be read
-             while they were being styled. */
-          className="absolute end-2 top-full z-30 mt-1 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-1 rounded-lg bg-white p-1 shadow-lg ring-1 ring-[#e3e8ef]"
+        <div
+          className="z-30 mt-1 mb-2 flex flex-wrap items-center gap-1 rounded-lg bg-white p-1 shadow-lg ring-1 ring-[#e3e8ef]"
+          style={{ position: 'sticky', bottom: 8, marginInline: 8, zoom: 1 / (selection.zoom || 1) }}
           onClick={(e) => e.stopPropagation()}
         >
           <Handle
@@ -1253,18 +1284,18 @@ function Selectable({
               icon={<CopyPlus className="h-3.5 w-3.5" />}
             />
           )}
-          {/* Matching two blocks by hand is eight controls set twice, and a
-              third block that never quite matches. */}
+          {/* Matching two blocks by hand is eight controls set twice, and a third block that never quite matches.
+              Copy and paste are a clipboard pair — not a palette and a brush beside the panel's own colour tabs. */}
           <Handle
-            title="انسخ التنسيق"
+            title={copiedHere ? 'نُسخ — الصقه على قسم ثاني' : 'نسخ الشكل'}
             onClick={() => selection.onCopyLook?.(s.id)}
-            icon={<PaletteIcon className="h-3.5 w-3.5" />}
+            icon={copiedHere ? <Check className="h-3.5 w-3.5" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
           />
-          {selection.hasCopiedLook && (
+          {selection.hasCopiedLook && !copiedHere && (
             <Handle
-              title="الصق التنسيق"
+              title="لصق الشكل"
               onClick={() => selection.onPasteLook?.(s.id)}
-              icon={<Paintbrush className="h-3.5 w-3.5" />}
+              icon={<ClipboardPaste className="h-3.5 w-3.5" />}
             />
           )}
           <span className="mx-0.5 h-4 w-px bg-[#e3e8ef]" />
@@ -1309,10 +1340,8 @@ function Selectable({
               {selection.toolbar(s)}
             </>
           )}
-        </span>
+        </div>
       )}
-
-      {children}
     </div>
   );
 }
@@ -1334,6 +1363,7 @@ function Handle({
     <button
       type="button"
       title={title}
+      aria-label={title}
       disabled={disabled}
       onClick={onClick}
       className={`cursor-pointer rounded p-1 disabled:cursor-default disabled:opacity-30 ${

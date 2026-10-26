@@ -11,7 +11,7 @@ import { BlockBuilder } from '@/components/landing-editor/BlockBuilder';
 import { HtmlPromptButtons } from '@/components/landing/HtmlPromptButtons';
 import { type LandingTheme, DEFAULT_THEME } from '@/lib/landing-theme';
 import {
-  type LandingSection, parseSections, ensureForm, starterSections,
+  type LandingSection, parseSections, ensureForm, starterSections, LOCKED_SECTIONS,
 } from '@/lib/landing-sections';
 import { useHistory } from '@/lib/use-history';
 import { RiArchiveLine, RiArrowGoBackLine, RiBookOpenLine, RiArrowGoForwardLine, RiArrowRightLine, RiCodeSLine, RiComputerLine, RiCursorLine, RiEarthLine, RiEyeLine, RiFullscreenExitLine, RiFullscreenLine, RiGiftLine, RiImageLine, RiInputMethodLine, RiLoader4Line, RiPaletteLine, RiPlayListAddLine, RiRefreshLine, RiSaveLine, RiSmartphoneLine, RiTabletLine, RiUpload2Line } from '@remixicon/react';
@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { useConfirm } from '@/components/ui/Confirm';
 import { publicAddress } from '@/lib/public-address';
 import { publishQuestion } from '@/lib/landing-publish';
+import type { SellingFamily } from '@/lib/selling-blocks';
 
 /**
  * CUSTOM LANDING PAGE EDITOR — Phase 1
@@ -240,6 +241,8 @@ export function LandingPageEditorScreen() {
   const lpId = params?.id ?? null;
 
   const [lp, setLp] = useState<any>(null);
+  // The store's family, so the builder's preview draws the page as it is published.
+  const [family, setFamily] = useState<SellingFamily | null>(null);
   const confirm = useConfirm();
   /**
    * WHAT THE SERVER SAYS ABOUT THIS PAGE'S DRAFT.
@@ -309,6 +312,7 @@ export function LandingPageEditorScreen() {
       const data = await crmApi(`/api/landing-pages/${lpId}`);
       const page = data.landingPage;
       setLp(page);
+      setFamily(data.family ?? null);
       // The GET hands back the DRAFT overlaid on the live row, so what loads
       // here is what «نشر التعديلات» would publish — the editor and the
       // publish never show each other different pages.
@@ -331,7 +335,10 @@ export function LandingPageEditorScreen() {
       // behind a single lonely block.
       const stored = parseSections(page.sections);
       // Loading is not an edit: it must not become the first undo step.
-      history.reset(stored.length ? ensureForm(stored) : starterSections());
+      // A form or floating button saved as hidden is shown again: the published page re-enables both, and the
+      // editor no longer offers a hide for them — one saved hidden would otherwise sit struck through for ever.
+      const shown = stored.map((s) => (LOCKED_SECTIONS.includes(s.type) && !s.enabled ? { ...s, enabled: true } : s));
+      history.reset(shown.length ? ensureForm(shown) : starterSections());
 
       setDirty(false);
       // Phase 2 preview data — this page's own DB records (no secrets)
@@ -805,6 +812,7 @@ export function LandingPageEditorScreen() {
             store={lp.store ? { name: lp.store.name, logo: lp.store.logo ?? null, phone: lp.store.supportPhone ?? null } : null}
             currency={previewData?.currency || 'USD'}
             offers={previewData?.offers || []}
+            family={family}
           />
         ) : (
         /* ─── 3-column workspace ─── */

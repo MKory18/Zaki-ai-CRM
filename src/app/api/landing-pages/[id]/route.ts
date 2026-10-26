@@ -11,6 +11,8 @@ import { draftState, publishContent } from '@/lib/landing-draft';
 import { validateDomain, forgetHost, dashboardHosts } from '@/lib/landing-domain';
 import { zodMessage } from '@/lib/zod-message';
 import { standDownRedirectsTo, suggestSlugRedirect } from '@/lib/store-redirects';
+import { familyOf } from '@/lib/selling-blocks';
+import { parseStoreTheme } from '@/lib/store-theme';
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -37,7 +39,7 @@ export async function GET(_req: Request, ctx: Ctx) {
         // that is the country's currency, not the company's. The page is
         // read through the selected store, so it always has one.
         // And the store's identity, which the footer block shows.
-        store: { select: { name: true, logo: true, supportPhone: true, country: { select: { currencyCode: true } } } },
+        store: { select: { name: true, logo: true, supportPhone: true, theme: true, country: { select: { currencyCode: true } } } },
       },
     });
     if (!lp) return NextResponse.json({ error: 'صفحة الهبوط غير موجودة' }, { status: 404 });
@@ -65,6 +67,9 @@ export async function GET(_req: Request, ctx: Ctx) {
       hasUnpublished: state.hasUnpublished,
       canRevert: state.canRevert,
       publishedAt: state.publishedAt,
+      // The store's family (عيادة · عطّار · ترند), the same one the published page wears — so the editor's preview
+      // draws the page the visitor will see, not the family-less one.
+      family: familyOf(parseStoreTheme(lp.store?.theme).template),
     });
   } catch (error) {
     const { body, status } = apiError(error);
