@@ -77,6 +77,10 @@ describe('the cards', () => {
   it('NEGATIVE: with nothing losing there is no «biggest loss» card claiming one', () => {
     expect(campaignInsights([list[0]], new Map()).worst).toBeNull();
   });
+
+  it('NEGATIVE: with nothing earned there is no «best return» card crowning a 0× campaign', () => {
+    expect(campaignInsights([list[2], list[3]], new Map()).best).toBeNull();
+  });
 });
 
 describe('the filters', () => {

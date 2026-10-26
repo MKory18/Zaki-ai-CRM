@@ -51,7 +51,8 @@ export interface CampaignInsights {
 
 export function campaignInsights(list: InsightCampaign[], duplicates: Map<string, string>): CampaignInsights {
   const spent = list.filter((c) => c.money.spend > 0);
-  const withRoas = spent.filter((c) => c.money.roas !== null);
+  // A return of 0× is not a «best» of anything: with nothing earned, the card says so instead of crowning a loser.
+  const withRoas = spent.filter((c) => c.money.roas !== null && c.money.roas > 0);
   const best = withRoas.reduce<InsightCampaign | null>((b, c) => (!b || (c.money.roas as number) > (b.money.roas as number) ? c : b), null);
   const worst = spent.reduce<InsightCampaign | null>((w, c) => (!w || c.money.net < w.money.net ? c : w), null);
   return {
