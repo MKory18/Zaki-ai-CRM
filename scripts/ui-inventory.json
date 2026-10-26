@@ -109,6 +109,16 @@
     "links": 2,
     "tabs": 0
   },
+  "src/components/growth/CampaignsBoard.tsx": {
+    "buttons": 8,
+    "inputs": 7,
+    "columns": 3,
+    "cards": 5,
+    "modals": 0,
+    "icons": 5,
+    "links": 0,
+    "tabs": 0
+  },
   "src/components/growth/IntelligenceStrip.tsx": {
     "buttons": 0,
     "inputs": 0,
@@ -702,7 +712,7 @@
   "src/components/screens/CampaignsScreen.tsx": {
     "buttons": 17,
     "inputs": 11,
-    "columns": 4,
+    "columns": 7,
     "cards": 0,
     "modals": 0,
     "icons": 21,
