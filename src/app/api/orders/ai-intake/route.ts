@@ -200,6 +200,38 @@ export async function POST(req: Request) {
         );
       }
 
+      /*
+       * THE OFFER'S PRICE, AT THE WRITE AND NOT ONLY IN THE PREVIEW.
+       *
+       * The preview fills the box with the offer's price and locks it; this
+       * is the same rule where the money is written, so a box edited around
+       * the lock, a product changed after the parse, or a hand-made payload
+       * cannot record a bundle at a price it does not have. Refused rather
+       * than corrected: the button the reviewer pressed named a figure, and
+       * an order saved at a different one is a number nobody confirmed. The
+       * answer carries the offer's price so the screen can put it in the box.
+       *
+       * BEFORE THE CUSTOMER IS WRITTEN: a refused confirmation must leave no
+       * customer row behind it. `activeOffersFor` reads this company's offers
+       * only, so a product id from another company finds none here and is
+       * refused by name below.
+       */
+      const quantityOffer = offerForQuantity(
+        await activeOffersFor(db, companyId, p.productId, country.minorUnit),
+        p.quantity,
+      );
+      if (quantityOffer && roundMinor(p.finalPrice, country.minorUnit) !== roundMinor(quantityOffer.price, country.minorUnit)) {
+        return NextResponse.json(
+          {
+            error: `سعر العرض «${quantityOffer.name}» لهذه الكمية ${quantityOffer.price} — الطلب بالذكاء يُسجَّل بسعر العرض`,
+            code: 'OFFER_PRICE',
+            offerPrice: quantityOffer.price,
+            offerName: quantityOffer.name,
+          },
+          { status: 409 },
+        );
+      }
+
       // The same identity rule every other door uses.
       const customer = await findOrCreateCustomer(db, {
         companyId,
@@ -221,32 +253,6 @@ export async function POST(req: Request) {
       }
 
       const qty = p.quantity;
-      /*
-       * THE OFFER'S PRICE, AT THE WRITE AND NOT ONLY IN THE PREVIEW.
-       *
-       * The preview fills the box with the offer's price and locks it; this
-       * is the same rule where the money is written, so a box edited around
-       * the lock, a product changed after the parse, or a hand-made payload
-       * cannot record a bundle at a price it does not have. Refused rather
-       * than corrected: the button the reviewer pressed named a figure, and
-       * an order saved at a different one is a number nobody confirmed. The
-       * answer carries the offer's price so the screen can put it in the box.
-       */
-      const quantityOffer = offerForQuantity(
-        await activeOffersFor(db, companyId, product.id, country.minorUnit),
-        qty,
-      );
-      if (quantityOffer && roundMinor(p.finalPrice, country.minorUnit) !== roundMinor(quantityOffer.price, country.minorUnit)) {
-        return NextResponse.json(
-          {
-            error: `سعر العرض «${quantityOffer.name}» لهذه الكمية ${quantityOffer.price} — الطلب بالذكاء يُسجَّل بسعر العرض`,
-            code: 'OFFER_PRICE',
-            offerPrice: quantityOffer.price,
-            offerName: quantityOffer.name,
-          },
-          { status: 409 },
-        );
-      }
       /**
        * WHAT THE REVIEWER CONFIRMED, INCLUDING A ZERO.
        *

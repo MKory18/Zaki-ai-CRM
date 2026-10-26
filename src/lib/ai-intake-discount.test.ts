@@ -503,6 +503,8 @@ describe('وبابُ الكتابةِ يُسجِّلُ سعرَ العرضِ ل�
     expect(json.error).toContain('قطعتان');
     expect(db.order.create).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
+    // and no customer row is left behind a refused confirmation
+    expect(findOrCreateCustomer).not.toHaveBeenCalled();
   });
 
   it('وسعرُ العرضِ نفسُه يمرّ، ورقمُ الزبونِ يُحفَظ بتاريخِ الطلبِ — لا بملاحظتِه التي تُطبَع للشركة', async () => {
