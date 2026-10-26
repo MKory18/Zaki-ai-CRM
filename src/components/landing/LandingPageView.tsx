@@ -349,6 +349,14 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
                 label: formChoices.whatsappLabel,
                 message: formChoices.whatsappMessage,
                 autoOpen: formChoices.whatsappAutoOpen,
+                when: formChoices.whatsappWhen,
+                delaySeconds: formChoices.whatsappDelay,
+                look: formChoices.whatsappLook,
+                shape: formChoices.whatsappShape,
+                wide: formChoices.whatsappWide,
+                color: formChoices.whatsappColor,
+                icon: formChoices.whatsappIcon,
+                pulse: formChoices.whatsappPulse,
               }
             : undefined
         }

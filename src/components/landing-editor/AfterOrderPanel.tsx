@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
+import { whatsappButtonStyle } from '@/components/landing/OrderForm';
+import { RiWhatsappLine } from '@/components/storefront/icons';
 
 /**
  * «بعد الطلب» — everything that happens once the order is in, in one place on the form block.
@@ -19,6 +21,15 @@ export interface AfterOrderSection {
   whatsappMessage: string;
   whatsappNumber: string;
   whatsappAutoOpen: boolean;
+  // When the button appears and how it looks. Optional here: a block saved before them reads the defaults below.
+  whatsappWhen?: 'now' | 'end' | 'delay';
+  whatsappDelay?: number;
+  whatsappLook?: 'outline' | 'solid' | 'green' | 'floating';
+  whatsappShape?: 'curved' | 'pill' | 'square';
+  whatsappWide?: boolean;
+  whatsappColor?: string;
+  whatsappIcon?: boolean;
+  whatsappPulse?: boolean;
   afterOrderFlow: 'together' | 'sequence';
   afterOrderBanner: 'none' | 'congrats' | 'countdown';
   afterOrderBannerText: string;
@@ -89,6 +100,10 @@ export function AfterOrderPanel({
   }, [ctx.productId, ctx.pageId]);
 
   const number = s.whatsappNumber.trim() || ctx.storePhone || '';
+  const when = s.whatsappWhen ?? 'now';
+  const delay = s.whatsappDelay ?? 5;
+  const look = s.whatsappLook ?? 'outline';
+  const color = s.whatsappColor ?? '';
 
   return (
     <section aria-label="بعد الطلب" className="space-y-2 rounded-lg bg-[var(--sys-surface)] p-2.5">
@@ -193,12 +208,104 @@ export function AfterOrderPanel({
           {!number && (
             <p className="text-xs font-semibold text-[var(--sys-warning)]">ما في رقم — الزر ما رح يطلع. اكتب رقماً هون أو من إعدادات المتجر.</p>
           )}
+          {/* «متى اقدر اظهر زر الواتس بعد الشراء… واتحكم بشكل الزر، اشكالو والوانو». */}
+          <Choices
+            label="إيمتى بيطلع الزر"
+            value={when}
+            options={[['now', 'فوراً'], ['end', 'آخر شي'], ['delay', 'بعد ثواني']] as const}
+            onPick={(v) => patch({ whatsappWhen: v })}
+          />
+          <p className="text-xs text-[var(--sys-muted-foreground)]">
+            {when === 'now'
+              ? 'بيطلع أول ما الطلب يمشي، فوق العروض.'
+              : when === 'end'
+                ? 'بيطلع تحت العروض، بعد ما الزبون يجاوب عليها (يضيف أو يقول «لا شكراً»).'
+                : `بيطلع بعد ${delay} ثانية من الطلب.`}
+          </p>
+          {when === 'delay' && (
+            <label className="flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
+              عدد الثواني
+              <input
+                aria-label="عدد الثواني قبل ما يطلع زر واتساب"
+                type="number"
+                min={1}
+                max={120}
+                className={`${FIELD} w-20`}
+                value={delay}
+                onChange={(e) => {
+                  const n = Math.round(Number(e.target.value));
+                  if (Number.isFinite(n)) patch({ whatsappDelay: Math.min(120, Math.max(1, n)) });
+                }}
+              />
+            </label>
+          )}
+          <Choices
+            label="شكل الزر"
+            value={look}
+            options={[['outline', 'إطار'], ['solid', 'لون المتجر'], ['green', 'أخضر واتساب'], ['floating', 'دائرة بالزاوية']] as const}
+            onPick={(v) => patch({ whatsappLook: v })}
+          />
+          {look !== 'floating' && (
+            <Choices
+              label="الزوايا"
+              value={s.whatsappShape ?? 'curved'}
+              options={[['curved', 'مدوّرة'], ['pill', 'كبسولة'], ['square', 'حادّة']] as const}
+              onPick={(v) => patch({ whatsappShape: v })}
+            />
+          )}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--sys-foreground)]">
+            <label className="flex items-center gap-1.5">
+              اللون
+              <input
+                aria-label="لون زر واتساب"
+                type="color"
+                value={color || (look === 'outline' ? '#121926' : look === 'solid' ? '#b8256e' : '#25d366')}
+                onChange={(e) => patch({ whatsappColor: e.target.value })}
+              />
+            </label>
+            {color && (
+              <button type="button" className={LINK} onClick={() => patch({ whatsappColor: '' })}>
+                رجّع لون الشكل
+              </button>
+            )}
+            {look !== 'floating' && (
+              <label className="flex items-center gap-1.5">
+                <input type="checkbox" checked={!!s.whatsappWide} onChange={(e) => patch({ whatsappWide: e.target.checked })} />
+                بعرض الشاشة
+              </label>
+            )}
+            {look !== 'floating' && (
+              <label className="flex items-center gap-1.5">
+                <input type="checkbox" checked={!!s.whatsappIcon} onChange={(e) => patch({ whatsappIcon: e.target.checked })} />
+                أيقونة واتساب
+              </label>
+            )}
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={!!s.whatsappPulse} onChange={(e) => patch({ whatsappPulse: e.target.checked })} />
+              حركة بتلفت النظر
+            </label>
+          </div>
+          {/* The button as the customer will see it — the same style the thank-you screen draws. */}
+          <div className="rounded-md bg-[var(--sys-surface-strong)] p-2 text-center" aria-label="معاينة زر واتساب">
+            <span
+              style={{
+                ...whatsappButtonStyle(
+                  { look, shape: s.whatsappShape, wide: s.whatsappWide, color, icon: s.whatsappIcon, pulse: s.whatsappPulse },
+                  true
+                ),
+                ...(look === 'floating' ? { position: 'static' } : { marginTop: 0 }),
+              }}
+            >
+              {(s.whatsappIcon || look === 'floating') && <RiWhatsappLine size={look === 'floating' ? 30 : 20} aria-hidden />}
+              {look !== 'floating' && <span>{s.whatsappLabel.trim() || 'أكّد طلبك على واتساب'}</span>}
+            </span>
+          </div>
           <label className="flex items-center gap-2 text-xs text-[var(--sys-foreground)]">
             <input type="checkbox" checked={s.whatsappAutoOpen} onChange={(e) => patch({ whatsappAutoOpen: e.target.checked })} />
-            افتح واتساب لحاله بعد 3 ثواني
+            افتح واتساب لحاله بعد 3 ثواني من ما يطلع الزر
           </label>
-          {s.whatsappAutoOpen && (
-            <p className="text-xs text-[var(--sys-warning)]">الزبون بيطلع من الصفحة — عرض «زيد علبة» والمنتجات المقترحة ما رح يشوفهم.</p>
+          {s.whatsappAutoOpen && when !== 'end' && (
+            <p className="text-xs text-[var(--sys-warning)]">الزبون بيطلع من الصفحة — عرض «زيد علبة» والمنتجات المقترحة ما رح يشوفهم. اختار «آخر شي» إذا بدك يشوفهم أول.</p>
           )}
         </div>
       )}

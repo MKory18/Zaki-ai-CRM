@@ -501,6 +501,25 @@ const form = z.object({
   whatsappNumber: z.string().max(30).regex(/^[+0-9 ()-]*$/).default(''),
   whatsappAutoOpen: z.boolean().default(false),
   /**
+   * «متى اقدر اظهر زر الواتس بعد الشراء… واتحكم بشكل الزر، اشكالو والوانو». Every default is the button as it was —
+   * shown at once, a plain outlined button, no icon — so a saved page reads as before.
+   *
+   *   · `whatsappWhen` — `now` at once; `end` last, under the offers, once the customer is done with them (the bundle
+   *     answered, the suggestions answered or one of them added); `delay` after `whatsappDelay` seconds.
+   *     `whatsappAutoOpen` then opens WhatsApp three seconds after the button APPEARS, never before it is seen.
+   *   · `whatsappLook` — `outline` · `solid` (the store's colour) · `green` (WhatsApp's) · `floating` (a round
+   *     button in the corner of the screen); `whatsappShape` its corners; `whatsappWide` the full width;
+   *     `whatsappColor` a colour of the seller's own over the look's; `whatsappIcon` and `whatsappPulse` as named.
+   */
+  whatsappWhen: z.enum(['now', 'end', 'delay']).default('now'),
+  whatsappDelay: z.number().int().min(1).max(120).default(5),
+  whatsappLook: z.enum(['outline', 'solid', 'green', 'floating']).default('outline'),
+  whatsappShape: z.enum(['curved', 'pill', 'square']).default('curved'),
+  whatsappWide: z.boolean().default(false),
+  whatsappColor: z.string().regex(/^(#[0-9a-fA-F]{6})?$/).default(''),
+  whatsappIcon: z.boolean().default(false),
+  whatsappPulse: z.boolean().default(false),
+  /**
    * The words on the form's own button — «بعد ما يعبي بياناته زر واضح كمان». The price still follows them. The
    * default is what it always said, so a saved page reads as before.
    */
