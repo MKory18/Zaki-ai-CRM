@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RiWhatsappLine } from '@/components/storefront/icons';
 import { OrderCta } from './OrderCta';
+import { ORDER_PLACED } from '@/lib/order-placed-event';
 
 /**
  * THE BAR THAT KEEPS THE ORDER ONE TAP AWAY — at any scroll position.
@@ -50,6 +51,7 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsa
   // Start on what the form starts on, so the two agree before any click.
   const initial = offers.find((o) => o.isDefault)?.id ?? offers[0]?.id ?? '';
   const [offerId, setOfferId] = useState(initial);
+  const [ordered, setOrdered] = useState(false);
 
   useEffect(() => {
     function onMessage(ev: MessageEvent) {
@@ -62,6 +64,14 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsa
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [offers]);
+
+  // The order is in: «اطلب الآن» would only cover the thank-you screen — its
+  // offer, its suggestions, its WhatsApp — and invite a second order.
+  useEffect(() => {
+    const leave = () => setOrdered(true);
+    window.addEventListener(ORDER_PLACED, leave);
+    return () => window.removeEventListener(ORDER_PLACED, leave);
+  }, []);
 
   /**
    * Step aside while the order form is on the screen.
@@ -99,6 +109,8 @@ export function StickyCta({ text, showPrice, offers, basePrice, currency, whatsa
   }, []);
 
   const price = offers.find((o) => o.id === offerId)?.price ?? (offers.length ? undefined : basePrice);
+
+  if (ordered) return null;
 
   return (
     <div className="lp-sticky-bar" ref={ref}>
