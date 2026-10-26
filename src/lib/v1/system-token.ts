@@ -35,6 +35,12 @@ export const V1_SCOPES = [
   'orders.create',
   'orders.read',
   'orders.note',
+  // The media buyer's two (2026-10-26). Separate scopes, not a widening of
+  // `orders.read` and `products.read`: the replies system holds those, and
+  // it must not start reading every order's ad trail or the cost of goods
+  // because a third system needed them.
+  'orders.attribution',
+  'products.costs',
 ] as const;
 
 export type V1Scope = (typeof V1_SCOPES)[number];
@@ -52,6 +58,29 @@ export const REPLIES_SCOPES: V1Scope[] = [
   'orders.note',
 ];
 
+/**
+ * What the media buyer is given, and nothing else — READ ONLY.
+ *
+ * It decides where ad money goes, so it needs which ad each order came from
+ * and what happened to it (`orders.attribution`), and what a unit costs and
+ * how long the shelf lasts (`products.read` + `products.costs`). It never
+ * writes here: no order, no note, no lookup of a customer's number — the
+ * owner's rule is that ads are edited THERE and orders live HERE.
+ */
+export const MEDIABUYER_SCOPES: V1Scope[] = ['products.read', 'products.costs', 'orders.attribution'];
+
+/**
+ * The outside systems a key may be made for, each with its default scopes.
+ *
+ * The screen offers these by name, so a person making the media buyer's key
+ * starts from its three scopes instead of unticking the replies system's
+ * five — least privilege as the default, not as homework.
+ */
+export const V1_SYSTEMS = [
+  { key: 'replies', ar: 'نظام الردود', scopes: REPLIES_SCOPES },
+  { key: 'mediabuyer', ar: 'الميديا باير', scopes: MEDIABUYER_SCOPES },
+] as const;
+
 /** The Arabic name of each scope, for the screen that grants them. */
 export const V1_SCOPE_AR: Record<V1Scope, string> = {
   'products.read': 'قراءة المنتجات والعروض',
@@ -59,6 +88,8 @@ export const V1_SCOPE_AR: Record<V1Scope, string> = {
   'orders.create': 'إنشاء طلب',
   'orders.read': 'قراءة حالة طلب',
   'orders.note': 'إضافة ملاحظة على طلب',
+  'orders.attribution': 'قراءة مصدر الطلبات وحالتها (بلا بيانات زبون)',
+  'products.costs': 'قراءة تكلفة المنتج ومدة المخزون',
 };
 
 /** The default life of a token: «90 يوم» in the contract's own table. */

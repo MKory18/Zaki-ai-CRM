@@ -6,6 +6,7 @@ import { realStoresOnly } from '@/lib/test-store';
 import { requireSystemToken } from '@/lib/v1/system-token';
 import { v1ErrorResponse, v1Ok, requestIdOf } from '@/lib/v1/door';
 import { amountString } from '@/lib/v1/shape';
+import { productFigures, readFields, requireCostScope } from '@/lib/v1/product-figures';
 
 /**
  * GET /api/v1/products — what the other system may quote from.
@@ -29,6 +30,14 @@ import { amountString } from '@/lib/v1/shape';
  *   shop hold?», which is a competitor's question.
  * · A TEST BENCH'S products. «أرقامٌ لا تدخل أيَّ حسبة» — an outside system
  *   selling off a bench would put real orders on it.
+ *
+ * ── `?fields=` — WHAT THE MEDIA BUYER MAY ADD (2026-10-26) ──
+ *
+ * Without `fields` the answer is byte-for-byte what it was. With it, the
+ * named optional fields are ADDED to each item — never instead of one:
+ * `aliases` and `price_options` under `products.read`, and the cost and
+ * shelf figures only under `products.costs` (`src/lib/v1/product-figures.ts`,
+ * which says where each comes from and which have no single source).
  */
 
 /** Below this many units a shelf is reported as short rather than stocked. */
@@ -44,6 +53,10 @@ export async function GET(req: Request) {
     // `?limit=abc` is page-sized, not a 500 — see
     // `a-page-number-is-not-a-crash.test.ts`.
     const limit = readLimit(searchParams, 100, 500);
+    const wanted = readFields(searchParams.get('fields'));
+    // Before any query: a key without the scope learns nothing, not even
+    // how long the answer would have taken.
+    requireCostScope(caller, wanted);
 
     const products = await db.product.findMany({
       where: { companyId: caller.companyId, status: 'ACTIVE', ...realStoresOnly() },
@@ -53,11 +66,23 @@ export async function GET(req: Request) {
         id: true,
         sku: true,
         name: true,
+        nameEn: true,
         basePrice: true,
         storeId: true,
         store: { select: { country: { select: { currencyCode: true, minorUnit: true } } } },
       },
     });
+
+    const figures = await productFigures(
+      caller.companyId,
+      products.map((p) => ({
+        id: p.id,
+        storeId: p.storeId,
+        currency: p.store?.country?.currencyCode ?? 'USD',
+        minorUnit: p.store?.country?.minorUnit ?? 2,
+      })),
+      wanted
+    );
 
     const items = [];
     for (const p of products) {
@@ -115,6 +140,21 @@ export async function GET(req: Request) {
          * question. An empty list is what this system knows.
          */
         complements: [] as string[],
+        // The other name a seller wrote for it — the media buyer matches old
+        // campaign names against these. Nothing is invented to fill the list.
+        ...(wanted.has('aliases') ? { aliases: p.nameEn?.trim() ? [p.nameEn.trim()] : [] } : {}),
+        // The single-unit price first, then each live offer — the same
+        // figures as `price` and `offers` above, in the shape the media
+        // buyer's calculator reads.
+        ...(wanted.has('price_options')
+          ? {
+              price_options: [
+                { title: null, quantity: 1, price: amountString(p.basePrice, minorUnit) },
+                ...offers.map((o) => ({ title: o.name, quantity: o.quantity, price: amountString(o.price, minorUnit) })),
+              ],
+            }
+          : {}),
+        ...figures.get(p.id),
       });
     }
 

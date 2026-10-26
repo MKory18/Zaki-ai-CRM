@@ -45,9 +45,16 @@ interface TokenRow {
   state: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
 }
 
+interface SystemChoice {
+  key: string;
+  ar: string;
+  scopes: string[];
+}
+
 interface Shelf {
   scopeCatalog: { key: string; ar: string }[];
   repliesScopes: string[];
+  systems: SystemChoice[];
   defaultDays: number;
   tokens: TokenRow[];
 }
@@ -64,6 +71,7 @@ export function SystemTokensPanel() {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('نظام الردود');
+  const [system, setSystem] = useState('replies');
   const [chosen, setChosen] = useState<string[]>([]);
   /** The one and only moment this value exists outside a header. */
   const [issued, setIssued] = useState<{ secret: string; notice: string } | null>(null);
@@ -91,7 +99,7 @@ export function SystemTokensPanel() {
     try {
       const made = await apiJson<{ secret: string; notice: string }>('/api/settings/system-tokens', {
         method: 'POST',
-        body: JSON.stringify({ name, system: 'replies', scopes: chosen }),
+        body: JSON.stringify({ name, system, scopes: chosen }),
       });
       setIssued({ secret: made.secret, notice: made.notice });
       setCopied(false);
@@ -100,7 +108,14 @@ export function SystemTokensPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر إنشاء المفتاح');
     }
-  }, [name, chosen, load]);
+  }, [name, system, chosen, load]);
+
+  /** Picking the system resets the name and the scopes to that system's own — least privilege as the default. */
+  const pickSystem = useCallback((s: SystemChoice) => {
+    setSystem(s.key);
+    setName(s.ar);
+    setChosen(s.scopes);
+  }, []);
 
   const revoke = useCallback(
     async (id: string, name: string) => {
@@ -187,6 +202,38 @@ export function SystemTokensPanel() {
 
       {adding && (
         <div className="mb-2 space-y-2 rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)] p-3">
+          <fieldset>
+            <legend className="mb-1 text-xs font-semibold text-[var(--sys-muted-foreground)]">المفتاح لأي نظام؟</legend>
+            <div className="flex flex-wrap gap-2">
+              {shelf.systems.map((s) => (
+                <label
+                  key={s.key}
+                  className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm md:min-h-0 ${
+                    system === s.key
+                      ? 'border-[var(--sys-primary)] bg-[var(--sys-primary-soft)] font-bold text-[var(--sys-heading)]'
+                      : 'border-[var(--sys-border)]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="systemTokenSystem"
+                    value={s.key}
+                    checked={system === s.key}
+                    onChange={() => pickSystem(s)}
+                  />
+                  {s.ar}
+                  <span className="text-xs font-normal text-[var(--sys-muted-foreground)]">
+                    · {s.scopes.length} صلاحيات
+                  </span>
+                </label>
+              ))}
+            </div>
+            {system === 'mediabuyer' && (
+              <p className="mt-1 text-xs text-[var(--sys-muted-foreground)]">
+                قراءة فقط: مصدر الطلبات وحالتها والمنتجات وتكلفتها — بلا اسم ولا هاتف ولا عنوان زبون، وما بيقدر ينشئ طلب.
+              </p>
+            )}
+          </fieldset>
           <Input
             label="اسم المفتاح"
             name="systemTokenName"

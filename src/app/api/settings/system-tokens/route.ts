@@ -10,6 +10,7 @@ import {
   REPLIES_SCOPES,
   TOKEN_DAYS,
   V1_SCOPES,
+  V1_SYSTEMS,
   V1_SCOPE_AR,
   mintToken,
   parseScopes,
@@ -85,6 +86,9 @@ export async function GET() {
       // scope never has to be typed into a component as well.
       scopeCatalog: V1_SCOPES.map((key) => ({ key, ar: V1_SCOPE_AR[key] })),
       repliesScopes: REPLIES_SCOPES,
+      // The systems a key may be made for, each with the scopes it starts
+      // from — the media buyer's three, read-only, beside the replies five.
+      systems: V1_SYSTEMS.map((s) => ({ key: s.key, ar: s.ar, scopes: s.scopes })),
       defaultDays: TOKEN_DAYS,
       tokens: rows.map((t) => ({
         id: t.id,
