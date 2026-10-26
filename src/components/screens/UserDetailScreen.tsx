@@ -673,6 +673,8 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
   const [modalOpen, setModalOpen] = useState(false);
   const [draftKey, setDraftKey] = useState('');
   const [draftEffect, setDraftEffect] = useState<'ALLOW' | 'DENY'>('ALLOW');
+  // «إضافة بحث… ويظهرلي قائمة الأشياء اللي مش بصلاحياته أصلاً». The picker's search.
+  const [pickQuery, setPickQuery] = useState('');
   const [draftScope, setDraftScope] = useState<ScopeValue>('ALL_COMPANY');
   // Advanced toggle: scopes stay hidden unless the admin opts in
   const [advancedScopes, setAdvancedScopes] = useState(false);
@@ -758,6 +760,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
   // ── Modal helpers ──
   function openAddModal() {
     setDraftKey('');
+    setPickQuery('');
     setDraftEffect('ALLOW');
     setDraftScope('ALL_COMPANY');
     setDraftScopeIds([]);
@@ -782,7 +785,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
       setProductQuery('');
       setProductResults([]);
     } else {
-      setDraftEffect('ALLOW');
+      // The effect stays what the person chose: the list they picked from was built for it.
       setDraftScope('ALL_COMPANY');
       setDraftScopeIds([]);
       setProductQuery('');
@@ -983,7 +986,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         { key: 'c1', label: ar ? 'من الدور' : 'Role', primary: true,
                           render: (r) => (
                   <>{r.roleEffect ? (
-                                <span className="font-bold text-[var(--sys-success)]">ALLOW آ· {ar ? 'موروث' : 'inherited'}</span>
+                                <span className="font-bold text-[var(--sys-success)]">مسموح · من الدور</span>
                               ) : (
                                 <span className="text-[var(--sys-muted)]">{ar ? 'غير ممنوح' : 'not granted'}</span>
                               )}</>
@@ -992,7 +995,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                           render: (r) => (
                   <>{r.overrideEffect ? (
                                 <span className={`font-bold ${r.overrideEffect === 'DENY' ? 'text-[var(--sys-destructive)]' : 'text-[var(--sys-success)]'}`}>
-                                  {r.overrideEffect} آ· {r.overrideEffect === 'DENY' ? (ar ? 'منع' : 'deny') : (ar ? 'إضافة' : 'allow')}
+                                  {r.overrideEffect === 'DENY' ? 'منع' : 'منح'}
                                 </span>
                               ) : (
                                 <span className="text-[var(--sys-muted)]">—</span>
@@ -1001,10 +1004,10 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                         { key: 'c3', label: ar ? 'الفعّالة' : 'Effective',
                           render: (r) => (
                   <>{r.effectiveEffect === 'ALLOW' ? (
-                                <span className="font-bold text-[var(--sys-success)]">ALLOW</span>
+                                <span className="font-bold text-[var(--sys-success)]">مسموح</span>
                               ) : (
                                 <span className="font-bold text-[var(--sys-destructive)]">
-                                  DENY <span className="font-medium">آ· {ar ? 'ممنوع' : 'denied'}</span>
+                                  ممنوع
                                 </span>
                               )}</>
                 ) },
@@ -1084,7 +1087,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                               : 'text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-[var(--sys-success-soft)]'
                           }`}
                         >
-                          {o.effect === 'DENY' ? `DENY آ· ${ar ? 'منع' : 'deny'}` : `ALLOW آ· ${ar ? 'إضافة' : 'allow'}`}
+                          {o.effect === 'DENY' ? 'منع' : 'منح'}
                         </span>
                         {o.effect === 'ALLOW' && scopeLabel && (
                           <span className="text-xs text-[var(--sys-muted-foreground)]">{scopeLabel}</span>
@@ -1120,29 +1123,10 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
         maxWidth="lg"
       >
         <div className="space-y-4">
-          {/* Permission picker — grouped by module from the catalog */}
-          <Select
-            label={ar ? 'الصلاحية' : 'Permission'}
-            value={draftKey}
-            onChange={(e) => onDraftKeyChange(e.target.value)}
-          >
-            <option value="">{ar ? '— اختر صلاحية —' : '— Pick a permission —'}</option>
-            {PERMISSION_MODULES.map((m) => (
-              <optgroup key={m.module} label={ar ? MODULE_LABELS[m.module]?.ar ?? m.module : MODULE_LABELS[m.module]?.en ?? m.module}>
-                {m.items.map((i) => (
-                  <option key={i.key} value={i.key}>
-                    {ar ? i.ar : i.en}
-                    {overridesMap.has(i.key) ? (ar ? ' (لديه استثناء)' : ' (has override)') : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </Select>
-
-          {/* Effect radio — text labels, never color alone */}
+          {/* What kind of exception — first, because the list below depends on it. Words, never colour alone. */}
           <div>
-            <p className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">{ar ? 'نوع الاستثناء' : 'Effect'}</p>
-            <div className="flex items-center gap-5">
+            <p className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">نوع الاستثناء</p>
+            <div className="flex flex-wrap items-center gap-5">
               <label className="flex items-center gap-1.5 text-xs text-[var(--sys-heading)] cursor-pointer">
                 <input
                   type="radio"
@@ -1151,7 +1135,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                   onChange={() => setDraftEffect('ALLOW')}
                   className="w-3.5 h-3.5 accent-[var(--sys-success)] cursor-pointer"
                 />
-                ALLOW آ· {ar ? 'منح (يتجاوز الدور)' : 'grant'}
+                منح — صلاحية زيادة عن دوره
               </label>
               <label className="flex items-center gap-1.5 text-xs text-[var(--sys-heading)] cursor-pointer">
                 <input
@@ -1161,7 +1145,7 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
                   onChange={() => setDraftEffect('DENY')}
                   className="w-3.5 h-3.5 accent-[var(--sys-destructive)] cursor-pointer"
                 />
-                DENY آ· {ar ? 'منع (يحجب حتى لو سمح الدور)' : 'deny'}
+                منع — يحجبها حتى لو دوره بيسمح
               </label>
               {/* Advanced toggle — scopes stay hidden for ordinary permission changes */}
               <label className="flex items-center gap-1.5 text-xs text-[var(--sys-muted-foreground)] cursor-pointer ms-auto">
@@ -1178,6 +1162,23 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
               </label>
             </div>
           </div>
+
+          {/*
+            THE PERMISSION, FOUND BY SEARCHING — «إضافة بحث… لأني بتوه».
+            Ninety keys in one dropdown was a list to get lost in. Now a search box, and a list built for the
+            chosen kind: «منح» offers only what the role does NOT already give (granting what he has is nothing),
+            «منع» offers only what he HAS (blocking what he lacks is nothing). An existing exception stays findable.
+          */}
+          <PermissionPicker
+            effect={draftEffect}
+            query={pickQuery}
+            onQuery={setPickQuery}
+            selected={draftKey}
+            onPick={onDraftKeyChange}
+            has={(key) => Boolean(payload?.effective.fullAccess || payload?.effective.grants[key] || payload?.roleGrants[key])}
+            fromRole={(key) => Boolean(payload?.roleGrants[key])}
+            hasOverride={(key) => overridesMap.has(key)}
+          />
 
           {/* Scope — only meaningful for ALLOW (DENY blocks regardless of scope);
               hidden behind the advanced toggle for ordinary permission changes */}
@@ -1282,5 +1283,93 @@ function UserPermissionsSection({ userId, canEdit }: { userId: string; canEdit: 
         </div>
       </Modal>
     </>
+  );
+}
+
+
+/**
+ * The permission list of the «إضافة استثناء» dialog: a search box over the catalog, grouped by section, showing only
+ * what the chosen kind of exception can change for this person.
+ */
+export function PermissionPicker({
+  effect,
+  query,
+  onQuery,
+  selected,
+  onPick,
+  has,
+  fromRole,
+  hasOverride,
+}: {
+  effect: 'ALLOW' | 'DENY';
+  query: string;
+  onQuery: (q: string) => void;
+  selected: string;
+  onPick: (key: string) => void;
+  /** Whether the person holds the key now (from the role or an exception). */
+  has: (key: string) => boolean;
+  /** Whether the role itself gives it. */
+  fromRole: (key: string) => boolean;
+  hasOverride: (key: string) => boolean;
+}) {
+  const q = query.trim().toLowerCase();
+  const groups = PERMISSION_MODULES.map((m) => {
+    const section = MODULE_LABELS[m.module]?.ar ?? m.module;
+    const items = m.items.filter((i) => {
+      // «منح»: what the role does not give. «منع»: what he holds. A key that already has an exception, or the one
+      // being edited, stays in the list so it can be changed.
+      const fits = effect === 'ALLOW' ? !fromRole(i.key) : has(i.key);
+      if (!fits && !hasOverride(i.key) && i.key !== selected) return false;
+      if (!q) return true;
+      return i.ar.includes(query.trim()) || i.key.toLowerCase().includes(q) || section.includes(query.trim());
+    });
+    return { module: m.module, section, items };
+  }).filter((g) => g.items.length > 0);
+  const count = groups.reduce((n, g) => n + g.items.length, 0);
+
+  return (
+    <div>
+      <p className="block text-xs font-medium text-[var(--sys-heading)] mb-1.5">الصلاحية</p>
+      <Input
+        aria-label="ابحث عن صلاحية"
+        placeholder="ابحث بالاسم أو بالقسم — مثلاً: الشحن، المرتجعات، الرواتب"
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+      />
+      <p className="mt-1 text-xs text-[var(--sys-muted)]">
+        {effect === 'ALLOW'
+          ? `${count} صلاحية مش بدوره — اختار اللي بدك تمنحه إياها`
+          : `${count} صلاحية عنده — اختار اللي بدك تمنعها عنه`}
+      </p>
+      <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-[var(--sys-border)]" role="listbox" aria-label="الصلاحيات">
+        {groups.length === 0 ? (
+          <p className="p-3 text-xs text-[var(--sys-muted)]">ما في صلاحية بهالاسم.</p>
+        ) : (
+          groups.map((g) => (
+            <div key={g.module}>
+              <p className="sticky top-0 bg-[var(--sys-surface)] px-3 py-1 text-xs font-semibold text-[var(--sys-muted-foreground)]">{g.section}</p>
+              {g.items.map((i) => (
+                <button
+                  key={i.key}
+                  type="button"
+                  role="option"
+                  aria-selected={selected === i.key}
+                  onClick={() => onPick(i.key)}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-start text-xs ${
+                    selected === i.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-heading)] hover:bg-[var(--sys-surface)]'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium">{i.ar}</span>
+                    <span className="block font-mono text-[var(--sys-muted)]" dir="ltr">{i.key}</span>
+                  </span>
+                  {hasOverride(i.key) && <span className="shrink-0 text-[var(--sys-muted-foreground)]">عنده استثناء</span>}
+                </button>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
