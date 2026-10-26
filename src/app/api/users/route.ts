@@ -11,7 +11,7 @@ import { ASSIGNABLE_ROLES, UserRole } from '@/types/auth';
 import { requirePermission } from '@/lib/authorization';
 
 import { isPrivilegedRoleName } from '@/lib/role-names';
-import { canConferRole } from '@/lib/user-permissions';
+import { canConferRole, roleRefOf } from '@/lib/user-permissions';
 import { geoAccessError, replaceGeoAccess } from '@/lib/geo-access';
 import { can } from '@/lib/authorization';
 import { zodMessage } from '@/lib/zod-message';
@@ -83,9 +83,13 @@ if (isPrivilegedRoleName(targetRole.name) && admin.role !== 'SUPER_ADMIN') {
       targetRoleName = targetRole.name;
       targetRoleTheme = targetRole.systemTheme ?? null;
     } else if (admin.role !== 'SUPER_ADMIN') {
-      // Legacy role-string path: same conferral policy resolved through the
-      // canonical legacy matrix (fail-closed for unknown names).
-      const conferral = await canConferRole(admin, { name: targetRoleName });
+      // Legacy role-string path: the account is saved with no roleId, so the
+      // engine gives it the SYSTEM template of that name — and the conferral
+      // is checked against that template, not the in-code matrix. The matrix
+      // is EMPTY for CONFIRMATION_SUPERVISOR and WAREHOUSE, so the check
+      // passed with nothing to check while the template handed out win-back
+      // discounts, change requests and every order (roleRefOf).
+      const conferral = await canConferRole(admin, await roleRefOf({ role: targetRoleName }));
       if (!conferral.ok) {
         return NextResponse.json({ error: conferral.error }, { status: conferral.status });
       }

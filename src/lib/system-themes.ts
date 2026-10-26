@@ -658,7 +658,7 @@ export const SYSTEM_THEMES: SystemTheme[] = [
    * The teal carries the accent, the golds the moment — and text on either
    * is the dark of the ground (#050F1F), 9.66:1 on the gold and 7.38:1 on
    * the teal. A new staff member opens on this one: the creation paths in
-   * api/users and api/moderators write `layl` explicitly. `layl` is NOT in
+   * api/users writes `layl` explicitly (api/moderators no longer creates staff). `layl` is NOT in
    * SHEET_THEMES (that list is the default and `auto` only, and
    * a-new-member-of-staff-opens-on-layl.test.ts asserts it stays out): the
    * theme's CSS is inlined per request from the user's own choice, so the
@@ -938,8 +938,8 @@ export function openingTheme(own: string | null | undefined, roleBase: string | 
  * ═══════════════════════════════════════════════════════════════════════
  * THE LOOK A NEW MEMBER OF STAFF IS GIVEN — «ليل», UNLESS THEIR ROLE HAS ONE.
  *
- * Phase 3 of the owner's brief opens every NEW employee on «ليل». The two
- * creation doors (`/api/users` and `/api/moderators`) write it into the
+ * Phase 3 of the owner's brief opens every NEW employee on «ليل». The one
+ * creation door (`/api/users` — `/api/moderators` is closed) writes it into the
  * person's own column, so the first time they pick a theme of their own it
  * is simply overwritten — and nobody who already exists is touched: no
  * migration, no backfill, no update path ever writes it.

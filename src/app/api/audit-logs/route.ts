@@ -2,7 +2,8 @@
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireCompanyTenant } from '@/lib/auth';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
+import { withoutPay } from '@/lib/audit-pay-redact';
 import { readPage, readLimit } from '@/lib/numeric-input';
 import { auditWhere, readAuditQuery } from '@/lib/audit-view';
 
@@ -20,7 +21,7 @@ import { auditWhere, readAuditQuery } from '@/lib/audit-view';
 export async function GET(req: Request) {
   try {
     const { companyId } = await requireCompanyTenant();
-    await requirePermission('audit.view');
+    const viewer = await requirePermission('audit.view');
 
     const params = new URL(req.url).searchParams;
     const query = readAuditQuery(params);
@@ -51,7 +52,9 @@ export async function GET(req: Request) {
     const nameOf = new Map(names.map((u) => [u.id, u.name]));
 
     return NextResponse.json({
-      logs,
+      // Salaries, payslips, penalties and payouts keep their rows and lose
+      // their amounts for a reader without «عرض الرواتب» (audit-pay-redact.ts).
+      logs: can(viewer, 'payroll.view') ? logs : logs.map(withoutPay),
       pagination: { total, page, limit, totalPages },
       facts: {
         users: byUser

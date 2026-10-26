@@ -122,16 +122,12 @@ describe('the two creation doors write it — called for real', () => {
     expect(tx.user.create.mock.calls[0][0].data.systemTheme).toBe('layl');
   });
 
-  it('— /api/moderators: «ليل»', async () => {
-    const res = await createModerator(post({ name: 'مشرف جديد', email: 'new.mod@example.test', password: SAMPLE_PASSWORD, commissionRate: 0 }));
-    expect(res.status, await res.clone().text()).toBeLessThan(300);
-    expect(db.user.create).toHaveBeenCalledTimes(1);
-    expect(db.user.create.mock.calls[0][0].data.systemTheme).toBe('layl');
-  });
-
-  it('— and a refused creation writes nothing at all (the email is taken)', async () => {
-    db.user.findUnique.mockResolvedValue({ id: 'someone' });
-    await createModerator(post({ name: 'مشرف جديد', email: 'taken@example.test', password: SAMPLE_PASSWORD, commissionRate: 0 }));
+  // `/api/moderators` was the third door that made staff. It is closed now
+  // (410 — it skipped the role and password checks `/api/users` makes), so
+  // the rule here is that it makes nobody at all, theme or no theme.
+  it('— /api/moderators: closed, and makes nobody', async () => {
+    const res = await createModerator();
+    expect(res.status).toBe(410);
     expect(db.user.create).not.toHaveBeenCalled();
   });
 });
@@ -144,14 +140,15 @@ describe('and nobody who already exists is touched', () => {
       return statSync(p).isDirectory() ? walk(p) : [p];
     });
 
-  it('— «ليل» is written only where a user is CREATED: the two doors, through the one rule', () => {
+  // One door now: `/api/moderators` is closed (410) and creates nobody.
+  it('— «ليل» is written only where a user is CREATED: the one door, through the one rule', () => {
     const writers = walk(join(ROOT, 'src'))
       .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f))
       .filter((f) => /newStaffTheme\(|NEW_STAFF_THEME/.test(stripComments(readFileSync(f, 'utf8'))))
       .map((f) => f.slice(ROOT.length + 1).split('\\').join('/'))
       .sort();
-    expect(writers).toEqual(['src/app/api/moderators/route.ts', 'src/app/api/users/route.ts', 'src/lib/system-themes.ts']);
-    for (const door of ['src/app/api/moderators/route.ts', 'src/app/api/users/route.ts']) {
+    expect(writers).toEqual(['src/app/api/users/route.ts', 'src/lib/system-themes.ts']);
+    for (const door of ['src/app/api/users/route.ts']) {
       const body = stripComments(readFileSync(join(ROOT, door), 'utf8'));
       // Inside the `data` of a `create`, and in no update of any kind.
       const call = body.indexOf('systemTheme: newStaffTheme(');

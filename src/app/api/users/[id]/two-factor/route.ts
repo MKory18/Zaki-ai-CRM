@@ -5,6 +5,7 @@ import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { manageableUserWhere, mayActOnUser } from '@/lib/manageable-user';
 import { mayResetTwoFactor, TWO_FACTOR_RESET_ROLES } from '@/lib/two-factor-reset';
+import { canActOnUser } from '@/lib/user-permissions';
 
 /**
  * DELETE /api/users/:id/two-factor — the owner unlocks a locked-out employee.
@@ -52,7 +53,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
      */
     const target = await db.user.findFirst({
       where: manageableUserWhere(user, id),
-      select: { id: true, name: true, email: true, role: true, companyId: true, totpEnabledAt: true },
+      select: { id: true, name: true, email: true, role: true, roleId: true, companyId: true, totpEnabledAt: true },
     });
     if (!target) return NextResponse.json({ error: 'الموظف غير موجود' }, { status: 404 });
 
@@ -92,6 +93,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         { status: 403 }
       );
     }
+    // Stripping a second factor is acting on the account: not on one that
+    // holds powers this person lacks (canActOnUser), as for every other action.
+    const acting = await canActOnUser(user, target);
+    if (!acting.ok) return NextResponse.json({ error: acting.error, code: 'BEYOND_REACH' }, { status: acting.status });
 
     if (!target.totpEnabledAt) {
       return NextResponse.json(

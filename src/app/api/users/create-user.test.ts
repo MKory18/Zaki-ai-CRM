@@ -36,7 +36,11 @@ vi.mock('@/lib/auth', () => ({
   hashPassword: (...a: unknown[]) => hashPassword(...a),
   resolveSingleCompanyId: (...a: unknown[]) => resolveSingleCompanyId(...a),
 }));
-vi.mock('@/lib/user-permissions', () => ({ canConferRole: (...a: unknown[]) => canConferRole(...a) }));
+vi.mock('@/lib/user-permissions', () => ({
+  canConferRole: (...a: unknown[]) => canConferRole(...a),
+  // The role a legacy name resolves to; this file asks no role table.
+  roleRefOf: async (u: { role: string }) => ({ id: null, name: u.role }),
+}));
 vi.mock('@/lib/geo-access', () => ({
   geoAccessError: (...a: unknown[]) => geoAccessError(...a),
   replaceGeoAccess: (...a: unknown[]) => replaceGeoAccess(...a),
