@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/Toast';
 import { useLiveRefresh } from '@/hooks/useLiveRefresh';
 import { useCreateIntent } from '@/hooks/useCreateIntent';
 import { isManualAccount } from '@/lib/ads/manual';
+import { DateRange, type Range } from '@/components/ui/DateRange';
+import { CampaignsBoard, type BoardInsights } from '@/components/growth/CampaignsBoard';
 
 /**
  * WHAT EACH AD COST, AND WHAT IT BROUGHT BACK.
@@ -66,6 +68,9 @@ interface Campaign {
   product: { id: string; name: string } | null;
   productId: string | null;
   link: string; ranInWindow: boolean; funnel: Funnel; money: Money;
+  /** Where the seller dragged it; and, for a hand-typed campaign, the platform twin it duplicates. */
+  sortOrder?: number;
+  duplicateOf?: string | null;
 }
 interface Payload {
   campaigns: Campaign[];
@@ -73,11 +78,19 @@ interface Payload {
   currency: string;
   adAccounts: AdAccount[];
   definitions: Record<string, string>;
+  insights?: BoardInsights;
 }
 
+/**
+ * The server's own period keys (`campaign-window.ts`). The old ones — `this_month`, `last_30` — were unknown to it
+ * and both silently became the last 90 days; «كل الوقت» was capped at 90 days too.
+ */
 const PERIODS = [
-  { key: 'this_month', label: 'هذا الشهر' },
-  { key: 'last_30', label: 'آخر 30 يوماً' },
+  { key: 'today', label: 'اليوم' },
+  { key: 'yesterday', label: 'أمس' },
+  { key: '7d', label: '7 أيام' },
+  { key: '30d', label: '30 يوماً' },
+  { key: 'month', label: 'هذا الشهر' },
   { key: 'last_month', label: 'الشهر الماضي' },
   { key: 'all', label: 'كل الوقت' },
 ] as const;
@@ -90,7 +103,10 @@ const fmt = (n: number | null) =>
 export function CampaignsScreen() {
   const toast = useToast();
   const [data, setData] = useState<Payload | null>(null);
-  const [period, setPeriod] = useState<string>('this_month');
+  const [period, setPeriod] = useState<string>('month');
+  // A picked range wins over the period buttons; a period button clears it.
+  const [range, setRange] = useState<Range>({ from: '', to: '' });
+  const windowQuery = range.from && range.to ? `startDate=${range.from}&endDate=${range.to}` : `period=${period}`;
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [creating, setCreating] = useState(false);
@@ -187,14 +203,14 @@ export function CampaignsScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/growth/campaigns?period=${period}`);
+      const res = await fetch(`/api/growth/campaigns?${windowQuery}`);
       setData(await res.json());
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [windowQuery]);
 
-  useLiveRefresh(load, { key: period });
+  useLiveRefresh(load, { key: windowQuery });
   useEffect(() => {
     void fetch('/api/landing-pages')
       .then((r) => r.json())
@@ -245,6 +261,63 @@ export function CampaignsScreen() {
     await load();
   }
 
+  /** The order the seller dragged them into — the whole list, saved for everyone who sees this screen. */
+  async function reorder(ids: string[]) {
+    try {
+      await apiJson('/api/growth/campaigns/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر حفظ الترتيب');
+      await load();
+    }
+  }
+
+  /** «حذف الكل» / «احذف المحدد» — by the single delete's rule: a campaign with orders is ended, not deleted. */
+  async function bulkDelete(ids: string[]) {
+    const chosen = (data?.campaigns ?? []).filter((c) => ids.includes(c.id));
+    const withOrders = chosen.filter((c) => c.funnel.brought > 0).length;
+    const ok = await confirm({
+      title: `حذف ${chosen.length} حملة؟`,
+      body: withOrders
+        ? `${withOrders} منها جابت طلبات — رح تنتهي بدل ما تنحذف، حتى تضل طلباتها تعرف من وين إجت. الباقي (${chosen.length - withOrders}) بينحذف.`
+        : 'ولا وحدة منها جابت طلب، فبتنحذف كلها.',
+      confirmLabel: 'احذف',
+      cancelLabel: 'إلغاء',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const r = await apiJson<{ deleted: number; ended: number }>('/api/growth/campaigns/bulk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', ids }),
+      });
+      setSyncMsg(`انحذفت ${r.deleted} حملة${r.ended ? `، وانتهت ${r.ended} لأنها جابت طلبات` : ''}.`);
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر الحذف');
+    }
+    await load();
+  }
+
+  /** «حذف المكرر» — the hand-typed copy's orders move to the platform twin, then the copy is removed. */
+  async function merge(ids?: string[]) {
+    const count = ids?.length ?? data?.insights?.duplicates ?? 0;
+    const ok = await confirm({
+      title: `دمج ${count} حملة مكررة؟`,
+      body: 'كل حملة مدخّلة باليد إلها نسخة بنفس الاسم سحبها النظام من المنصة: طلباتها بتنتقل للنسخة اللي فيها الإنفاق، وبعدين النسخة اليدوية بتنحذف. ما في طلب بيضيع.',
+      confirmLabel: 'ادمج واحذف المكرر',
+      cancelLabel: 'إلغاء',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const r = await apiJson<{ merged: number; ordersMoved: number }>('/api/growth/campaigns/duplicates', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ids ? { ids } : {}),
+      });
+      setSyncMsg(`اندمجت ${r.merged} حملة مكررة، وانتقل ${r.ordersMoved} طلب للنسخة الصحيحة.`);
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر الدمج');
+    }
+    await load();
+  }
+
   const totals = data?.totals;
   const currency = data?.currency ?? '';
 
@@ -258,15 +331,16 @@ export function CampaignsScreen() {
             {PERIODS.map((p) => (
               <button
                 key={p.key}
-                onClick={() => setPeriod(p.key)}
+                onClick={() => { setPeriod(p.key); setRange({ from: '', to: '' }); }}
                 className={`min-h-11 md:min-h-0 inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                  period === p.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
+                  !range.from && period === p.key ? 'bg-[var(--sys-primary-soft)] text-[var(--sys-primary)]' : 'text-[var(--sys-muted-foreground)] hover:bg-[var(--sys-surface)]'
                 }`}
               >
                 {p.label}
               </button>
             ))}
           </div>
+          <DateRange value={range} onChange={setRange} label="من — إلى" />
           {/* Only an account with a platform on the other end can be pulled
               from. A manual account is a place to put campaigns, and offering
               «اسحب الإنفاق» because one exists would call nobody. */}
@@ -322,10 +396,18 @@ export function CampaignsScreen() {
       ) : data && data.campaigns.length === 0 ? (
         <Empty onCreate={() => setCreating(true)} />
       ) : (
-        <div className="space-y-2">
-          {data?.campaigns.map((c) => (
+        <CampaignsBoard
+          campaigns={data?.campaigns ?? []}
+          insights={data?.insights ?? null}
+          currency={currency}
+          statuses={CAMPAIGN_STATUSES}
+          platforms={CAMPAIGN_PLATFORMS}
+          accounts={data?.adAccounts ?? []}
+          onReorder={reorder}
+          onBulkDelete={bulkDelete}
+          onMerge={merge}
+          renderCard={(c) => (
             <Row
-              key={c.id}
               c={c}
               currency={currency}
               copied={copied === c.id}
@@ -334,8 +416,8 @@ export function CampaignsScreen() {
               onRemove={() => remove(c)}
               onLink={connectedAccounts.length > 0 ? () => setLinking(c) : undefined}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
 
       {data && (

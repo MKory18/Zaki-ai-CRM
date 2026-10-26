@@ -151,6 +151,7 @@ describe('what the browser is allowed to remember', () => {
     'blocks/Countdown.tsx': 'when a public page’s per-visitor countdown started, for that visitor',
     'landing/OrderForm.tsx': 'which campaign a visitor arrived from',
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
+    'growth/CampaignsBoard.tsx': 'which of the three campaign views this person last picked — a word, never a record',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',
     'ui/SavedViews.tsx': 'a name and a query string — a question to re-ask, never an answer or a record id',
     'storefront/RecentlyViewed.tsx':

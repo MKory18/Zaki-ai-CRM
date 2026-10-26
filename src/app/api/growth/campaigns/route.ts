@@ -5,7 +5,8 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { inStore } from '@/lib/store-filter';
-import { getDateRange, type DateFilter } from '@/lib/analytics';
+import { campaignWindow } from '@/lib/campaign-window';
+import { campaignInsights, duplicatesOf } from '@/lib/campaign-insights';
 import { campaignPerformance } from '@/lib/attribution-performance';
 import {
   campaignInputSchema,
@@ -38,17 +39,12 @@ export async function GET(req: Request) {
     await requirePermission('reports.view').catch(async () => requirePermission('analytics.view'));
 
     const q = new URL(req.url).searchParams;
-    const filter: DateFilter = {
-      period: (q.get('period') as DateFilter['period']) || undefined,
-      startDate: q.get('startDate') || undefined,
-      endDate: q.get('endDate') || undefined,
-    };
-    const { start, end } = getDateRange(filter);
+    const { start, end } = campaignWindow(q);
 
     const [campaigns, rows] = await Promise.all([
       db.campaign.findMany({
         where: inStore(companyId, storeId),
-        orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
+        orderBy: [{ sortOrder: 'asc' }, { status: 'asc' }, { startDate: 'desc' }],
         include: {
           landingPage: {
             select: {
@@ -66,6 +62,7 @@ export async function GET(req: Request) {
     ]);
 
     const byId = new Map(rows.map((r) => [r.id, r]));
+    const orderOf = new Map(campaigns.map((c) => [c.id, c.sortOrder]));
     const store = storeId
       ? await db.store.findFirst({ where: { id: storeId, companyId }, select: { slug: true } })
       : null;
@@ -143,8 +140,17 @@ export async function GET(req: Request) {
       { spend: 0, revenue: 0, brought: 0, delivered: 0 }
     );
 
+    // «حذف المكرر»: a hand-typed campaign whose twin the platform sent, and the cards at the top — both worked out
+    // here, from the figures above, so the screen draws answers and adds up nothing.
+    const duplicates = duplicatesOf(list.map((c) => ({ id: c.id, name: c.name, externalId: c.externalId })));
+    const insights = campaignInsights(
+      list.map((c) => ({ id: c.id, name: c.name, externalId: c.externalId, hasProduct: !!c.product, money: c.money, funnel: c.funnel })),
+      duplicates
+    );
+
     return NextResponse.json({
-      campaigns: list,
+      campaigns: list.map((c) => ({ ...c, sortOrder: orderOf.get(c.id) ?? 0, duplicateOf: duplicates.get(c.id) ?? null })),
+      insights,
       totals: {
         ...campaignResult(totals.spend, { revenue: totals.revenue, brought: totals.brought, delivered: totals.delivered }),
         brought: totals.brought,

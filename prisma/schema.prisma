@@ -3538,7 +3538,13 @@ model Campaign {
   adAccount   AdAccount?   @relation(fields: [adAccountId], references: [id], onDelete: SetNull)
   orders      Order[]
 
+  /// The place the seller dragged it to on the campaigns screen — «الدراج اند دروب وترتيب الحملات عندي». Shared
+  /// by everyone who sees the screen. 0 for every campaign until somebody orders them; ties fall back to status
+  /// then newest first, as the list always read.
+  sortOrder   Int       @default(0) @map("sort_order")
+
   @@unique([companyId, storeId, code])
+  @@index([companyId, storeId, sortOrder])
   @@index([companyId, storeId, status])
   @@map("campaigns")
 }
