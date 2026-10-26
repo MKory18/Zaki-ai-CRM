@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { z } from 'zod';
 import { requireContext } from '@/lib/geo-context';
 import { can, requirePermission } from '@/lib/authorization';
@@ -8,7 +9,7 @@ import type { SessionUser } from '@/types/auth';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { customerFacts } from '@/lib/customer-insights';
-import { aiChat, AiNotConfigured, aiSettings, providerInfo } from '@/lib/ai-provider';
+import { aiChat, AiEndpointMissing, AiNotConfigured, aiSettings, providerInfo } from '@/lib/ai-provider';
 import { getCompanyAnalytics } from '@/lib/analytics';
 import { teamPerformance } from '@/lib/team-performance';
 
@@ -113,6 +114,8 @@ export async function POST(req: Request) {
   try {
     const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ai.use');
+    const limited = tooManyAiCalls('ask', companyId, user.id);
+    if (limited) return limited;
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
@@ -189,6 +192,9 @@ export async function POST(req: Request) {
 
     const answer = await aiChat({
       companyId,
+      // «مركز الذكاء» in AI settings routes THIS door — the screen says
+      // «بيروح على: …» beside that row, and it used to go to the default.
+      job: 'advisor',
       system,
       user: `البيانات:\n${JSON.stringify(context, null, 2)}\n\nالسؤال: ${parsed.data.question}`,
     });
@@ -207,6 +213,15 @@ export async function POST(req: Request) {
         : {}),
     });
   } catch (error) {
+    if (error instanceof AiEndpointMissing) {
+      return NextResponse.json(
+        {
+          error: 'مركز الذكاء موجَّه لنموذج على خادمك، وعنوانه لسا ما انضبط — إعدادات الذكاء ← المساعدون.',
+          code: 'AI_ENDPOINT_MISSING',
+        },
+        { status: 409 }
+      );
+    }
     if (error instanceof AiNotConfigured) {
       return NextResponse.json(
         {

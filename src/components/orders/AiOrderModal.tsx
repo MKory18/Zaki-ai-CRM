@@ -81,7 +81,8 @@ interface ParseResult {
   productMatchConfident: boolean;
   suggestedPrice: number | null;
   suggestedOfferName: string | null;
-  existingCustomer: { fullName: string; totalOrders: number; city: string } | null;
+  // What the preview may say depends on the reader's customers key: the name and count, the name alone, or only that the number is known.
+  existingCustomer: { exists: true; fullName?: string; totalOrders?: number; city?: string } | null;
   /**
    * WHY THE MODEL DID NOT READ THE TEXT, WHEN IT DID NOT.
    *
@@ -301,8 +302,15 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             {result.existingCustomer && (
               <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
                 <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
-                هذا الرقم مسجل مسبقاً لعميل: <strong>{result.existingCustomer.fullName}</strong> (
-                {result.existingCustomer.totalOrders} طلب سابق) — سيتم ربط الطلب بنفس الملف.
+                {result.existingCustomer.fullName ? (
+                  <>
+                    هذا الرقم مسجل مسبقاً لعميل: <strong>{result.existingCustomer.fullName}</strong>
+                    {typeof result.existingCustomer.totalOrders === 'number' && ` (${result.existingCustomer.totalOrders} طلب سابق)`}
+                    {' '}— سيتم ربط الطلب بنفس الملف.
+                  </>
+                ) : (
+                  <>رقم معروف — سيُربط الطلب بنفس الملف.</>
+                )}
               </div>
             )}
 

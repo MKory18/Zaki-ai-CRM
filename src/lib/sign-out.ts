@@ -15,6 +15,8 @@
  * different fact.
  */
 
+import { forgetDock } from '@/lib/dock-memory';
+
 export type SignOutReason = 'manual' | 'idle';
 
 export async function signOut(reason: SignOutReason = 'manual'): Promise<void> {
@@ -30,5 +32,7 @@ export async function signOut(reason: SignOutReason = 'manual'): Promise<void> {
     // has to leave — an unreachable server is not a reason to stay signed
     // in on a device somebody is walking away from.
   }
+  // The assistant's conversation does not stay behind for the next person.
+  forgetDock();
   window.location.href = reason === 'idle' ? '/login?idle=1' : '/login';
 }

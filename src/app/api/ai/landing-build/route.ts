@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -77,9 +78,11 @@ const MAX_IMAGE_BYTES = 1_500_000;
 
 export async function POST(req: Request) {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     const assistant = assistantByKey('landing_copy')!;
     await requirePermission(assistant.needs);
+    const limited = tooManyAiCalls('landing-build', companyId, user.id, 3);
+    if (limited) return limited;
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {

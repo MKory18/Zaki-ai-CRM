@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { RiCloseLine, RiDeleteBinLine, RiLoader4Line, RiRobot2Line, RiSendPlaneLine, RiSubtractLine } from '@remixicon/react';
 import { useBulkActive } from '@/components/shell/BulkBar';
 import { arTime } from '@/lib/format';
+import { useAppOptional } from '@/context/AppContext';
+import { dockKey } from '@/lib/dock-memory';
 
 /**
  * THE ASSISTANT, WHEREVER YOU ARE.
@@ -31,8 +33,13 @@ interface Msg {
   at: string;
 }
 
-/** The conversation survives navigation; it does not survive a reload. */
-const KEY = 'zaki_ai_dock';
+/*
+ * The conversation survives navigation and a reload, in this tab, for this
+ * person only — kept under their id (dock-memory.ts) and forgotten on every
+ * way out. The one shared key it used to be handed the last person's
+ * conversation to whoever signed in next on the same tab.
+ */
+const LEGACY_KEY = 'zaki_ai_dock';
 
 const OPENERS = [
   'كم طلب ينتظر التأكيد؟',
@@ -85,6 +92,8 @@ function AiDockSurface() {
    * orders to print.
    */
   const yielding = useBulkActive();
+  const currentUser = useAppOptional()?.currentUser;
+  const key = currentUser?.id ? dockKey(currentUser.id) : null;
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState('');
@@ -96,20 +105,23 @@ function AiDockSurface() {
   // yesterday's numbers is not a question you want back next week.
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem(KEY);
-      if (saved) setMsgs(JSON.parse(saved));
+      // The one shared key from before: whoever it belonged to, not this person.
+      sessionStorage.removeItem(LEGACY_KEY);
+      const saved = key ? sessionStorage.getItem(key) : null;
+      setMsgs(saved ? JSON.parse(saved) : []);
     } catch {
       /* blocked storage is not a reason to have no assistant */
     }
-  }, []);
+  }, [key]);
 
   useEffect(() => {
+    if (!key) return;
     try {
-      sessionStorage.setItem(KEY, JSON.stringify(msgs.slice(-40)));
+      sessionStorage.setItem(key, JSON.stringify(msgs.slice(-40)));
     } catch {
       /* ditto */
     }
-  }, [msgs]);
+  }, [key, msgs]);
 
   useEffect(() => {
     if (open) {

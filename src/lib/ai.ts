@@ -92,6 +92,10 @@ export async function generateAiBusinessAnalysis(
     try {
       const content = await aiChat({
         companyId,
+        // The same analysis as the intelligence centre, so its row in AI
+        // settings routes it — it went to the company default whatever the
+        // owner chose there. The wording is still `system`, unchanged.
+        job: 'advisor',
         system: systemPrompt,
         user: `هذه أرقام أداء المتجر المحقّقة لليوم:
 ${JSON.stringify(context, null, 2)}`,
