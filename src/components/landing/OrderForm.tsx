@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { whatsappHref } from '@/lib/store-contact';
+import { ORDER_PLACED } from '@/lib/order-placed-event';
 import { leaveFor } from '@/lib/leave-for';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
@@ -315,6 +316,13 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       window.postMessage({ type: 'ZAKI_OFFER_SELECTED', offerId: selectedOffer }, '*');
     } catch { /* never fatal */ }
   }, [selectedOffer]);
+  // «شريط اطلب الآن بيغطّي على شاشة الشكر»: once the order is in, the bar that
+  // carries people to the form has nothing left to offer — it is told, and leaves.
+  React.useEffect(() => {
+    if (state !== 'success') return;
+    // A DOM event, not a message: only a script of this page can raise it, never a frame inside it.
+    window.dispatchEvent(new Event(ORDER_PLACED));
+  }, [state]);
   const [totals, setTotals] = useState<{ total: number } | null>(null);
 
   const offer = useMemo(() => offers.find((o) => o.id === selectedOffer) || offers[0], [offers, selectedOffer]);
