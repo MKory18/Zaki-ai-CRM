@@ -23,12 +23,18 @@ import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { productStatusAr, productStatusTone } from '@/lib/product-status';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
+import { userCan } from '@/lib/can';
 
 export function ProductDetailScreen() {
   const params = useParams();
   const productId = params?.id as string;
   const { currentUser } = useApp();
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('products.edit');
+  const canManage = userCan(currentUser, 'products.edit');
+  // Each control asks the key its own server route checks: the pictures are `products.upload_images`
+  // (api/products/[id]/images), and the stock shortcut lands on screens guarded by inventory and production keys.
+  const canImages = userCan(currentUser, 'products.upload_images');
+  const canReceiveStock = userCan(currentUser, 'inventory.view') && userCan(currentUser, 'inventory.adjust');
+  const canProduce = userCan(currentUser, 'production.view') && userCan(currentUser, 'production.manage');
 
   const ask = useConfirm();
   const tell = useTell();
@@ -221,7 +227,7 @@ export function ProductDetailScreen() {
                   : 'لا صور بعد'
               }
               action={
-                canManage && (
+                canImages && (
                   <>
                     <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleUpload} className="hidden" />
                     <Button size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading} className="bg-[var(--sys-destructive)] hover:bg-[var(--sys-destructive)]/85">
@@ -247,8 +253,8 @@ export function ProductDetailScreen() {
               */}
               <button
                 type="button"
-                disabled={!primary && !canManage}
-                aria-label={primary ? 'كبّر الصورة الرئيسية' : canManage ? 'ارفع الصورة الرئيسية' : 'لا توجد صور'}
+                disabled={!primary && !canImages}
+                aria-label={primary ? 'كبّر الصورة الرئيسية' : canImages ? 'ارفع الصورة الرئيسية' : 'لا توجد صور'}
                 className={`relative block w-full h-72 bg-[var(--sys-surface)] rounded-lg overflow-hidden border border-[var(--sys-border)] disabled:cursor-default ${
                   primary ? 'cursor-zoom-in' : 'cursor-pointer'
                 }`}
@@ -259,7 +265,7 @@ export function ProductDetailScreen() {
                   <img src={primary.url} alt={primary.altText || product.name} className="w-full h-full object-contain" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[var(--sys-muted-foreground)] text-sm">
-                    {canManage ? 'لا توجد صور — اضغط هنا لرفع الصورة الرئيسية' : 'لا توجد صور'}
+                    {canImages ? 'لا توجد صور — اضغط هنا لرفع الصورة الرئيسية' : 'لا توجد صور'}
                   </div>
                 )}
                 {primary && (
@@ -299,7 +305,7 @@ export function ProductDetailScreen() {
                           className="w-full h-16 object-cover"
                         />
                       </button>
-                      {canManage && (
+                      {canImages && (
                         <div className="absolute inset-0 bg-[var(--sys-sidebar)]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-1 rtl:space-x-reverse">
                           <button onClick={() => setPrimary(img.id)} aria-label="تعيين كرئيسية" title="تعيين كرئيسية" className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 bg-[var(--sys-card)]/90 rounded-lg text-[var(--sys-warning)] hover:bg-[var(--sys-card)] cursor-pointer">
                             <RiStarLine className="w-4 h-4" />
@@ -434,7 +440,7 @@ export function ProductDetailScreen() {
         )}
 
         {/* Stock, cost and the one door that adds more. */}
-        <ProductStock productId={productId} canManage={!!canManage} />
+        <ProductStock productId={productId} canReceive={canReceiveStock} canProduce={canProduce} />
 
         {/* What kind of thing it is — the answers that become filters. */}
         <Card>

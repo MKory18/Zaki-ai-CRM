@@ -55,7 +55,8 @@ function enforcedKeys(): Set<string> {
   }
 
   // A legacy key aliasing onto a canonical one keeps that one alive.
-  const auth = readFileSync(join(SRC, 'lib', 'authorization.ts'), 'utf8');
+  // The table moved to permission-aliases.ts (shared with the browser's userCan); read it where it lives.
+  const auth = readFileSync(join(SRC, 'lib', 'permission-aliases.ts'), 'utf8');
   for (const match of auth.matchAll(/['"]([a-z_]+\.[a-z_]+)['"]\s*:\s*['"]([a-z_]+\.[a-z_]+)['"]/g)) {
     if (enforced.has(match[1])) enforced.add(match[2]);
   }

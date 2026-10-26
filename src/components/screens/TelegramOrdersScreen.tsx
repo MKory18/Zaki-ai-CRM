@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { arDateTime } from '@/lib/format';
 import { OrderLink } from '@/components/orders/OrderLink';
+import { userCan } from '@/lib/can';
 
 interface TelegramMsg {
   id: string;
@@ -71,8 +72,8 @@ export function TelegramOrdersScreen() {
   const [statusFilter, setStatusFilter] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('telegram.manage');
-  const canView = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('telegram.view');
+  const canManage = userCan(currentUser, 'telegram.manage');
+  const canView = userCan(currentUser, 'telegram.view');
 
   const loadAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);

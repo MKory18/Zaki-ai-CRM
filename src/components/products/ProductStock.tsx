@@ -35,7 +35,12 @@ interface Stock {
   sourceType: 'MANUFACTURED' | 'PURCHASED';
 }
 
-export function ProductStock({ productId, canManage }: { productId: string; canManage: boolean }) {
+/**
+ * `canReceive` / `canProduce`: the keys the shortcut's two destinations are guarded by — stock received on
+ * /inventory/balances (inventory.view + inventory.adjust), a production run on /manufacturing (production.view +
+ * production.manage). It asked `products.edit`, which neither screen checks.
+ */
+export function ProductStock({ productId, canReceive, canProduce }: { productId: string; canReceive: boolean; canProduce: boolean }) {
   const [stock, setStock] = useState<Stock | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +91,7 @@ export function ProductStock({ productId, canManage }: { productId: string; canM
           </span>
         }
         action={
-          canManage && (
+          (made ? canProduce : canReceive) && (
             // One door, the one that fits this product. Offering both invites
             // a bought good to be entered as a production run, which puts
             // invented manufacturing costs into the cost reports.

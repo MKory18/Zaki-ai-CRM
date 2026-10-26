@@ -28,9 +28,8 @@ import { TelegramSettingsScreen } from '@/components/screens/TelegramSettingsScr
  */
 export function LinksSettingsScreen() {
   const { currentUser } = useApp();
-  // The same test the two screens always used: the owner roles, or the key itself.
-  const mayManage = (key: string) =>
-    currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || userCan(currentUser, key);
+  // The server's own test: the key itself (SUPER_ADMIN holds every key). No other role passes by name.
+  const mayManage = (key: string) => userCan(currentUser, key);
   const whatsapp = mayManage('whatsapp.manage');
   const telegram = mayManage('telegram.manage');
 

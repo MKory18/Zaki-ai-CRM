@@ -56,10 +56,7 @@ export function DashboardScreen() {
   };
   /** The href, or nothing — a card with no link is still a card. */
   const linkTo = (path: string): string | undefined => (mayOpen(path) ? path : undefined);
-  const canFinance =
-    currentUser?.role === 'SUPER_ADMIN' ||
-    currentUser?.role === 'COMPANY_ADMIN' ||
-    currentUser?.permissions?.includes('finance.view');
+  const canFinance = userCan(currentUser, 'finance.view');
 
   const [period, setPeriod] = useState<'today' | '7d' | '30d' | 'month' | 'all'>('all');
   const [analytics, setAnalytics] = useState<any>(null);

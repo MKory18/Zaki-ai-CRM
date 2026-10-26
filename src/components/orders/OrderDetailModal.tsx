@@ -76,10 +76,9 @@ export function OrderDetailModal({ orderId, isOpen, onClose, onRefresh, filters 
 
   // Two fields the person editing may not have authority over. The server
   // decides; these mirror it so the screen never offers what it will refuse.
-  const perms = currentUser?.permissions ?? [];
-  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN';
-  const mayChangeChannel = isAdmin || perms.includes('orders.assign');
-  const mayChangeShipping = isAdmin || perms.includes('orders.change_status');
+  // `userCan` is the server's own answer — no role is let through by name, because none is on the server.
+  const mayChangeChannel = userCan(currentUser, 'orders.assign');
+  const mayChangeShipping = userCan(currentUser, 'orders.change_status');
   const ar = locale === 'ar';
   const [order, setOrder] = useState<any>(null);
   const [currency, setCurrency] = useState<Currency | null>(null);

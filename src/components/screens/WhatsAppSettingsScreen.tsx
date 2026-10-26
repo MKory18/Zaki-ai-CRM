@@ -8,6 +8,7 @@ import { screenApi as crmApi } from '@/lib/screen-api';
 import { RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiRefreshLine, RiShieldFlashLine } from '@remixicon/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { arDateTime } from '@/lib/format';
+import { userCan } from '@/lib/can';
 
 /**
  * `embedded` — a card of «الربط» (`/settings/links`), which owns the page's title: the
@@ -21,7 +22,7 @@ export function WhatsAppSettingsScreen({ embedded = false }: { embedded?: boolea
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [conn, setConn] = useState<any>(null);
 
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'COMPANY_ADMIN' || currentUser?.permissions?.includes('whatsapp.manage');
+  const canManage = userCan(currentUser, 'whatsapp.manage');
 
   const load = useCallback(async () => {
     try {

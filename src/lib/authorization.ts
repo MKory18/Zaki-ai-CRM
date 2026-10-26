@@ -23,6 +23,7 @@ import type { SessionUser } from '@/types/auth';
 import { db } from './db';
 import { requireAuth } from './auth';
 import { computeEffectiveGrants, EffectiveGrants, Scope } from './permissions-core';
+import { LEGACY_ALIAS } from './permission-aliases';
 
 // ─────────────────────────────────────────────────────
 // Grants access — sync when the session carries them (normal path),
@@ -78,25 +79,7 @@ export function can(user: SessionUser, permission: string): boolean {
   return g.grants[permission] !== undefined || g.grants[LEGACY_ALIAS[permission] ?? permission] !== undefined;
 }
 
-/** Legacy key -> canonical new key. Transitional: routes still enforce legacy
- * keys until PHASE 3 migrates them; the engine resolves both to the same grant. */
-const LEGACY_ALIAS: Record<string, string> = {
-  'orders.update': 'orders.edit',
-  'orders.update_own': 'orders.edit',
-  'orders.confirmation_status': 'orders.confirm',
-  'orders.shipping_status': 'orders.change_status',
-  'orders.reassign': 'orders.assign',
-  'orders.view_assigned': 'orders.view',
-  'orders.view_own': 'orders.view',
-  'customers.update': 'customers.edit',
-  'customers.freeze': 'customers.edit',
-  'customers.unfreeze': 'customers.edit',
-  'products.update': 'products.edit',
-  'products.manage': 'products.edit',
-  'users.update': 'users.edit',
-  'settings.manage': 'settings.edit',
-  'analytics.view': 'reports.view',
-};
+// `LEGACY_ALIAS` lives in permission-aliases.ts, shared with the browser's `userCan`.
 
 // ─────────────────────────────────────────────────────
 // Scope resolution
