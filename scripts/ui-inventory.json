@@ -1390,7 +1390,7 @@
     "tabs": 0
   },
   "src/components/screens/UserDetailScreen.tsx": {
-    "buttons": 14,
+    "buttons": 15,
     "inputs": 10,
     "columns": 5,
     "cards": 8,
