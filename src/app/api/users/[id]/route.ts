@@ -258,11 +258,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       // The employee's phone, on their own page. It could be set only when
       // the account was created, with no way to correct it afterwards.
       // Typed on an Arabic keyboard the digits are ٠-٩; stored as 0-9.
-      const phone = typeof body.phone === 'string' ? toLatinDigits(body.phone).trim() : '';
-      if (phone && !/^\+?[\d\s()-]{6,24}$/.test(phone)) {
-        return NextResponse.json({ error: 'رقم الهاتف غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +' }, { status: 400 });
+      //
+      // ONLY WHEN THE PHONE WAS SENT. The shift, salary and commission-currency
+      // cards save through this same action without a phone, and an absent
+      // phone read as «cleared»: every one of those saves wiped the
+      // employee's number. Absent now means untouched; an empty string still
+      // clears it on purpose.
+      if ('phone' in body) {
+        const phone = typeof body.phone === 'string' ? toLatinDigits(body.phone).trim() : '';
+        if (phone && !/^\+?[\d\s()-]{6,24}$/.test(phone)) {
+          return NextResponse.json({ error: 'رقم الهاتف غير صالح — أرقام فقط، ويمكن أن يبدأ بـ +' }, { status: 400 });
+        }
+        updateData.phone = phone || null;
       }
-      updateData.phone = phone || null;
 
       // WHAT THIS PERSON'S COMMISSION IS COUNTED IN.
       //
