@@ -10,7 +10,8 @@ import { zodMessage } from '@/lib/zod-message';
 import { authorises, expandApproved } from '@/lib/change-request-apply';
 import { changeFieldLabel } from '@/lib/change-request-fields';
 import { courierActionFor } from '@/lib/courier-change';
-import { orderSeal, sealedFieldsIn } from '@/lib/order-seal';
+import { orderSeal, sealedFieldsIn, handedToCourier } from '@/lib/order-seal';
+import { mayDecide } from '@/lib/change-request-routing';
 import { createReplacement, type ReplacementSource } from '@/lib/replacement-order';
 
 /**
@@ -93,6 +94,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       include: { replacedBy: { select: { orderNumber: true } } },
     });
     if (!order) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
+    /*
+     * AND WHO DECIDES THIS ORDER, AS THE APPLY DOOR ASKS.
+     *
+     * The check above is any grant at all: `orders.edit` limited to the
+     * agent's own orders passed it, for any order in the store, and this
+     * door cancels the parcel and creates a replacement with stock held.
+     * The ordinary apply path asks who decides THIS order (mayApply →
+     * mayDecide); so does this one now.
+     */
+    const routing = mayDecide(user, {
+      confirmationStatus: order.confirmationStatus,
+      claimedById: order.claimedById ?? null,
+      handedToCourier: handedToCourier({ shippingStatus: order.shippingStatus, shippedAt: order.shippedAt ?? null }),
+    });
+    if (!routing.allowed) {
+      return NextResponse.json(
+        { error: routing.reason ?? 'لا تملك صلاحية تنفيذ هذا القرار', code: 'NOT_THE_DECIDER' },
+        { status: 403 }
+      );
+    }
     if (order.replacedBy) {
       return NextResponse.json(
         { error: `صدر لهذا الطلب بديل مسبقاً (${order.replacedBy.orderNumber})`, code: 'ALREADY_REPLACED' },

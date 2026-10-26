@@ -1,127 +1,34 @@
 import { NextResponse } from 'next/server';
-import { readLimit, readPage } from '@/lib/numeric-input';
-import { apiErrorResponse } from '@/lib/api-error';
-import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { deriveFollowUpState } from '@/lib/confirmation-workflow';
-import { noteCustomersHandedOut } from '@/lib/pii-alert';
+import { apiErrorResponse } from '@/lib/api-error';
 
 /**
- * GET /api/orders/follow-ups — backend-enforced follow-up queues.
+ * GET /api/orders/follow-ups — CLOSED (410), and why it is closed rather
+ * than fixed.
  *
- * Query params:
- *   bucket = today | overdue | upcoming | my | all   (server decides eligibility)
- *   page / limit
+ * The follow-up queues computed on the server's clock, from before the
+ * confirmation screens. Nothing calls it: «طلباتي» and «المتابعة» read
+ * `/api/confirmation/*`. It asked for no permission at all, and decided
+ * what to show by role NAME — managers and accountants got every follow-up
+ * order in the company, agents and moderators their own plus the whole
+ * unclaimed pool, with names and phones.
  *
- * Derivation is SERVER-TIME based (deriveFollowUpState) — browser clock never used.
+ * A second copy of the confirmation rules, kept in step with the first by
+ * nobody, is how this one drifted. So it answers 410 with where to go, and
+ * the git history keeps what it was.
  */
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { user, companyId, storeId } = await requireContext();
-    const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get('bucket') || 'today';
-    const page = readPage(searchParams);
-    const limit = readLimit(searchParams, 50, 100);
-
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
-
-    // Base: orders with an active (scheduled) follow-up in this company
-    const base: Record<string, unknown> = {
-      companyId,
-      storeId,
-      nextFollowUpAt: { not: null },
-      followUpStatus: { notIn: ['COMPLETED', 'CANCELLED'] },
-    };
-
-    // Role scoping: agents see only their own cases + company queue
-    const isSelfScoped = ['CONFIRMATION_AGENT', 'FOLLOW_UP_AGENT', 'MODERATOR'].includes(user.role);
-    const isGlobalView = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'DELIVERY_MANAGER', 'SETTLEMENT_OFFICER', 'ACCOUNTANT'].includes(user.role);
-
-    if (bucket === 'my') {
-      base.OR = [{ claimedById: user.id }, { assignedToId: user.id }, { currentOwnerId: user.id }];
-    } else if (isSelfScoped && !isGlobalView) {
-      // Self-scoped roles: own cases + unclaimed eligible queue only
-      base.OR = [
-        { claimedById: user.id },
-        { assignedToId: user.id },
-        { currentOwnerId: user.id },
-        { claimedById: null, signatureStatus: 'UNSIGNED' }, // claimable follow-up pool
-      ];
-    } else if (!isGlobalView) {
-      base.id = '__no_access__';
-    }
-    // Global-view roles: company-wide follow-ups (companyId already scoped)
-
-    switch (bucket) {
-      case 'today':
-        base.nextFollowUpAt = { gte: startOfToday, lt: endOfToday };
-        break;
-      case 'overdue':
-        base.nextFollowUpAt = { lt: now };
-        break;
-      case 'upcoming':
-        base.nextFollowUpAt = { gte: endOfToday };
-        break;
-      case 'my':
-      case 'all':
-      default:
-        break;
-    }
-
-    const [total, orders] = await Promise.all([
-      db.order.count({ where: base as any }),
-      db.order.findMany({
-        where: base as any,
-        include: {
-          customer: { select: { id: true, fullName: true, phone: true, rawPhone: true, city: true } },
-          product: { select: { id: true, name: true, image: true } },
-          owner: { select: { id: true, name: true } },
-          claimer: { select: { id: true, name: true } },
-        },
-        orderBy:
-          bucket === 'overdue'
-            ? { nextFollowUpAt: 'asc' }   // oldest overdue first
-            : { nextFollowUpAt: 'asc' },  // soonest first
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    ]);
-
-    // Enrich with server-derived bucket state (DUE / OVERDUE / SCHEDULED)
-    const enriched = orders.map((o) => ({
-      ...o,
-      followUpState: deriveFollowUpState(o.nextFollowUpAt, o.followUpStatus, now),
-    }));
-
-    // Summary counts (single round trip)
-    const [dueToday, overdue, upcoming, mine] = await Promise.all([
-      db.order.count({ where: { ...base, nextFollowUpAt: { gte: startOfToday, lt: endOfToday } } as any }),
-      db.order.count({ where: { ...base, nextFollowUpAt: { lt: now } } as any }),
-      db.order.count({ where: { ...base, nextFollowUpAt: { gte: endOfToday } } as any }),
-      db.order.count({
-        where: {
-          companyId,
-          storeId,
-          nextFollowUpAt: { not: null },
-          followUpStatus: { notIn: ['COMPLETED', 'CANCELLED'] },
-          OR: [{ claimedById: user.id }, { assignedToId: user.id }, { currentOwnerId: user.id }],
-        } as any,
-      }),
-    ]);
-
-    // Contact details left the building; the tally is the person's, not
-    // this screen's. See noteCustomersHandedOut.
-    await noteCustomersHandedOut({ companyId, storeId, user, where: 'قائمة المتابعة', rows: orders });
-
-    return NextResponse.json({
-      orders: enriched,
-      summary: { dueToday, overdue, upcoming, mine: mine },
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
-    });
-  } catch (error: any) {
+    await requireContext();
+    return NextResponse.json(
+      {
+        error: 'هالباب انسكّر — المتابعات بشاشة «طلباتي» و«المتابعة».',
+        errorAr: 'هالباب انسكّر — المتابعات بشاشة «طلباتي» و«المتابعة».',
+        code: 'GONE',
+      },
+      { status: 410 }
+    );
+  } catch (error) {
     return apiErrorResponse(error);
   }
 }

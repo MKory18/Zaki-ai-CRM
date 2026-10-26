@@ -110,11 +110,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (parsed.data.isPublished !== undefined) {
       await requirePermission('landing_pages.publish');
     }
+    // `showInStore` too: it changes the live shop window, and alone in a body
+    // it asked for nothing — any signed-in member of the store could switch
+    // a twelve-product shelf to one. Same key as «اعرض كل الصفحات المنشورة».
     const needsEdit =
       parsed.data.name !== undefined ||
       parsed.data.slug !== undefined ||
       parsed.data.productId !== undefined ||
-      parsed.data.domain !== undefined;
+      parsed.data.domain !== undefined ||
+      parsed.data.showInStore !== undefined;
     if (needsEdit) await requirePermission('landing_pages.edit');
 
     // A page that is a Single Product store's front answers at the store's
