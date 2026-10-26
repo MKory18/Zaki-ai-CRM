@@ -1,5 +1,6 @@
 'use client';
 
+import { dispatchReasonAr } from '@/lib/dispatch-reason';
 import React, { useCallback, useState } from 'react';
 import { apiJson } from '@/lib/api-client';
 import type { DispatchSummary } from '@/lib/courier-dispatch';
@@ -312,15 +313,7 @@ export function ShippingBatchesScreen() {
                         >
                           <span className="font-mono" dir="ltr">{o.orderNumber}</span>
                           {' — '}
-                          {o.skipped === 'ALREADY_SENT'
-                            ? 'له باركود أصلاً'
-                            : o.skipped === 'NOT_AUTOMATED'
-                              ? 'شركة يدوية — لا API'
-                              : o.skipped === 'NO_PROVIDER'
-                                ? 'بلا شركة شحن'
-                                : o.skipped === 'SEND_IN_FLIGHT'
-                                  ? 'قيد الإرسال الآن من مكانٍ آخر'
-                                  : o.error}
+                          {dispatchReasonAr(o)}
                         </p>
                       ))}
                     {result.summary.outcomes.filter((o) => o.ok).length > 0 && (

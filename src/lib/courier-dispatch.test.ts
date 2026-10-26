@@ -344,3 +344,64 @@ describe('what happens to the claim when the call fails', () => {
     expect(res.skipped).toBe(0);
   });
 });
+
+/**
+ * A GOVERNORATE THE COURIER HAS NO ID FOR IS REFUSED BEFORE ANYTHING HAPPENS.
+ *
+ * السويداء is not in Basha's list. Its order used to be claimed, searched for
+ * by name over the network, failed with an English error code and released.
+ * Now: refused before the claim and before any call, with the governorate
+ * named — and the rest of the batch still goes.
+ */
+describe('a region with no courier id', () => {
+  beforeEach(() => {
+    adapterFor.mockReturnValue({ code: 'LOGESTECHS', automated: true, needsCourierCityId: true, createShipment });
+    db.deliveryFee.findMany.mockResolvedValue([{ regionId: 'r-dam', courierCityId: 445053 }]);
+  });
+
+  it('is refused by name, not claimed, and the courier is not asked — the next order still goes', async () => {
+    db.order.findMany.mockResolvedValue([
+      order({ id: 'o-sw', orderNumber: 'SY-1', regionId: 'r-sw', region: { name: 'السويداء' } }),
+      order({ id: 'o-dam', orderNumber: 'SY-2', regionId: 'r-dam', region: { name: 'دمشق' } }),
+    ]);
+    db.$queryRaw.mockImplementation(async (frags: string[]) =>
+      frags.join(' ').includes('UPDATE') ? [{ id: 'o-dam' }] : [{ tracking: null }]
+    );
+    const res = await dispatchBatch(input);
+    const sw = res.outcomes.find((o) => o.orderId === 'o-sw')!;
+    expect(sw).toMatchObject({ ok: false, skipped: 'NO_COURIER_CITY', regionName: 'السويداء' });
+    // Only Damascus reached the courier, with its id.
+    expect(createShipment).toHaveBeenCalledTimes(1);
+    expect(createShipment.mock.calls[0][0].cityId).toBe(445053);
+    // And the Suwayda row was never claimed.
+    const claims = raw(db.$queryRaw).filter((c) => c.sql.includes('UPDATE'));
+    expect(claims.every((c) => !c.args.includes('o-sw'))).toBe(true);
+  });
+
+  it('an adapter that needs no courier id is not held by it', async () => {
+    adapterFor.mockReturnValue({ code: 'OTHER', automated: true, createShipment });
+    db.order.findMany.mockResolvedValue([order({ regionId: 'r-sw', region: { name: 'السويداء' } })]);
+    const res = await dispatchBatch(input);
+    expect(res.sent).toBe(1);
+  });
+
+  it('the second phone travels with the parcel', async () => {
+    db.order.findMany.mockResolvedValue([
+      order({ regionId: 'r-dam', customer: { fullName: 'زبون', rawPhone: '0999111222', phone: '999111222', altPhone: '0988777666', address: 'شارع' } }),
+    ]);
+    await dispatchBatch(input);
+    expect(createShipment.mock.calls[0][0].customer.altPhone).toBe('0988777666');
+  });
+
+  it('a second phone stored without its zero (the storefront form) reaches them as it is dialled', async () => {
+    db.order.findMany.mockResolvedValue([
+      order({
+        regionId: 'r-dam',
+        store: { country: { code: 'SY' } },
+        customer: { fullName: 'زبون', rawPhone: '0999111222', phone: '999111222', altPhone: '988777666', address: 'شارع' },
+      }),
+    ]);
+    await dispatchBatch(input);
+    expect(createShipment.mock.calls[0][0].customer.altPhone).toBe('0988777666');
+  });
+});

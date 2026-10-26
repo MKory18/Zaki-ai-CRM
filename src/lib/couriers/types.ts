@@ -48,16 +48,24 @@ export interface CourierShipmentRequest {
   merchantRef: string;
   codAmount: number;
   currencyCode: string;
-  customer: { fullName: string; phone: string; address: string; regionName: string | null };
+  customer: {
+    fullName: string;
+    phone: string;
+    /** The second number, so the courier's own waybill carries both, as ours does. */
+    altPhone?: string | null;
+    address: string;
+    regionName: string | null;
+  };
   pieces: number;
   note?: string | null;
   /**
-   * The courier's OWN id for the destination, when we hold it.
+   * The courier's OWN id for the destination.
    *
    * Agreed once per region and stored on the delivery-fee row. An adapter
-   * that has it addresses the parcel with it; one that does not falls back
-   * to asking the courier to find the region by name, which costs a round
-   * trip and can match the wrong place when several come back.
+   * that needs one (`needsCourierCityId`) is never called without it: the
+   * name search it used to fall back to took the FIRST hit when several came
+   * back, and a parcel addressed to the wrong governorate is found out about
+   * when the driver calls.
    */
   cityId?: number;
 }
@@ -91,6 +99,12 @@ export interface CourierAdapter {
   readonly name: string;
   /** False for the manual adapter: nothing to call, nothing to poll. */
   readonly automated: boolean;
+  /**
+   * True when a shipment cannot be created without the courier's own id for
+   * the destination region (stored per region on the delivery-fee row).
+   * Dispatch refuses such an order BEFORE claiming it, with the region named.
+   */
+  readonly needsCourierCityId?: boolean;
 
   createShipment(req: CourierShipmentRequest): Promise<CourierShipmentResult>;
   fetchEvents(trackingNumbers: string[]): Promise<CourierEvent[]>;

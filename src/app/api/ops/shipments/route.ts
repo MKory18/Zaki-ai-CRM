@@ -330,7 +330,9 @@ export async function POST(req: Request) {
       newData: { batchNumber: batch.batchNumber, orders: shippable.length, exceptions: exceptions.length },
     });
 
-    return NextResponse.json({ batch, shipped: shippable.length, exceptions }, { status: 201 });
+    // Whether this courier is sent to by API: the banner then offers «رحّل»
+    // before «اطبع», so the waybill carries the courier's barcode beside our QR.
+    return NextResponse.json({ batch, shipped: shippable.length, exceptions, courierApi: provider.apiEnabled === true }, { status: 201 });
   } catch (error) {
     return apiErrorResponse(error);
   }

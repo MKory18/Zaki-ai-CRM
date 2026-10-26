@@ -182,6 +182,8 @@ export class LogesTechsAdapter implements CourierAdapter {
   readonly code = 'LOGESTECHS';
   readonly name = 'LogesTechs';
   readonly automated = true;
+  // Their API addresses a parcel by their city id, nothing else ("الـ API مع الـ id تبع المناطق").
+  readonly needsCourierCityId = true;
 
   private readonly base: string;
   private readonly http: typeof fetch;
@@ -257,14 +259,18 @@ export class LogesTechsAdapter implements CourierAdapter {
     );
     const wanted = name.trim().toLocaleLowerCase('ar');
     const rows = data.data ?? [];
-    const hit =
-      rows.find((c) => [c.arabicName, c.englishName, c.name].some((n) => n?.trim().toLocaleLowerCase('ar') === wanted)) ??
-      rows[0];
+    // An EXACT name, or nothing. It used to fall back to the first row the
+    // search returned, so a near name — «السويدية» for «السويداء» — was an
+    // address.
+    const hit = rows.find((c) => [c.arabicName, c.englishName, c.name].some((n) => n?.trim().toLocaleLowerCase('ar') === wanted));
     return hit?.id ?? null;
   }
 
   async createShipment(req: CourierShipmentRequest): Promise<CourierShipmentResult> {
-    const cityId = req.cityId ?? (req.customer.regionName ? await this.findCityId(req.customer.regionName) : null);
+    // By id only. The name search this fell back to took the first hit of
+    // several; dispatch now refuses an order with no id before it gets here
+    // (NO_COURIER_CITY), and this stays as the last line if anything else calls.
+    const cityId = req.cityId;
     if (!cityId) {
       throw new Error('LOGESTECHS_CITY_UNKNOWN: لم يُعرف رمز المدينة لدى الشركة');
     }
@@ -292,6 +298,8 @@ export class LogesTechsAdapter implements CourierAdapter {
         receiverName: req.customer.fullName,
         ...splitName(req.customer.fullName),
         receiverPhone: req.customer.phone,
+        // The second number their own waybill can carry — ours always printed both.
+        ...(req.customer.altPhone ? { receiverPhone2: req.customer.altPhone } : {}),
         quantity: req.pieces,
         shipmentType: 'COD',
         cityId,
