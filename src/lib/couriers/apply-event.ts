@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { isAutoApplicable, type CourierEvent } from './types';
-import { isValidShippingTransition } from '../shipping-workflow';
+import { isValidShippingTransition, STATUS_TIMESTAMP } from '../shipping-workflow';
 
 /**
  * ONE PLACE WHERE A COURIER'S WORD CHANGES AN ORDER.
@@ -39,7 +39,17 @@ export interface ApplyTarget {
   id: string;
   companyId: string;
   shippingStatus: string;
+  /*
+   * The in-transit timestamps, when the caller read them. null = read and empty, so the move stamps it;
+   * undefined = not read, so it is left alone. A parcel the poll moved to SHIPPED had no shippedAt — and the
+   * «days in transit», the late threshold and the statement sweep all read that column.
+   */
+  shippedAt?: Date | null;
+  outForDeliveryAt?: Date | null;
+  failedAt?: Date | null;
 }
+
+const FEED_STAMPS = new Set(['shippedAt', 'outForDeliveryAt', 'failedAt']);
 
 export async function applyCourierEvent(input: {
   order: ApplyTarget;
@@ -55,10 +65,14 @@ export async function applyCourierEvent(input: {
   if (event.status === order.shippingStatus) return 'NO_CHANGE';
   if (!isValidShippingTransition(order.shippingStatus, event.status)) return 'INVALID_TRANSITION';
 
+  const field = STATUS_TIMESTAMP[event.status as keyof typeof STATUS_TIMESTAMP];
+  const stamp =
+    field && FEED_STAMPS.has(field) && (order as unknown as Record<string, unknown>)[field] === null ? { [field]: new Date() } : {};
+
   await db.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: order.id },
-      data: { shippingStatus: event.status!, version: { increment: 1 } },
+      data: { shippingStatus: event.status!, version: { increment: 1 }, ...stamp },
     });
     await tx.orderActivity.create({
       data: {

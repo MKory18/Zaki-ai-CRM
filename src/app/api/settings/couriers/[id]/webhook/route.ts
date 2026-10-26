@@ -5,14 +5,17 @@ import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { logAudit } from '@/lib/audit';
 import { generateWebhookToken, hashWebhookToken, webhookUrl } from '@/lib/couriers/webhook-token';
+import { isAutomated } from '@/lib/couriers';
 
 /**
  * The courier's webhook URL: created here, shown once, never readable again.
  *
- * GET  — whether one exists and when it last carried traffic. Never the URL.
- * POST — mint a new one and return it, this once. Any previous URL stops
- *        working the moment this returns, so the new one has to reach the
- *        courier before their next push.
+ * GET    — whether one exists and when it last carried traffic, and whether this courier's statuses are pulled from
+ *          its API (`polled`, a yes or no — no credential leaves the server). Never the URL.
+ * POST   — mint a new one and return it, this once. Any previous URL stops
+ *          working the moment this returns, so the new one has to reach the
+ *          courier before their next push.
+ * DELETE — «الغي الويب هوك وخليك API»: the URL stops working; statuses keep being pulled from the API.
  *
  * Treating it as unreadable is the whole point: the URL is a credential, and
  * the same rule already governs this courier's password one field away.
@@ -34,7 +37,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const provider = await db.deliveryProvider.findFirst({
       where: { id, companyId },
-      select: { webhookSecretHash: true, webhookSecretSetAt: true, webhookLastSeenAt: true },
+      select: {
+        webhookSecretHash: true, webhookSecretSetAt: true, webhookLastSeenAt: true,
+        code: true, apiEnabled: true, adapterCode: true, apiConfig: true, apiCredentials: true,
+      },
     });
     if (!provider) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
@@ -42,6 +48,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       configured: Boolean(provider.webhookSecretHash),
       setAt: provider.webhookSecretSetAt,
       lastSeenAt: provider.webhookLastSeenAt,
+      // Whether the status job pulls this courier's parcels from its API — the same test the job uses.
+      polled: isAutomated(provider),
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -82,6 +90,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     return NextResponse.json({ url: webhookUrl(originOf(req), token) });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { user, companyId } = await requireContext();
+    await requirePermission('settings.manage');
+    const { id } = await params;
+
+    const provider = await db.deliveryProvider.findFirst({
+      where: { id, companyId },
+      select: { id: true, name: true, webhookSecretHash: true, webhookLastSeenAt: true },
+    });
+    if (!provider) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
+    if (!provider.webhookSecretHash) return NextResponse.json({ ok: true, revoked: false });
+
+    // The old URL's hash is gone, so the receiver finds no courier for it and refuses every push on it.
+    await db.deliveryProvider.update({
+      where: { id: provider.id },
+      data: { webhookSecretHash: null, webhookSecretSetAt: null, webhookLastSeenAt: null },
+    });
+
+    // Never the URL — only that it was stopped, and when it last carried a status.
+    await logAudit({
+      companyId,
+      userId: user.id,
+      action: 'COURIER_WEBHOOK_REVOKED',
+      entity: 'DeliveryProvider',
+      entityId: provider.id,
+      newData: { courier: provider.name, lastSeenAt: provider.webhookLastSeenAt },
+    });
+
+    return NextResponse.json({ ok: true, revoked: true });
   } catch (error) {
     return apiErrorResponse(error);
   }
