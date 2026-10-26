@@ -57,7 +57,8 @@ describe('the outcome shorthand', () => {
     // «All of it» means every unit the order HAS.
     expect(src).toMatch(/asked\.outcome === 'ALL' \? i\.quantity \+ i\.freeQuantity : 0/);
     // Scoped to the company, like every other read.
-    expect(src).toMatch(/order: \{ companyId \}/);
+    // And this store's order: the company alone let another store's id through.
+    expect(src).toMatch(/order: \{ companyId, storeId \}/);
   });
 
   it('and still runs the one settlement function', () => {

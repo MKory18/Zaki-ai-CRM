@@ -251,7 +251,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     // Phase S: writing expenses requires finance.create (not just view)
     await requirePermission('finance.create');
 
@@ -294,8 +294,11 @@ export async function POST(req: Request) {
     if (!walletId) {
       return NextResponse.json({ error: 'اختر المحفظة التي خرج منها المال' }, { status: 400 });
     }
+    // This store's wallet or one not placed yet — what the wallets screen
+    // offers the expense form (finance/wallets GET). A wallet id of another
+    // store of the company used to be enough to spend from it.
     const wallet = await db.wallet.findFirst({
-      where: { id: walletId, companyId, isActive: true },
+      where: { id: walletId, companyId, isActive: true, ...(storeId ? { OR: [{ storeId }, { storeId: null }] } : {}) },
       select: { id: true, name: true, currencyCode: true },
     });
     if (!wallet) {

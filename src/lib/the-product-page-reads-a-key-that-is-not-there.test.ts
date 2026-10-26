@@ -181,8 +181,9 @@ describe('every key the page reads is one the door sends', () => {
   const columns = productModel.fields.filter((f) => f.kind === 'scalar' || f.kind === 'enum').map((f) => f.name);
 
   it('— `product.<key>`: a column of the product, or a relation the door includes', () => {
-    // The first `include` after the GET's own `findUnique` — the relations the door reads along with the product.
-    const get = door().slice(door().indexOf('db.product.findUnique('));
+    // The first `include` after the GET's own read — the relations the door reads along with the product.
+    // (`findFirst` now: the read is held to this store, which `findUnique` by id alone was not.)
+    const get = door().slice(door().indexOf('db.product.findFirst('));
     const included = keysOf(get, 'include: {');
     expect(included.sort(), 'قرأتُ include الباب خطأً').toEqual(['batches', 'category', 'images']);
     const sent = new Set([...columns, ...included]);
