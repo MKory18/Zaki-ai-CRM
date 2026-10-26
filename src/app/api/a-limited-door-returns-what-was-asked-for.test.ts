@@ -54,7 +54,8 @@ vi.mock('@/lib/auth', () => ({
   requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a),
   requirePermission: (...a: unknown[]) => requirePermission(...a),
 }));
-vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a) }));
+// `can` for the telegram door's store scoping, which this file does not test.
+vi.mock('@/lib/authorization', () => ({ requirePermission: (...a: unknown[]) => requirePermission(...a), can: () => true }));
 vi.mock('@/lib/analytics', () => ({ getCompanyAnalytics: (...a: unknown[]) => getCompanyAnalytics(...a) }));
 
 import { GET as PROFITABILITY } from './finance/profitability/route';

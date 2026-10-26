@@ -181,6 +181,33 @@ export function reachesStore(facts: StoreReachFacts, storeId: string): boolean {
   return true;
 }
 
+/**
+ * THE COUNTRIES AND STORES A PERSON REACHES, FOR A SCREEN THAT LISTS THEM.
+ *
+ * The geo settings listed every country and store of the company to anyone
+ * with «عرض الدول والمتاجر», including somebody confined to one store — the
+ * other stores' names, domains, support phones and storefront settings. The
+ * same reach rule as entering a store (reachesStore): the countries assigned
+ * to them, and inside those, only the stores named to them if any are.
+ *
+ * Null when they see every country: no filter at all.
+ */
+export async function geoReach(
+  user: SessionUser,
+  companyId: string
+): Promise<{ countryIds: string[]; storeIds: string[] | null } | null> {
+  if (seesAllCountries(user)) return null;
+  const [countries, granted] = await Promise.all([
+    db.country.findMany({ where: { companyId, access: { some: { userId: user.id } } }, select: { id: true } }),
+    db.userStoreAccess.findMany({ where: { userId: user.id }, select: { storeId: true, store: { select: { countryId: true } } } }),
+  ]);
+  let countryIds = countries.map((c) => c.id);
+  if (granted.length === 0) return { countryIds, storeIds: null };
+  const named = new Set(granted.map((g) => g.store.countryId));
+  countryIds = countryIds.filter((id) => named.has(id));
+  return { countryIds, storeIds: granted.map((g) => g.storeId) };
+}
+
 /** Stores of one accessible country the user may enter (null = country not accessible). */
 export async function listAccessibleStores(user: SessionUser, companyId: string, countryId: string) {
   const seesAll = seesAllCountries(user);

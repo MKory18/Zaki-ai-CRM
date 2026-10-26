@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireCompanyTenant } from '@/lib/auth';
 import { requireContext } from '@/lib/geo-context';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/authorization';
@@ -30,7 +29,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { user, companyId, storeId: currentStore } = await requireContext();
     await requirePermission('settings.edit');
 
-    const provider = await db.deliveryProvider.findFirst({ where: { id, companyId } });
+    // This store's courier, or one not placed yet (this door is how one gets
+    // placed) — never another store's, which an id alone used to reach.
+    const provider = await db.deliveryProvider.findFirst({ where: { id, companyId, OR: [{ storeId: currentStore }, { storeId: null }] } });
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });
 
     const body = (await req.json().catch(() => ({}))) as {
@@ -133,11 +134,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { user, companyId } = await requireCompanyTenant();
+    const { user, companyId, storeId: currentStore } = await requireContext();
     await requirePermission('settings.edit');
 
+    // The same reach as editing it: this store's courier or an unplaced one.
     const provider = await db.deliveryProvider.findFirst({
-      where: { id, companyId },
+      where: { id, companyId, OR: [{ storeId: currentStore }, { storeId: null }] },
       select: { id: true, name: true, isActive: true },
     });
     if (!provider) return NextResponse.json({ error: 'شركة الشحن غير موجودة' }, { status: 404 });

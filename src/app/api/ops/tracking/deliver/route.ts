@@ -76,7 +76,9 @@ const schema = z.union([
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId, country } = await requireContext();
+    // The store too: the order was found by company alone, so an id from
+    // another store of the same company could be delivered from this one.
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ops.track');
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
     let lines: { itemId: string; deliveredQty: number }[];
     if ('outcome' in asked) {
       const items = await db.orderItem.findMany({
-        where: { orderId: asked.orderId, order: { companyId } },
+        where: { orderId: asked.orderId, order: { companyId, storeId } },
         select: { id: true, quantity: true, freeQuantity: true },
       });
       if (items.length === 0) {
@@ -115,7 +117,7 @@ export async function POST(req: Request) {
      */
     if ('preview' in asked && asked.preview) {
       const order = await db.order.findFirst({
-        where: { id: asked.orderId, companyId },
+        where: { id: asked.orderId, companyId, storeId },
         select: {
           priceIncludesDelivery: true,
           deliveryFee: true,
@@ -152,6 +154,7 @@ export async function POST(req: Request) {
       const outcome = await db.$transaction((tx) =>
         recordPartialDelivery(tx, {
           companyId,
+          storeId,
           orderId: parsed.data.orderId,
           lines,
           minorUnit: country.minorUnit,

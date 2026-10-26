@@ -173,7 +173,6 @@ const ID_SCOPED: Record<string, Excuse> = {
   'app/api/control/blacklist/route.ts': { reason: 'مقيَّد بأرقام هواتف مُسمّاة — سؤالٌ عن عميلٍ بعينه', sites: 1 },
   'app/api/finance/statements/[id]/route.ts': { reason: 'مقيَّد بـ settledOrderIds — سطورُ كشفٍ بعينه', sites: 2 },
   'app/api/geo/countries/[id]/route.ts': { reason: 'عدٌّ ليُعرَفَ هل يُحذَفُ بلد — ليس رقماً يُعرَض', sites: 1 },
-  'app/api/ops/tracking/deliver/route.ts': { reason: 'مقيَّد بـ orderId واحد', sites: 1 },
   'app/api/orders/[id]/route.ts': { reason: 'مقيَّد بـ orderId واحد — إضافاتُ طلبٍ بعينه', sites: 1 },
   'app/api/orders/import/migrate/route.ts': { reason: 'مقيَّد بأرقام طلباتٍ مُسمّاة من الملف — هل الرقم محجوز لطلبٍ آخر', sites: 1 },
   'app/api/whatsapp/conversations/[id]/route.ts': { reason: 'مقيَّد بـ customerId واحد — محادثةٌ بعينها', sites: 1 },
