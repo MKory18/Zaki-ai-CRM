@@ -80,6 +80,8 @@ export function PerformanceScreen() {
   // The score board is its own decision: these are people's numbers, not
   // the shop's, and the key that opens the reports does not open them.
   const canScores = userCan(currentUser, 'team.monitor');
+  // The money columns and «الأكثر ربحاً»: the finance key's, as the server now sends them.
+  const canFinance = userCan(currentUser, 'finance.view');
   const [tab, setTab] = useState<Tab>('team');
   // Opened from a link (?tab=landing) — read after mount, so the server
   // render and the first client render agree.
@@ -307,6 +309,7 @@ export function PerformanceScreen() {
             name={analytics?.rankings?.mostRequested?.name}
             note={`${analytics?.rankings?.mostRequested?.totalOrders || 0} طلب`}
           />
+          {canFinance && (
           <Rank
             icon={<RiCopperCoinLine className="w-4 h-4" />}
             label="الأكثر ربحاً"
@@ -319,6 +322,7 @@ export function PerformanceScreen() {
               )
             }
           />
+          )}
           <Rank
             icon={<RiTruckLine className="w-4 h-4" />}
             label="الأكثر توصيلاً"
@@ -434,6 +438,8 @@ export function PerformanceScreen() {
                         </span>
                       );
                     } },
+                  // The five money columns, only with «عرض المالية».
+                  ...(!canFinance ? [] : [
                   { key: 'c7', label: "إيراد الموصَّل",
                     render: (prod: any) => (
                   <><Money value={prod.revenue} /></>
@@ -475,6 +481,7 @@ export function PerformanceScreen() {
                         </span>
                     : <span className="text-[var(--sys-muted)]" title="لا كلفة مسجَّلة لهذا المنتج — الهامش سيكون الإيراد نفسه">—</span>
                 ) },
+                  ]),
                 ]}
               />
             </div>

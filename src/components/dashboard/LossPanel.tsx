@@ -36,7 +36,8 @@ const FAULT_TINT: Record<Fault, string> = {
   UNKNOWN: 'bg-[var(--sys-surface)] text-[var(--sys-muted)] border-[var(--sys-border)]',
 };
 
-type Loaded = LossReport & { scanned: number; total: number; truncated: boolean };
+// `moneyWithheld`: the server zeroed every money figure for a reader without «عرض المالية».
+type Loaded = LossReport & { scanned: number; total: number; truncated: boolean; moneyWithheld?: boolean };
 
 export function LossPanel({ period }: { period: string }) {
   const [data, setData] = useState<Loaded | null>(null);
@@ -92,6 +93,13 @@ export function LossPanel({ period }: { period: string }) {
             {/* ── The sentence the whole panel exists for ── */}
             {data.preventable.count > 0 && (
               <div className="rounded-lg border border-[var(--sys-destructive-border)] bg-[var(--sys-destructive-soft)] px-3 py-2.5">
+                {data.moneyWithheld ? (
+                  // The same sentence without the money, which this reader's key does not show.
+                  <p className="text-sm text-[var(--sys-heading)]">
+                    <b className="text-[var(--sys-destructive)]">{data.preventable.count} شحنةً</b> فشلت لسببٍ عندنا
+                    — رقمٌ خاطئ، عنوانٌ لم يُعرف، موعدٌ لم يُتَّفق عليه. كلُّها كانت تُكتشف بمكالمةٍ قبل دفع أجرة المندوب.
+                  </p>
+                ) : (
                 <p className="text-sm text-[var(--sys-heading)]">
                   <b className="text-[var(--sys-destructive)]">
                     <Money value={data.preventable.money} tone="lost" />
@@ -99,6 +107,7 @@ export function LossPanel({ period }: { period: string }) {
                   دُفعت على {data.preventable.count} شحنةً فشلت لسببٍ عندنا — رقمٌ خاطئ، عنوانٌ لم
                   يُعرف، موعدٌ لم يُتَّفق عليه. كلُّها كانت تُكتشف بمكالمةٍ قبل دفع أجرة المندوب.
                 </p>
+                )}
                 {data.after.money > 0 && (
                   <p className="mt-1 text-xs text-[var(--sys-destructive)]">
                     {data.preventable.shareOfAfterMoney}% من كلفةِ ما فشل بعد الشحن.
@@ -117,9 +126,13 @@ export function LossPanel({ period }: { period: string }) {
             <Half
               icon={<RiTruckLine className="w-4 h-4 text-[var(--sys-destructive)]" aria-hidden />}
               title="بعد الشحن"
-              note="أجرةُ الذهاب + أجرةُ الإرجاع + البضاعةُ إن رجعت تالفة."
+              withMoney={!data.moneyWithheld}
+              note={
+                data.moneyWithheld
+                  ? 'العدد والسبب — كلفتها (الأجرة والبضاعة) بمفتاح «عرض المالية».'
+                  : 'أجرةُ الذهاب + أجرةُ الإرجاع + البضاعةُ إن رجعت تالفة.'
+              }
               half={data.after}
-              withMoney
             />
 
             {data.truncated && (

@@ -8,6 +8,7 @@ import { AiOrderModal } from '@/components/orders/AiOrderModal';
 import { useApp } from '@/context/AppContext';
 import { canAccessRoute, findRoute } from '@/lib/route-registry';
 import { userCan } from '@/lib/can';
+import { TEAM_PERMISSIONS } from '@/lib/ai-assistants';
 import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import { RiAddCircleLine, RiArrowRightLine, RiArrowUpCircleLine, RiAwardLine, RiCloseCircleLine, RiFireLine, RiHandCoinLine, RiInboxUnarchiveLine, RiPercentLine, RiMagicLine, RiShoppingBagLine, RiTruckLine, RiWallet3Line } from '@remixicon/react';
@@ -57,6 +58,7 @@ export function DashboardScreen() {
   /** The href, or nothing — a card with no link is still a card. */
   const linkTo = (path: string): string | undefined => (mayOpen(path) ? path : undefined);
   const canFinance = userCan(currentUser, 'finance.view');
+  const maySeeColleagues = TEAM_PERMISSIONS.some((p) => userCan(currentUser, p));
 
   const [period, setPeriod] = useState<'today' | '7d' | '30d' | 'month' | 'all'>('all');
   const [analytics, setAnalytics] = useState<any>(null);
@@ -291,9 +293,10 @@ export function DashboardScreen() {
      * So it names a product when the cost data can support the word, and
      * says which field is empty when it cannot.
      */
-    profitStated
+    // A product's profit is money: without «عرض المالية» the tile is not drawn at all.
+    ...(!canFinance ? [] : [profitStated
       ? { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: analytics?.rankings?.mostProfitable?.name, id: analytics?.rankings?.mostProfitable?.id, value: fmt(analytics?.rankings?.mostProfitable?.netProfit ?? 0), tint: 'bg-[var(--sys-success-soft)]', text: 'text-[var(--sys-success)]' }
-      : { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: undefined, value: locale === 'ar' ? 'كلفة البضاعة غير مسجَّلة' : 'No recorded cost', tint: 'bg-[var(--sys-surface)] border-[var(--sys-border)]', text: 'text-[var(--sys-muted-foreground)]' },
+      : { icon: RiWallet3Line, label: locale === 'ar' ? 'الأكثر ربحاً' : 'Most Profitable', name: undefined, value: locale === 'ar' ? 'كلفة البضاعة غير مسجَّلة' : 'No recorded cost', tint: 'bg-[var(--sys-surface)] border-[var(--sys-border)]', text: 'text-[var(--sys-muted-foreground)]' }]),
     { icon: RiTruckLine, label: locale === 'ar' ? 'الأكثر توصيلاً' : 'Most Delivered', name: analytics?.rankings?.mostDelivered?.name, id: analytics?.rankings?.mostDelivered?.id, value: `${analytics?.rankings?.mostDelivered?.deliveredOrders ?? 0} ${locale === 'ar' ? 'توصيل' : 'delivered'}`, tint: 'bg-[var(--sys-warning-soft)] border-[var(--sys-warning)]/30', text: 'text-[var(--sys-warning)]' },
     { icon: RiCloseCircleLine, label: locale === 'ar' ? 'الأكثر رفضاً' : 'Highest Rejections', name: analytics?.rankings?.highestRejection?.name, id: analytics?.rankings?.highestRejection?.id, value: `${analytics?.rankings?.highestRejection?.rejectedOrders ?? 0} ${locale === 'ar' ? 'رفض' : 'rejected'}`, tint: 'bg-[var(--sys-destructive-soft)] border-[var(--sys-destructive-border)]', text: 'text-[var(--sys-destructive)]' },
   ];
@@ -619,6 +622,9 @@ export function DashboardScreen() {
           */}
           <LossPanel period={period} />
 
+          {/* Colleagues by name: only for the key of a screen that already shows
+              them — the server sends no leaderboard to anyone else. */}
+          {maySeeColleagues && (
           <Card>
             <CardHeader
               title={
@@ -668,15 +674,18 @@ export function DashboardScreen() {
                       <span className="text-xs font-bold text-[var(--sys-success)] bg-[var(--sys-success-soft)] border-0 px-2 py-0.5 rounded-full">
                         {mod.confirmationRate}%
                       </span>
-                      <p className="text-xs font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
-                        <Money value={mod.sales} />
-                      </p>
+                      {canFinance && (
+                        <p className="text-xs font-semibold text-[var(--sys-foreground)] mt-1" dir="ltr">
+                          <Money value={mod.sales} />
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
       </div>

@@ -71,7 +71,11 @@ const ANALYTICS = {
     profitMargin: 52.7,
   },
   aiContext: {
-    orders_today: 4,
+    // A real key of the AI context. The answer now passes it through the
+    // assistant's closed map (analytics-projection.ts), which drops any key
+    // nobody classified — the made-up `orders_today` this used was one.
+    total_orders: 4,
+    revenue: 900,
     net_profit: 475,
     production_cost: 300,
     profit_margin: 52.7,
@@ -111,8 +115,9 @@ describe('a role without finance.view', () => {
     // A second copy of a number is a second door to it.
     const { body } = await read();
     const keys = Object.keys(body.aiContext ?? {});
-    expect(keys).toContain('orders_today');
-    for (const leaked of ['net_profit', 'production_cost', 'profit_margin', 'top_profitable_product']) {
+    expect(keys).toContain('total_orders');
+    // `revenue` too: the old pattern (cost|profit|margin|…) let it through.
+    for (const leaked of ['revenue', 'net_profit', 'production_cost', 'profit_margin', 'top_profitable_product']) {
       expect(keys, `aiContext.${leaked}`).not.toContain(leaked);
     }
   });
