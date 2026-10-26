@@ -33,6 +33,8 @@ const { db, current, getCompanyAnalytics, aiChat, aiSettings, askAiAssistant, ge
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
+// The per-person ceiling is its own test (the-assistant-has-a-ceiling).
+vi.mock('@/lib/ai-rate', () => ({ tooManyAiCalls: () => null }));
 vi.mock('@/lib/geo-context', async (orig) => ({
   ...(await orig<typeof import('@/lib/geo-context')>()),
   requireContext: async () => ({
@@ -239,6 +241,12 @@ describe('«اسأل الذكاء»: each source on its own key, and on the owne
     current.user = await employee(['ai.use', 'growth.intelligence'], { allow: ['team.monitor'] });
     await ASK(['TEAM']);
     expect(sent().team).toEqual([{ name: 'سارة', confirmed: 40 }]);
+  });
+
+  it('goes the way «مركز الذكاء» is routed in AI settings — it went to the default', async () => {
+    current.user = await employee(['ai.use', 'customers.view_basic']);
+    await ASK(['CUSTOMERS']);
+    expect((aiChat.mock.calls[0][0] as { job?: string }).job).toBe('advisor');
   });
 
   it('the panel lists only what this person may tick, names the rest, and shows the house prompt only to settings', async () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -31,6 +32,8 @@ export async function POST(req: Request) {
     const { user, companyId, storeId } = await requireContext();
     const assistant = assistantByKey('confirmation')!;
     await requirePermission(assistant.needs);
+    const limited = tooManyAiCalls('confirmation', companyId, user.id);
+    if (limited) return limited;
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {

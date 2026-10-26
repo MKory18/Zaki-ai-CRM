@@ -62,3 +62,12 @@ export function useApp() {
   }
   return ctx;
 }
+
+/**
+ * The same, for a component that also renders outside the provider and
+ * must not fall over there (the assistant's bubble, drawn in isolation by
+ * its own tests). Null outside it.
+ */
+export function useAppOptional() {
+  return useContext(AppContext);
+}

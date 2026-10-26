@@ -328,6 +328,10 @@ export function DashboardScreen() {
             {/* The performance board is the DETAIL of this screen (see `DetailsLinks`). */}
             <DetailsLink />
 
+            {/* Both open the order-creation door, which asks «إنشاء طلب»; without
+                it they were buttons whose form always failed. */}
+            {userCan(currentUser, 'orders.create') && (
+            <>
             <Button
               variant="outline"
               onClick={() => setAiModalOpen(true)}
@@ -341,6 +345,8 @@ export function DashboardScreen() {
               <RiAddCircleLine className="w-4 h-4" />
               <span>طلب سريع</span>
             </Button>
+            </>
+            )}
           </div></>
             }
           />

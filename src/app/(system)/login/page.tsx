@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { SecondFactor } from '@/components/shell/SecondFactor';
 import { loginWithPasskey, passkeySupported } from '@/lib/passkey-browser';
+import { forgetDock } from '@/lib/dock-memory';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +35,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     void passkeySupported().then(setCanFinger);
+    // A session the server ended lands here without the sign-out button —
+    // the assistant's conversation from it is forgotten here too.
+    forgetDock();
   }, []);
 
   async function signInWithFinger() {

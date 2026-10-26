@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
@@ -21,9 +22,11 @@ import { pickingPayload } from '@/lib/ai-scope';
  */
 export async function POST() {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     const assistant = assistantByKey('picking')!;
     await requirePermission(assistant.needs);
+    const limited = tooManyAiCalls('picking', companyId, user.id);
+    if (limited) return limited;
 
     const groups = await preparationGroups(db, { companyId, storeId });
     if (groups.length === 0) {

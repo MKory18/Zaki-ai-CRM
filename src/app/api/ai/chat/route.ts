@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { can } from '@/lib/authorization';
 import { allowedScopes, scopeContext } from '@/lib/ai-scope';
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { apiErrorResponse } from '@/lib/api-error';
 import { requireContext } from '@/lib/geo-context';
 import { getCompanyAnalytics } from '@/lib/analytics';
@@ -12,6 +13,8 @@ export async function POST(req: Request) {
   try {
     const { user, companyId, storeId } = await requireContext();
     await requirePermission('ai.use');
+    const limited = tooManyAiCalls('chat', companyId, user.id);
+    if (limited) return limited;
 
     const body = await req.json();
     const { question, period = 'all' } = body;
