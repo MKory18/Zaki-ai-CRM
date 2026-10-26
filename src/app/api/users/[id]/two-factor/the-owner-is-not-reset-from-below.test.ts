@@ -39,7 +39,7 @@ vi.mock('@/lib/db', () => ({ db }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/audit', () => ({ logAudit: (...a: unknown[]) => logAudit(...a) }));
 // The reach rule (canActOnUser): open by default; its refusal is asked below.
-const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async () => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
+const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async (..._a: unknown[]) => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
 vi.mock('@/lib/user-permissions', () => ({ canActOnUser: (...a: unknown[]) => reach.canActOnUser(...a) }));
 // Surfaced rather than swallowed: an unexpected throw should fail an
 // assertion with its message in the body, not look like a tidy refusal.

@@ -12,7 +12,7 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
     region: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     store: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     storePage: { createMany: vi.fn() },
-    user: { findFirst: vi.fn(), findUnique: vi.fn(async () => null) },
+    user: { findFirst: vi.fn(), findUnique: vi.fn(async (): Promise<unknown> => null) },
     userCountryAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
     userStoreAccess: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn(), count: vi.fn() },
     $transaction: vi.fn(),
@@ -24,7 +24,7 @@ const { db, requireCompanyTenant, requirePermission, can, logAudit } = vi.hoiste
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
-const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async () => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
+const reach = vi.hoisted(() => ({ canActOnUser: vi.fn(async (..._a: unknown[]) => ({ ok: true }) as { ok: boolean; status?: number; error?: string }) }));
 vi.mock('@/lib/auth', () => ({ requireCompanyTenant: (...a: unknown[]) => requireCompanyTenant(...a) }));
 vi.mock('@/lib/authorization', () => ({
   requirePermission: (...a: unknown[]) => requirePermission(...a),
