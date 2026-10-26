@@ -25,6 +25,8 @@ interface Status {
   configured: boolean;
   setAt: string | null;
   lastSeenAt: string | null;
+  /** The status job pulls this courier's parcels from its API. */
+  polled?: boolean;
 }
 
 export function CourierWebhook({ providerId }: { providerId: string }) {
@@ -71,6 +73,30 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
     }
   };
 
+  // «الغي الويب هوك وخليك API» — the URL stops; the statuses keep coming from the API.
+  const revoke = async () => {
+    if (
+      !(await ask({
+        title: 'إيقاف الرابط؟',
+        body: 'أي حالة ترسلها الشركة على هذا الرابط رح تنرفض. الحالات بتضل تنسحب من الشركة تلقائياً.',
+        confirmLabel: 'أوقف الرابط',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiJson(`/api/settings/couriers/${providerId}/webhook`, { method: 'DELETE' });
+      setUrl(null);
+      await load();
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذّر الإيقاف');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const copy = async () => {
     if (!url) return;
     const ok = await copyText(url);
@@ -94,7 +120,13 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
           </p>
           <p className="mt-0.5 text-xs text-[var(--sys-muted-foreground)]">
             {!status.configured ? (
-              <>لا رابط بعد — الحالات تصل بالاستطلاع كل دقيقتين.</>
+              status.polled ? (
+                <>لا رابط — الحالات تُسحب من شركة الشحن تلقائياً كل دقيقتين.</>
+              ) : (
+                <>هذه الشركة غير مربوطة — الحالات تُحدَّث يدوياً من شاشة الشحنة.</>
+              )
+            ) : status.polled ? (
+              <>الحالات تُسحب تلقائياً، والرابط إضافة ما في حاجة إلها.</>
             ) : status.lastSeenAt ? (
               <>
                 يعمل · آخر استقبال {arDateTime(status.lastSeenAt)}
@@ -106,10 +138,17 @@ export function CourierWebhook({ providerId }: { providerId: string }) {
             )}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={mint} disabled={busy}>
-          {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
-          {status.configured ? 'رابط جديد' : 'أنشئ الرابط'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button size="sm" variant="outline" onClick={mint} disabled={busy}>
+            {busy ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiRefreshLine className="h-4 w-4" />}
+            {status.configured ? 'رابط جديد' : 'أنشئ الرابط'}
+          </Button>
+          {status.configured && (
+            <Button size="sm" variant="outline" onClick={revoke} disabled={busy}>
+              أوقف الرابط
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Shown once. Reloading this screen will not bring it back. */}

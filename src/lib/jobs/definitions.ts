@@ -159,41 +159,105 @@ export const accrueCommission: JobDefinition = {
  * the courier's statement. This job moves parcels along the in-transit
  * states and nothing else.
  */
+/** Parcels asked about per courier per sweep — the rest wait for the next sweep, in id order. */
+export const POLL_BATCH = 60;
+/** Barcodes asked at once: the first ten tell us whether the courier is reachable at all. */
+const POLL_CHUNK = 10;
+/*
+ * Where each courier's last sweep stopped. In memory: a restart starts again from the top, which only costs one
+ * sweep of fairness. Without it, a courier with more than POLL_BATCH parcels in transit had the same first ones
+ * asked about for ever.
+ */
+const pollCursor = new Map<string, string>();
+/** Tests start each case from the top. */
+export function forgetCourierPollCursor(): void {
+  pollCursor.clear();
+}
+
 export const syncCourierStatus: JobDefinition = {
   name: 'sync-courier-status',
   everySeconds: 120,
   description: 'تحديث حالات الشحنات من شركات الشحن المرتبطة',
   async run(): Promise<JobResult> {
+    /*
+     * THE PLATFORM AND THE ACCOUNT ARE PART OF THE QUESTION.
+     *
+     * This read only {id, code, name, apiEnabled, companyId}. A courier like «الباشا» is code BASHA on the
+     * LogesTechs platform (adapterCode LOGESTECHS) with its account encrypted on its row — so `adapterFor` keyed on
+     * BASHA, found no adapter, handed back the manual one, and the courier was skipped on every sweep. Not one Basha
+     * status was ever read from their API.
+     */
     const providers = await db.deliveryProvider.findMany({
       where: { isActive: true, apiEnabled: true },
-      select: { id: true, code: true, name: true, apiEnabled: true, companyId: true },
+      select: {
+        id: true, code: true, name: true, apiEnabled: true, companyId: true,
+        adapterCode: true, apiConfig: true, apiCredentials: true,
+      },
     });
 
     let applied = 0;
     let missing = 0;
     const skipped: string[] = [];
+    const notPolled: string[] = [];
+    const unreachable: string[] = [];
 
     for (const provider of providers) {
       const adapter = adapterFor(provider);
-      if (!adapter.automated) continue;
+      if (!adapter.automated) {
+        // Said, not skipped in silence: «لا تحديثات» read as «nothing moved» when nothing was even asked.
+        notPolled.push(provider.name);
+        continue;
+      }
 
-      const inTransit = await db.order.findMany({
-        where: {
-          companyId: provider.companyId,
-          deliveryProviderId: provider.id,
-          trackingNumber: { not: null },
-          shippingStatus: { in: ['READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY'] },
-        },
-        select: {
-          id: true, trackingNumber: true, shippingStatus: true, companyId: true, storeId: true,
-          orderNumber: true, trackingMissCount: true, trackingMissingSince: true,
-          trackingMissingAlertedAt: true,
-        },
-        take: 200,
+      const where = {
+        companyId: provider.companyId,
+        deliveryProviderId: provider.id,
+        trackingNumber: { not: null },
+        shippingStatus: { in: ['READY_FOR_PICKUP', 'SHIPPED', 'OUT_FOR_DELIVERY', 'FAILED_DELIVERY'] },
+      };
+      const select = {
+        id: true, trackingNumber: true, shippingStatus: true, companyId: true, storeId: true,
+        orderNumber: true, trackingMissCount: true, trackingMissingSince: true,
+        trackingMissingAlertedAt: true,
+        // Read so the status's own timestamp is stamped when it is still empty (apply-event).
+        shippedAt: true, outForDeliveryAt: true, failedAt: true,
+      } as const;
+      const after = pollCursor.get(provider.id);
+      let inTransit = await db.order.findMany({
+        where: { ...where, ...(after ? { id: { gt: after } } : {}) },
+        select,
+        orderBy: { id: 'asc' },
+        take: POLL_BATCH,
       });
+      if (inTransit.length === 0 && after) {
+        // Past the end: start again from the top.
+        inTransit = await db.order.findMany({ where, select, orderBy: { id: 'asc' }, take: POLL_BATCH });
+      }
+      if (inTransit.length === POLL_BATCH) pollCursor.set(provider.id, inTransit[inTransit.length - 1].id);
+      else pollCursor.delete(provider.id);
       if (inTransit.length === 0) continue;
 
-      const events = await adapter.fetchEvents(inTransit.map((o) => o.trackingNumber!));
+      /*
+       * IS THE COURIER THERE AT ALL?
+       *
+       * The first chunk decides. When every barcode in it (two or more) answers with an error, the courier is down
+       * or our account is refused — that is not sixty lost parcels, and counting it as sixty misses would raise
+       * sixty «مفقودة» alerts after three sweeps. The courier is skipped and named; nothing is recorded as missing.
+       */
+      const events: Awaited<ReturnType<typeof adapter.fetchEvents>> = [];
+      let reachable = true;
+      for (let i = 0; i < inTransit.length; i += POLL_CHUNK) {
+        const chunk = await adapter.fetchEvents(inTransit.slice(i, i + POLL_CHUNK).map((o) => o.trackingNumber!));
+        if (i === 0 && chunk.length >= 2 && chunk.every((e) => e.rawStatus === 'ERROR')) {
+          reachable = false;
+          break;
+        }
+        events.push(...chunk);
+      }
+      if (!reachable) {
+        unreachable.push(provider.name);
+        continue;
+      }
       const byBarcode = new Map(events.map((e) => [e.trackingNumber, e]));
 
       for (const order of inTransit) {
@@ -252,7 +316,14 @@ export const syncCourierStatus: JobDefinition = {
       applied ? `حُدِّث ${applied} شحنة` : null,
       skipped.length ? `${skipped.length} حالة تحتاج قراراً بشرياً` : null,
       missing ? `${missing} شحنة مفقودة عند الشركة` : null,
+      notPolled.length ? `لا يُستطلع: ${notPolled.join('، ')} — حسابها عند الشركة غير مكتمل أو غير مقروء` : null,
     ].filter(Boolean);
+
+    // The other couriers' work is already written; the run is marked failed so the worker backs off and the jobs
+    // screen says which courier could not be reached.
+    if (unreachable.length) {
+      throw new Error(`تعذّر الوصول إلى ${unreachable.join('، ')} — لم يُعَدّ أي طرد مفقوداً. ${notes.join(' · ')}`.trim());
+    }
 
     return { processed: applied, detail: notes.join(' · ') || 'لا تحديثات' };
   },
