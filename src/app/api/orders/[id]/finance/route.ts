@@ -84,20 +84,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
 
-    // Access: finance/settlement viewers get company-wide read; the order's own
-    // agent reads it through the same envelope their list applies.
-    const hasFinanceView = can(user, 'finance.view') || can(user, 'settlement.view');
-    if (!hasFinanceView) {
-      const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
-      if (!access.allowed) {
-        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
-      }
-    } else {
-      // Finance viewers still must stay inside their own company (tenant isolation)
-      const exists = await db.order.findFirst({ where: { id, companyId }, select: { id: true } });
-      if (!exists) {
-        return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
-      }
+    /*
+     * THE MONEY KEYS ONLY.
+     *
+     * Anyone who could open the order used to fall through to this snapshot:
+     * cost of goods, gross and net profit, refunds and the ledger with the
+     * names of who moved what — including on orders in the unclaimed pool,
+     * which the read envelope lets an agent open. No screen asks for it
+     * without a money key; the order window carries no finance tab. So it is
+     * the finance and settlement keys' alone, inside this store.
+     */
+    if (!can(user, 'finance.view') && !can(user, 'settlement.view')) {
+      return NextResponse.json(
+        { error: 'لا تملك صلاحية عرض المالية.', errorAr: 'لا تملك صلاحية عرض المالية.' },
+        { status: 403 },
+      );
+    }
+    const exists = await db.order.findFirst({ where: { id, companyId, storeId }, select: { id: true } });
+    if (!exists) {
+      return NextResponse.json({ error: 'Order not found', errorAr: ORDER_NOT_FOUND }, { status: 404 });
     }
 
     const order = await db.order.findUnique({

@@ -23,6 +23,7 @@ import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE }
 import { zodMessage } from '@/lib/zod-message';
 import { noteCustomersHandedOut } from '@/lib/pii-alert';
 import { giftUnits } from '@/lib/offer-gift';
+import { projectOrder } from '@/lib/order-projection';
 
 export async function GET(req: Request) {
   try {
@@ -71,8 +72,19 @@ export async function GET(req: Request) {
     // ─── Role-based visibility + workflow queues (backend-enforced) ───
     // applyQueueFilter enforces per-role visibility envelopes; never trust the
     // requested queue blindly — the server decides which queues a role may use.
+    /*
+     * EXCEPT THE ONE QUEUE THAT WIDENS.
+     *
+     * `available` is the unclaimed pool, the only queue that ADDS orders the
+     * person's own envelope leaves out. The arrows door already refuses it
+     * (orders/[id]/route.ts); this door honoured it, so an agent who typed
+     * `?queue=available&limit=500` got the whole pool with names, phones and
+     * addresses — the list the confirmation queue gives her only as a count.
+     * It is the supervisor's, or someone who sees every order anyway.
+     */
     const queue = searchParams.get('queue');
-    const visibleWhere = applyQueueFilter(user, whereClause, queue);
+    const mayAskPool = can(user, 'confirmation.supervise') || getPermissionScope(user, 'orders.view')?.scope === 'ALL_COMPANY';
+    const visibleWhere = applyQueueFilter(user, whereClause, queue === 'available' && !mayAskPool ? null : queue);
 
     const [total, orders] = await Promise.all([
       db.order.count({ where: visibleWhere }),
@@ -117,7 +129,8 @@ export async function GET(req: Request) {
       // The ONE state the whole app shows, derived from the stored fields —
       // the legacy `status` column is kept for compatibility but never drives
       // a screen, because it drifts from confirmation/shipping status.
-      orders: orders.map((o) => ({
+      // Cost, profit and the customer's private counters only to their own keys — see order-projection.ts.
+      orders: orders.map((o) => projectOrder({
         ...o,
         state: deriveCoreState(o as unknown as StateSource),
         zone: getZone(deriveCoreState(o as unknown as StateSource)),
@@ -125,7 +138,7 @@ export async function GET(req: Request) {
         outcome: OUTCOME_LABEL_AR[orderOutcome(o)],
         outcomeClosed: OUTCOME_CLOSED[orderOutcome(o)],
         previousOrders: Math.max(0, (o.customer.totalOrders ?? 1) - 1),
-      })),
+      }, user)),
       // The store's own currency. The list used to print a hard-coded $ on
       // every row, which read as dollars on a Jordanian store.
       currency: { code: country.currencyCode, minorUnit: country.minorUnit },

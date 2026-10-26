@@ -5,6 +5,8 @@ import { noteCustomersHandedOut } from '@/lib/pii-alert';
 
 import { logAudit } from '@/lib/audit';
 import { can } from '@/lib/authorization';
+import { apiErrorResponse } from '@/lib/api-error';
+import { redactCustomerForWarehouse } from '@/lib/operations';
 
 /**
  * PATCH /api/shipping-batches/[id] — update status/notes/provider (company-scoped)
@@ -16,17 +18,20 @@ import { can } from '@/lib/authorization';
 /**
  * GET /api/shipping-batches/[id] — one batch with the orders it holds.
  *
- * Reading a batch needs only the right to see orders: printing its waybills
- * and checking what is in it are not management, and the batch is scoped to
- * the session's store either way.
+ * The keys of the batches screen, which is the only thing that reads it —
+ * and it reads only the order numbers and barcodes, to check parcels
+ * against. `orders.view` used to be enough, with its scope ignored, and the
+ * answer carried every customer's name and phone. The phone now goes only
+ * with the address-book key, as on the labels and returns screens.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, companyId, storeId } = await requireContext();
     const { id } = await params;
-    if (!can(user, 'orders.view')) {
-      return NextResponse.json({ error: 'Forbidden', errorAr: 'هذا الإجراء ليس من صلاحيّاتك. راجع مدير النطام إن كان من عملك.' }, { status: 403 });
+    if (!can(user, 'ops.ship') && !can(user, 'ops.track')) {
+      return NextResponse.json({ error: 'دفعات الشحن ليست من صلاحيّاتك.', errorAr: 'دفعات الشحن ليست من صلاحيّاتك.' }, { status: 403 });
     }
+    const maySeeContact = can(user, 'customers.view');
 
     const batch = await db.shippingBatch.findFirst({
       where: { id, companyId, ...(storeId ? { storeId } : {}) },
@@ -51,9 +56,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       companyId, storeId, user, where: 'دفعة شحن', rows: batch.orders,
     });
 
-    return NextResponse.json({ batch });
+    return NextResponse.json({
+      batch: { ...batch, orders: batch.orders.map((o) => ({ ...o, customer: redactCustomerForWarehouse(o.customer, maySeeContact) })) },
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'حدث خطأ داخلي' }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }
 
