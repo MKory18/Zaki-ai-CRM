@@ -85,7 +85,8 @@ describe('«بيظهر مرة وحدة، وبيختفي إذا رفضه الزا
   });
 
   it('and refusing hides it', () => {
-    expect(src()).toContain('{!offerRefused && recommendations.length > 0 &&');
+    expect(src()).toContain('const showCrossSell = !offerRefused &&');
+    expect(src()).toContain('{showCrossSell && (');
   });
 
   it('while anything already added stays on the order', () => {

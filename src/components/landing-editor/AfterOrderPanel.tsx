@@ -19,6 +19,34 @@ export interface AfterOrderSection {
   whatsappMessage: string;
   whatsappNumber: string;
   whatsappAutoOpen: boolean;
+  afterOrderFlow: 'together' | 'sequence';
+  afterOrderBanner: 'none' | 'congrats' | 'countdown';
+  afterOrderBannerText: string;
+  upsellLook: 'card' | 'banner' | 'compact';
+  crossSellLook: 'list' | 'cards';
+}
+
+/** One row of mutually exclusive choices — the editor's segmented control. */
+function Choices<T extends string>({ label, value, options, onPick }: { label: string; value: T; options: readonly (readonly [T, string])[]; onPick: (v: T) => void }) {
+  return (
+    <div className="space-y-1">
+      <span className="block text-xs font-semibold text-[var(--sys-heading)]">{label}</span>
+      <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
+        {options.map(([v, text]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onPick(v)}
+            className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
+              value === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+            }`}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export interface AfterOrderContext {
@@ -99,6 +127,41 @@ export function AfterOrderPanel({
           مدّة العرض
         </a>
       </div>
+
+      {/*
+        HOW THE TWO ARE SHOWN — «يكونو يا مع بعض يا ورا بعض» · «شريط مبروك أو عدّاد» · «اشكال الأب سيل والكروس سيل».
+        The countdown is the real window above, never an invented deadline.
+      */}
+      <Choices
+        label="ترتيب العرضين"
+        value={s.afterOrderFlow}
+        options={[['together', 'مع بعض'], ['sequence', 'ورا بعض']] as const}
+        onPick={(v) => patch({ afterOrderFlow: v })}
+      />
+      <Choices
+        label="شريط فوق العروض"
+        value={s.afterOrderBanner}
+        options={[['none', 'بلا'], ['congrats', 'مبروك'], ['countdown', 'عدّاد']] as const}
+        onPick={(v) => patch({ afterOrderBanner: v })}
+      />
+      {s.afterOrderBanner === 'congrats' && (
+        <input aria-label="نص شريط مبروك" className={FIELD} maxLength={80} value={s.afterOrderBannerText} onChange={(e) => patch({ afterOrderBannerText: e.target.value })} />
+      )}
+      {s.afterOrderBanner === 'countdown' && (
+        <p className="text-xs text-[var(--sys-muted-foreground)]">بيعدّ مدّة العرض الحقيقية من إعدادات النظام، ولما تخلص العروض بتختفي.</p>
+      )}
+      <Choices
+        label="شكل الأب سيل"
+        value={s.upsellLook}
+        options={[['card', 'بطاقة'], ['banner', 'شريط ملوّن'], ['compact', 'سطر واحد']] as const}
+        onPick={(v) => patch({ upsellLook: v })}
+      />
+      <Choices
+        label="شكل الكروس سيل"
+        value={s.crossSellLook}
+        options={[['list', 'قائمة'], ['cards', 'بطاقات']] as const}
+        onPick={(v) => patch({ crossSellLook: v })}
+      />
 
       {/* The WhatsApp button after the order. */}
       <label className="flex items-center gap-2 text-xs font-semibold text-[var(--sys-heading)]">

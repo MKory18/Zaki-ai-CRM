@@ -332,6 +332,17 @@ export const BLOCK_CSS = `
 .lp-radio { display: flex; align-items: center; gap: 10px; padding: 7px 4px; font-size: 13px; cursor: pointer; }
 .lp-radio input { width: 18px; height: 18px; accent-color: var(--store-accent, #b8256e); }
 
+/* The thank-you screen's offers — the form block's «بعد الطلب» looks. One markup, the shape is the rule. */
+.lp-after-banner { margin-top: 20px; border-radius: 12px; padding: 10px; text-align: center; font-size: 13px; font-weight: 700; background: var(--store-accent-tint); color: var(--store-accent); }
+.lp-upsell[data-look=banner] { background: var(--store-accent); }
+.lp-upsell[data-look=banner] * { color: var(--store-accent-text) !important; }
+.lp-upsell[data-look=banner] .lp-upsell-yes { background: #fff !important; color: var(--store-accent) !important; }
+.lp-upsell[data-look=compact] { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; text-align: start; }
+.lp-upsell[data-look=compact] .lp-upsell-note { display: none; }
+.lp-xsell-items[data-look=cards] { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-xsell-items[data-look=cards] > * { flex-direction: column; text-align: center; margin: 0; }
+.lp-xsell-items[data-look=cards] .lp-xsell-thumb { width: 100%; height: auto; aspect-ratio: 1; }
+
 /* ── catalog: the shop's own pages and products ──
    ONE COLUMN COUNT IS THE SELLER'S, ONE IS THE PHONE'S. The
    --store-cat-cols variable is their choice for a wide screen; a phone is too

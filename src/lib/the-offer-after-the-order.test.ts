@@ -602,7 +602,8 @@ describe('«بيظهر بعد الطلب، مرة وحدة، وبيختفي إذ
   it('draws the offer only when the SERVER sent one', () => {
     // `null` is a real answer — the seller set none — and draws nothing.
     // Better than inventing a suggestion nobody configured.
-    expect(form()).toContain('{postOrder.offer && !postOrderRefused && (');
+    expect(form()).toContain('const showUpsell = !!postOrder.offer && !postOrderRefused');
+    expect(form()).toContain('{showUpsell && postOrder.offer && (');
   });
 
   it('and prints the server’s two numbers rather than working one out', () => {
@@ -616,10 +617,12 @@ describe('«بيظهر بعد الطلب، مرة وحدة، وبيختفي إذ
     const src = form();
     expect(src).toContain('fmt(postOrder.offer.price)');
     expect(src).toContain('fmt(postOrder.offer.listPrice)');
-    // The window is STATED from the server's own number, never counted down
-    // by a clock of the page's own.
+    // The window is STATED from the server's own number. A countdown exists only when the seller chose «عدّاد»
+    // («شريط … أو عدّاد», 26/10), and it counts that same number of minutes — the page invents no deadline of its own.
     expect(src).toContain('{postOrder.windowMinutes} دقيقة');
-    expect(src, 'الصفحة بتحسب مهلة بحالها').not.toContain('setInterval');
+    expect(src.match(/setInterval/g) ?? [], 'عدّاد غير العدّاد الوحيد').toHaveLength(1);
+    expect(src).toContain("look.banner === 'countdown' && offersFrom !== null && postOrder.windowMinutes > 0");
+    expect(src).toContain('postOrder.windowMinutes * 60_000');
   });
 
   it('and the two answers the owner wrote are the two buttons', () => {
@@ -664,8 +667,9 @@ describe('«بيظهر بعد الطلب، مرة وحدة، وبيختفي إذ
     // Two different things are being refused. One flag for both would mean
     // declining the seller's bundle silently removed everything else.
     const src = form();
-    expect(src).toContain('{postOrder.offer && !postOrderRefused && (');
-    expect(src).toContain('{!offerRefused && recommendations.length > 0 &&');
+    expect(src).toContain('const showUpsell = !!postOrder.offer && !postOrderRefused');
+    // The list answers to its OWN refusal; refusing the bundle only ever REVEALS it (the «ورا بعض» order).
+    expect(src).toContain('const showCrossSell = !offerRefused && !windowOver && recommendations.length > 0');
   });
 });
 
