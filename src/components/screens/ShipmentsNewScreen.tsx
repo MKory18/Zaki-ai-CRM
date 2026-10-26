@@ -14,6 +14,8 @@ import { useApp } from '@/context/AppContext';
 import { userCan } from '@/lib/can';
 import { useLabelSize } from '@/components/labels/LabelSize';
 import { BLOCKED_WAYBILLS, describeRefused, openWaybills, WaybillError } from '@/components/labels/openWaybills';
+import type { DispatchSummary } from '@/lib/courier-dispatch';
+import { dispatchReasonAr } from '@/lib/dispatch-reason';
 import { useToast } from '@/components/ui/Toast';
 import { Rows } from '@/components/ui/Rows';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -80,6 +82,11 @@ export function ShipmentsNewScreen() {
   /** The batch the banner above is about — what «اطبع البوالص» prints. */
   const [justMade, setJustMade] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
+  /** The batch's courier is sent to by API — «رحّل» comes before «اطبع». */
+  const [courierApi, setCourierApi] = useState(false);
+  const [dispatching, setDispatching] = useState(false);
+  /** What the courier answered for the batch just made, order by order. */
+  const [dispatched, setDispatched] = useState<DispatchSummary | null>(null);
   const { currentUser } = useApp();
   const tell = useTell();
   const labelSize = useLabelSize();
@@ -268,7 +275,12 @@ export function ShipmentsNewScreen() {
 
     setBusy(true);
     try {
-      const res = await apiJson<{ batch: { id: string; batchNumber: string }; shipped: number; exceptions: { orderNumber: string; reasons: string[] }[] }>(
+      const res = await apiJson<{
+        batch: { id: string; batchNumber: string };
+        shipped: number;
+        exceptions: { orderNumber: string; reasons: string[] }[];
+        courierApi?: boolean;
+      }>(
         '/api/ops/shipments',
         {
           method: 'POST',
@@ -282,6 +294,8 @@ export function ShipmentsNewScreen() {
       );
       setDone(`تم إنشاء الدفعة ${res.batch.batchNumber} بـ ${res.shipped} طلب`);
       setJustMade(res.batch.id);
+      setCourierApi(res.courierApi === true);
+      setDispatched(null);
       setExceptions(res.exceptions);
       await load();
     } catch (e) {
@@ -323,6 +337,35 @@ ${describeRefused(out.refused)}`,
     }
   };
 
+  /**
+   * «رحّل إلى الشركة واجلب الباركود» — the batch just made, sent from the banner.
+   *
+   * BEFORE THE PRINT, BECAUSE THE PRINT CARRIES WHAT IT WAS GIVEN. A waybill
+   * printed before dispatch has our reference where the courier's barcode
+   * goes (`courierCode` falls back to it), so the warehouse was handed a
+   * label the courier cannot scan — and reached for the courier's own label,
+   * which has no QR of ours. The same door and the same body the batches
+   * screen uses; the answer is shown per order, with the same sentences.
+   */
+  const dispatchJustMade = async () => {
+    if (!justMade) return;
+    setDispatching(true);
+    try {
+      const summary = await apiJson<DispatchSummary>(`/api/ops/shipments/${justMade}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      setDispatched(summary);
+    } catch (e) {
+      toast.failed(e instanceof Error ? e.message : 'تعذر الترحيل');
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  /** Sent to a courier with a server, and not yet: printing now gives a label without its barcode. */
+  const sendFirst = !!justMade && courierApi && !dispatched;
   const selectedCount = Object.values(selected).filter(Boolean).length;
   const labelsStep = printLabelsStep(mayOpen);
 
@@ -378,11 +421,19 @@ ${describeRefused(out.refused)}`,
             Whoever holds `ops.labels` prints the batch just made from this
             line; whoever does not is still pointed at the screen that has it.
           */}
+          {sendFirst && (
+            <>
+              {' — '}
+              <button type="button" onClick={dispatchJustMade} disabled={dispatching} className="font-bold underline disabled:opacity-50">
+                {dispatching ? 'جارٍ الترحيل…' : 'رحّل إلى الشركة واجلب الباركود'}
+              </button>
+            </>
+          )}
           {justMade && mayPrint ? (
             <>
               {' — '}
               <button type="button" onClick={printJustMade} disabled={printing} className="font-bold underline disabled:opacity-50">
-                {printing ? 'جارٍ التجهيز…' : 'اطبع البوالص'}
+                {printing ? 'جارٍ التجهيز…' : sendFirst ? 'اطبع بلا باركود الشركة' : 'اطبع البوالص'}
               </button>
             </>
           ) : (
@@ -396,6 +447,42 @@ ${describeRefused(out.refused)}`,
             )
           )}
         </p>
+      )}
+
+      {sendFirst && (
+        <p className="text-xs text-[var(--sys-muted-foreground)]">
+          رحّل أولاً، ثم اطبع: تخرج البوليصة وعليها باركود الشركة بجانب رمزنا. ما يُطبع قبل الترحيل لا يحمل إلا رمزنا.
+        </p>
+      )}
+      {dispatched && (
+        <div className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-surface)] p-2.5 space-y-1">
+          <p className="text-xs font-bold text-[var(--sys-heading)]">
+            رُحّل {dispatched.sent}
+            {dispatched.skipped > 0 && ` · تُخطّي ${dispatched.skipped}`}
+            {dispatched.failed > 0 && ` · فشل ${dispatched.failed}`}
+          </p>
+          {dispatched.outcomes
+            .filter((o) => !o.ok)
+            .map((o) => (
+              <p
+                key={o.orderId}
+                className={
+                  o.outcomeUnknown
+                    ? 'text-xs font-bold text-[var(--sys-warning)]'
+                    : 'text-xs text-[var(--sys-muted-foreground)]'
+                }
+              >
+                <span className="font-mono" dir="ltr">{o.orderNumber}</span>
+                {' — '}
+                {dispatchReasonAr(o)}
+              </p>
+            ))}
+          {dispatched.sent > 0 && (
+            <p className="text-xs text-[var(--sys-success)]">
+              الباركودات محفوظة على الطلبات — اطبع الآن فتظهر على البوليصة بجانب رمزنا.
+            </p>
+          )}
+        </div>
       )}
 
       {exceptions.length > 0 && (

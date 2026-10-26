@@ -149,4 +149,68 @@ describe('the banner', () => {
     expect(screen.getByRole('link', { name: 'اطبع البوالص' }).getAttribute('href')).toBe('/ops/batches');
     expect(openWaybills).not.toHaveBeenCalled();
   });
+
+  it('a manual courier is offered no «رحّل» — there is no server to send to', async () => {
+    await ship();
+    expect(screen.queryByRole('button', { name: /رحّل إلى الشركة/ })).toBeNull();
+  });
+});
+
+/**
+ * «رحّل» BEFORE «اطبع», FOR A COURIER WITH A SERVER.
+ *
+ * Printed before dispatch, the waybill's barcode row carries our reference
+ * (the courier's code falls back to it): a label Basha cannot scan, so the
+ * warehouse printed Basha's own — which has no QR of ours.
+ */
+describe('a courier sent to by API', () => {
+  const summary = {
+    sent: 1, skipped: 1, failed: 0,
+    outcomes: [
+      { orderId: '1', orderNumber: 'ORD-1', ok: true, trackingCode: 'BSH1' },
+      { orderId: '2', orderNumber: 'ORD-2', ok: false, skipped: 'NO_COURIER_CITY', regionName: 'السويداء' },
+    ],
+  };
+
+  beforeEach(() => {
+    apiJson.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && url.endsWith('/dispatch')) return summary;
+      if (init?.method === 'POST') return { batch: { id: 'b-1', batchNumber: 'B-26-0001' }, shipped: 1, exceptions: [], courierApi: true };
+      if (url.includes('/api/ops/shipments')) return { orders: [row], heldCount: 0 };
+      return { providers: [{ id: 'p1', name: 'الباشا' }], regions: [{ id: 'r1', name: 'عمّان' }] };
+    });
+  });
+
+  it('offers «رحّل» first, says why, and names the print that would come out without their barcode', async () => {
+    await ship();
+    expect(screen.getByRole('button', { name: 'رحّل إلى الشركة واجلب الباركود' })).toBeTruthy();
+    expect(screen.getByText(/ما يُطبع قبل الترحيل لا يحمل إلا رمزنا/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'اطبع بلا باركود الشركة' })).toBeTruthy();
+  });
+
+  it('sends the batch just made through the batches door, then shows each order and offers the plain print', async () => {
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'رحّل إلى الشركة واجلب الباركود' }));
+    });
+    const sent = apiJson.mock.calls.find((c) => String(c[0]).endsWith('/dispatch'));
+    expect(sent?.[0]).toBe('/api/ops/shipments/b-1/dispatch');
+    expect((sent?.[1] as RequestInit).method).toBe('POST');
+    expect(await screen.findByText(/رُحّل 1/, undefined, WAIT)).toBeTruthy();
+    // the same sentence the batches screen gives for a governorate with no id
+    expect(screen.getByText(/السويداء: لا رمز لها عند الشركة بعد/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /رحّل إلى الشركة/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'اطبع البوالص' })).toBeTruthy();
+  });
+
+  it('NEGATIVE: «رحّل» opens no print and writes no handover', async () => {
+    await ship();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'رحّل إلى الشركة واجلب الباركود' }));
+    });
+    await screen.findByText(/رُحّل 1/, undefined, WAIT);
+    expect(openWaybills).not.toHaveBeenCalled();
+    const writes = apiJson.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === 'POST');
+    expect(writes.map((c) => c[0])).toEqual(['/api/ops/shipments', '/api/ops/shipments/b-1/dispatch']);
+  });
 });
