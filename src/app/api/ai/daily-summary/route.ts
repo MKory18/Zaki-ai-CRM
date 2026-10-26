@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { tooManyAiCalls } from '@/lib/ai-rate';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { requireContext, seesAllCountries } from '@/lib/geo-context';
@@ -67,6 +68,8 @@ export async function POST() {
   try {
     const { user, companyId } = await requireContext();
     await requirePermission('ai.use');
+    const limited = tooManyAiCalls('daily-summary', companyId, user.id, 3);
+    if (limited) return limited;
     // Before anything is counted or sent anywhere.
     if (!maySeeSummary(user)) {
       return NextResponse.json({ error: SUMMARY_REASON_AR, errorAr: SUMMARY_REASON_AR }, { status: 403 });

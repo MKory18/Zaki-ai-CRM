@@ -381,6 +381,8 @@ const { db, requireContext, requirePermission } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/db', () => ({ db }));
+// The per-person ceiling is its own test (the-assistant-has-a-ceiling); this file drives the builder many times on purpose.
+vi.mock('@/lib/ai-rate', () => ({ tooManyAiCalls: () => null }));
 vi.mock('@/lib/geo-context', () => ({ requireContext: (...a: unknown[]) => requireContext(...a) }));
 vi.mock('@/lib/authorization', () => ({
   requirePermission: (...a: unknown[]) => requirePermission(...a),
