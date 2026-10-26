@@ -11,6 +11,7 @@ import { iconFor } from './icons';
 import { RiCloseLine, RiLogoutBoxLine, RiMoreLine } from '@remixicon/react';
 import { useBulkActive } from './BulkBar';
 import { signOut } from '@/lib/sign-out';
+import { InstallAppLine } from './InstallApp';
 
 /**
  * THE BOTTOM OF A PHONE.
@@ -184,6 +185,8 @@ export function MobileNav({ groups }: { groups: NavGroup[] }) {
               width of a notification bell.
             */}
             <div className="border-t border-[var(--sys-border)] p-2">
+              {/* Installing, while this phone can: the strip above the page rests, this line stays. */}
+              <InstallAppLine className={`${TAP} flex w-full items-center gap-3 rounded-lg px-2 text-sm font-semibold text-[var(--sys-primary)]`} />
               <button
                 type="button"
                 onClick={() => signOut('manual')}

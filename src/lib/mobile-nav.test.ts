@@ -109,7 +109,8 @@ describe('built for a thumb', () => {
 
   it('every target is at least 44px — a tap that misses is a tap made twice', () => {
     const src = nav();
-    const targets = (src.match(/<Link|<button/g) ?? []).length;
+    // The install line is a button drawn by its own component, and it takes the same TAP.
+    const targets = (src.match(/<Link|<button|<InstallAppLine/g) ?? []).length;
     const tapped = (src.match(/\$\{TAP\}/g) ?? []).length;
     expect(tapped, 'some target does not carry the 44px minimum').toBe(targets);
   });
