@@ -328,7 +328,10 @@ export async function POST(req: Request) {
           currencyCode: wallet.currencyCode,
           party: title.trim(),
           category: 'EXPENSE',
-          note: notes?.trim() || null,
+          // The movement's note is required (`wallet_movements.note` is NOT NULL) and the expense's is optional:
+          // an expense recorded with no notes wrote `null` here and the whole expense failed. The movement says
+          // why the money left; with no notes, that is the expense itself.
+          note: notes?.trim() || `مصروف: ${title.trim()}`,
           referenceType: 'EXPENSE',
           referenceId: row.id,
           createdById: user.id,
