@@ -90,7 +90,7 @@ interface OrderFormProps {
   showOfferPicker?: boolean;
   /** The form's look and how it lists the bundles — the `form` block's choices. Default: as it always was. */
   formStyle?: 'card' | 'compact';
-  offerStyle?: 'cards' | 'radio';
+  offerStyle?: 'cards' | 'radio' | 'select';
   /**
    * WHICH WAY THIS FORM READS.
    *
@@ -785,7 +785,8 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
               {/* The page's own offers block is the picker; here it is a
                   dropdown, so the choice can still be changed at the last
                   moment without scrolling back up the page. */}
-              {hasOffers && !showOfferPicker && offer && (
+              {/* …and when the seller chose «قائمة منسدلة» for the form itself. */}
+              {hasOffers && (!showOfferPicker || offerStyle === 'select') && offer && (
                 <div>
                   <label htmlFor="zf-offer" className={labelCls}>العرض المختار</label>
                   <select
@@ -826,7 +827,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   ))}
                 </fieldset>
               )}
-              {hasOffers && showOfferPicker && offerStyle !== 'radio' && (
+              {hasOffers && showOfferPicker && offerStyle !== 'radio' && offerStyle !== 'select' && (
                 <div>
                   <span className={labelCls}>اختر العرض</span>
                   <div className="space-y-2">
