@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
+import { inStore } from '@/lib/store-filter';
 import { requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
@@ -68,7 +69,8 @@ export async function POST(req: Request) {
      * because telling them apart is the leak.
      */
     const product = await db.product.findFirst({
-      where: { id: parsed.data.productId, companyId },
+      // This store's product, as the products screen reads it — not any id in the company.
+      where: { id: parsed.data.productId, ...inStore(companyId, storeId) },
       select: { name: true, description: true, basePrice: true, attributes: true },
     });
     if (!product) {

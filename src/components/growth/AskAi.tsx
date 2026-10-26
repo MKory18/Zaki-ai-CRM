@@ -35,6 +35,8 @@ interface Info {
   ready: boolean;
   housePrompt: string;
   sources: Source[];
+  /** What this person may not hand the model, and why — said beside the chips. */
+  withheld?: { id: string; label: string; why: string }[];
 }
 
 export function AskAi({
@@ -56,9 +58,15 @@ export function AskAi({
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
 
+  const [note, setNote] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
-      setInfo(await apiJson<Info>('/api/growth/intelligence/ask'));
+      const got = await apiJson<Info>('/api/growth/intelligence/ask');
+      setInfo(got);
+      // The server lists only what this person may tick; a preselected
+      // source it held back is not left ticked to fail on «حلّل».
+      setPicked((p) => p.filter((id) => got.sources.some((s) => s.id === id)));
     } catch {
       setInfo(null);
     }
@@ -78,12 +86,13 @@ export function AskAi({
     setBusy(true);
     setAnswer(null);
     try {
-      const d = await apiJson<{ answer: string }>('/api/growth/intelligence/ask', {
+      const d = await apiJson<{ answer: string; noteAr?: string }>('/api/growth/intelligence/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: question.trim(), sources: picked }),
       });
       setAnswer(d.answer || 'لم يرجع المزوّد إجابة.');
+      setNote(d.noteAr ?? null);
     } catch (e) {
       toast.failed(e instanceof Error ? e.message : 'تعذر التحليل');
     } finally {
@@ -125,6 +134,9 @@ export function AskAi({
 
         <div>
           <p className="text-xs text-[var(--sys-muted-foreground)] mb-1.5">ما الذي يُسمح له بقراءته:</p>
+          {info.sources.length === 0 && (
+            <p className="text-xs text-[var(--sys-muted-foreground)] mb-1.5">ما في مصدر متاح لصلاحيتك هون.</p>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {info.sources.map((s) => {
               const on = picked.includes(s.id);
@@ -145,6 +157,14 @@ export function AskAi({
               );
             })}
           </div>
+          {/* What is held back is named, with the reason — a chip that silently
+              is not there reads as a feature the system never had. */}
+          {(info.withheld ?? []).length > 0 && (
+            <p className="text-xs text-[var(--sys-muted)] mt-1.5">
+              مش متاح هون:{' '}
+              {(info.withheld ?? []).map((w) => `${w.label} (${w.why})`).join('، ')}
+            </p>
+          )}
         </div>
 
         <textarea
@@ -184,6 +204,7 @@ export function AskAi({
             <p className="text-xs text-[var(--sys-muted)] mt-2">
               مبني على أرقام الثلاثين يوماً الماضية المعروضة أعلاه — راجِعه قبل التنفيذ.
             </p>
+            {note && <p className="text-xs text-[var(--sys-muted)] mt-1">{note}</p>}
           </div>
         )}
       </div>

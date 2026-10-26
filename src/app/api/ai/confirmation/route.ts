@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
 import { requirePermission } from '@/lib/authorization';
+import { orderVisibilityWhere } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
 import { zodMessage } from '@/lib/zod-message';
 import { AiNotConfigured, aiChat, describeRoute } from '@/lib/ai-provider';
@@ -27,7 +28,7 @@ const schema = z.object({ orderId: z.string().uuid() });
 
 export async function POST(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     const assistant = assistantByKey('confirmation')!;
     await requirePermission(assistant.needs);
 
@@ -38,8 +39,13 @@ export async function POST(req: Request) {
 
     // This store's order. An agent assigned to one store is not shown
     // another's customers by asking for an id.
+    //
+    // AND ONE THIS PERSON MAY OPEN — the same envelope the order window
+    // reads it through. An agent whose orders are «المسندة إليّ» sent the id
+    // of an order that had moved to a colleague, and got its customer's
+    // history and risk from here while the window answered «not found».
     const order = await db.order.findFirst({
-      where: { id: parsed.data.orderId, companyId, storeId },
+      where: { id: parsed.data.orderId, companyId, storeId, AND: [orderVisibilityWhere(user)] },
       select: {
         id: true, orderNumber: true, totalAmount: true, currency: true,
         confirmationStatus: true, shippingStatus: true, claimedById: true,

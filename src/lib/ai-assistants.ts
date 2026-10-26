@@ -158,8 +158,25 @@ export const FINANCE_SCOPE: AiScope = 'finance';
  * anybody holding ai.use — a permission granted so people could ask about
  * their orders. Seeing the company's profit is a different decision, and it
  * has its own key already.
+ *
+ * And it is «عرض المالية», the key every money screen opens on — the
+ * dashboard's tiles, /finance/profit, /api/analytics. It was «عرض التقارير»,
+ * which the moderator and manager templates hold: the dashboard hid the
+ * net profit from them and the bubble told them. A DENY on «عرض المالية»
+ * closed the profit screen and left the bubble answering.
  */
-export const FINANCE_PERMISSION = 'reports.view';
+export const FINANCE_PERMISSION = 'finance.view';
+
+/** The scope a colleague's figures belong to (the best moderator, the team table). */
+export const TEAM_SCOPE: AiScope = 'team';
+
+/**
+ * The keys of the screens that show a colleague's numbers: the performance
+ * board (`reports.view`), the team scoreboard (`team.monitor`) and the
+ * people screen (`users.view`). Holding one of them, the assistant may name
+ * who is doing best; holding none, it may not — it used to, for anyone.
+ */
+export const TEAM_PERMISSIONS = ['reports.view', 'team.monitor', 'users.view'] as const;
 
 /** The scopes an assistant may actually use, given what the owner turned on. */
 export function scopesOf(def: AssistantDef, enabled: string[] | null | undefined): AiScope[] {
