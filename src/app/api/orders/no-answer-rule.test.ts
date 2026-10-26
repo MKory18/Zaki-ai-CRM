@@ -11,6 +11,8 @@ const { db, requireContext, assertOrderAccess, logAudit } = vi.hoisted(() => ({
     order: { update: vi.fn() },
     orderStatusLog: { create: vi.fn() },
     orderNote: { create: vi.fn() },
+    // An order with no add-ons — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: { updateMany: vi.fn() },
     user: { findUnique: vi.fn() },
     $transaction: vi.fn(async (fn: any) => fn(db)),

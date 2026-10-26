@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const db = {
+  // An order with no add-ons, unless a test says otherwise — plain functions, so a mock reset leaves them answering.
+  orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
   orderItem: { aggregate: vi.fn() },
   productionBatch: { aggregate: vi.fn() },
 };

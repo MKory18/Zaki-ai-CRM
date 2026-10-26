@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { db, requireContext, assertOrderAccess, logAudit, createNotification } = vi.hoisted(() => ({
   db: {
     orderNote: { findMany: vi.fn(), create: vi.fn() },
+    // An order with no add-ons — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: { findMany: vi.fn() },
     orderChangeRequest: { findFirst: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn() },

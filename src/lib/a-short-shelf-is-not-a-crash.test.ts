@@ -46,6 +46,8 @@ const { db, requireContext, requirePermission, logAudit } = vi.hoisted(() => ({
   db: {
     product: { findFirst: vi.fn() },
     order: { findFirst: vi.fn(), update: vi.fn() },
+    // An order with no add-ons, unless a test says otherwise — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: { updateMany: vi.fn() },
     orderActivity: { create: vi.fn() },
     inventoryMovement: { findFirst: vi.fn(), create: vi.fn() },

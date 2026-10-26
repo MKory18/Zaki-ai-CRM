@@ -36,6 +36,8 @@ function makeTx(over: Record<string, unknown> = {}) {
     // `update` because delivery now writes down what the goods actually
     // cost, from the batches they came out of.
     order: { findFirst: vi.fn().mockResolvedValue(ORDER), update: vi.fn() },
+    // An order with no add-ons, unless a test says otherwise — plain functions, so a mock reset leaves them answering.
+    orderAddOn: { aggregate: async () => ({ _sum: { reservedQty: 0 } }), findMany: async () => [], update: async () => ({}), updateMany: async () => ({ count: 0 }) },
     orderItem: { updateMany: vi.fn() },
     productionBatch: { findFirst: vi.fn().mockResolvedValue({ costPerUnit: 4 }), create: vi.fn().mockResolvedValue({ id: 'b-new' }) },
     ...over,

@@ -37,51 +37,60 @@ export async function reservedElsewhere(
   exceptOrderId?: string,
   storeId?: string | null
 ) {
-  const agg = await tx.orderItem.aggregate({
-    where: {
-      companyId,
-      productId,
-      ...(exceptOrderId ? { orderId: { not: exceptOrderId } } : {}),
-      reservedQty: { gt: 0 },
-      order: {
-        // The order already knows its store — this side needs no migration.
-        ...(storeId ? { storeId } : {}),
-        confirmationStatus: { notIn: ['REJECTED', 'CANCELLED'] },
-        /*
-         * ── «RETURNED» IS NOT ON THIS LIST, AND THAT IS THE POINT ──
-         *
-         * The owner, 21/10: «بالمرتجعات لما يرجع لا ترجع — سواء جزئي او
-         * غيرو — للمخزون غير لما احط انو استلم المرتجع و سليم».
-         *
-         * The two that remain belong here because by then nothing is
-         * held any more: delivery CONSUMED the units (`consumeOrderStock`
-         * clears `reservedQty`) and a cancellation RELEASED them. Their
-         * reservation is already zero; skipping them only saves the read.
-         *
-         * A return is the opposite. A full return was never consumed —
-         * the units are still counted in the batches as physically on
-         * hand — and its reservation is cleared by the returns desk, when
-         * the parcel is in somebody's hands. Excluding it here meant that
-         * between «the courier says it came back» and «we have counted
-         * it», the order stopped holding its units and `availableStock`
-         * rose by exactly them.
-         *
-         * Those units are in a van, or in a courier's warehouse, or lost.
-         * The shop could promise them to the next customer, and did.
-         *
-         * ⚠️ RETURNED is set without anybody counting anything — by the
-         * door outcome «nothing taken», and by a manual transition on the
-         * shipping screen. So the hold has to outlast the status and end
-         * where the counting is: `POST /api/ops/returns`, which refuses
-         * to restore a thing without `countedAndInspected` and returns
-         * only the units ticked as sound.
-         */
-        shippingStatus: { notIn: ['DELIVERED', 'CANCELLED'] },
-      },
-    },
-    _sum: { reservedQty: true },
-  });
-  return agg._sum.reservedQty ?? 0;
+  /*
+   * THE SAME QUESTION OF THE ORDER'S ADD-ONS.
+   *
+   * «الأب سيل والكروس سيل بينحفظوا بالطلب وبالسعر، والمخزون ح يتأثر». An add-on (the offer after the order, a
+   * recommended product) is money on the order and, from now on, units on the shelf: it reserves exactly like a
+   * line, so another order cannot be promised the units it holds. Same filter, same reasons — one `where`, read by
+   * both aggregates, so the two can never disagree about which orders are still holding stock.
+   */
+  const holding = {
+    companyId,
+    productId,
+    ...(exceptOrderId ? { orderId: { not: exceptOrderId } } : {}),
+    reservedQty: { gt: 0 },
+  };
+  const order = {
+    // The order already knows its store — this side needs no migration.
+    ...(storeId ? { storeId } : {}),
+    confirmationStatus: { notIn: ['REJECTED', 'CANCELLED'] },
+    /*
+     * ── «RETURNED» IS NOT ON THIS LIST, AND THAT IS THE POINT ──
+     *
+     * The owner, 21/10: «بالمرتجعات لما يرجع لا ترجع — سواء جزئي او
+     * غيرو — للمخزون غير لما احط انو استلم المرتجع و سليم».
+     *
+     * The two that remain belong here because by then nothing is
+     * held any more: delivery CONSUMED the units (`consumeOrderStock`
+     * clears `reservedQty`) and a cancellation RELEASED them. Their
+     * reservation is already zero; skipping them only saves the read.
+     *
+     * A return is the opposite. A full return was never consumed —
+     * the units are still counted in the batches as physically on
+     * hand — and its reservation is cleared by the returns desk, when
+     * the parcel is in somebody's hands. Excluding it here meant that
+     * between «the courier says it came back» and «we have counted
+     * it», the order stopped holding its units and `availableStock`
+     * rose by exactly them.
+     *
+     * Those units are in a van, or in a courier's warehouse, or lost.
+     * The shop could promise them to the next customer, and did.
+     *
+     * ⚠️ RETURNED is set without anybody counting anything — by the
+     * door outcome «nothing taken», and by a manual transition on the
+     * shipping screen. So the hold has to outlast the status and end
+     * where the counting is: `POST /api/ops/returns`, which refuses
+     * to restore a thing without `countedAndInspected` and returns
+     * only the units ticked as sound.
+     */
+    shippingStatus: { notIn: ['DELIVERED', 'CANCELLED'] },
+  };
+  const [lines, addOns] = await Promise.all([
+    tx.orderItem.aggregate({ where: { ...holding, order }, _sum: { reservedQty: true } }),
+    tx.orderAddOn.aggregate({ where: { ...holding, order }, _sum: { reservedQty: true } }),
+  ]);
+  return (lines._sum.reservedQty ?? 0) + (addOns._sum.reservedQty ?? 0);
 }
 
 /** Units sitting in this store's production batches (what physically exists). */
@@ -181,10 +190,10 @@ function assertInTransaction(tx: Tx, what: string) {
 }
 
 export interface ReservationOutcome {
-  /** Lines whose full quantity (including gift units) is now reserved. */
+  /** Lines (and add-ons) whose full quantity (including gift units) is now reserved. */
   reserved: number;
-  /** Lines left short because stock is missing. */
-  shortages: { orderItemId: string; productId: string; productName: string; missing: number }[];
+  /** Lines left short because stock is missing. `addOn` marks a shortage on an add-on rather than a line. */
+  shortages: { orderItemId: string; productId: string; productName: string; missing: number; addOn?: true }[];
 }
 
 /**
@@ -203,6 +212,11 @@ export async function reserveOrderLines(
     where: { orderId },
     select: { id: true, companyId: true, productId: true, productName: true, quantity: true, freeQuantity: true, reservedQty: true },
   });
+  // The add-ons the customer accepted on the thank-you screen — they reserve with the lines (see `reservedElsewhere`).
+  const addOns = await tx.orderAddOn.findMany({
+    where: { orderId },
+    select: { id: true, companyId: true, productId: true, productName: true, quantity: true, reservedQty: true },
+  });
 
   /*
    * EVERY product of this order is locked BEFORE the first availability is
@@ -210,7 +224,7 @@ export async function reserveOrderLines(
    * one at a time as the loop reaches them would leave the earlier answers
    * going stale while the later locks are being waited for.
    */
-  await lockStockScopes(tx, items.map((i) => stockScopeKey(i.companyId, i.productId)));
+  await lockStockScopes(tx, [...items, ...addOns].map((i) => stockScopeKey(i.companyId, i.productId)));
 
   const outcome: ReservationOutcome = { reserved: 0, shortages: [] };
   for (const item of items) {
@@ -236,6 +250,34 @@ export async function reserveOrderLines(
       where: { id: item.id },
       data: { reservedQty: item.quantity + item.freeQuantity },
     });
+    item.reservedQty = item.quantity + item.freeQuantity;
+    outcome.reserved++;
+  }
+
+  /*
+   * THE ADD-ONS, AFTER THE LINES, BY THE SAME RULE.
+   *
+   * `availableStock` leaves this whole order out, so an add-on of a product the order ALSO buys as a line would be
+   * told the line's units are still free. What this order already holds of the product — its lines just above, and
+   * the add-ons before this one — comes off first.
+   */
+  const heldHere = new Map<string, number>();
+  for (const i of items) heldHere.set(i.productId, (heldHere.get(i.productId) ?? 0) + i.reservedQty);
+  for (const addOn of addOns) {
+    const need = addOn.quantity - addOn.reservedQty;
+    if (need <= 0) {
+      outcome.reserved++;
+      continue;
+    }
+    const held = heldHere.get(addOn.productId) ?? 0;
+    const available = (await availableStock(tx, addOn.companyId, addOn.productId, orderId)) - held;
+    const missing = Math.max(0, need - available);
+    if (missing > 0) {
+      outcome.shortages.push({ orderItemId: addOn.id, productId: addOn.productId, productName: addOn.productName, missing, addOn: true });
+      if (!opts.allowNegativeStock) continue; // stays unreserved — blocks READY_TO_SHIP like a line
+    }
+    await tx.orderAddOn.update({ where: { id: addOn.id }, data: { reservedQty: addOn.quantity } });
+    heldHere.set(addOn.productId, held + addOn.quantity);
     outcome.reserved++;
   }
   return outcome;
@@ -255,13 +297,23 @@ export async function releaseOrderLines(tx: Tx, orderId: string): Promise<number
     where: { orderId, reservedQty: { gt: 0 } },
     data: { reservedQty: 0 },
   });
-  return res.count;
+  // And the add-ons' — a cancelled order must not keep holding the offer it accepted.
+  const addOns = await tx.orderAddOn.updateMany({
+    where: { orderId, reservedQty: { gt: 0 } },
+    data: { reservedQty: 0 },
+  });
+  return res.count + addOns.count;
 }
 
 /** Lines of an order in the shape the READY_TO_SHIP guard expects. */
 export async function orderLinesForGuard(tx: Tx, orderId: string) {
-  return tx.orderItem.findMany({
-    where: { orderId },
-    select: { quantity: true, freeQuantity: true, reservedQty: true },
-  });
+  const [lines, addOns] = await Promise.all([
+    tx.orderItem.findMany({
+      where: { orderId },
+      select: { quantity: true, freeQuantity: true, reservedQty: true },
+    }),
+    tx.orderAddOn.findMany({ where: { orderId }, select: { quantity: true, reservedQty: true } }),
+  ]);
+  // An add-on short of stock holds the parcel back exactly like a line: the customer was promised it.
+  return [...lines, ...addOns.map((a) => ({ quantity: a.quantity, freeQuantity: 0, reservedQty: a.reservedQty }))];
 }

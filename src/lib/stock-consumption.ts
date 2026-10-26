@@ -112,6 +112,8 @@ export async function consumeOrderStock(
       items: {
         select: { productId: true, productName: true, quantity: true, freeQuantity: true, reservedQty: true },
       },
+      // The add-ons the customer accepted after ordering leave in the same parcel — see the loop below.
+      addOns: { select: { productId: true, productName: true, quantity: true } },
       // The currency's minor unit, read from the order rather than asked of
       // the caller: it is a property of the order, and four callers would
       // otherwise each have to find it and could each find a different one.
@@ -126,7 +128,18 @@ export async function consumeOrderStock(
   let short = 0;
   let cost = 0;
 
-  for (const line of order.items) {
+  /*
+   * THE ADD-ONS LEAVE IN THE SAME PARCEL.
+   *
+   * «الأب سيل والكروس سيل … المخزون ح يتأثر». The offer accepted after the order and a recommended product are goods
+   * the courier hands over with the rest; they were charged (`computeCod` carries them) and never drawn down, so the
+   * shelf kept units that were sold. They are lines here, with no gift units — an add-on has none (`offers.ts`).
+   */
+  const lines = [
+    ...order.items,
+    ...(order.addOns ?? []).map((a) => ({ productId: a.productId, productName: a.productName, quantity: a.quantity, freeQuantity: 0 })),
+  ];
+  for (const line of lines) {
     // The gift units are goods too. Leaving them in stock is how a shelf
     // ends up holding inventory that was given away.
     const need = line.quantity + line.freeQuantity;
@@ -179,6 +192,10 @@ export async function consumeOrderStock(
 
   // The reservation has served its purpose: the units are gone, not held.
   await tx.orderItem.updateMany({
+    where: { orderId: input.orderId, reservedQty: { gt: 0 } },
+    data: { reservedQty: 0 },
+  });
+  await tx.orderAddOn.updateMany({
     where: { orderId: input.orderId, reservedQty: { gt: 0 } },
     data: { reservedQty: 0 },
   });
@@ -350,6 +367,8 @@ export async function restoreOrderStock(
        */
       storeId: true,
       items: { select: { productId: true, quantity: true, freeQuantity: true } },
+      // Counted back in after the lines: they left in the same parcel (`consumeOrderStock`).
+      addOns: { select: { productId: true, quantity: true } },
       // Read from the order for the same reason `consumeOrderStock` reads it:
       // the currency is the order's, and asking each caller to find it is how
       // two of them find different answers.
@@ -369,7 +388,8 @@ export async function restoreOrderStock(
   let damagedLeft = Math.max(0, Math.trunc(input.damagedQty ?? 0));
   const soundTotal = input.receivedQty;
 
-  for (const line of order.items) {
+  const returnLines = [...order.items, ...(order.addOns ?? []).map((a) => ({ productId: a.productId, quantity: a.quantity, freeQuantity: 0 }))];
+  for (const line of returnLines) {
     if (remaining <= 0) break;
     const take = Math.min(remaining, line.quantity + line.freeQuantity);
     if (take <= 0) continue;
