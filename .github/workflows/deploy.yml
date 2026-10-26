@@ -1,0 +1,48 @@
+name: Deploy
+
+# «دمج تلقائي لجيت هاب وديبلوي تلقائي لكوليفاي». A PR merges itself the moment `check` is green (auto-merge, with
+# `check` required on main); this tells Coolify to deploy what was merged — only after CI passed on that very push.
+#
+# WHY A STEP AND NOT COOLIFY'S OWN WEBHOOK. Coolify builds this app from `iahmed30004000-wq/zaki-ai-OSM` through its
+# GitHub App, and matches the App's push notice to an application by the repository's numeric id — which still holds
+# the id of the repository the app was first created from. The notice arrives (200) and deploys nothing; Coolify turns
+# manual webhooks off for App-connected applications. Its deploy endpoint is the one door left.
+#
+# Only on the repository Coolify deploys from: the MKory18 mirrors receive the same commits and must deploy nothing.
+# Without the `COOLIFY_TOKEN` secret it says so and stops — a missing token never fails CI or blocks a merge.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.repository == 'iahmed30004000-wq/zaki-ai-OSM' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tell Coolify to deploy the merged commit
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          if [ -z "${COOLIFY_TOKEN:-}" ]; then
+            echo "::notice::لا يوجد سر COOLIFY_TOKEN في المستودع — النشر لـ ${SHA} يدوي من Coolify هذه المرة"
+            exit 0
+          fi
+          echo "النشر لـ ${SHA}"
+          curl -fsS --max-time 30 \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            "https://coolify.zakiai.io/api/v1/deploy?uuid=fremau2p3dfbc2fvilitgxg7&force=false"
