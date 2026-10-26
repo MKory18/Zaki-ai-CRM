@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { whatsappHref } from '@/lib/store-contact';
 import { ORDER_PLACED } from '@/lib/order-placed-event';
 import { leaveFor } from '@/lib/leave-for';
+import { RiWhatsappLine } from '@/components/storefront/icons';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
 /**
@@ -139,7 +140,21 @@ interface OrderFormProps {
    * The WhatsApp button after the order, as the form block sets it: on/off, its words, the message (`{رقم_الطلب}`
    * becomes the number) and whether WhatsApp opens by itself. Absent = the button as it always was.
    */
-  afterOrderWhatsapp?: { enabled?: boolean; label?: string; message?: string; autoOpen?: boolean };
+  afterOrderWhatsapp?: {
+    enabled?: boolean;
+    label?: string;
+    message?: string;
+    autoOpen?: boolean;
+    /** When it appears and what it looks like — `landing-sections.ts` `whatsappWhen` and the rest. */
+    when?: 'now' | 'end' | 'delay';
+    delaySeconds?: number;
+    look?: 'outline' | 'solid' | 'green' | 'floating';
+    shape?: 'curved' | 'pill' | 'square';
+    wide?: boolean;
+    color?: string;
+    icon?: boolean;
+    pulse?: boolean;
+  };
   /** The words on the submit button, as the form block sets them; the price follows. Absent = «تأكيد الطلب». */
   submitLabel?: string;
   /**
@@ -152,6 +167,38 @@ interface OrderFormProps {
     bannerText?: string;
     upsellLook?: 'card' | 'banner' | 'compact';
     crossSellLook?: 'list' | 'cards';
+  };
+}
+
+const WHATSAPP_GREEN = '#25D366';
+
+/**
+ * The WhatsApp button's look, as inline style — the seller's colour is a value, not a class, and the page's sheet has
+ * no room left under its budget for four more looks. The default (`outline`) is the button as it always was.
+ */
+export function whatsappButtonStyle(
+  w: NonNullable<OrderFormProps['afterOrderWhatsapp']>,
+  reduceMotion: boolean
+): React.CSSProperties {
+  const look = w.look ?? 'outline';
+  const color = /^#[0-9a-fA-F]{6}$/.test(w.color ?? '') ? w.color! : '';
+  const radius = w.shape === 'pill' ? 999 : w.shape === 'square' ? 4 : 12;
+  const motion = w.pulse && !reduceMotion ? { animation: 'lp-bounce 1.8s ease-in-out infinite' } : {};
+  if (look === 'floating') {
+    return {
+      position: 'fixed', bottom: 18, insetInlineEnd: 18, zIndex: 60, width: 58, height: 58, borderRadius: 999,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      background: color || WHATSAPP_GREEN, color: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,.22)', ...motion,
+    };
+  }
+  const fill =
+    look === 'solid' ? { background: color || 'var(--store-accent,#b8256e)', color: '#fff', border: '1px solid transparent' }
+    : look === 'green' ? { background: color || WHATSAPP_GREEN, color: '#fff', border: '1px solid transparent' }
+    : { background: '#fff', color: color || '#121926', border: `1px solid ${color || '#e3e8ef'}` };
+  return {
+    marginTop: 20, display: w.wide ? 'flex' : 'inline-flex', width: w.wide ? '100%' : undefined,
+    alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: radius,
+    fontSize: 14, fontWeight: 700, textDecoration: 'none', ...fill, ...motion,
   };
 }
 
@@ -210,12 +257,15 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
     afterOrderWhatsapp?.enabled !== false && waBase && result.orderNumber
       ? `${waBase}?text=${encodeURIComponent(afterOrderMessage(afterOrderWhatsapp?.message, result.orderNumber))}`
       : null;
-  // «يحولو ع الواتس» — only when the seller chose it: a moment to read «تم تسجيل طلبك», then WhatsApp.
+  // «متى اقدر اظهر زر الواتس»: at once, after a few seconds, or last — once the offers are done (see `waShown`).
+  const waWhen = afterOrderWhatsapp?.when ?? 'now';
+  const waDelay = Math.min(120, Math.max(1, Math.round(afterOrderWhatsapp?.delaySeconds ?? 5)));
+  const [waDelayOver, setWaDelayOver] = useState(false);
   useEffect(() => {
-    if (state !== 'success' || !waAfter || !afterOrderWhatsapp?.autoOpen) return;
-    const t = window.setTimeout(() => leaveFor(waAfter), 3000);
+    if (state !== 'success' || waWhen !== 'delay') return;
+    const t = window.setTimeout(() => setWaDelayOver(true), waDelay * 1000);
     return () => window.clearTimeout(t);
-  }, [state, waAfter, afterOrderWhatsapp?.autoOpen]);
+  }, [state, waWhen, waDelay]);
   /**
    * «العرض بعد الطلب», as the server answered it — the offer, and how long
    * it may still be taken.
@@ -588,6 +638,38 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
   const upsellOpen = !!postOrder.offer && !postOrderRefused && (postOrderState === 'idle' || postOrderState === 'adding');
   const showCrossSell = !offerRefused && !windowOver && recommendations.length > 0 && (look.flow === 'together' || !upsellOpen);
   const showUpsell = !!postOrder.offer && !postOrderRefused && !windowOver;
+  // «آخر شي»: the bundle answered (or none), and the suggestions answered — refused, or one of them added.
+  const offersDone = !upsellOpen && (!showCrossSell || Object.values(addons).includes('added'));
+  const waShown =
+    !!waAfter && (waWhen === 'now' || (waWhen === 'delay' && waDelayOver) || (waWhen === 'end' && (offersDone || windowOver)));
+  const waFloating = afterOrderWhatsapp?.look === 'floating';
+  // «يحولو ع الواتس» — only when the seller chose it: three seconds after the button is on the screen, so the
+  // customer has read «تم تسجيل طلبك» and seen where they are going.
+  useEffect(() => {
+    if (!waShown || !waAfter || !afterOrderWhatsapp?.autoOpen) return;
+    const t = window.setTimeout(() => leaveFor(waAfter), 3000);
+    return () => window.clearTimeout(t);
+  }, [waShown, waAfter, afterOrderWhatsapp?.autoOpen]);
+  const reduceMotion = useMemo(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
+  const waLabel = afterOrderWhatsapp?.label?.trim() || 'أكّد طلبك على واتساب';
+  const waButton = waShown && waAfter ? (
+    <a
+      href={waAfter}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="lp-wa-after"
+      data-look={afterOrderWhatsapp?.look ?? 'outline'}
+      // The round corner button shows the icon alone; its words are still what a screen reader says.
+      aria-label={waFloating ? waLabel : undefined}
+      style={whatsappButtonStyle(afterOrderWhatsapp ?? {}, reduceMotion)}
+    >
+      {(afterOrderWhatsapp?.icon || waFloating) && <RiWhatsappLine size={waFloating ? 30 : 20} aria-hidden />}
+      {!waFloating && <span>{waLabel}</span>}
+    </a>
+  ) : null;
 
   const inputCls =
     'w-full rounded-xl border border-[#e3e8ef] bg-white px-4 py-3 text-base text-[#121926] placeholder:text-[#9aa4b2] focus:outline-none focus:ring-2 focus:ring-[var(--store-accent-border,#e8b9d0)] focus:border-[var(--store-accent,#b8256e)] transition-colors';
@@ -669,16 +751,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 the message carries the order number, so the person on the
                 other end is not asking «شو رقم طلبك؟» first.
               */}
-              {waAfter && (
-                <a
-                  href={waAfter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-[#e3e8ef] px-5 py-3 text-sm font-bold text-[#121926] hover:border-[var(--store-accent,#b8256e)]"
-                >
-                  {afterOrderWhatsapp?.label?.trim() || 'أكّد طلبك على واتساب'}
-                </a>
-              )}
+              {waAfter && (waWhen !== 'end' || waFloating) && waButton}
 
               {/*
                 ═══════════════════════════════════════════════════════════
@@ -851,6 +924,9 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                   </button>
                 </div>
               )}
+
+              {/* «آخر شي»: the button under the offers, once the customer is done with them. */}
+              {waAfter && waWhen === 'end' && !waFloating && <div>{waButton}</div>}
             </div>
           ) : (
             <form onSubmit={onSubmit} onFocusCapture={startCheckout} noValidate className={formStyle === 'compact' ? 'px-5 py-6 lp-form-compact' : 'space-y-4 px-5 py-6'}>
