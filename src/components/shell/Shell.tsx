@@ -9,6 +9,7 @@ import { NotificationsProvider } from './NotificationsProvider';
 import { NotificationCards } from './NotificationCards';
 import { MobileNav } from './MobileNav';
 import { OfflineWatch } from './OfflineWatch';
+import { InstallAppStrip } from './InstallApp';
 import { Watermark } from './Watermark';
 import { IdleGuard } from './IdleGuard';
 import { CommandPalette, useCommandPalette } from './CommandPalette';
@@ -77,6 +78,8 @@ export function Shell({
           context={context}
           onSearchClick={() => palette.setOpen(true)}
         />
+        {/* The phone's offer to install, seen without opening a menu. See InstallApp.tsx. */}
+        <InstallAppStrip />
         {/* The bar at the bottom is fixed, so the page needs room under it
             or the last row of every screen sits behind the thumb that is
             trying to read it. */}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { signOut } from '@/lib/sign-out';
 import { NotificationBell } from '@/components/shell/NotificationBell';
 import { MyWork } from './MyWork';
+import { InstallAppButton } from './InstallApp';
 import { ShiftChip } from '@/components/attendance/ShiftChip';
 import { ROLE_LABELS } from '@/types/auth';
 import { RiLogoutBoxLine, RiMenuLine, RiRepeatLine, RiSearchLine, RiStore2Line } from '@remixicon/react';
@@ -142,6 +143,9 @@ export function Header({
         rows is ordinary; a page that scrolls sideways is not.
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-3 md:mr-auto lg:flex-nowrap">
+        {/* «ثبّت التطبيق» — only while this browser can install and has not. See InstallApp.tsx. */}
+        <InstallAppButton />
+
         {/* Am I on shift, and how long since my last order. It lives here
             rather than above a queue: same place on every screen, beside
             the name, and never in the path of somebody clicking fast. The

@@ -153,6 +153,7 @@ describe('what the browser is allowed to remember', () => {
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'growth/CampaignsBoard.tsx': 'which of the three campaign views this person last picked — a word, never a record',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',
+    'shell/InstallApp.tsx': 'when «ليس الآن» was pressed on the install strip — a timestamp, nothing about a person or a record',
     'ui/SavedViews.tsx': 'a name and a query string — a question to re-ask, never an answer or a record id',
     'storefront/RecentlyViewed.tsx':
       'a shopper’s own «شوهد مؤخراً» — product ids, one key per shop. Never sent anywhere except to ask what those products are, never stored against a person, and nothing in it names one',
