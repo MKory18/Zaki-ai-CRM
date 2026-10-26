@@ -1448,7 +1448,8 @@ function SectionFields({
             <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
               {([
                 ['cards', 'بطاقات'],
-                ['radio', 'قائمة اختيار'],
+                ['radio', 'اختيار بدوائر'],
+                ['select', 'قائمة منسدلة'],
               ] as const).map(([v, label]) => (
                 <button
                   key={v}

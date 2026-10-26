@@ -484,10 +484,11 @@ const form = z.object({
   formStyle: z.enum(['card', 'compact']).default('card'),
   /**
    * HOW THE BUNDLE IS CHOSEN INSIDE THE FORM. `cards` is what it always was; `radio` is a plain list with a
-   * radio button per bundle («عبوة عدد 2 = 35 دولار») under «اختر الكمية». Display only: the choice is still the
-   * offer's id, and the server prices it.
+   * radio button per bundle («عبوة عدد 2 = 35 دولار») under «اختر الكمية»; `select` is a dropdown — «العرض خيار دروب
+   * داون ليست» — the one the form already drew when the page had its own offers block, now the seller's to choose.
+   * Display only: the choice is still the offer's id, and the server prices it.
    */
-  offerStyle: z.enum(['cards', 'radio']).default('cards'),
+  offerStyle: z.enum(['cards', 'radio', 'select']).default('cards'),
   /**
    * AFTER THE ORDER: the WhatsApp button on the thank-you screen — «تواصل معنا عبر الواتس بعد ما يتمم الطلب… اقدر اعدل
    * النص والرقم». On by default with the words it always had, so a saved page reads as before. `{رقم_الطلب}` in the

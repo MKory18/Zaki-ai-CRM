@@ -98,6 +98,32 @@ describe('the offer list, as radios', () => {
   });
 });
 
+describe('the offer list, as a dropdown — «العرض خيار دروب داون ليست»', () => {
+  it('draws one dropdown with every bundle and its price, and no radios or cards', () => {
+    form({ offerStyle: 'select' });
+    const select = screen.getByLabelText('العرض المختار') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual([
+      'عبوة واحدة — 1 قطعة — 20 USD',
+      'عبوتان — 2 قطعة — 35 USD',
+      'قطعتان — 2 قطعة + 1 هدية — 50 USD',
+    ]);
+    expect(select.value).toBe('o1');
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+  });
+
+  it('choosing another bundle in it moves the selection', () => {
+    form({ offerStyle: 'select' });
+    const select = screen.getByLabelText('العرض المختار') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'o2' } });
+    expect(select.value).toBe('o2');
+  });
+
+  it('NEGATIVE: a page whose own offers block is the picker still gets exactly one dropdown, not two', () => {
+    form({ offerStyle: 'select', showOfferPicker: false });
+    expect(screen.getAllByLabelText('العرض المختار')).toHaveLength(1);
+  });
+});
+
 describe('the compact form', () => {
   const ofForm = () => document.querySelector('form') as HTMLFormElement;
   const half = () => [...document.querySelectorAll('.lp-half')].map((e) => e.querySelector('input')?.name);
@@ -130,6 +156,7 @@ describe('the form block', () => {
 
   it('accepts the two new looks, and refuses anything else', () => {
     expect(landingSectionSchema.safeParse({ ...newSection('form'), formStyle: 'compact', offerStyle: 'radio' }).success).toBe(true);
+    expect(landingSectionSchema.safeParse({ ...newSection('form'), offerStyle: 'select' }).success).toBe(true);
     expect(landingSectionSchema.safeParse({ ...newSection('form'), formStyle: 'wide' }).success).toBe(false);
     expect(landingSectionSchema.safeParse({ ...newSection('form'), offerStyle: 'grid' }).success).toBe(false);
   });
