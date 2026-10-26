@@ -969,7 +969,7 @@ function SectionFields({
                   type="button"
                   onClick={() => patch({ layout: v })}
                   className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                    s.layout === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    s.layout === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                   }`}
                 >
                   {label}
@@ -1009,7 +1009,7 @@ function SectionFields({
                   type="button"
                   onClick={() => patch({ source: v })}
                   className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                    s.source === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    s.source === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                   }`}
                 >
                   {label}
@@ -1435,7 +1435,7 @@ function SectionFields({
                   type="button"
                   onClick={() => patch({ formStyle: v })}
                   className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                    s.formStyle === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    s.formStyle === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                   }`}
                 >
                   {label}
@@ -1456,7 +1456,7 @@ function SectionFields({
                   type="button"
                   onClick={() => patch({ offerStyle: v })}
                   className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                    s.offerStyle === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    s.offerStyle === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                   }`}
                 >
                   {label}
@@ -1554,7 +1554,7 @@ function SectionFields({
                   type="button"
                   onClick={() => patch({ motion: v })}
                   className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                    s.motion === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                    s.motion === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                   }`}
                 >
                   {label}
@@ -1576,7 +1576,7 @@ function SectionFields({
                     type="button"
                     onClick={() => patch({ motionSpeed: v })}
                     className={`flex-1 rounded-sm px-2 py-1.5 text-xs font-bold transition ${
-                      s.motionSpeed === v ? 'bg-[var(--sys-card)] text-[#0f172a] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[#0f172a]'
+                      s.motionSpeed === v ? 'bg-[var(--sys-card)] text-[var(--sys-heading)] shadow-raised' : 'text-[var(--sys-muted-foreground)] hover:text-[var(--sys-heading)]'
                     }`}
                   >
                     {label}
