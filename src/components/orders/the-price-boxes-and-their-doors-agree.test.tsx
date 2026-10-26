@@ -261,6 +261,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   sent = [];
   freshDoors();
+  // No bundle on this product: the reviewer's figure is the price. With one, the write asks
+  // for the offer's price for that quantity (RV151) — `ai-intake-discount.test.ts` owns that.
+  activeOffersFor.mockResolvedValue([]);
 
   apiJson.mockImplementation(async (path: string) => {
     if (path.startsWith('/api/products')) return { products: [PRODUCT] };

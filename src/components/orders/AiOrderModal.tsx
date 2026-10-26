@@ -58,6 +58,12 @@ function boxFor(value: number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value);
 }
 
+interface OfferPrice {
+  quantity: number;
+  price: number;
+  name: string;
+}
+
 interface AiOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -81,6 +87,12 @@ interface ParseResult {
   productMatchConfident: boolean;
   suggestedPrice: number | null;
   suggestedOfferName: string | null;
+  /** The box holds the offer's price for exactly this quantity (RV151). */
+  priceFromOffer?: boolean;
+  /** What the customer's message named, when the offer's price was put in its place. */
+  typedPrice?: number | null;
+  /** The matched product's bundles: quantity → the price the order is written at. */
+  offerPrices?: OfferPrice[];
   // What the preview may say depends on the reader's customers key: the name and count, the name alone, or only that the number is known.
   existingCustomer: { exists: true; fullName?: string; totalOrders?: number; city?: string } | null;
   /**
@@ -120,6 +132,16 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
    */
   const [priceTyped, setPriceTyped] = useState('');
   const [quantityTyped, setQuantityTyped] = useState('');
+  /*
+   * THE BUNDLES OF THE PRODUCT IN THE BOX, AND WHOSE THEY ARE.
+   *
+   * Through this door the order is written at the offer's price for its
+   * quantity (the owner's ruling, RV151), so the box follows the quantity
+   * and is locked while an offer covers it. Known for the product the parse
+   * matched; a product changed by hand is priced by the door, which answers
+   * with the offer's price and the box takes it from there.
+   */
+  const [offers, setOffers] = useState<{ productId: string; list: OfferPrice[] }>({ productId: '', list: [] });
   /** The price this screen prints on its own button — never a figure it invented. */
   const priceFigure = typedFigure(priceTyped);
   /** Read only to SAY what the total covers — never to divide anything by. */
@@ -136,6 +158,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       setProductId('');
       setPriceTyped('');
       setQuantityTyped('');
+      setOffers({ productId: '', list: [] });
     }
   }, [isOpen]);
 
@@ -162,6 +185,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       if (!res.ok) throw new Error(data.error || 'فشل تحليل الطلب');
       setResult(data);
       if (data.matchedProduct) setProductId(data.matchedProduct.id);
+      setOffers({ productId: data.matchedProduct?.id ?? '', list: data.offerPrices ?? [] });
       // The server's suggestion, or the price the message itself named, or an
       // EMPTY BOX. The old `?? 0` made «the message named no price» and «the
       // customer pays nothing» the same opening state.
@@ -203,10 +227,30 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
              */
             quantity: onTheWire(quantityTyped),
             finalPrice: onTheWire(priceTyped),
+            // Kept in the order's history, never charged.
+            typedPrice: result.typedPrice ?? undefined,
           },
         }),
       });
       const data = await res.json();
+      /*
+       * THE DOOR PRICED IT FROM THE OFFER. The box takes the offer's price
+       * and locks, and the reviewer presses again with the figure in front
+       * of them — nothing is saved at a number the button did not show.
+       */
+      if (res.status === 409 && data.code === 'OFFER_PRICE' && typeof data.offerPrice === 'number') {
+        const q = typedFigure(quantityTyped);
+        if (q !== undefined) {
+          const bundle = { quantity: q, price: data.offerPrice, name: String(data.offerName ?? '') };
+          setOffers((o) => ({
+            productId,
+            list: [...(o.productId === productId ? o.list : []).filter((x) => x.quantity !== q), bundle],
+          }));
+        }
+        setPriceTyped(boxFor(data.offerPrice));
+        toast.warn(data.error);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'فشل حفظ الطلب');
       /*
        * THE SAME NOTICE THE OTHER ENTRY WINDOW SHOWS. Pasting a message in
@@ -226,6 +270,11 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
   };
 
   const p = result?.parsed;
+  /** The bundle that prices this product at this quantity, when there is one: the box is its price and is locked. */
+  const offerNow =
+    offers.productId && offers.productId === productId && quantityFigure !== undefined
+      ? offers.list.find((o) => o.quantity === quantityFigure)
+      : undefined;
 
   return (
     <Modal
@@ -296,6 +345,20 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
                 مستخرج الطلبات بالذكاء يعمل على نموذج محلي فقط حمايةً لبيانات الزبون، فقُرئ النص بالقواعد.
                 لتشغيله: إعدادات الذكاء ← المساعدون ← مستخرج الطلبات ← نموذج على خادمك.
+              </div>
+            )}
+
+            {/*
+              THE CUSTOMER NAMED ANOTHER PRICE. It was the figure the box opened
+              on, and one keystroke made it the charge; the offer's price is
+              written now, and the customer's figure is said here — where the
+              reviewer is about to call them — and kept in the order's history.
+            */}
+            {result.typedPrice != null && (
+              <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
+                <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
+                الزبون كتب سعراً <strong>{result.typedPrice}</strong>، ويُسجَّل الطلب بسعر العرض
+                {result.suggestedPrice != null && <> <strong>{result.suggestedPrice}</strong></>} — راجعه معه عند التأكيد.
               </div>
             )}
 
@@ -399,6 +462,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                      * absent price by name, so nothing is written blind.
                      */
                     setPriceTyped('');
+                    setOffers({ productId: id, list: [] });
                   }}
                 />
               </div>
@@ -409,7 +473,13 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 type="number"
                 min="1"
                 value={quantityTyped}
-                onChange={(e) => setQuantityTyped(e.target.value)}
+                onChange={(e) => {
+                  setQuantityTyped(e.target.value);
+                  // A quantity an offer covers takes that offer's price.
+                  const q = typedFigure(e.target.value);
+                  const bundle = offers.productId === productId ? offers.list.find((o) => o.quantity === q) : undefined;
+                  if (bundle) setPriceTyped(boxFor(bundle.price));
+                }}
               />
 
               {/*
@@ -444,10 +514,13 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 step="0.01"
                 value={priceTyped}
                 onChange={(e) => setPriceTyped(e.target.value)}
+                disabled={!!offerNow}
                 helperText={
-                  quantityFigure !== undefined && quantityFigure > 1
-                    ? `للكمية كلّها (${quantityFigure} قطعة) — لا لقطعة واحدة`
-                    : 'إجمالي ما يُحصَّل عن هذا السطر'
+                  offerNow
+                    ? `سعر العرض «${offerNow.name}» — يُسجَّل كما هو`
+                    : quantityFigure !== undefined && quantityFigure > 1
+                      ? `للكمية كلّها (${quantityFigure} قطعة) — لا لقطعة واحدة`
+                      : 'إجمالي ما يُحصَّل عن هذا السطر'
                 }
               />
             </div>
