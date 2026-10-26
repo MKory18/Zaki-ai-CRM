@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { activeBlock } from '@/lib/blacklist';
-import { normalizePhoneNumber } from '@/lib/phone';
+import { phoneKeysAnyStore } from '@/lib/phone-rules';
 import { realStoresOnly } from '@/lib/test-store';
 import { requireSystemToken } from '@/lib/v1/system-token';
 import { V1_CODE, V1Fault, v1ErrorResponse, v1Ok, requestIdOf } from '@/lib/v1/door';
@@ -43,10 +43,9 @@ export async function GET(req: Request) {
       throw new V1Fault(422, V1_CODE.VALIDATION_FAILED, 'phone is required', { field: 'phone' });
     }
 
-    // The same normaliser every other door identifies a customer with. A
-    // second spelling of «the same number» here would make this endpoint
-    // disagree with the order door about whether a person is known.
-    const phone = normalizePhoneNumber(raw);
+    // The same reading every other door identifies a customer with, in every form a store may have kept it in
+    // (`phoneKeysAnyStore`): a second spelling of «the same number» here would make this endpoint disagree with the
+    // order door about whether a person is known.
 
     /*
      * ACROSS THE COMPANY'S REAL STORES, NOT ONE OF THEM.
@@ -59,7 +58,8 @@ export async function GET(req: Request) {
      * figures enter no calculation.
      */
     const rows = await db.customer.findMany({
-      where: { companyId: caller.companyId, phone, ...realStoresOnly() },
+      // Both stored forms of a foreign number — with its code (RV136) and without (before it).
+      where: { companyId: caller.companyId, phone: { in: phoneKeysAnyStore(raw) }, ...realStoresOnly() },
       select: { id: true, totalOrders: true, storeId: true },
     });
 

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
-import { canonicalPhone } from './phone-rules';
+import { canonicalPhone, phoneKeys } from './phone-rules';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -39,21 +39,25 @@ export interface ActiveBlock {
 export async function activeBlock(
   tx: Tx,
   companyId: string,
-  rawPhone: string
+  rawPhone: string,
+  countryCode?: string | null
 ): Promise<ActiveBlock | null> {
-  const phone = canonicalPhone(rawPhone);
-  if (!phone) return null;
+  // Every form the number may be stored in: as read without a country, as the store reads it (a foreign number keeps
+  // its code, RV136), and the older code-less form of either. A block is company-wide; the store it was written from
+  // must not decide whether it holds.
+  const keys = [...new Set([...phoneKeys(canonicalPhone(rawPhone)), ...phoneKeys(canonicalPhone(rawPhone, countryCode))])];
+  if (keys.length === 0) return null;
 
   return tx.customerBlock.findFirst({
-    where: { companyId, phone, releasedAt: null },
+    where: { companyId, phone: { in: keys }, releasedAt: null },
     orderBy: { createdAt: 'desc' },
     select: { id: true, phone: true, name: true, reason: true, createdAt: true, blockedById: true },
   });
 }
 
 /** True when this phone may not place an order. */
-export async function isBlocked(tx: Tx, companyId: string, rawPhone: string): Promise<boolean> {
-  return (await activeBlock(tx, companyId, rawPhone)) !== null;
+export async function isBlocked(tx: Tx, companyId: string, rawPhone: string, countryCode?: string | null): Promise<boolean> {
+  return (await activeBlock(tx, companyId, rawPhone, countryCode)) !== null;
 }
 
 /**
@@ -76,7 +80,8 @@ export async function blockPhone(
   tx: Tx,
   input: { companyId: string; phone: string; name?: string | null; reason: string; blockedById: string }
 ) {
-  const phone = canonicalPhone(input.phone);
+  // Stored in the code-less form, the one every reading of the number shares — `activeBlock` finds it from any of them.
+  const phone = phoneKeys(canonicalPhone(input.phone)).at(-1) ?? '';
   if (!phone) throw new Error('رقم هاتف غير صالح');
   if (!input.reason.trim()) throw new Error('سبب الحظر إلزامي');
 

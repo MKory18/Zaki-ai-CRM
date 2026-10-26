@@ -13,7 +13,7 @@ import { ORDER_ACCESS_STATUS, assertOrderAccess, assertOrderReadable, applyQueue
 import { logAudit } from '@/lib/audit';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { ordersWhere } from '@/lib/order-filters';
-import { isValidPhoneFor, phoneErrorFor, ruleFor } from '@/lib/phone-rules';
+import { isValidPhoneFor, phoneErrorFor, phoneKeys, ruleFor } from '@/lib/phone-rules';
 import { CONFIRMATION_STATUSES } from '@/lib/confirmation-workflow';
 import { SHIPPING_STATUSES } from '@/lib/shipping-workflow';
 import { apiError } from '@/lib/api-error';
@@ -1200,9 +1200,9 @@ export async function PATCH(
     }
 
     if (editingCustomer && customerPhone !== undefined) {
-      const normalized = normalizePhoneNumber(customerPhone);
+      const normalized = normalizePhoneNumber(customerPhone, country.code);
       const dupe = await db.customer.findFirst({
-        where: { companyId, phone: normalized, id: { not: existing.customerId } },
+        where: { companyId, phone: { in: phoneKeys(normalized) }, id: { not: existing.customerId } },
         select: { id: true, fullName: true },
       });
       if (dupe) {
@@ -1285,7 +1285,7 @@ export async function PATCH(
         // Keep the written city in step with the chosen governorate.
         if (regionName !== undefined) custData.city = regionName;
         if (customerPhone !== undefined) {
-          custData.phone = normalizePhoneNumber(customerPhone);
+          custData.phone = normalizePhoneNumber(customerPhone, country.code);
           custData.rawPhone = customerPhone;
         }
         if (customerAltPhone !== undefined) {

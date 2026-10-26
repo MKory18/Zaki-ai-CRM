@@ -374,7 +374,7 @@ export async function createSystemOrder(
     throw new V1Fault(422, V1_CODE.CUSTOMER_BLACKLISTED, 'This phone may not place an order');
   }
 
-  const normalizedPhone = normalizePhoneNumber(input.customer.phone);
+  const normalizedPhone = normalizePhoneNumber(input.customer.phone, country.code);
   const customer = await findOrCreateCustomer(db, {
     companyId,
     storeId: store.id,

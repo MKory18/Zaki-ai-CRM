@@ -29,7 +29,7 @@ describe('matching a phone', () => {
 
     // What it searched on is the canonical form, not the typing.
     const where = db.customerBlock.findFirst.mock.calls[0][0].where;
-    expect(where.phone).toBe('790123456');
+    expect(where.phone.in).toContain('790123456');
   });
 
   it('sees through the international form — the way around a block', async () => {
@@ -42,11 +42,11 @@ describe('matching a phone', () => {
     for (const form of forms) {
       db.customerBlock.findFirst.mockClear();
       await isBlocked(db as never, 'c1', form);
-      searched.add(db.customerBlock.findFirst.mock.calls[0][0].where.phone);
+      for (const k of db.customerBlock.findFirst.mock.calls[0][0].where.phone.in) searched.add(k);
     }
 
-    // Local and +963 forms agree; the bare 963… without a + is ambiguous by
-    // design and is left alone rather than guessed at.
+    // Local and +963 forms agree; the bare 963… is asked about as itself AND as the code-less form it reads as at
+    // eleven digits or more (`phoneKeys`) — a block cannot be walked round by dropping the +.
     expect(searched.has('966793918')).toBe(true);
   });
 
@@ -59,7 +59,9 @@ describe('matching a phone', () => {
     await isBlocked(db as never, 'c1', '+966793918');
     const saudi = db.customerBlock.findFirst.mock.calls[0][0].where.phone;
 
-    expect(local).not.toBe(saudi);
+    // Two different numbers: no form of the one is a form of the other.
+    expect(local.in).toEqual(['966793918']);
+    expect(saudi.in).not.toContain('966793918');
   });
 
   it('only counts a block that has not been released', async () => {

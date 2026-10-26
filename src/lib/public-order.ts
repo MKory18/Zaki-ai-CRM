@@ -306,7 +306,7 @@ export async function createPublicOrder(
     return { ok: false, status: 400, body: { error: 'تعذر إرسال الطلب' } };
   }
 
-  const normalizedPhone = normalizePhoneNumber(v.phone);
+  const normalizedPhone = normalizePhoneNumber(v.phone, store.country.code);
   if (normalizedPhone.length < 7 || normalizedPhone.length > 15) {
     return { ok: false, status: 400, body: { error: 'رقم الهاتف غير صالح' } };
   }
@@ -368,7 +368,7 @@ export async function createPublicOrder(
     rawPhone: v.phone,
     fullName: v.full_name,
     // Stored when given; the phone above stays the identity.
-    altPhone: v.alt_phone ? normalizePhoneNumber(v.alt_phone) : null,
+    altPhone: v.alt_phone ? normalizePhoneNumber(v.alt_phone, store.country.code) : null,
     address: v.address,
     city: v.city,
     notes: v.notes || null,

@@ -13,6 +13,7 @@ import { count, money as amount, readTypedFigure } from '@/lib/numeric-input';
 import { productCost } from '@/lib/product-cost';
 import { parseOrderText, matchProduct, normalizeArabic, ParsedOrder } from '@/lib/order-parser';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { phoneKeys } from '@/lib/phone-rules';
 import { toLatinDigits } from '@/lib/latin-digits';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
@@ -168,7 +169,7 @@ export async function POST(req: Request) {
 
       // What the reviewer's box held may still be Arabic-Indic digits (they can type them): stored and checked as Latin.
       const phone = toLatinDigits(p.phone);
-      const normalizedPhone = normalizePhoneNumber(phone);
+      const normalizedPhone = normalizePhoneNumber(phone, country.code);
 
       // Blacklist, company-wide. Staff get the real reason.
       const block = await activeBlock(db, companyId, phone);
@@ -559,11 +560,11 @@ export async function POST(req: Request) {
     // Duplicate customer check
     let existingCustomer = null;
     if (parsed.phone) {
-      const normalizedPhone = normalizePhoneNumber(parsed.phone);
+      const normalizedPhone = normalizePhoneNumber(parsed.phone, country.code);
       // This store's customer. Telling an agent "3 previous orders" from
       // another store's history is a fact about somebody else's shop.
       existingCustomer = await db.customer.findFirst({
-        where: { companyId, storeId, phone: normalizedPhone },
+        where: { companyId, storeId, phone: { in: phoneKeys(normalizedPhone) } },
         select: { fullName: true, totalOrders: true, city: true },
       });
     }

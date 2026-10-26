@@ -300,7 +300,7 @@ export async function POST(req: Request) {
     }
 
     // 1. Duplicate check / Customer creation (reuse on a P2002 race)
-    const normalizedPhone = normalizePhoneNumber(customerPhone);
+    const normalizedPhone = normalizePhoneNumber(customerPhone, country.code);
 
     // ─── Blacklist, company-wide ───
     // Staff get the real reason: they are the ones who decide whether to

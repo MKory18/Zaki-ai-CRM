@@ -19,8 +19,10 @@ import { canonicalPhone, isForeignNumber, ruleFor } from './phone-rules';
  * The number as the customer typed it is never lost — it is kept in
  * `rawPhone` and shown back to them.
  */
-export function normalizePhoneNumber(phone: string): string {
-  return canonicalPhone(phone);
+export function normalizePhoneNumber(phone: string, countryCode?: string | null): string {
+  // The store's country, when the caller has one, keeps a foreign number's own code (RV136) — every door that STORES a
+  // customer passes it; a search does not need to.
+  return canonicalPhone(phone, countryCode);
 }
 
 /**

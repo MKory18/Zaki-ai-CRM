@@ -88,7 +88,7 @@ const COLUMN_AR: Record<ColumnKey, string> = {
 };
 
 /** A sheet's rows (header first) as migration rows. Blank lines are skipped, never counted. */
-export function readMigrationSheet(sheet: string[][], file: string, date: string): ReadSheet {
+export function readMigrationSheet(sheet: string[][], file: string, date: string, countryCode?: string | null): ReadSheet {
   const [header = [], ...body] = sheet;
   const at: Partial<Record<ColumnKey, number>> = {};
   header.forEach((cell, i) => {
@@ -114,7 +114,7 @@ export function readMigrationSheet(sheet: string[][], file: string, date: string
       ref: cell(r, 'ref').replace(/\.0+$/, ''),
       name: cell(r, 'name'),
       rawPhone,
-      phone: rawPhone ? normalizePhoneNumber(rawPhone) : '',
+      phone: rawPhone ? normalizePhoneNumber(rawPhone, countryCode) : '',
       address: cell(r, 'address'),
       region: cell(r, 'region'),
       courier: cell(r, 'courier'),

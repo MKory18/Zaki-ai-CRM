@@ -125,7 +125,7 @@ export interface ParsedImport {
  * two bad phone numbers is ninety-eight orders somebody wants today, and
  * rejecting the file teaches them to fix it blind in Excel and try again.
  */
-export function parseOrderSheet(content: string | Buffer | Uint8Array): ParsedImport {
+export function parseOrderSheet(content: string | Buffer | Uint8Array, countryCode?: string | null): ParsedImport {
   let sheet: string[][];
 
   if (typeof content !== 'string' && looksLikeXlsx(content)) {
@@ -168,7 +168,8 @@ export function parseOrderSheet(content: string | Buffer | Uint8Array): ParsedIm
       }
     }
 
-    const phone = values.customerPhone ? normalizePhoneNumber(values.customerPhone) : null;
+    // The store's country keeps a foreign number's own code (RV136).
+    const phone = values.customerPhone ? normalizePhoneNumber(values.customerPhone, countryCode) : null;
     if (values.customerPhone && !phone) {
       problems.push({ field: 'customerPhone', kind: 'BAD_PHONE', ar: 'رقم الهاتف غير صالح' });
     }

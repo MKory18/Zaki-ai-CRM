@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { db } from './db';
+import { phoneKeys } from './phone-rules';
 
 type Tx = Prisma.TransactionClient | typeof db;
 
@@ -37,9 +38,18 @@ export interface CustomerSeed {
   notes?: string | null;
 }
 
-/** The existing customer of this store, or null. */
+/**
+ * The existing customer of this store, or null.
+ *
+ * The exact form first; then the form a foreign number was stored in before it kept its code (RV136) — so a customer
+ * who ordered as `791234567` is the same customer when they order again as `962791234567`, not a second one.
+ */
 export async function findCustomer(tx: Tx, companyId: string, storeId: string, phone: string) {
-  return tx.customer.findFirst({ where: { companyId, storeId, phone } });
+  const exact = await tx.customer.findFirst({ where: { companyId, storeId, phone } });
+  if (exact) return exact;
+  const older = phoneKeys(phone).filter((k) => k !== phone);
+  if (older.length === 0) return null;
+  return tx.customer.findFirst({ where: { companyId, storeId, phone: { in: older } } });
 }
 
 /**

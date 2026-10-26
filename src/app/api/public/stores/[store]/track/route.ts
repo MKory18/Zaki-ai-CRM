@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { getStorefront } from '@/lib/storefront';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { phoneKeys } from '@/lib/phone-rules';
 import { deliveryWindows } from '@/lib/delivery-time';
 import { TRACKING_NOT_FOUND, trackingView } from '@/lib/order-tracking';
 
@@ -113,7 +114,10 @@ export async function POST(req: Request, ctx: Ctx) {
         companyId: store.companyId,
         storeId: store.id,
         orderNumber,
-        customer: { phone: normalized },
+        // As this store stores it (a foreign number keeps its code, RV136), and the older code-less form.
+        customer: {
+          phone: { in: [...new Set([...phoneKeys(normalizePhoneNumber(phone, store.countryCode)), ...phoneKeys(normalized)])] },
+        },
       },
       select: {
         // The id is read for ONE purpose: to sign the rating link

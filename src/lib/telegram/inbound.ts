@@ -249,16 +249,22 @@ export async function processStoredMessage(messageId: string): Promise<StoredPro
   // A source nobody has linked to one has no store, and a message from it
   // cannot become anybody's customer or anybody's order — it goes to review
   // rather than landing in whichever store happens to be open.
-  const storeId = message.sourceId
-    ? (await db.telegramSource.findUnique({ where: { id: message.sourceId }, select: { storeId: true } }))?.storeId ?? null
+  const source = message.sourceId
+    ? await db.telegramSource.findUnique({
+        where: { id: message.sourceId },
+        select: { storeId: true, store: { select: { country: { select: { code: true } } } } },
+      })
     : null;
+  const storeId = source?.storeId ?? null;
   if (!storeId) return review('NO_STORE');
+  // Read again as THIS store reads it, now that it is known: a foreign number keeps its own code (RV136).
+  const storedPhone = normalizePhoneNumber(parsed.phone!, source?.store?.country?.code);
 
   // ── Customer matching / creation (the shared one) ──
   const customer = await findOrCreateCustomer(db, {
     companyId,
     storeId,
-    phone,
+    phone: storedPhone,
     rawPhone: parsed.phone!.slice(0, 20),
     fullName: customerName.slice(0, 80),
     address: address.slice(0, 200),

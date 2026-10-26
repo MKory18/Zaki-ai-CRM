@@ -225,7 +225,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user, companyId, storeId } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('customers.create');
 
     const body = await req.json();
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Full Name and Phone Number are required', errorAr: 'الاسم ورقم الهاتف مطلوبان.' }, { status: 400 });
     }
 
-    const normalizedPhone = normalizePhoneNumber(phone);
+    const normalizedPhone = normalizePhoneNumber(phone, country.code);
 
     /*
      * THROUGH THE ONE OWNER, which this file already imported and never
