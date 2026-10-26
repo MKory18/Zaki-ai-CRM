@@ -80,6 +80,8 @@ describe('createShipment', () => {
     customer: { fullName: 'محمد', phone: '0790123456', address: 'شارع المدينة', regionName: 'عمّان' },
     pieces: 1,
     note: 'يرجى الاتصال قبل الوصول',
+    // Their id for the destination, from the region's fee row — the only way a parcel is addressed now.
+    cityId: 41125,
   };
 
   it('sends the merchant reference as their invoiceNumber, and the COD including delivery', async () => {
@@ -112,19 +114,43 @@ describe('createShipment', () => {
     expect(body.originAddress.cityId).toBe(36237);
   });
 
-  it('refuses rather than guessing when the city is not one of theirs', async () => {
-    const fetchImpl = ok({ data: [] });
+  /*
+   * BY ID ONLY. With no id it used to search their cities by our
+   * governorate's NAME and take the first hit — «السويدية» for «السويداء».
+   * Now it refuses, and asks their server nothing.
+   */
+  it('without their id: refuses, and makes no call at all — no name search', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ data: [{ id: 99, arabicName: 'عمّان' }] }), { status: 200 })) as unknown as typeof fetch;
     const adapter = new LogesTechsAdapter(config(fetchImpl));
-    await expect(adapter.createShipment(request)).rejects.toThrow(/CITY_UNKNOWN/);
+    const { cityId: _drop, ...noId } = request;
+    await expect(adapter.createShipment(noId)).rejects.toThrow(/CITY_UNKNOWN/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('a name search answers an exact name or nothing — never the first of several', async () => {
+    const adapter = new LogesTechsAdapter(
+      config(ok({ data: [{ id: 731235, arabicName: 'السويدية' }, { id: 1, arabicName: 'الرقة' }] })),
+    );
+    expect(await adapter.findCityId('السويداء')).toBeNull();
+    const exact = new LogesTechsAdapter(config(ok({ data: [{ id: 2, arabicName: 'السويدية' }, { id: 41125, arabicName: 'عمّان' }] })));
+    expect(await exact.findCityId('عمّان')).toBe(41125);
+  });
+
+  it('sends the second phone when there is one, as our own label prints both', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fetchImpl = vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({ barcode: 'KSA1' }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const adapter = new LogesTechsAdapter(config(fetchImpl));
+    await adapter.createShipment({ ...request, customer: { ...request.customer, altPhone: '0780000000' } });
+    expect(JSON.parse(String(calls[0].init.body)).pkg.receiverPhone2).toBe('0780000000');
+    await adapter.createShipment(request);
+    expect(JSON.parse(String(calls[1].init.body)).pkg).not.toHaveProperty('receiverPhone2');
   });
 
   it('refuses a response with no barcode — there would be nothing to track', async () => {
-    const fetchImpl = vi.fn(async (url: string) =>
-      url.includes('/addresses/cities')
-        ? new Response(JSON.stringify({ data: [{ id: 1 }] }), { status: 200 })
-        : new Response(JSON.stringify({ id: 42 }), { status: 200 })
-    ) as unknown as typeof fetch;
-
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ id: 42 }), { status: 200 })) as unknown as typeof fetch;
     const adapter = new LogesTechsAdapter(config(fetchImpl));
     await expect(adapter.createShipment(request)).rejects.toThrow(/NO_BARCODE/);
   });

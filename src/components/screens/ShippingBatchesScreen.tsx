@@ -320,7 +320,10 @@ export function ShippingBatchesScreen() {
                                 ? 'بلا شركة شحن'
                                 : o.skipped === 'SEND_IN_FLIGHT'
                                   ? 'قيد الإرسال الآن من مكانٍ آخر'
-                                  : o.error}
+                                  : o.skipped === 'NO_COURIER_CITY'
+                                    ? // Which governorate, and where its id goes — it was an English error code.
+                                      `${o.regionName ?? 'المحافظة'}: لا رمز لها عند الشركة بعد — لم يُرسَل. أدخِل رمزها من شركات الشحن ← الأجور ← «رمزها عند الشركة»، أو انقل الطلب لشركة أخرى`
+                                    : o.error}
                         </p>
                       ))}
                     {result.summary.outcomes.filter((o) => o.ok).length > 0 && (

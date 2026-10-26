@@ -42,7 +42,9 @@ export interface DispatchOutcome {
   ok: boolean;
   /** The courier's barcode — our tracking number from now on. */
   trackingNumber?: string;
-  skipped?: 'ALREADY_SENT' | 'NOT_AUTOMATED' | 'NO_PROVIDER' | 'SEND_IN_FLIGHT';
+  skipped?: 'ALREADY_SENT' | 'NOT_AUTOMATED' | 'NO_PROVIDER' | 'SEND_IN_FLIGHT' | 'NO_COURIER_CITY';
+  /** With NO_COURIER_CITY: the governorate the courier has no id for yet. */
+  regionName?: string | null;
   /**
    * True when the courier may have created the parcel and we never heard.
    * Whoever retries must ask the courier first — this is the one failure
@@ -151,7 +153,7 @@ export async function dispatchBatch(input: {
       id: true, orderNumber: true, merchantRef: true, trackingNumber: true,
       totalAmount: true, currency: true, quantity: true, freeQuantity: true,
       customerNotes: true, deliveryProviderId: true,
-      customer: { select: { fullName: true, rawPhone: true, phone: true, address: true } },
+      customer: { select: { fullName: true, rawPhone: true, phone: true, altPhone: true, address: true } },
       regionId: true,
       region: { select: { name: true } },
     },
@@ -188,6 +190,20 @@ export async function dispatchBatch(input: {
       outcomes.push({ orderId: order.id, orderNumber: order.orderNumber, ok: false, skipped: 'NOT_AUTOMATED' });
       continue;
     }
+    /*
+     * A GOVERNORATE THE COURIER HAS NO ID FOR IS REFUSED HERE — before the
+     * claim and before any call. السويداء is not in Basha's list at all; it
+     * used to be claimed, searched for by name over the network, failed with
+     * an English error code, and released. Now it says which governorate and
+     * where its id is typed, and the rest of the batch goes on.
+     */
+    if (adapter.needsCourierCityId && !cityIds.has(order.regionId ?? '')) {
+      outcomes.push({
+        orderId: order.id, orderNumber: order.orderNumber, ok: false,
+        skipped: 'NO_COURIER_CITY', regionName: order.region?.name ?? null,
+      });
+      continue;
+    }
 
     /*
      * From here on a parcel may come into existence, so the row is taken
@@ -219,6 +235,7 @@ export async function dispatchBatch(input: {
           // The phone AS TYPED: couriers dial it, and a normalized form can
           // lose the leading zero their system expects.
           phone: order.customer?.rawPhone || order.customer?.phone || '',
+          altPhone: order.customer?.altPhone ?? null,
           address: order.customer?.address ?? '',
           regionName: order.region?.name ?? null,
         },
