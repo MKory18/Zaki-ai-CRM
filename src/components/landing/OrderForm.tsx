@@ -135,6 +135,8 @@ interface OrderFormProps {
    * becomes the number) and whether WhatsApp opens by itself. Absent = the button as it always was.
    */
   afterOrderWhatsapp?: { enabled?: boolean; label?: string; message?: string; autoOpen?: boolean };
+  /** The words on the submit button, as the form block sets them; the price follows. Absent = «تأكيد الطلب». */
+  submitLabel?: string;
 }
 
 /** The message the customer sends, with the order number put in. */
@@ -180,7 +182,7 @@ type FormState = 'idle' | 'loading' | 'success' | 'error';
 const packs = (n: number) => (n === 1 ? 'عبوة' : n === 2 ? 'عبوتان' : n <= 10 ? `${n} عبوات` : `${n} عبوة`);
 const fmt = (n: number) => `${Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou, afterOrderWhatsapp }: OrderFormProps) {
+export function OrderForm({ slug, productName, basePrice, currency, offers, recommendations, regions, phonePlaceholder, externalSelectedOfferId, showOfferPicker = true, formStyle = 'card', offerStyle = 'cards', dir = 'rtl', whatsapp, endpoint, thankYou, afterOrderWhatsapp, submitLabel }: OrderFormProps) {
   const orderEndpoint = endpoint || `/api/public/landing-pages/${encodeURIComponent(slug)}/orders`;
   const [state, setState] = useState<FormState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1084,7 +1086,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 ) : (
                   <>
                     <ShoppingBag className="h-5 w-5" />
-                    تأكيد الطلب{offer ? ` — ${fmt(offer.price)} ${currency}` : ''}
+                    {submitLabel?.trim() || 'تأكيد الطلب'}{offer ? ` — ${fmt(offer.price)} ${currency}` : ''}
                   </>
                 )}
               </button>
@@ -1096,7 +1098,7 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                 </p>
               )}
               <p className="text-center text-[11px] text-[#697586]">
-                بالضغط على تأكيد الطلب، سيتواصل معك فريقنا لتأكيد الطلب والتوصيل. الدفع عند الاستلام.
+                بالضغط على «{submitLabel?.trim() || 'تأكيد الطلب'}»، سيتواصل معك فريقنا لتأكيد الطلب والتوصيل. الدفع عند الاستلام.
               </p>
             </form>
           )}
