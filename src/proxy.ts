@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { hostSite, inHostScope } from '@/lib/landing-domain';
 import { countRedirectHit, redirectFor } from '@/lib/store-redirects';
+import { cachedLandingPath, isCachedLandingPath } from '@/lib/landing-cache-path';
 
 let cachedJwtSecret: Uint8Array | null = null;
 function getJwtSecret(): Uint8Array {
@@ -97,9 +98,27 @@ function validateApiOrigin(req: Request): NextResponse | null {
   return null;
 }
 
+/**
+ * A rewrite onto a selling page, answered with the selling page's headers. next.config's header rules match the path
+ * the browser ASKED for; a rewritten request would otherwise wear the dashboard's shut policy, which refuses the page's
+ * fonts and pixels.
+ */
+function sellingRewrite(req: Request, pathname: string) {
+  const target = new URL(req.url);
+  target.pathname = pathname;
+  const res = NextResponse.rewrite(target);
+  for (const h of SELLING_PAGE_HEADERS) res.headers.set(h.key, h.value);
+  return res;
+}
+
 export async function proxy(req: Request) {
   const url = new URL(req.url);
   const { pathname } = url;
+
+  // ── The cached landing page (`landing-cache-path.ts`) ──
+  // Its internal route is reached only through the rewrite below; asked for by name it does not exist, so nobody can
+  // reach a page by a second address that no count or redirect knows about.
+  if (isCachedLandingPath(pathname)) return new NextResponse('Not found', { status: 404 });
 
   // ── A seller's own domain ──
   //
@@ -154,8 +173,12 @@ export async function proxy(req: Request) {
       // lp/<any company's page> rendered that page under seller A's name.
       if (pathname.startsWith('/lp/') || pathname.startsWith('/s/')) {
         if (!inHostScope(site, pathname)) return new NextResponse('Not found', { status: 404 });
-        return NextResponse.next();
+        const cached = req.method === 'GET' ? cachedLandingPath(pathname, url.searchParams) : null;
+        return cached ? sellingRewrite(req, cached) : NextResponse.next();
       }
+      // The seller's domain root IS their landing page: answered from the cache when the switch is on, like /lp/<slug>.
+      const cachedRoot = pathname === '/' && req.method === 'GET' ? cachedLandingPath(site.path, url.searchParams) : null;
+      if (cachedRoot) return sellingRewrite(req, cachedRoot);
       const target = new URL(req.url);
       target.pathname = pathname === '/' ? site.path : `${site.path}${pathname}`;
       // The page underneath is a selling page, but next.config's header
@@ -175,6 +198,13 @@ export async function proxy(req: Request) {
     const originError = validateApiOrigin(req);
     if (originError) return originError;
     return NextResponse.next();
+  }
+
+  // A visit to a landing page, answered from the cache when the owner has turned it on. Only a GET — an order is never
+  // a page view — and never a preview (`cachedLandingPath` says no to `?p=`).
+  if (req.method === 'GET') {
+    const cached = cachedLandingPath(pathname, url.searchParams);
+    if (cached) return sellingRewrite(req, cached);
   }
 
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {

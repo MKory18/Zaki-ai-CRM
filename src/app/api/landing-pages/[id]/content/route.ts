@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -225,6 +226,8 @@ export async function POST(_req: Request, ctx: Ctx) {
     }
 
     await publishContent(lp.id);
+    // What visitors see just changed: the cached page is rebuilt now, not in a minute.
+    await refreshLandingPages({ pageId: lp.id });
 
     await logAudit({
       companyId,
@@ -257,6 +260,7 @@ export async function PATCH(_req: Request, ctx: Ctx) {
     if (!(await revertContent(lp.id))) {
       return NextResponse.json({ error: 'لا نسخة سابقة لهذه الصفحة', code: 'NO_PREVIOUS' }, { status: 409 });
     }
+    await refreshLandingPages({ pageId: lp.id });
 
     await logAudit({
       companyId,

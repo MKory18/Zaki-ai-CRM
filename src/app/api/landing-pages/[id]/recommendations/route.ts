@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
@@ -79,6 +80,7 @@ export async function POST(req: Request, ctx: Ctx) {
         },
         include: { product: { select: { id: true, name: true, basePrice: true, image: true } } },
       });
+      await refreshLandingPages({ pageId: id });
       return NextResponse.json({ success: true, recommendation: rec }, { status: 201 });
     } catch (e: any) {
       if (e?.code === 'P2002') {

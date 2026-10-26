@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { deviceClassOf, isPrefetch, recordBrowserView } from '@/lib/landing-views';
+import { deviceClassOf, isPrefetch, recordBrowserView, recordLandingView } from '@/lib/landing-views';
+import { landingCacheOn } from '@/lib/landing-cache-path';
 import { resolveCampaign } from '@/lib/campaigns-server';
 import { getClientIp, rateLimit } from '@/lib/rate-limit';
 
@@ -8,12 +9,18 @@ import { getClientIp, rateLimit } from '@/lib/rate-limit';
  *
  * Sent once by a landing page as it opens in a visitor's browser (`BrowserVisit`), with `navigator.sendBeacon`. It is
  * the count a CACHED page will rely on, run for a week beside the server's count (`recordLandingView`) so the two can be
- * compared before the switch. It writes only `landing_page_browser_views`; the server's rows and the lifetime
- * `viewsCount` are not touched here.
+ * compared before the switch. It always writes `landing_page_browser_views`; the server's rows and the lifetime
+ * `viewsCount` only for a cached page's visit, below.
  *
  * The same rules as the server's count, and the two it could not have: a link-preview crawler is not a visitor
  * (`deviceClassOf`), and neither is a request made AHEAD of a visit (Meta's preload, a prefetch — `isPrefetch`). Only a
  * published page counts, so a preview or an unpublished draft never does.
+ *
+ * ONCE THE CACHE IS ON, THE CACHED PAGE'S BEACON IS THE VISIT. A cached page is not built per visit, so the server
+ * does not count it; its beacon carries `o:1` and — only while the owner's switch (`LP_PAGE_CACHE=1`) is on — is also
+ * written where the server's count goes (`viewsCount` and `landing_page_views`), so every screen that reads visits
+ * goes on reading them. A beacon from a page built per request (the switch off, a store's front) never does: the
+ * server already counted that visit, and one visit is never counted twice.
  *
  * Always 204 and never a reason: a beacon has nobody to read an answer, and a page that cannot be counted must never
  * look broken.
@@ -30,7 +37,7 @@ export async function POST(req: Request) {
 
     // `sendBeacon` posts a string as text/plain; read the body as text whatever it says it is.
     const raw = (await req.text()).slice(0, 500);
-    let body: { p?: unknown; c?: unknown } = {};
+    let body: { p?: unknown; c?: unknown; o?: unknown } = {};
     try {
       body = JSON.parse(raw);
     } catch {
@@ -52,7 +59,12 @@ export async function POST(req: Request) {
     if (!page) return done();
 
     const campaignId = code && page.storeId ? await resolveCampaign(page.companyId, page.storeId, code) : null;
-    await recordBrowserView({ companyId: page.companyId, storeId: page.storeId, landingPageId: page.id, campaignId, device });
+    const view = { companyId: page.companyId, storeId: page.storeId, landingPageId: page.id, campaignId, device };
+    await recordBrowserView(view);
+    if (body.o === 1 && landingCacheOn()) {
+      await db.landingPage.update({ where: { id: page.id }, data: { viewsCount: { increment: 1 } } });
+      await recordLandingView(view);
+    }
     return done();
   } catch {
     return done();

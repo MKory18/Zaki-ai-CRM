@@ -1,4 +1,5 @@
 import { sellingCurrency } from '@/lib/selling-currency';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { NextResponse } from 'next/server';
 import { apiErrorResponse, forbiddenAr } from '@/lib/api-error';
 import { db } from '@/lib/db';
@@ -296,6 +297,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       newData: { name: updated.name, sku: updated.sku, status: updated.status, basePrice: updated.basePrice },
     });
 
+    await refreshLandingPages({ productId: id, companyId });
     return NextResponse.json({ success: true, product: updated });
   } catch (error: any) {
     return apiErrorResponse(error);

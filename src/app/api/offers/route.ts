@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshLandingPages } from '@/lib/landing-cache';
 import { z } from 'zod';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
       newData: offer,
     });
 
+    await refreshLandingPages({ productId: offer.productId, companyId });
     return NextResponse.json({ success: true, offer });
   } catch (error: any) {
     return apiErrorResponse(error);
