@@ -127,7 +127,11 @@ export const PERMISSION_MODULES: CatalogModule[] = [
       { key: 'reports.view', ar: 'عرض التقارير', en: 'View reports' },
       { key: 'reports.export', ar: 'تصدير التقارير', en: 'Export reports' },
       { key: 'analytics.view', ar: 'عرض التحليلات', en: 'View analytics' },
-      { key: 'ai.use', ar: 'استخدام المساعد الذكي', en: 'Use AI assistant' },
+      // Says what it opens: the in-screen assistants (confirmation, picking,
+      // landing pages, AI order entry) answer to the key of the work they sit
+      // in, so «منع» on this one turns off the bubble, the assistant page and
+      // «اسأل الذكاء» — not those.
+      { key: 'ai.use', ar: 'المساعد العام — الفقاعة وصفحة المساعد وسؤال الأرقام', en: 'General assistant — bubble, assistant page, ask the numbers' },
     ],
   },
   {

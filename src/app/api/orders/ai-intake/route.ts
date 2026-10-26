@@ -18,7 +18,7 @@ import { toLatinDigits } from '@/lib/latin-digits';
 import { activeBlock } from '@/lib/blacklist';
 import { logAudit } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
-import { requirePermission, can } from '@/lib/authorization';
+import { requirePermission, can, getPermissionScope } from '@/lib/authorization';
 import { entryOwnership, ownedCounts, recordEntryClaim, ENTRY_CAP_FULL_MESSAGE } from '@/lib/confirmation-queue';
 import { zodMessage } from '@/lib/zod-message';
 import { AiEndpointMissing, AiNotConfigured, AiNotLocal, aiChat, aiSettings } from '@/lib/ai-provider';
@@ -110,7 +110,10 @@ async function aiAssistedParse(
     if (e instanceof AiNotConfigured || e instanceof AiEndpointMissing) {
       return { parsed: null, skipped: 'NOT_CONFIGURED' };
     }
-    console.warn('AI parse failed, using deterministic parser:', e);
+    // The kind of failure, never its message: a JSON error quotes the start of
+    // what it could not read, and that is the model's reading of a pasted
+    // message — a customer's name, phone and address, written to a server log.
+    console.warn('AI parse failed, using deterministic parser:', e instanceof Error ? e.name : 'unknown');
     return { parsed: null, skipped: 'FAILED' };
   }
 }
@@ -558,15 +561,38 @@ export async function POST(req: Request) {
     }
 
     // Duplicate customer check
-    let existingCustomer = null;
+    //
+    // WHAT THE PREVIEW SAYS ABOUT A KNOWN NUMBER — by the reader's own
+    // customers key, as the customers list would answer the same number.
+    // It answered «name, city, N orders» to anyone allowed to create an
+    // order, so pasting number after number made this door an address book
+    // for a person the owner had denied «عرض العملاء».
+    //   full key, all customers → name, city, count
+    //   full key, OWN           → the same, if they brought this customer in
+    //   basic key               → name and city, no count
+    //   otherwise               → only that the number is known
+    let existingCustomer: { fullName?: string; totalOrders?: number; city?: string; exists: true } | null = null;
     if (parsed.phone) {
       const normalizedPhone = normalizePhoneNumber(parsed.phone, country.code);
       // This store's customer. Telling an agent "3 previous orders" from
       // another store's history is a fact about somebody else's shop.
-      existingCustomer = await db.customer.findFirst({
+      const found = await db.customer.findFirst({
         where: { companyId, storeId, phone: { in: phoneKeys(normalizedPhone) } },
-        select: { fullName: true, totalOrders: true, city: true },
+        select: { id: true, fullName: true, totalOrders: true, city: true },
       });
+      if (found) {
+        const book = getPermissionScope(user, 'customers.view');
+        const own =
+          book?.scope === 'OWN' &&
+          !!(await db.order.findFirst({ where: { companyId, customerId: found.id, moderatorId: user.id }, select: { id: true } }));
+        if (book && (book.scope !== 'OWN' || own)) {
+          existingCustomer = { exists: true, fullName: found.fullName, city: found.city, totalOrders: found.totalOrders };
+        } else if (can(user, 'customers.view_basic')) {
+          existingCustomer = { exists: true, fullName: found.fullName, city: found.city };
+        } else {
+          existingCustomer = { exists: true };
+        }
+      }
     }
 
     return NextResponse.json({

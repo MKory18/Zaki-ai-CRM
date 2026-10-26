@@ -355,7 +355,7 @@ export const PERMISSION_LABELS: Record<Permission, { ar: string; en: string; gro
   'production.manage': { ar: 'إدارة الإنتاج', en: 'Manage production', group: 'OPERATIONS' },
   'reports.view': { ar: 'عرض التقارير', en: 'View reports', group: 'ANALYTICS' },
   'analytics.view': { ar: 'عرض التحليلات', en: 'View analytics', group: 'ANALYTICS' },
-  'ai.use': { ar: 'استخدام المساعد الذكي', en: 'Use AI assistant', group: 'ANALYTICS' },
+  'ai.use': { ar: 'المساعد العام — الفقاعة وصفحة المساعد وسؤال الأرقام', en: 'General assistant — bubble, assistant page, ask the numbers', group: 'ANALYTICS' },
   'settings.view': { ar: 'عرض الإعدادات', en: 'View settings', group: 'SETTINGS' },
   'settings.manage': { ar: 'تعديل إعدادات النظام', en: 'Manage system settings', group: 'SETTINGS' },
   'audit.view': { ar: 'عرض سجل التدقيق', en: 'View audit logs', group: 'SETTINGS' },
