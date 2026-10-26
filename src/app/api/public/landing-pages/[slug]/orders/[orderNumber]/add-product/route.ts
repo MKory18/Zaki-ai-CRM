@@ -6,6 +6,7 @@ import { verifyAddonToken } from '@/lib/landing-pages';
 import { ORDER_NUMBER_RE } from '@/lib/order-ref';
 import { zodMessage } from '@/lib/zod-message';
 import { roundMinor } from '@/lib/money';
+import { POST_ORDER_REFUSAL_AR, postOrderGate, postOrderOfferSettings } from '@/lib/post-order-offer';
 
 interface Ctx {
   params: Promise<{ slug: string; orderNumber: string }>;
@@ -110,6 +111,8 @@ export async function POST(req: Request, ctx: Ctx) {
     const order = await db.order.findFirst({
       where: { id: tok.orderId, orderNumber: tok.orderNumber },
       include: {
+        // Whether anybody has called about this order yet — one of the gates below.
+        _count: { select: { contactAttempts: true } },
         landingPage: { select: { id: true, name: true, slug: true, isPublished: true } },
         // The CURRENCY'S minor unit, which decides where this money rounds.
         // See below — it is not two decimals everywhere.
@@ -122,6 +125,32 @@ export async function POST(req: Request, ctx: Ctx) {
     // Unpublished page → upsells disappear for everyone (fail-closed)
     if (!order.landingPage.isPublished) {
       return NextResponse.json({ error: 'غير مسموح' }, { status: 403, headers: CORS });
+    }
+
+    /*
+     * THE LINK CLOSES WHEN THE ORDER IS CONFIRMED — «مجرد ما يتأكد الطلب، ممنوع الأب سيل والكروس سيل، والرابط اللي
+     * معه تنتهي صلاحيته».
+     *
+     * The offer after the order already closed then (`postOrderGate`); a recommended product did not: its token lives
+     * thirty minutes, and an agent could confirm the order — and the warehouse reserve it — while the customer kept
+     * adding goods nobody would see. The same gate, the same sentences: still NEW on both stages, nobody has called
+     * yet, inside the seller's window. Only «once» is not asked: a customer may take more than one recommendation.
+     */
+    const { windowMinutes } = await postOrderOfferSettings(order.companyId);
+    const { status, confirmationStatus, createdAt } = order;
+    const gate = postOrderGate(
+      {
+        status,
+        confirmationStatus,
+        createdAt,
+        contactAttempts: order._count.contactAttempts,
+        postOrderAddOns: 0,
+      },
+      windowMinutes,
+      new Date()
+    );
+    if (!gate.allowed) {
+      return NextResponse.json({ error: POST_ORDER_REFUSAL_AR[gate.reason], code: gate.reason }, { status: 409, headers: CORS });
     }
 
     // ─── Recommendation must belong to THIS landing page and be active ───
