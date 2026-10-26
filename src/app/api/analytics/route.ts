@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { projectAnalytics } from '@/lib/analytics-projection';
 import { apiErrorResponse } from '@/lib/api-error';
 import { requireContext } from '@/lib/geo-context';
 import { can, requirePermission } from '@/lib/authorization';
@@ -264,32 +265,17 @@ export async function GET(req: Request) {
      * this person's own work, and the rates are what the screen is for.
      */
     const maySeeMoney = can(user, 'finance.view');
-    const { financials, aiContext, ...rest } = analytics as unknown as Record<string, unknown> & {
-      financials?: unknown;
-      aiContext?: Record<string, unknown>;
-    };
 
     return NextResponse.json({
-      ...rest,
+      // Money in every shape — products, rankings, colleagues' sales and
+      // commission, the AI context — and colleagues' names, each to its own
+      // key; the latest orders with their customers' phones to nobody. See
+      // analytics-projection.ts.
+      ...projectAnalytics(analytics as unknown as Record<string, unknown>, user),
       outcomes,
-      ...(maySeeMoney ? { financials } : {}),
-      // The AI context carries the same figures in another shape — net
-      // profit, production cost, margin, the most profitable product —
-      // and a second copy is a second door.
-      ...(aiContext
-        ? {
-            aiContext: maySeeMoney
-              ? aiContext
-              : Object.fromEntries(
-                  Object.entries(aiContext).filter(
-                    ([k]) => !/cost|profit|margin|expense|commission/i.test(k)
-                  )
-                ),
-          }
-        : {}),
       previous: maySeeMoney
         ? previous
-        : previous && (({ netProfit, ...p }) => p)(previous),
+        : previous && (({ netProfit, deliveredRevenue, ...p }) => p)(previous as typeof previous & { deliveredRevenue?: unknown }),
       vitals: {
         door: {
           delivered: door.delivered,
@@ -310,7 +296,9 @@ export async function GET(req: Request) {
         returnsByProduct: productReturns,
         outstanding: {
           orders: collected._count._all + uncollected._count._all,
-          money: Math.round(outstandingMoney * 100) / 100,
+          // The money still out with couriers is money: the tile showing it
+          // is behind «عرض المالية» on the screen, and now here too.
+          ...(maySeeMoney ? { money: Math.round(outstandingMoney * 100) / 100 } : {}),
           unrecordedOrders: unrecorded,
         },
       },

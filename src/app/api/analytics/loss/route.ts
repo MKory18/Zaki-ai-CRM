@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { orderGoodsCost } from '@/lib/finance-workflow';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
 import { apiErrorResponse } from '@/lib/api-error';
 import { reportRange, type DateFilter } from '@/lib/analytics';
 import { summariseLoss, type LossRow } from '@/lib/loss-analysis';
@@ -37,7 +37,7 @@ const MAX_ROWS = 5000;
 
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
     await requirePermission('analytics.view');
 
     const { searchParams } = new URL(req.url);
@@ -186,8 +186,22 @@ export async function GET(req: Request) {
       }
     }
 
+    /*
+     * THE COUNTS FOR THE PANEL'S READERS; THE MONEY FOR THE MONEY KEY.
+     *
+     * What a failed parcel cost — both fees and the goods — is money, and
+     * it went to anyone holding the reports key, beside a dashboard that
+     * hides every money tile from them. The counts, the reasons and whose
+     * fault each was stay: that is what the panel is for. Every money figure
+     * is zero for them, and the answer says it was withheld, so the screen
+     * says so instead of printing «٠».
+     */
+    const summary = summariseLoss(rows);
+    const maySeeMoney = can(user, 'finance.view');
+
     return NextResponse.json({
-      ...summariseLoss(rows),
+      ...(maySeeMoney ? summary : withoutMoney(summary)),
+      ...(maySeeMoney ? {} : { moneyWithheld: true }),
       period: filter.period || 'all',
       // Never a silent cap: a report that quietly dropped rows reads exactly
       // like one that found nothing more.
@@ -198,4 +212,17 @@ export async function GET(req: Request) {
   } catch (error) {
     return apiErrorResponse(error);
   }
+}
+
+/** Every money figure in the report set to zero, every count left as it is. */
+function withoutMoney<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(withoutMoney) as unknown as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) =>
+        /money/i.test(k) && typeof v === 'number' ? [k, 0] : [k, withoutMoney(v)],
+      ),
+    ) as T;
+  }
+  return value;
 }
