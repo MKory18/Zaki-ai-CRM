@@ -515,17 +515,38 @@ function Block({ section: s, ctx, lead = false }: { section: LandingSection; ctx
       );
     }
 
-    case 'text':
-      if (!s.body.trim()) return null;
+    case 'text': {
+      /*
+       * «لما امسح النص العنوان بيختفي… وما قدرت اعدّلو من شاشة المعاينة».
+       * The block was drawn only when its BODY had words, so emptying the body
+       * took the title with it — and left nothing on the preview to click.
+       * Now a title stands alone, the body is typed on the page like the
+       * title is, and in the preview an empty body is a line to type on
+       * (`data-edit-empty`), which a visitor never sees.
+       */
+      const body = s.body.trim();
+      const titled = !!s.title.replace(/<[^>]*>/g, '').trim();
+      if (!body && !titled && !ctx.placeholders) return null;
       return (
         <Section title={s.title}>
-          <div className="lp-prose">
-            {s.body.split(/\n{2,}/).map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
+          {body ? (
+            // Keyed on the text: typing on the page reshapes these paragraphs
+            // outside React, so a new body is a new element, never a diff.
+            <div key={body} className="lp-prose" data-edit="body" data-edit-plain="">
+              {body.split(/\n{2,}/).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          ) : (
+            ctx.placeholders && (
+              <div key="empty" className="lp-prose" data-edit="body" data-edit-plain="" data-edit-empty="">
+                <p style={{ opacity: 0.55 }}>اكتب النص هنا…</p>
+              </div>
+            )
+          )}
         </Section>
       );
+    }
 
     case 'offers':
       if (!ctx.offers.length) return null;
