@@ -1,5 +1,5 @@
 import type { AiScope } from './ai-assistants';
-import { FINANCE_PERMISSION, FINANCE_SCOPE } from './ai-assistants';
+import { FINANCE_PERMISSION, FINANCE_SCOPE, TEAM_PERMISSIONS, TEAM_SCOPE } from './ai-assistants';
 
 /**
  * WHAT IS ACTUALLY PUT IN FRONT OF THE MODEL.
@@ -82,12 +82,20 @@ export function scopeContext<T extends object>(context: T, allowed: AiScope[]): 
  * Money is the one that moved: it used to travel with `ai.use`, a key
  * granted so people could ask about their own orders. Seeing the company's
  * profit is a different decision and has its own key already.
+ *
+ * The team is the second: «who is the best moderator» names a colleague,
+ * and it went to anyone. It now needs the key of a screen that already
+ * shows colleagues' numbers (TEAM_PERMISSIONS).
  */
 export function allowedScopes(
   assistantScopes: AiScope[],
   can: (permission: string) => boolean
 ): AiScope[] {
-  return assistantScopes.filter((s) => s !== FINANCE_SCOPE || can(FINANCE_PERMISSION));
+  return assistantScopes.filter((s) => {
+    if (s === FINANCE_SCOPE) return can(FINANCE_PERMISSION);
+    if (s === TEAM_SCOPE) return TEAM_PERMISSIONS.some((p) => can(p));
+    return true;
+  });
 }
 
 /** Said in the answer, so a narrowed view is never mistaken for the whole. */
@@ -112,6 +120,37 @@ export function scopeNoteAr(removed: AiScope[]): string | null {
  * here, in one named function, rather than by whoever writes the next
  * caller remembering to leave two fields out.
  */
+/**
+ * A product row as an assistant may read it — the same closed-map rule as
+ * scopeContext: counts with the orders scope, money with the finance scope,
+ * and a field nobody listed is dropped, so a column added to the analytics
+ * tomorrow does not reach a model by being forgotten here.
+ */
+const PRODUCT_FIELD_SCOPE: Record<string, AiScope> = {
+  name: 'orders',
+  sku: 'orders',
+  totalOrders: 'orders',
+  confirmedOrders: 'orders',
+  deliveredOrders: 'orders',
+  rejectedOrders: 'orders',
+  revenue: 'finance',
+  cogs: 'finance',
+  shippingCost: 'finance',
+  netProfit: 'finance',
+  profitMargin: 'finance',
+};
+
+export function scopeProductStats(rows: readonly object[], allowed: AiScope[]): Record<string, unknown>[] {
+  return rows.map((row) => {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      const scope = PRODUCT_FIELD_SCOPE[key];
+      if (scope && allowed.includes(scope)) out[key] = value;
+    }
+    return out;
+  });
+}
+
 export interface PickingProduct {
   product: string;
   sku: string | null;

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { can, requirePermission } from '@/lib/authorization';
+import { allowedScopes, scopeContext, scopeProductStats } from '@/lib/ai-scope';
+import { assistantByKey, scopesOf, type AiScope } from '@/lib/ai-assistants';
+import type { SessionUser } from '@/types/auth';
 import { apiErrorResponse } from '@/lib/api-error';
 import { db } from '@/lib/db';
 import { customerFacts } from '@/lib/customer-insights';
@@ -42,17 +45,64 @@ export const DATA_SOURCES = [
   },
 ] as const;
 
+type SourceId = (typeof DATA_SOURCES)[number]['id'];
+
+/**
+ * WHAT THIS PERSON MAY HAND THE MODEL — decided here, per source.
+ *
+ * Every source used to travel with «استخدام المساعد الذكي» alone. A
+ * confirmation agent on «العملاء» could tick «المبيعات والأرباح» and «أداء
+ * الفريق» and ask what the company made and who her weakest colleague is,
+ * and be told. And the ticks the owner sets for «مركز الذكاء» in AI settings
+ * — whose row promises «لا يقرأ إلا المجالات التي تؤشّرها أنت» — were stored
+ * and never read.
+ *
+ * Now each source has its own condition, all of them on THIS person's keys
+ * (role + their exceptions, as every check here is):
+ *   • sales, products, team: the intelligence centre's key, AND the scope
+ *     ticked by the owner, AND the person's own key for it — money with
+ *     «عرض المالية», a colleague's numbers with a key of a screen that
+ *     already shows them;
+ *   • customers: the address book's key. Counts only, as before.
+ */
+function sourcePlan(user: SessionUser, ownerTicks: AiScope[]) {
+  const intel = assistantByKey('intelligence')!;
+  const ticked = scopesOf(intel, ownerTicks);
+  const mine = allowedScopes(['orders', 'finance', 'team'], (p) => can(user, p));
+  const allowed = ticked.filter((s) => mine.includes(s));
+  const centre = can(user, 'growth.intelligence');
+  const why = (scope: AiScope): string | null => {
+    if (!centre) return 'يحتاج «مركز الذكاء»';
+    if (!ticked.includes(scope)) return 'غير مؤشَّر في إعدادات الذكاء — مركز الذكاء';
+    if (!mine.includes(scope)) return 'غير متاح لصلاحيتك';
+    return null;
+  };
+  const withheld: Partial<Record<SourceId, string>> = {};
+  const sales = why('orders');
+  if (sales) withheld.SALES = sales;
+  if (sales) withheld.PRODUCTS = sales;
+  const team = why('team');
+  if (team) withheld.TEAM = team;
+  if (!can(user, 'customers.view') && !can(user, 'customers.view_basic')) withheld.CUSTOMERS = 'يحتاج «عرض العملاء»';
+  return { allowed, withheld };
+}
+
 export async function GET() {
   try {
-    const { companyId } = await requireContext();
+    const { user, companyId } = await requireContext();
     await requirePermission('ai.use');
     const settings = await aiSettings(companyId);
+    const { withheld } = sourcePlan(user, settings.intelligenceScopes);
     return NextResponse.json({
       provider: providerInfo(settings.provider).label,
       model: settings.model,
       ready: settings.hasKey,
-      housePrompt: settings.prompt,
-      sources: DATA_SOURCES,
+      // The house prompt is the owner's wording, written in settings — the
+      // settings key reads it, not everyone who may ask a question.
+      housePrompt: can(user, 'settings.view') ? settings.prompt : '',
+      // Only what this person may tick; what is held back, and why, beside it.
+      sources: DATA_SOURCES.filter((s) => !withheld[s.id]),
+      withheld: DATA_SOURCES.filter((s) => withheld[s.id]).map((s) => ({ id: s.id, label: s.label, why: withheld[s.id] })),
     });
   } catch (error) {
     return apiErrorResponse(error);
@@ -61,22 +111,32 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { companyId, storeId, country } = await requireContext();
+    const { user, companyId, storeId, country } = await requireContext();
     await requirePermission('ai.use');
 
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
       return NextResponse.json({ error: 'اكتب سؤالاً أولاً' }, { status: 400 });
     }
-    const want = new Set(parsed.data.sources ?? ['SALES', 'PRODUCTS', 'TEAM', 'CUSTOMERS']);
+    const settingsBefore = await aiSettings(companyId);
+    const { allowed, withheld } = sourcePlan(user, settingsBefore.intelligenceScopes);
+    const asked = new Set<SourceId>(parsed.data.sources ?? ['SALES', 'PRODUCTS', 'TEAM', 'CUSTOMERS']);
+    const want = new Set([...asked].filter((id) => !withheld[id]));
+    const notRead = [...asked].filter((id) => withheld[id]);
+    if (want.size === 0) {
+      const msg = `ما في مصدر متاح لهالسؤال: ${notRead.map((id) => `${DATA_SOURCES.find((s) => s.id === id)!.label} (${withheld[id]})`).join('، ')}.`;
+      return NextResponse.json({ error: msg, errorAr: msg, withheld: notRead }, { status: 403 });
+    }
 
     const analytics = await getCompanyAnalytics({ companyId, storeId }, { period: '30d' });
     const context: Record<string, unknown> = { currency: country.currencyCode, window: 'آخر 30 يوماً' };
 
-    if (want.has('SALES')) context.sales = analytics.aiContext;
+    // Through the same closed maps as the bubble: money only when the finance
+    // scope survived, the best moderator only when the team scope did.
+    if (want.has('SALES')) context.sales = scopeContext(analytics.aiContext, allowed).context;
     if (want.has('PRODUCTS')) {
       // Trimmed: the whole table is mostly zeros and costs tokens to say so.
-      context.products = (analytics.productStats ?? []).slice(0, 15);
+      context.products = scopeProductStats((analytics.productStats ?? []).slice(0, 15), allowed);
     }
     if (want.has('TEAM')) {
       const end = new Date();
@@ -133,12 +193,18 @@ export async function POST(req: Request) {
       user: `البيانات:\n${JSON.stringify(context, null, 2)}\n\nالسؤال: ${parsed.data.question}`,
     });
 
-    const settings = await aiSettings(companyId);
+    const settings = settingsBefore;
     return NextResponse.json({
       answer,
       model: settings.model,
       provider: providerInfo(settings.provider).label,
       sources: [...want],
+      // Said, not dropped in silence: an answer read from less than was asked.
+      ...(notRead.length
+        ? {
+            noteAr: `ما قُرئ: ${notRead.map((id) => `${DATA_SOURCES.find((s) => s.id === id)!.label} (${withheld[id]})`).join('، ')}.`,
+          }
+        : {}),
     });
   } catch (error) {
     if (error instanceof AiNotConfigured) {

@@ -78,8 +78,23 @@ describe('who may see the money', () => {
     expect(allowedScopes(['orders', 'finance'], holds('ai.use', FINANCE_PERMISSION))).toEqual(['orders', 'finance']);
   });
 
-  it('never withholds the non-money scopes', () => {
-    expect(allowedScopes(['orders', 'team', 'inventory'], () => false)).toEqual(['orders', 'team', 'inventory']);
+  /*
+   * REWRITTEN ON PURPOSE. This used to say «never withholds the non-money
+   * scopes», and that was the hole: «who is the best moderator» names a
+   * colleague, and it went to anyone. The team now needs the key of a
+   * screen that already shows colleagues' numbers; orders and inventory
+   * still travel with the assistant's own key.
+   */
+  it('never withholds orders or inventory — and the team needs a team key', () => {
+    expect(allowedScopes(['orders', 'team', 'inventory'], () => false)).toEqual(['orders', 'inventory']);
+    for (const key of ['reports.view', 'team.monitor', 'users.view']) {
+      expect(allowedScopes(['orders', 'team'], (p) => p === key), key).toEqual(['orders', 'team']);
+    }
+  });
+
+  it('the money key is «عرض المالية», not «عرض التقارير»', () => {
+    expect(FINANCE_PERMISSION).toBe('finance.view');
+    expect(allowedScopes(['orders', 'finance'], (p) => p === 'reports.view')).toEqual(['orders']);
   });
 });
 

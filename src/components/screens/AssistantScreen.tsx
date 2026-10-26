@@ -10,6 +10,7 @@ import { RiCheckboxCircleLine, RiLightbulbLine, RiRobot2Line, RiSendPlaneLine, R
 import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { arTime } from '@/lib/format';
+import { userCan } from '@/lib/can';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,8 +19,17 @@ interface ChatMessage {
 }
 
 export function AssistantScreen() {
-  const { t } = useApp();
+  const { t, currentUser } = useApp();
   const [summaryData, setSummaryData] = useState<any>(null);
+  /*
+   * The summary is the company's money across every store, so it is the
+   * finance key's with every country — the same two the server asks. Anyone
+   * else gets the server's one line saying why, and no button that fails.
+   */
+  const maySeeSummary =
+    userCan(currentUser, 'finance.view') &&
+    (currentUser?.role === 'SUPER_ADMIN' || userCan(currentUser, 'geo.manage'));
+  const [summaryReason, setSummaryReason] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -50,6 +60,7 @@ export function AssistantScreen() {
       if (res.ok) {
         const data = await res.json();
         setSummaryData(data.summary);
+        setSummaryReason(typeof data.reasonAr === 'string' ? data.reasonAr : null);
       }
     } catch (e) {
       console.error(e);
@@ -150,6 +161,7 @@ export function AssistantScreen() {
         <PageHeader title={routeLabel('/assistant')}
             description="يجيب من أرقام متجرك وحدها. ما لا يجده في البيانات يقول إنه لا يعرفه، ولا يخترع رقماً."
             actions={
+              maySeeSummary ? (
               <><Button
             size="sm"
             onClick={handleGenerateSummary}
@@ -159,8 +171,13 @@ export function AssistantScreen() {
             <RiSparkling2Line className="w-4 h-4" />
             <span>أعد توليد الملخّص</span>
           </Button></>
+              ) : undefined
             }
           />
+
+        {summaryReason && (
+          <p className="text-xs text-[var(--sys-muted-foreground)]">{summaryReason}</p>
+        )}
 
         {/* The daily summary — the one thing this screen has that the dock does not. */}
         {summaryData && (
