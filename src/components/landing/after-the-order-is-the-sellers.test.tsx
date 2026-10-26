@@ -112,3 +112,19 @@ describe('the editor panel', () => {
     expect(patch).toHaveBeenCalledWith({ whatsappNumber: '+963 99' });
   });
 });
+
+describe('the confirm button’s words — «بعد ما يعبي بياناته زر واضح كمان»', () => {
+  it('a saved page still says «تأكيد الطلب»', () => {
+    expect((landingSectionSchema.parse({ ...newSection('form') }) as Record<string, unknown>).submitLabel).toBe('تأكيد الطلب');
+  });
+
+  it('the seller’s words are on the button, with the price after them', () => {
+    render(<OrderForm slug="s" productName="ماء الكمأ" basePrice={12} currency="USD" offers={offers} recommendations={[]} regions={['دمشق']} submitLabel="اضغط هنا لتأكيد طلبك" />);
+    expect(screen.getByRole('button', { name: /اضغط هنا لتأكيد طلبك — 12 USD/ })).toBeTruthy();
+  });
+
+  it('NEGATIVE: an empty label falls back to «تأكيد الطلب», never a blank button', () => {
+    render(<OrderForm slug="s" productName="ماء الكمأ" basePrice={12} currency="USD" offers={offers} recommendations={[]} regions={['دمشق']} submitLabel="  " />);
+    expect(screen.getByRole('button', { name: /^تأكيد الطلب — 12 USD/ })).toBeTruthy();
+  });
+});

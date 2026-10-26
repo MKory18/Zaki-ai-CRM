@@ -499,6 +499,11 @@ const form = z.object({
   whatsappMessage: z.string().max(300).default('مرحباً، بدّي أأكّد طلبي رقم {رقم_الطلب}'),
   whatsappNumber: z.string().max(30).regex(/^[+0-9 ()-]*$/).default(''),
   whatsappAutoOpen: z.boolean().default(false),
+  /**
+   * The words on the form's own button — «بعد ما يعبي بياناته زر واضح كمان». The price still follows them. The
+   * default is what it always said, so a saved page reads as before.
+   */
+  submitLabel: z.string().max(40).default('تأكيد الطلب'),
 });
 
 /** The three reassurances under the button. */

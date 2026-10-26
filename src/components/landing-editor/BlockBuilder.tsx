@@ -1422,6 +1422,7 @@ function SectionFields({
         <div className="space-y-2.5">
           <Field label="العنوان" value={s.title} onChange={(v) => patch({ title: v })} />
           <Field label="سطر تحته" value={s.subtitle} onChange={(v) => patch({ subtitle: v })} />
+          <Field label="نص زر التأكيد (السعر بيطلع بعده)" value={s.submitLabel} onChange={(v) => patch({ submitLabel: v })} placeholder="تأكيد الطلب" />
           <div className="space-y-1">
             <span className="block text-xs font-semibold text-[var(--sys-heading)]">شكل النموذج</span>
             <div className="flex gap-1 rounded-md bg-[var(--sys-surface-strong)] p-0.5">
