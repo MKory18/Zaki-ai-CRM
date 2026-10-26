@@ -310,7 +310,17 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
         phonePlaceholder={ruleFor(countryCode)?.example}
         // The shop's own number, for the optional confirmation button
         // on the thank-you screen. A shop with none gets no button.
-        whatsapp={lp.store?.supportPhone ?? null}
+        whatsapp={formChoices?.whatsappNumber?.trim() || lp.store?.supportPhone || null}
+        afterOrderWhatsapp={
+          formChoices
+            ? {
+                enabled: formChoices.whatsappAfter,
+                label: formChoices.whatsappLabel,
+                message: formChoices.whatsappMessage,
+                autoOpen: formChoices.whatsappAutoOpen,
+              }
+            : undefined
+        }
         showOfferPicker={!pageHasOffersBlock}
         formStyle={formChoices?.formStyle}
         offerStyle={formChoices?.offerStyle}

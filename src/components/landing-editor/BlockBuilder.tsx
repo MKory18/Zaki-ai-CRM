@@ -23,6 +23,7 @@ import { FontUploader, type StoreFontRow } from '@/components/landing/blocks/Fon
 import { SelectionBar } from './SelectionBar';
 import { Advanced } from './Advanced';
 import { AiCopyPanel } from './AiCopyPanel';
+import { AfterOrderPanel, type AfterOrderContext } from './AfterOrderPanel';
 import { PaneToggle, editPaneClass, previewPaneClass, type EditorPane } from './EditorPanes';
 import { PAGE_TEMPLATES, buildTemplate } from '@/lib/page-templates';
 import { useConfirm } from '@/components/ui/Confirm';
@@ -61,6 +62,8 @@ interface Props {
    * product to write a brief about and the assistant is simply not offered.
    */
   productId?: string | null;
+  /** This page's id, so «بعد الطلب» can say how many products it suggests and link to them. */
+  pageId?: string | null;
   /** The page's store identity, as the published footer shows it. */
   store?: { name: string; logo: string | null; phone: string | null } | null;
   currency: string;
@@ -661,7 +664,7 @@ export function BlockBuilder(props: Props) {
 
                 {openId === s.id && (
                   <div className="space-y-2 border-t border-[var(--sys-border)] bg-[var(--sys-surface)] p-3">
-                    <SectionFields section={s} patch={(f) => patch(s.id, f)} onUpload={props.onUpload} />
+                    <SectionFields section={s} patch={(f) => patch(s.id, f)} onUpload={props.onUpload} ctx={{ productId: props.productId, pageId: props.pageId, storePhone: props.store?.phone ?? null }} />
 
                   </div>
                 )}
@@ -903,11 +906,12 @@ export function BlockBuilder(props: Props) {
 // ─────────────────────────────────────────────────────
 
 function SectionFields({
-  section: s, patch, onUpload,
+  section: s, patch, onUpload, ctx = {},
 }: {
   section: LandingSection;
   patch: (fields: Record<string, unknown>) => void;
   onUpload: (files: FileList) => Promise<string[]>;
+  ctx?: AfterOrderContext;
 }) {
   switch (s.type) {
     case 'announcement':
@@ -1458,6 +1462,7 @@ function SectionFields({
               ))}
             </div>
           </div>
+          <AfterOrderPanel section={s} patch={patch} ctx={ctx} />
         </div>
       );
 

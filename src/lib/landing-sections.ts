@@ -488,6 +488,17 @@ const form = z.object({
    * offer's id, and the server prices it.
    */
   offerStyle: z.enum(['cards', 'radio']).default('cards'),
+  /**
+   * AFTER THE ORDER: the WhatsApp button on the thank-you screen — «تواصل معنا عبر الواتس بعد ما يتمم الطلب… اقدر اعدل
+   * النص والرقم». On by default with the words it always had, so a saved page reads as before. `{رقم_الطلب}` in the
+   * message becomes the order number. An empty number uses the store's. `whatsappAutoOpen` opens WhatsApp by itself a
+   * moment after the order — off by default, because leaving the page also leaves the «زيد علبة» offer behind.
+   */
+  whatsappAfter: z.boolean().default(true),
+  whatsappLabel: z.string().max(40).default('أكّد طلبك على واتساب'),
+  whatsappMessage: z.string().max(300).default('مرحباً، بدّي أأكّد طلبي رقم {رقم_الطلب}'),
+  whatsappNumber: z.string().max(30).regex(/^[+0-9 ()-]*$/).default(''),
+  whatsappAutoOpen: z.boolean().default(false),
 });
 
 /** The three reassurances under the button. */
