@@ -52,3 +52,15 @@ describe('the order form', () => {
     expect(checkouts()).toHaveLength(0);
   });
 });
+
+describe('when the first touch is picking a bundle', () => {
+  it('reports the bundle being picked — not the one that was selected before the click', () => {
+    render(
+      <OrderForm slug="s" productName="ماء الكمأ" basePrice={12} currency="USD" offers={offers} recommendations={[]} regions={['دمشق']} offerStyle="radio" />
+    );
+    const second = (screen.getAllByRole('radio') as HTMLInputElement[]).find((r) => r.value === 'o2')!;
+    fireEvent.focus(second);
+    expect(checkouts()).toHaveLength(1);
+    expect(checkouts()[0][1]).toEqual({ value: 20, currency: 'USD' });
+  });
+});

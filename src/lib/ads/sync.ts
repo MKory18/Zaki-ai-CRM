@@ -60,6 +60,9 @@ export function earliestAskable(today = new Date()): Date {
   return d;
 }
 
+/** How many spend questions go to a platform at the same time — enough to finish fast, few enough to stay polite. */
+const SPEND_CALLS_AT_ONCE = 5;
+
 const notBefore = (d: Date) => {
   const floor = earliestAskable();
   return d < floor ? floor : d;
@@ -126,23 +129,41 @@ export async function syncAdSpend(scope: {
         account.campaigns.reduce((min, c) => (c.startDate < min ? c.startDate : min), account.campaigns[0].startDate)
       );
       const creds = readCredentials(token);
-      const rows = await adapter.fetchSpend(creds, account.accountId, adDate(since), adDate(new Date()));
+      const wide = { since: adDate(since), until: adDate(new Date()) };
+      const rows = await adapter.fetchSpend(creds, account.accountId, wide.since, wide.until);
       const byId = new Map(rows.map((r) => [r.campaignId, r]));
+
+      /*
+       * Per-campaign window, so a campaign that ran for a week is not charged with a month of the account's spend —
+       * but each DISTINCT window asked once, a few at a time. It was one call per campaign, in a row, inside one
+       * request: 145 campaigns on «كيوان 3» were 145 sequential calls to Meta, the request ran for minutes, and the
+       * app stopped answering the night it first ran.
+       */
+      const keyOf = (w: { since: string; until: string }) => `${w.since}|${w.until}`;
+      const windows = new Map<string, { since: string; until: string }>();
+      for (const c of account.campaigns) {
+        if (!byId.has(c.externalId!)) continue;
+        const w = windowFor(c);
+        if (keyOf(w) !== keyOf(wide)) windows.set(keyOf(w), w);
+      }
+      const byWindow = new Map<string, Map<string, { spend: number }>>();
+      const pending = [...windows.entries()];
+      for (let i = 0; i < pending.length; i += SPEND_CALLS_AT_ONCE) {
+        await Promise.all(
+          pending.slice(i, i + SPEND_CALLS_AT_ONCE).map(async ([key, w]) => {
+            const got = await adapter.fetchSpend(creds, account.accountId, w.since, w.until);
+            byWindow.set(key, new Map(got.map((r) => [r.campaignId, r])));
+          })
+        );
+      }
 
       let updated = 0;
       for (const c of account.campaigns) {
         const row = byId.get(c.externalId!);
         if (!row) continue;
 
-        // Per-campaign window, so a campaign that ran for a week is not
-        // charged with a month of the account's spend.
-        const w = windowFor(c);
-        const exact =
-          w.since === adDate(since) && w.until === adDate(new Date())
-            ? row
-            : (await adapter.fetchSpend(creds, account.accountId, w.since, w.until)).find(
-                (r) => r.campaignId === c.externalId
-              );
+        const key = keyOf(windowFor(c));
+        const exact = key === keyOf(wide) ? row : byWindow.get(key)?.get(c.externalId!);
 
         const spend = Number((exact?.spend ?? row.spend).toFixed(2));
         if (Number(c.spend) === spend) continue;
