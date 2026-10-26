@@ -5,6 +5,7 @@ import { requireContext } from '@/lib/geo-context';
 
 import { logAudit } from '@/lib/audit';
 import { can } from '@/lib/authorization';
+import { apiErrorResponse } from '@/lib/api-error';
 
 /**
  * GET  /api/shipping-batches — company-scoped list (with order counts)
@@ -14,7 +15,13 @@ import { can } from '@/lib/authorization';
  */
 export async function GET(req: Request) {
   try {
-    const { companyId, storeId } = await requireContext();
+    const { user, companyId, storeId } = await requireContext();
+    // The keys of the screen that reads it (route-registry: /ops/batches).
+    // It asked nothing before, so any signed-in member of the store read
+    // every batch, its courier and who made it.
+    if (!can(user, 'ops.ship') && !can(user, 'ops.track')) {
+      return NextResponse.json({ error: 'دفعات الشحن ليست من صلاحيّاتك.', errorAr: 'دفعات الشحن ليست من صلاحيّاتك.' }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
     const page = readPage(searchParams);
     const limit = readLimit(searchParams, 50, 100);
@@ -40,8 +47,9 @@ export async function GET(req: Request) {
       batches,
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'حدث خطأ داخلي' }, { status: 400 });
+  } catch (error) {
+    // A refusal is a refusal, not «خطأ داخلي» with a 400.
+    return apiErrorResponse(error);
   }
 }
 

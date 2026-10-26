@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -50,6 +50,9 @@ function legacyMentions(): { file: string; line: string }[] {
   const hits: { file: string; line: string }[] = [];
   for (const { path, text } of FILES) {
     if (path === 'lib/commission-one-source.test.ts') continue;
+    // Named there only to be REMOVED from what an order read hands out: the
+    // column still exists, so a select-all brings it, and the projection drops it.
+    if (path.split(sep).join('/') === 'lib/order-projection.ts') continue;
     for (const raw of text.split('\n')) {
       const line = raw.trim();
       if (line.startsWith('//') || line.startsWith('*') || line.startsWith('/*')) continue;

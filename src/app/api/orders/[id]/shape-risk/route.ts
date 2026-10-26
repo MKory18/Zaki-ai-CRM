@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireContext } from '@/lib/geo-context';
-import { requirePermission } from '@/lib/authorization';
+import { ORDER_ACCESS_STATUS, assertOrderReadable } from '@/lib/rbac';
+import { ORDER_NOT_FOUND } from '@/lib/order-refusals';
 import { apiErrorResponse } from '@/lib/api-error';
 import { DELIVERED_SHIPPING, RETURNED_SHIPPING } from '@/lib/order-state';
 import {
@@ -55,8 +56,13 @@ const add = (m: Map<string, SegmentOutcome>, key: string, n: number) => {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { companyId, storeId } = await requireContext();
-    await requirePermission('orders.view');
+    const { user, companyId, storeId } = await requireContext();
+    // The order through the same envelope the window opened it with: an agent
+    // asked about orders outside her own by id, and got this card for any of them.
+    const access = await assertOrderReadable(id, user, { companyId, storeId }, 'orders.view');
+    if (!access.allowed) {
+      return NextResponse.json({ error: ORDER_NOT_FOUND, errorAr: ORDER_NOT_FOUND }, { status: ORDER_ACCESS_STATUS[access.reason] });
+    }
 
     const order = await db.order.findFirst({
       where: { id, companyId, ...(storeId ? { storeId } : {}) },

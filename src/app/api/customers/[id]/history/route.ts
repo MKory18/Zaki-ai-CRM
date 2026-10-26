@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { inStore } from '@/lib/store-filter';
 import { requireContext } from '@/lib/geo-context';
-import { can } from '@/lib/authorization';
+import { can, getPermissionScope } from '@/lib/authorization';
+import { assertOrderReadable } from '@/lib/rbac';
 import { apiErrorResponse } from '@/lib/api-error';
 import { customerRisk } from '@/lib/customer-risk';
 import { deriveCoreState, type StateSource } from '@/lib/order-state';
@@ -22,7 +23,38 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const { user, companyId, storeId } = await requireContext();
 
-    if (!can(user, 'customers.view') && !can(user, 'customers.view_basic') && !can(user, 'orders.view')) {
+    /*
+     * WHOSE HISTORY, BY WHICH DOOR.
+     *
+     * Any of three keys used to open any customer in the store, scope or no
+     * scope: an agent with orders ASSIGNED, or the address book's OWN, typed
+     * an id and read thirty orders with their refusal reasons. The history
+     * is read two ways, and each is now held to its own rule:
+     *
+     *   • the address book (`customers.view`), within its scope — OWN is the
+     *     customers this person brought in, as the customers list counts it;
+     *   • from an order (every button passes `?exclude=<that order>`): the
+     *     order must be one this person can open, and this its customer.
+     */
+    const exclude = new URL(req.url).searchParams.get('exclude');
+    const book = getPermissionScope(user, 'customers.view');
+    let allowed = false;
+    if (book?.scope === 'OWN') {
+      allowed = !!(await db.order.findFirst({
+        where: { companyId, customerId: id, moderatorId: user.id },
+        select: { id: true },
+      }));
+    } else if (book) {
+      allowed = true;
+    }
+    if (!allowed && exclude && can(user, 'orders.view')) {
+      const access = await assertOrderReadable(exclude, user, { companyId, storeId }, 'orders.view');
+      if (access.allowed) {
+        const theirs = await db.order.findFirst({ where: { id: exclude, customerId: id }, select: { id: true } });
+        allowed = !!theirs;
+      }
+    }
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden: cannot read customer history', errorAr: 'سجلّ العميل ليس من صلاحيّاتك.' }, { status: 403 });
     }
 
@@ -36,7 +68,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     });
     if (!customer) return NextResponse.json({ error: 'العميل غير موجود' }, { status: 404 });
 
-    const exclude = new URL(req.url).searchParams.get('exclude');
     const orders = await db.order.findMany({
       // The customer is this store's; their orders must be too. A
       // customer who bought from two stores has two histories, and neither
