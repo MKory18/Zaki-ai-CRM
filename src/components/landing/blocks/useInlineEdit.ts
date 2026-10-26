@@ -54,9 +54,28 @@ export function useInlineEdit(
       node.style.cursor = 'text';
       node.title = 'اكتب هنا';
 
-      const before = sanitizeRich(node.innerHTML);
+      /*
+       * A PLAIN field (`data-edit-plain`) is a body of paragraphs, not a line:
+       * Enter starts a new paragraph instead of committing, and what is
+       * stored is the text with its paragraph breaks — no marks, no markup.
+       * An EMPTY one (`data-edit-empty`) shows a hint in the preview; the
+       * hint is cleared on the first click and is never what gets stored.
+       */
+      const plain = node.hasAttribute('data-edit-plain');
+      const hint = node.hasAttribute('data-edit-empty');
+      const shown = node.innerHTML;
+      const before = hint ? '' : plain ? plainText(node) : sanitizeRich(node.innerHTML);
 
+      const onFocus = () => {
+        if (hint && node.innerHTML === shown) node.innerHTML = '<p><br></p>';
+      };
       const onBlur = () => {
+        if (plain) {
+          const now = plainText(node);
+          if (now !== before) commit(activeId, field, now);
+          else if (hint) node.innerHTML = shown;
+          return;
+        }
         // Sanitised here as well as on the server: what the browser leaves
         // in a contenteditable after a paste is nobody's idea of clean, and
         // the editor should not hold a value the page would refuse.
@@ -66,12 +85,14 @@ export function useInlineEdit(
       // Enter commits rather than inserting a line into a headline; Escape
       // puts back what was there, which is what Escape means everywhere.
       const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && plain) {
+          e.stopPropagation();
+        } else if (e.key === 'Enter') {
           e.preventDefault();
           node.blur();
         } else if (e.key === 'Escape') {
           e.preventDefault();
-          node.innerHTML = before;
+          node.innerHTML = plain ? shown : before;
           node.blur();
         }
         // A keystroke inside the text is not a shortcut for the page.
@@ -80,10 +101,12 @@ export function useInlineEdit(
       // Clicking the words must not also re-select the block underneath.
       const onDown = (e: MouseEvent) => e.stopPropagation();
 
+      node.addEventListener('focus', onFocus);
       node.addEventListener('blur', onBlur);
       node.addEventListener('keydown', onKey);
       node.addEventListener('mousedown', onDown);
       cleanups.push(() => {
+        node.removeEventListener('focus', onFocus);
         node.removeEventListener('blur', onBlur);
         node.removeEventListener('keydown', onKey);
         node.removeEventListener('mousedown', onDown);
@@ -95,4 +118,31 @@ export function useInlineEdit(
 
     return () => cleanups.forEach((fn) => fn());
   }, [root, activeId, commit]);
+}
+
+/**
+ * The words of a plain field, one paragraph per block the browser made —
+ * a `<p>` or a `<div>` — separated by a blank line, which is how the body
+ * is stored and split again when it is drawn. A line break inside one
+ * paragraph stays a line break.
+ */
+export function plainText(node: HTMLElement): string {
+  const blocks = [...node.children].filter((c) => c.tagName === 'P' || c.tagName === 'DIV');
+  const parts = blocks.length
+    ? blocks.map((b) => textWithBreaks(b))
+    : [textWithBreaks(node)];
+  return parts
+    .map((p) => p.replace(/[ \t ]+/g, ' ').replace(/ ?\n ?/g, '\n').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function textWithBreaks(el: Element): string {
+  let out = '';
+  for (const n of el.childNodes) {
+    if (n.nodeType === 3) out += n.textContent ?? '';
+    else if ((n as Element).tagName === 'BR') out += '\n';
+    else out += textWithBreaks(n as Element);
+  }
+  return out;
 }
