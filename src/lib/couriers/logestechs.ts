@@ -87,6 +87,13 @@ export function logesTechsBase(raw: string | null | undefined): string {
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
 /**
+ * A status question gives up sooner. It runs sixty at a time on the worker every two minutes, and one silent server
+ * at thirty seconds a barcode held every other job behind it for half an hour. A late answer is asked again in two
+ * minutes; a late CREATE is the one that must wait.
+ */
+export const STATUS_TIMEOUT_MS = 10_000;
+
+/**
  * A TIMED-OUT WRITE IS NOT A FAILED WRITE.
  *
  * When a POST times out, the parcel may well have been created — we simply
@@ -190,13 +197,13 @@ export class LogesTechsAdapter implements CourierAdapter {
     return { email: this.config.email, password: this.config.password };
   }
 
-  private async call<T>(path: string, init: RequestInit): Promise<T> {
+  private async call<T>(path: string, init: RequestInit, timeoutMs: number = this.timeoutMs): Promise<T> {
     /*
      * The caller's own signal is kept, not replaced: a request cancelled
      * because the operator navigated away must still cancel. Whichever
      * fires first wins.
      */
-    const budget = AbortSignal.timeout(this.timeoutMs);
+    const budget = AbortSignal.timeout(timeoutMs);
     const signal = init.signal ? AbortSignal.any([init.signal, budget]) : budget;
 
     let res: Response;
@@ -214,7 +221,7 @@ export class LogesTechsAdapter implements CourierAdapter {
        */
       if (budget.aborted) {
         throw markOutcomeUnknown(
-          new Error(`${TIMEOUT_PREFIX}: لم تردّ شركةُ الشحن خلال ${Math.round(this.timeoutMs / 1000)} ثانية على ${path}`)
+          new Error(`${TIMEOUT_PREFIX}: لم تردّ شركةُ الشحن خلال ${Math.round(timeoutMs / 1000)} ثانية على ${path}`)
         );
       }
       throw e;
@@ -322,7 +329,8 @@ export class LogesTechsAdapter implements CourierAdapter {
       try {
         const res = await this.call<{ status?: string; cod?: number; cost?: number; notes?: string }>(
           `/guests/packages/status?barcode=${encodeURIComponent(barcode)}`,
-          { method: 'GET' }
+          { method: 'GET' },
+          Math.min(this.timeoutMs, STATUS_TIMEOUT_MS)
         );
         const rawStatus = res.status ?? '';
         return {

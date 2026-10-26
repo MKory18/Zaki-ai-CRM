@@ -168,7 +168,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
 
   const order = await db.order.findFirst({
     where: { companyId: provider.companyId, deliveryProviderId: provider.id, trackingNumber: barcode },
-    select: { id: true, companyId: true, shippingStatus: true },
+    select: { id: true, companyId: true, shippingStatus: true, shippedAt: true, outForDeliveryAt: true, failedAt: true },
   });
   if (!order) {
     return NextResponse.json({ ok: true, applied: false, reason: 'UNKNOWN_BARCODE' });
