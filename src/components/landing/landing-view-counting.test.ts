@@ -45,6 +45,7 @@ vi.mock('@/lib/reservation', () => ({ availableStock: async () => null }));
 vi.mock('next/server', () => ({ after: () => { throw new Error('outside a request'); } }));
 
 import { LandingPageView } from './LandingPageView';
+import { BrowserVisit } from './BrowserVisit';
 
 const page = {
   id: 'lp1', name: 'العرض', slug: 'offer', isPublished: true, htmlContent: '<p>hi</p>', builderMode: 'HTML',
@@ -95,5 +96,40 @@ describe('not a visit', () => {
     await settle();
     expect(db.landingPage.update).not.toHaveBeenCalled();
     expect(recordLandingView).not.toHaveBeenCalled();
+  });
+});
+
+/** Every element of a rendered tree whose component is `type`. */
+function findAll(node: unknown, type: unknown, out: { props: Record<string, unknown> }[] = []) {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) { for (const n of node) findAll(n, type, out); return out; }
+  const el = node as { type?: unknown; props?: Record<string, unknown> };
+  if (el.type === type && el.props) out.push(el as { props: Record<string, unknown> });
+  if (el.props) findAll(el.props.children, type, out);
+  return out;
+}
+
+describe('the browser’s count — «خلي العدّ بالطريقتين أسبوع»', () => {
+  it('a visit carries the one script that reports it, naming the page', async () => {
+    const tree = await LandingPageView({ target: { slug: 'offer' } });
+    const scripts = findAll(tree, BrowserVisit);
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0].props.pageId).toBe('lp1');
+  });
+
+  it('NEGATIVE: the seller’s preview carries none', async () => {
+    verifyPreviewToken.mockResolvedValue({ lpId: 'lp1' });
+    const tree = await LandingPageView({ target: { slug: 'offer', previewToken: 'tok' } });
+    expect(findAll(tree, BrowserVisit)).toHaveLength(0);
+  });
+
+  it('the script posts the page id and the ?c= code, and waits for a prerendered page to be shown', () => {
+    const el = BrowserVisit({ pageId: 'lp1' }) as { props: { dangerouslySetInnerHTML: { __html: string } } };
+    const js = el.props.dangerouslySetInnerHTML.__html;
+    expect(js).toContain("'/api/public/lp-view'");
+    expect(js).toContain('p:"lp1"');
+    expect(js).toContain(".get('c')");
+    expect(js).toContain('prerenderingchange');
+    expect(() => new Function(js)).not.toThrow();
   });
 });

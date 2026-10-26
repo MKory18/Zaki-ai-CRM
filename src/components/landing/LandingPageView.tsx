@@ -12,6 +12,7 @@ import { sellingCurrency } from '@/lib/selling-currency';
 import OrderForm from '@/components/landing/OrderForm';
 import { LandingFormBridge } from '@/components/landing/LandingFormBridge';
 import { detectOrderIntent } from '@/lib/landing-dynamic';
+import { BrowserVisit } from './BrowserVisit';
 import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
 import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { parseSections, ensureSellingCore } from '@/lib/landing-sections';
@@ -394,6 +395,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
         <style dangerouslySetInnerHTML={{ __html: BLOCK_CSS_WITH_DEV_FONTS }} />
         {storeFonts.css && <style dangerouslySetInnerHTML={{ __html: storeFonts.css }} />}
         <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
+        {!previewing && <BrowserVisit pageId={lp.id} />}
         {/*
           ONE ATTRIBUTE IS THE WHOLE FAMILY, AND IT IS WHY THIS IS A WRAPPER
           AND NOT A CLASS ON EACH BLOCK.
@@ -484,6 +486,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
   return (
     <div dir="rtl" className="flex min-h-screen flex-col bg-[#f7f7f8]">
       <LandingTrackingPixels pixels={trackingPixels} viewContent={viewContent} />
+      {!previewing && <BrowserVisit pageId={lp.id} />}
       <iframe
         src={rawSrc}
         title={lp.name}

@@ -237,8 +237,8 @@ describe('asking about many stores at once', () => {
     const many = fakeDb();
     await storeBlockers(many.db, Array.from({ length: 40 }, (_, i) => store(`s${i}`)), asker);
     expect(many.asked.length).toBe(one.asked.length);
-    // Twenty-five stoppers, and the pages.
-    expect(one.asked.length).toBe(26);
+    // Twenty-six stoppers (the browser's visit count joined the server's), and the pages.
+    expect(one.asked.length).toBe(27);
   });
 
   it('and no stores asks nothing at all', async () => {

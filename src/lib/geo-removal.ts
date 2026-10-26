@@ -96,6 +96,7 @@ export const STORE_TABLES: readonly StoreTable[] = [
   // Selling.
   { model: 'landingPage', label: 'صفحات الهبوط', how: 'blocks' },
   { model: 'landingPageView', label: 'زيارات صفحات الهبوط', how: 'blocks' },
+  { model: 'landingPageBrowserView', label: 'زيارات صفحات الهبوط (عدّ المتصفح)', how: 'blocks' },
   { model: 'campaign', label: 'الحملات', how: 'blocks' },
   { model: 'adAccount', label: 'الحسابات الإعلانية', how: 'blocks' },
   { model: 'trackingPixel', label: 'بكسلات التتبّع', how: 'blocks' },

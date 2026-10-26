@@ -29,6 +29,20 @@ export interface AnalyticsRow {
   conversion: number | null;
 }
 
+/**
+ * THE TWO COUNTS SIDE BY SIDE — the week of comparison before the page is cached.
+ *
+ * «ابني كاش الصفحة، وخلي العدّ بالطريقتين أسبوع قبل ما نبدّل». Only over the days the browser was counting too
+ * (`since` onwards, inside the window): the server's rows reach back months, and comparing those with a week of the
+ * browser's would show a «difference» that is only the calendar.
+ */
+export interface CountCheck {
+  since: string;
+  server: number;
+  browser: number;
+  byPage: { key: string; label: string; server: number; browser: number }[];
+}
+
 export interface LandingAnalytics {
   /** The first day views were counted for this store, or null if none yet. */
   countingSince: string | null;
@@ -36,6 +50,8 @@ export interface LandingAnalytics {
   byPage: AnalyticsRow[];
   byDevice: AnalyticsRow[];
   byCampaign: AnalyticsRow[];
+  /** The server's count beside the browser's — null until the browser has counted a first visit. */
+  countCheck: CountCheck | null;
 }
 
 export function conversionOf(views: number, orders: number): number | null {
@@ -167,6 +183,42 @@ export async function landingAnalytics(scope: {
     byPage,
     byDevice,
     byCampaign,
+    countCheck: await countCheckFor({ companyId, storeId, start, end }),
+  };
+}
+
+/** The server's count and the browser's, over the same days — see `CountCheck`. Reads two tables; computes no money. */
+export async function countCheckFor(scope: { companyId: string; storeId: string; start: Date; end: Date }): Promise<CountCheck | null> {
+  const { companyId, storeId, start, end } = scope;
+  const firstBrowser = await db.landingPageBrowserView.findFirst({
+    where: { companyId, storeId },
+    orderBy: { day: 'asc' },
+    select: { day: true },
+  });
+  if (!firstBrowser) return null;
+  const since = firstBrowser.day.toISOString().slice(0, 10);
+  const from = localDay(start) > since ? localDay(start) : since;
+  const to = localDay(end);
+  if (from > to) return null;
+  const where = { companyId, storeId, day: { gte: asDateColumn(from), lte: asDateColumn(to) } };
+  const [server, browser] = await Promise.all([
+    db.landingPageView.groupBy({ by: ['landingPageId'], where, _sum: { count: true } }),
+    db.landingPageBrowserView.groupBy({ by: ['landingPageId'], where, _sum: { count: true } }),
+  ]);
+  const ids = [...new Set([...server.map((r) => r.landingPageId), ...browser.map((r) => r.landingPageId)])];
+  const pages = ids.length
+    ? await db.landingPage.findMany({ where: { id: { in: ids }, companyId }, select: { id: true, name: true } })
+    : [];
+  const of = (rows: { landingPageId: string; _sum: { count: number | null } }[], id: string) =>
+    rows.find((r) => r.landingPageId === id)?._sum.count ?? 0;
+  const byPage = ids
+    .map((id) => ({ key: id, label: pages.find((p) => p.id === id)?.name ?? 'صفحة محذوفة', server: of(server, id), browser: of(browser, id) }))
+    .sort((a, b) => b.server + b.browser - (a.server + a.browser));
+  return {
+    since: from,
+    server: byPage.reduce((n, r) => n + r.server, 0),
+    browser: byPage.reduce((n, r) => n + r.browser, 0),
+    byPage,
   };
 }
 

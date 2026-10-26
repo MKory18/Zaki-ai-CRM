@@ -33,6 +33,15 @@ interface Data {
   byCampaign: Row[];
   /** One per product that has more than one page — see `pageVerdicts`. */
   verdicts: { productId: string; productName: string; pages: number; verdict: Verdict }[];
+  /** The server's count beside the browser's, for the week before the page is cached — see `CountCheck`. */
+  countCheck: CountCheckData | null;
+}
+
+interface CountCheckData {
+  since: string;
+  server: number;
+  browser: number;
+  byPage: { key: string; label: string; server: number; browser: number }[];
 }
 
 export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; from: string }) {
@@ -82,6 +91,8 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
 
       <Table title="حسب الصفحة" rows={data.byPage} empty="لا زيارات ولا طلبات من صفحات الهبوط في هذه المدة." linkPages />
 
+      {data.countCheck && <CountCheckBlock check={data.countCheck} />}
+
       {/*
         THE VERDICT BETWEEN TWO PAGES FOR ONE PRODUCT.
 
@@ -121,6 +132,44 @@ export function LandingAnalyticsTab({ dateQuery, from }: { dateQuery: string; fr
         كل طلب جاء من صفحة هبوط خلال المدة، والحملة من رمز ?c= في رابطها.
       </p>
     </div>
+  );
+}
+
+/**
+ * «العدّ بالطريقتين» — THE WEEK OF COMPARISON THE OWNER ASKED FOR.
+ *
+ * The server counts a visit when it builds the page; the browser counts it when the page opens. A cached page is not
+ * built per visit, so before it is switched on both counts run side by side and this block shows them over the same
+ * days. A sentence and two numbers per page — no button: switching is the owner's decision, made outside this screen.
+ */
+function CountCheckBlock({ check }: { check: CountCheckData }) {
+  const diff = (server: number, browser: number) =>
+    server > 0 ? `${browser >= server ? '+' : ''}${Math.round(((browser - server) / server) * 100)}٪` : '—';
+  return (
+    <section className="rounded-lg border border-[var(--sys-border)] bg-[var(--sys-card)]">
+      <h3 className="border-b border-[var(--sys-surface-strong)] px-4 py-2.5 text-sm font-bold text-[var(--sys-heading)]">
+        <RiEyeLine className="me-1 inline h-4 w-4" />
+        تجربة العدّ: السيرفر مقابل المتصفح
+      </h3>
+      <p className="px-4 py-2.5 text-xs leading-relaxed text-[var(--sys-foreground)]">
+        من {check.since}: السيرفر عدّ {fmt(check.server)} زيارة، والمتصفح {fmt(check.browser)} — الفرق {diff(check.server, check.browser)}.
+      </p>
+      <div className="divide-y divide-[var(--sys-surface-strong)]">
+        {check.byPage.map((r) => (
+          <div key={r.key} className="flex items-center justify-between gap-2 px-4 py-2.5 text-xs">
+            <span className="truncate text-[var(--sys-heading)]">{r.label}</span>
+            <span className="shrink-0 tabular-nums text-[var(--sys-muted-foreground)]" dir="ltr">
+              {fmt(r.server)} · {fmt(r.browser)} · {diff(r.server, r.browser)}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="border-t border-[var(--sys-surface-strong)] px-4 py-2.5 text-xs leading-relaxed text-[var(--sys-muted)]">
+        السيرفر يعدّ الزيارة حين يبني الصفحة، والمتصفح حين تُفتح عند الزائر. المتصفح لا يعدّ التحميل المسبق من ميتا
+        ولا الروبوتات، فمن الطبيعي أن يكون أقلّ قليلاً. الطلبات والمال لا يتأثران بأيٍّ منهما. بعد أسبوع تقرّر إن
+        كنّا ننتقل إلى الكاش.
+      </p>
+    </section>
   );
 }
 
