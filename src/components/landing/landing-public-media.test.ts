@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db, verifyPreviewToken } = vi.hoisted(() => ({
   db: {
-    landingPage: { findFirst: vi.fn(), update: vi.fn() },
+    landingPage: { findFirst: vi.fn(), update: vi.fn(), findMany: vi.fn(async () => []) },
     offer: { findMany: vi.fn(async () => []) },
     landingPageRecommendation: { findMany: vi.fn(async () => []) },
     region: { findMany: vi.fn(async () => []) },

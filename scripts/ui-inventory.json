@@ -1041,7 +1041,7 @@
   },
   "src/components/screens/LandingPageDetailScreen.tsx": {
     "buttons": 11,
-    "inputs": 5,
+    "inputs": 6,
     "columns": 0,
     "cards": 7,
     "modals": 0,

@@ -43,6 +43,10 @@ export interface RecommendationView {
   name: string;
   price: number;
   image: string | null;
+  /** One short line: the seller's own, or the start of the product's description. */
+  blurb?: string | null;
+  /** The product's own page (its landing page, or its page in the shop), opened beside this one. */
+  pageUrl?: string | null;
 }
 
 /**
@@ -786,9 +790,16 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="line-clamp-2 text-sm font-semibold leading-snug text-[#121926]">{rec.name}</p>
+                            {rec.blurb && <p className="lp-xsell-blurb line-clamp-2 text-xs leading-snug text-[#697586]">{rec.blurb}</p>}
                             <p className="text-sm font-bold text-[var(--store-accent,#b8256e)]" dir="ltr">
                               {fmt(rec.price)} {currency}
                             </p>
+                            {rec.pageUrl && (
+                              // A new tab: this screen holds the order and the add-to-order button.
+                              <a href={rec.pageUrl} target="_blank" rel="noopener" className="text-xs font-semibold text-[var(--store-accent,#b8256e)] underline">
+                                شوف المنتج ←
+                              </a>
+                            )}
                           </div>
                           {st === 'added' ? (
                             <span className="flex shrink-0 items-center gap-1 rounded-lg bg-[#e6f9ee] px-3 py-2 text-xs font-bold text-[#00c853]">

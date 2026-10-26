@@ -28,6 +28,7 @@ import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { getStorefront } from '@/lib/storefront';
 import { BLOCK_CSS_WITH_DEV_FONTS, fontHref } from '@/components/landing/blocks/styles';
 import { availableStock } from '@/lib/reservation';
+import { blurbOf, productPageLinks, type ShopForLinks } from '@/lib/recommendation-view';
 import { deviceClassOf, recordLandingView } from '@/lib/landing-views';
 import { resolveCampaign } from '@/lib/campaigns-server';
 import { afterResponse } from '@/lib/notify';
@@ -85,15 +86,34 @@ function pageThemeOverride(raw: string | null | undefined): Partial<typeof DEFAU
   }
 }
 
-async function loadLpData(landingPageId: string, companyId: string, productId: string | null, minorUnit: number) {
+async function loadLpData(
+  landingPageId: string,
+  companyId: string,
+  productId: string | null,
+  minorUnit: number,
+  storeId: string | null,
+  shop: ShopForLinks | null
+) {
   const [offers, recs] = await Promise.all([
     fetchOffers(companyId, productId, minorUnit),
     db.landingPageRecommendation.findMany({
       where: { landingPageId, isActive: true, product: { status: 'ACTIVE' } },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, product: { select: { name: true, basePrice: true, image: true } } },
+      select: {
+        id: true,
+        blurb: true,
+        product: { select: { id: true, sku: true, slug: true, name: true, basePrice: true, image: true, description: true } },
+      },
     }),
   ]);
+  // «وصف بسيط… او رابط بيثير الفضول لصفحة المنتج» — recommendation-view.ts.
+  const links = await productPageLinks({
+    companyId,
+    storeId,
+    exceptPageId: landingPageId,
+    products: recs.flatMap((r) => (r.product ? [r.product] : [])),
+    shop,
+  });
   // A recommendation needs a name and a price to be an offer at all: one
   // without them read "add it to my order — 0 USD" over a blank line, at the
   // moment the customer has just trusted us with their phone number.
@@ -103,6 +123,8 @@ async function loadLpData(landingPageId: string, companyId: string, productId: s
       name: (r.product?.name || '').trim(),
       price: r.product?.basePrice ?? 0,
       image: r.product?.image || null,
+      blurb: blurbOf(r.blurb, r.product?.description),
+      pageUrl: (r.product && links.get(r.product.id)) || null,
     }))
     .filter((r) => r.name && r.price > 0);
   return [offers, recViews] as const;
@@ -126,6 +148,7 @@ const PAGE_SELECT = {
   store: {
     select: {
       countryId: true, name: true, slug: true, logo: true, favicon: true, supportPhone: true, theme: true, language: true,
+      storefrontEnabled: true, status: true, type: true, landingPageId: true,
       country: { select: { code: true, currencyCode: true, minorUnit: true } },
     },
   },
@@ -209,7 +232,7 @@ export async function LandingPageView({ target }: { target: LandingPageTarget })
    * anything. Same answers, same order of use; only the waiting is shared.
    */
   const [[offers, recs], regions, currency, trackingPixels] = await Promise.all([
-    loadLpData(page.id, companyId, page.product?.id ?? null, page.store?.country.minorUnit ?? 2),
+    loadLpData(page.id, companyId, page.product?.id ?? null, page.store?.country.minorUnit ?? 2, page.storeId ?? null, page.store ?? null),
     // The cities offered and the phone format come from the country this page sells into — never a hard-coded list.
     page.store
       ? db.region
