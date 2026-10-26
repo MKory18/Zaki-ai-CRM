@@ -78,7 +78,11 @@ function mapLegacy(legacy: string): Mapped[] {
     'moderators.manage': [{ permission: 'users.view', scope: 'ALL_COMPANY' }, { permission: 'users.edit', scope: 'ALL_COMPANY' }],
     // SETTINGS / AUDIT
     'settings.view': [{ permission: 'settings.view', scope: 'ALL_COMPANY' }],
-    'settings.manage': [{ permission: 'settings.edit', scope: 'ALL_COMPANY' }],
+    // Both since RV149: «الإعدادات الحسّاسة» is no longer an alias of settings.edit.
+    'settings.manage': [
+      { permission: 'settings.edit', scope: 'ALL_COMPANY' },
+      { permission: 'settings.manage', scope: 'ALL_COMPANY' },
+    ],
     'audit.view': [{ permission: 'audit.view', scope: 'ALL_COMPANY' }],
     // CRM
     'crm.view': [

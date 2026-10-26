@@ -20,6 +20,16 @@ export const LEGACY_ALIAS: Readonly<Record<string, string>> = {
   'products.update': 'products.edit',
   'products.manage': 'products.edit',
   'users.update': 'users.edit',
-  'settings.manage': 'settings.edit',
+  /*
+   * NOT HERE ANY MORE: 'settings.manage' → 'settings.edit'.
+   *
+   * «الإعدادات الحسّاسة» is its own box (the owner's ruling, 27/10, RV149).
+   * Aliased, every holder of «تعديل إعدادات النظام» also read and changed
+   * the courier credentials, the ad-account tokens and the AI provider's key,
+   * and a «منع» on the sensitive box did nothing. The migration
+   * 20261027000000_sensitive_settings_own_key gave settings.manage to every
+   * role and person who held settings.edit, so nobody lost a door on the day.
+   * Only a catalog key that is NOT a real box may stand on the left here.
+   */
   'analytics.view': 'reports.view',
 };
