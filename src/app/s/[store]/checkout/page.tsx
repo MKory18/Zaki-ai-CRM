@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { getStorefront } from '@/lib/storefront';
 import { StorefrontShell } from '@/components/storefront/StorefrontShell';
 import { CheckoutForm } from '@/components/storefront/CheckoutForm';
+import { LandingTrackingPixels } from '@/components/tracking/LandingTrackingPixels';
+import { getTrackingPixelsForPage } from '@/lib/tracking/tracking-config';
 import { publicTitle, storeIcons } from '@/lib/public-metadata';
 import { cartBarApplies, checkoutOrder, requiredCheckoutFields } from '@/lib/store-theme';
 import { WHAT_HAPPENS_NEXT_AR } from '@/lib/order-tracking';
@@ -46,13 +48,15 @@ export default async function CheckoutPage({ params }: Props) {
   const store = await getStorefront(slug);
   if (!store || !cartBarApplies(store.type)) notFound();
 
-  const [country, regions] = await Promise.all([
+  // The checkout is where the sale is reported, so the store's pixels are here even for a visitor who opened it first.
+  const [country, regions, pixels] = await Promise.all([
     db.country.findUnique({ where: { id: store.countryId }, select: { minorUnit: true } }),
     db.region.findMany({
       where: { countryId: store.countryId, isActive: true },
       select: { name: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
+    getTrackingPixelsForPage(store.companyId, 'PUBLIC', { storeId: store.id, countryId: store.countryId }),
   ]);
 
   const theme = store.theme;
@@ -61,6 +65,7 @@ export default async function CheckoutPage({ params }: Props) {
 
   return (
     <StorefrontShell store={store} back={{ href: `/s/${store.slug}/cart`, label: 'السلة' }}>
+      <LandingTrackingPixels page="PUBLIC" pixels={pixels} viewContent={null} />
       <article className="sf-page">
         <h1>إتمام الطلب</h1>
         <ul>

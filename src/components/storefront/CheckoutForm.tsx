@@ -6,6 +6,7 @@ import type { CheckoutField } from '@/lib/store-theme';
 import { cartToOrderItems } from '@/lib/cart';
 import { moneyText } from '@/lib/money';
 import { shopFetch } from '@/lib/storefront-fetch';
+import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 import { useCart } from './useCart';
 
 /**
@@ -20,6 +21,13 @@ import { useCart } from './useCart';
  * AND THE SUMMARY IS THE SERVER'S. The amount beside the button is the
  * quote, which is the same resolver and the same `computeCod` the order
  * will be charged by. Nothing on this page adds anything up.
+ *
+ * AND THE SALE IS REPORTED HERE, ONCE THE SERVER SAYS IT IS AN ORDER.
+ * «الشراء» goes to the store's pixels with the total and currency the
+ * server answered with — the same rule the landing form keeps. Not on the
+ * thank-you page: that page only echoes a reference and must not look the
+ * order up, so it has no amount to report. The engine drops a second send
+ * for the same order, and skips a pixel the server reports for.
  *
  * The honeypot is `website`, checked server-side and never stored. It is
  * hidden from sight AND from screen readers, and it is not focusable: a
@@ -62,6 +70,7 @@ export function CheckoutForm({
 }) {
   const router = useRouter();
   const cart = useCart(slug);
+  const { trackEvent } = useTracking();
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +95,13 @@ export function CheckoutForm({
         // The basket became an order; leaving it on the device would let a
         // refresh place the same order twice.
         cart.clear();
+        try {
+          trackEvent('Purchase', {
+            orderId: String(body.orderNumber),
+            value: typeof body.total === 'number' ? body.total : null,
+            currency: typeof body.currency === 'string' ? body.currency : null,
+          });
+        } catch { /* tracking is non-fatal */ }
         router.push(`/s/${slug}/thanks?o=${encodeURIComponent(String(body.orderNumber))}`);
         return;
       }
