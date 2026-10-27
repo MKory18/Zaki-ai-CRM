@@ -30,15 +30,40 @@ const CACHE_MS = 5_000;
 
 let cached: { at: number; reading: HeartbeatReading } | null = null;
 
+/**
+ * THE READING IN FLIGHT, SHARED TOO.
+ *
+ * The window only helped once a reading had come BACK. While one was still on
+ * its way, every caller found the cache stale and started its own read: the
+ * container's HEALTHCHECK, the uptime monitor, `/api/health/worker` and any
+ * flood all queued for the database at the very moment it was slow, which is
+ * exactly when a slow reading is in flight longest. Now they wait for the one
+ * already asked. `readHeartbeat` never rejects (every failure is a reading), so
+ * nobody waiting on it can be handed an exception.
+ */
+let pending: Promise<HeartbeatReading> | null = null;
+
 /** Only for tests, so one test's cached answer cannot decide the next one's. */
 export function resetHealthCache(): void {
   cached = null;
+  pending = null;
 }
 
 export async function cachedHeartbeat(now: Date = new Date()): Promise<HeartbeatReading> {
   const ms = now.getTime();
   if (cached && ms - cached.at < CACHE_MS) return cached.reading;
-  const reading = await readHeartbeat(now);
-  cached = { at: ms, reading };
-  return reading;
+  if (!pending) {
+    const asked = readHeartbeat(now).then((reading) => {
+      cached = { at: ms, reading };
+      return reading;
+    });
+    pending = asked;
+    // Cleared only if it is still this read: a reset in between must not clear a newer one.
+    // Both arms, so even a rejection that should never happen is not left unhandled here.
+    const clear = () => {
+      if (pending === asked) pending = null;
+    };
+    asked.then(clear, clear);
+  }
+  return pending;
 }

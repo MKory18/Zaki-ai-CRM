@@ -22,6 +22,9 @@ const agoSeconds = (s: number) => new Date(NOW.getTime() - s * 1000);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // There are several reads per reading now: an answer queued for one test and not
+  // consumed must not become the next test's first answer.
+  db.jobRun.findFirst.mockReset();
 });
 
 describe('reading the heartbeat', () => {
@@ -73,29 +76,63 @@ describe('reading the heartbeat', () => {
 });
 
 describe('the query is the cheap one, and nothing else', () => {
-  it('asks for one row, by indexed job name, selecting only the timestamp', async () => {
+  it('asks for one row PER JOB, by one exact job name, selecting only the timestamp', async () => {
     db.jobRun.findFirst.mockResolvedValue({ startedAt: agoSeconds(1) });
     await readHeartbeat(NOW);
 
-    const arg = db.jobRun.findFirst.mock.calls[0][0];
-    // `(jobName, startedAt)` is the index on JobRun. Equality on jobName
-    // plus a descending order on startedAt is an index-only scan stopping
-    // at the first row — this assertion is what keeps it that way if
-    // somebody later "improves" it into a findMany or a count.
-    expect(arg.where).toEqual({ jobName: { in: [...HEARTBEAT_JOBS] } });
-    expect(arg.orderBy).toEqual({ startedAt: 'desc' });
-    // Not the whole row: `detail` and `error` are free text written by
-    // jobs, and an unauthenticated endpoint must not pull them into memory
-    // at all, never mind risk echoing them.
-    expect(arg.select).toEqual({ startedAt: true });
+    // `(jobName, startedAt)` is the index on JobRun. ONE exact name plus a
+    // descending order on startedAt is a backward index-only scan stopping
+    // at the first row. A LIST of names is not: the index orders by name
+    // first, so Postgres reads every run of every listed job and sorts them
+    // (EXPLAIN on Postgres 16, 27/10). That list is what this endpoint asked
+    // for until a deploy made the read cross its 2 s cap and the app said
+    // «db: down» with a working database. So: exact names, never `in`.
+    const asked = db.jobRun.findFirst.mock.calls.map((c) => c[0]);
+    expect(asked.map((a) => a.where)).toEqual(HEARTBEAT_JOBS.map((jobName) => ({ jobName })));
+    for (const arg of asked) {
+      expect(typeof arg.where.jobName, 'قائمة أسماء بدل اسم واحد — بترجع تقرأ السجل كله').toBe('string');
+      expect(arg.orderBy).toEqual({ startedAt: 'desc' });
+      // Not the whole row: `detail` and `error` are free text written by
+      // jobs, and an unauthenticated endpoint must not pull them into memory
+      // at all, never mind risk echoing them.
+      expect(arg.select).toEqual({ startedAt: true });
+    }
   });
 
-  it('makes exactly one database call — no separate liveness probe', async () => {
-    // A `SELECT 1` on top would be a second round trip to learn what this
-    // query already proves. It is polled every minute for ever.
+  it('makes one call per watched job and nothing else — no separate liveness probe', async () => {
+    // A `SELECT 1` on top would be another round trip to learn what these
+    // reads already prove. It is polled every minute for ever.
     db.jobRun.findFirst.mockResolvedValue(null);
     await readHeartbeat(NOW);
-    expect(db.jobRun.findFirst).toHaveBeenCalledTimes(1);
+    expect(db.jobRun.findFirst).toHaveBeenCalledTimes(HEARTBEAT_JOBS.length);
+  });
+
+  it('the newest of the watched jobs decides, whichever job it is', async () => {
+    // One job parked for an hour must not make a running worker read as stale,
+    // and the order the answers come back in must not matter.
+    for (let fresh = 0; fresh < HEARTBEAT_JOBS.length; fresh++) {
+      db.jobRun.findFirst.mockReset();
+      HEARTBEAT_JOBS.forEach((_, i) =>
+        db.jobRun.findFirst.mockResolvedValueOnce(i === fresh ? { startedAt: agoSeconds(20) } : i === 0 ? null : { startedAt: agoSeconds(3600) })
+      );
+      expect(await readHeartbeat(NOW), `الحديث رقم ${fresh}`).toEqual({ db: 'up', scheduler: 'alive' });
+    }
+  });
+
+  it('and the newest is still judged by the window — three old runs are stale', async () => {
+    db.jobRun.findFirst
+      .mockResolvedValueOnce({ startedAt: agoSeconds(SCHEDULER_STALE_SECONDS + 1) })
+      .mockResolvedValueOnce({ startedAt: agoSeconds(SCHEDULER_STALE_SECONDS + 60) })
+      .mockResolvedValueOnce(null);
+    expect(await readHeartbeat(NOW)).toEqual({ db: 'up', scheduler: 'stale' });
+  });
+
+  it('one failed read is a failed reading — never «alive» from the other two', async () => {
+    db.jobRun.findFirst
+      .mockResolvedValueOnce({ startedAt: agoSeconds(1) })
+      .mockRejectedValueOnce(new Error('connection refused'))
+      .mockResolvedValueOnce({ startedAt: agoSeconds(1) });
+    expect(await readHeartbeat(NOW)).toEqual({ db: 'down', scheduler: 'unknown' });
   });
 });
 
