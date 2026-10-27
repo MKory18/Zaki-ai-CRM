@@ -329,7 +329,9 @@ export function Sidebar({
           mobileOpen ? 'flex animate-in slide-in-from-right duration-200' : 'hidden'
         )}
       >
-        <div className="rail-center relative flex items-center gap-2 h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
+        {/* A minimum, like the header beside it (Header.tsx): the wordmark is shorter than 72px, so this
+            draws exactly as before, and the stylesheet carries one height rule for both instead of two. */}
+        <div className="rail-center relative flex items-center gap-2 min-h-[72px] px-5 border-b border-[var(--sys-border)] shrink-0">
           {/* The theme's own mood, in one of the three places it is allowed:
               above the menu, where the wordmark is — and not one pixel of it
               behind a figure. It draws nothing unless the person's level is

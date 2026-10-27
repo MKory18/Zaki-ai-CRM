@@ -34,8 +34,22 @@ export function Header({
 }) {
   const logout = () => signOut('manual');
 
+  /*
+   * AT LEAST 72px TALL, NEVER EXACTLY 72px.
+   *
+   * The group at the end of this bar wraps on purpose (see the note above it), but the bar
+   * itself had a fixed height. A wrapped group then did not make the bar taller: centred in
+   * 72px, it hung out of both edges. At 800px wide with an install button, a shift chip and
+   * four counters it measured 6 rows, from 33px above the window down to 104px, and the part
+   * below the bar sat over the page. It covered the screen's first row: on «الطلبات» that is
+   * «متقدم» and «إدخال طلب سريع», so pressing them did nothing at all. The top rows sat above
+   * the window and could not be seen.
+   *
+   * A minimum keeps the single-row bar exactly as it was, and lets a wrapped one push the page
+   * down instead of covering it. `py-2` keeps the wrapped rows off the bar's own border.
+   */
   return (
-    <header className="sticky top-0 z-30 h-[72px] bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
+    <header className="sticky top-0 z-30 min-h-[72px] py-2 bg-[var(--sys-card)] border-b border-[var(--sys-border)] flex items-center gap-3 px-4 md:px-6">
       <button
         onClick={onMenuClick}
         className="md:hidden flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--sys-surface)]"
@@ -141,6 +155,8 @@ export function Header({
         avatar, and `shrink-0` meant it would rather overflow the document by
         122px than give up a pixel. On a tablet a header that wraps to two
         rows is ordinary; a page that scrolls sideways is not.
+        It is ordinary only because the bar grows with it — see the height
+        note at the top of this component.
       */}
       <div className="flex min-w-0 flex-wrap items-center gap-3 md:mr-auto lg:flex-nowrap">
         {/* «ثبّت التطبيق» — only while this browser can install and has not. See InstallApp.tsx. */}
