@@ -165,8 +165,11 @@ export async function POST(req: Request) {
          */
         quantity: count(999, 1),
         finalPrice: amount(100000),
-        /** What the customer's message named, when it differed from the offer — kept in the order's history, never charged. */
-        typedPrice: amount(100000).optional().nullable(),
+        /**
+         * What the customer's message named, when it differed from the offer — kept in the order's history, never charged.
+         * A RECORD, SO IT NEVER REFUSES AN ORDER: a figure out of range is dropped, not a 400 about a box the reviewer cannot edit.
+         */
+        typedPrice: amount(100000).optional().nullable().catch(null),
         moderatorId: z.string().min(10).max(64).optional().nullable(),
         notes: z.string().trim().max(500).optional().nullable(),
         source: z.string().trim().max(40).optional().nullable(),
@@ -607,6 +610,8 @@ export async function POST(req: Request) {
         if (
           parsed.price !== null &&
           parsed.price > 0 &&
+          // the confirm door's own bound on a price: a figure past it is not a price anybody could record
+          parsed.price <= 100000 &&
           roundMinor(parsed.price, country.minorUnit) !== roundMinor(exact.price, country.minorUnit)
         ) {
           typedPrice = parsed.price;

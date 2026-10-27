@@ -356,6 +356,16 @@ describe('المقترَح للمراجع هو ما يَعِدُ به العرض
     expect(json.typedPrice).toBeNull();
   });
 
+  it('ورقمٌ فوقَ حدِّ أيِّ سعرٍ (١٥٠٠٠٠) لا يُحمَل كرقمِ الزبون — فلا يَسُدُّ التسجيلَ بعدها', async () => {
+    parseOrderText.mockImplementation(() => ({
+      customerName: 'سامر الأحمد', phone: '0999111222', governorate: 'عمّان', address: 'شارع',
+      productQuery: 'منتج أ', quantity: 2, price: 150000, notes: '', source: '',
+    }));
+    const json = (await preview()) as Record<string, unknown>;
+    expect(json.suggestedPrice).toBe(22);
+    expect(json.typedPrice).toBeNull();
+  });
+
   it('وكميّةٌ لا عرضَ لها بالضبط: لا يُقفَل المربّع، ورقمُ الرسالةِ يبقى اقتراحاً كما كان', async () => {
     parseOrderText.mockImplementation(() => ({
       customerName: 'سامر الأحمد', phone: '0999111222', governorate: 'عمّان', address: 'شارع',
@@ -515,6 +525,13 @@ describe('وبابُ الكتابةِ يُسجِّلُ سعرَ العرضِ ل�
     expect(data.customerNotes).toBe('بعد العصر');
     const meta = JSON.parse(db.orderActivity.create.mock.calls[0][0].data.metadata);
     expect(meta.customerTypedPrice).toBe(5);
+  });
+
+  it('ورقمُ الزبونِ سجلٌّ لا شرط: رقمٌ خارجَ الحدِّ يُسقَط ولا يَرُدُّ الطلب', async () => {
+    const res = await confirmAt(22, 2, { typedPrice: 150000 });
+    expect(res.status).toBe(200);
+    const meta = JSON.parse(db.orderActivity.create.mock.calls[0][0].data.metadata);
+    expect(meta).not.toHaveProperty('customerTypedPrice');
   });
 
   it('وبلا رقمٍ من الزبونِ لا يُكتَب في التاريخِ شيءٌ عنه', async () => {

@@ -49,6 +49,7 @@ const FIELDS: Record<string, string> = {
   // an empty price box on that modal came back «حقل مطلوب ناقص» — a missing
   // field, unnamed, on a form with eight boxes.
   finalPrice: 'السعر',
+  typedPrice: 'سعر الزبون',
   amount: 'المبلغ',
   // The production-run door. Without these the reader got «حقل مطلوب
   // ناقص» for a missing quantity and the raw English «Too small: …» for a

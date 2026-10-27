@@ -142,8 +142,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
    * with the offer's price and the box takes it from there.
    */
   const [offers, setOffers] = useState<{ productId: string; list: OfferPrice[] }>({ productId: '', list: [] });
-  /** The price this screen prints on its own button — never a figure it invented. */
-  const priceFigure = typedFigure(priceTyped);
   /** Read only to SAY what the total covers — never to divide anything by. */
   const quantityFigure = typedFigure(quantityTyped);
 
@@ -189,7 +187,10 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
       // The server's suggestion, or the price the message itself named, or an
       // EMPTY BOX. The old `?? 0` made «the message named no price» and «the
       // customer pays nothing» the same opening state.
-      setPriceTyped(boxFor(data.suggestedPrice ?? data.parsed.price));
+      // Priced by an offer, the box SHOWS the offer's price (see `shownPrice`) and
+      // holds nothing of its own: a quantity no offer covers then opens it empty,
+      // rather than on one bundle's price or the customer's figure for another count.
+      setPriceTyped(data.priceFromOffer ? '' : boxFor(data.suggestedPrice ?? data.parsed.price));
       setQuantityTyped(boxFor(data.parsed.quantity));
     } catch (err: any) {
       toast.failed(err.message);
@@ -226,7 +227,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
              * which is how «I did not fill this in» reaches the door at all.
              */
             quantity: onTheWire(quantityTyped),
-            finalPrice: onTheWire(priceTyped),
+            finalPrice: onTheWire(shownPrice),
             // Kept in the order's history, never charged.
             typedPrice: result.typedPrice ?? undefined,
           },
@@ -247,7 +248,6 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             list: [...(o.productId === productId ? o.list : []).filter((x) => x.quantity !== q), bundle],
           }));
         }
-        setPriceTyped(boxFor(data.offerPrice));
         toast.warn(data.error);
         return;
       }
@@ -275,6 +275,15 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
     offers.productId && offers.productId === productId && quantityFigure !== undefined
       ? offers.list.find((o) => o.quantity === quantityFigure)
       : undefined;
+  /*
+   * WHAT THE BOX SHOWS, AND WHAT IS SENT: the offer's price while one covers
+   * this quantity, otherwise what the reviewer has. Derived, never written
+   * into the reviewer's own value — so typing «10» does not leave the
+   * one-piece bundle's price behind after passing through «1».
+   */
+  const shownPrice = offerNow ? boxFor(offerNow.price) : priceTyped;
+  /** The price this screen prints on its own button — never a figure it invented. */
+  const priceFigure = typedFigure(shownPrice);
 
   return (
     <Modal
@@ -357,8 +366,13 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
             {result.typedPrice != null && (
               <div className="p-2.5 bg-[var(--sys-warning-soft)] border border-[var(--sys-warning)]/40 text-[var(--sys-warning)] text-xs rounded-lg">
                 <RiErrorWarningLine className="me-1 inline-block h-4 w-4 align-text-bottom" aria-hidden />
-                الزبون كتب سعراً <strong>{result.typedPrice}</strong>، ويُسجَّل الطلب بسعر العرض
-                {result.suggestedPrice != null && <> <strong>{result.suggestedPrice}</strong></>} — راجعه معه عند التأكيد.
+                الزبون كتب سعراً <strong>{result.typedPrice}</strong>
+                {/* The offer as it stands NOW — the quantity or the product may have changed since the parse. */}
+                {offerNow ? (
+                  <>، ويُسجَّل الطلب بسعر العرض «{offerNow.name}» <strong>{offerNow.price}</strong> — راجعه معه عند التأكيد.</>
+                ) : (
+                  <> في رسالته.</>
+                )}
               </div>
             )}
 
@@ -473,13 +487,8 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 type="number"
                 min="1"
                 value={quantityTyped}
-                onChange={(e) => {
-                  setQuantityTyped(e.target.value);
-                  // A quantity an offer covers takes that offer's price.
-                  const q = typedFigure(e.target.value);
-                  const bundle = offers.productId === productId ? offers.list.find((o) => o.quantity === q) : undefined;
-                  if (bundle) setPriceTyped(boxFor(bundle.price));
-                }}
+                // A quantity an offer covers shows that offer's price (`shownPrice`); nothing is written here.
+                onChange={(e) => setQuantityTyped(e.target.value)}
               />
 
               {/*
@@ -512,7 +521,7 @@ export function AiOrderModal({ isOpen, onClose, onSuccess }: AiOrderModalProps) 
                 name="finalPrice"
                 type="number"
                 step="0.01"
-                value={priceTyped}
+                value={shownPrice}
                 onChange={(e) => setPriceTyped(e.target.value)}
                 disabled={!!offerNow}
                 helperText={

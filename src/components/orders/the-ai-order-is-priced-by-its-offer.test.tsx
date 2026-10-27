@@ -109,10 +109,44 @@ describe('the box is the offer’s price', () => {
     expect(priceBox().disabled).toBe(true);
   });
 
-  it('a quantity no offer covers unlocks the box for the reviewer', async () => {
+  it('a quantity no offer covers unlocks the box, EMPTY — not one bundle’s price, not the customer’s figure for another count', async () => {
     await parse();
     fireEvent.change(quantityBox(), { target: { value: '3' } });
     expect(priceBox().disabled).toBe(false);
+    expect(priceBox().value).toBe('');
+  });
+
+  it('typing «10» through «1» leaves nothing of the one-piece bundle behind', async () => {
+    // A parse with no offer for its own quantity: the box holds the reviewer’s 60.
+    apiFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}'));
+      bodies.push(body);
+      if (body.confirm) return reply(200, { success: true });
+      return reply(200, { ...PREVIEW, parsed: { ...PREVIEW.parsed, quantity: 3, price: 60 }, suggestedPrice: 60, priceFromOffer: false, typedPrice: null });
+    });
+    render(<AiOrderModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText(/الاسم:/), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: /تحليل الطلب/ }));
+    await waitFor(() => expect(priceBox().value).toBe('60'));
+    fireEvent.change(quantityBox(), { target: { value: '1' } });
+    expect(priceBox().value).toBe('22');
+    fireEvent.change(quantityBox(), { target: { value: '10' } });
+    expect(priceBox().value, 'the bundle’s 22 stayed in an open box for ten pieces').toBe('60');
+    expect(priceBox().disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: /تسجيل الطلب/ }));
+    await waitFor(() => expect(bodies.some((b) => b.confirm)).toBe(true));
+    expect((bodies.find((b) => b.confirm)!.parsed as Record<string, unknown>).finalPrice).toBe('60');
+  });
+
+  it('the warning names the offer as it stands now, not as it was at the parse', async () => {
+    await parse();
+    fireEvent.change(quantityBox(), { target: { value: '2' } });
+    const line = () => screen.getByText(/الزبون كتب سعراً/).textContent ?? '';
+    expect(line()).toContain('قطعتان');
+    expect(line()).toContain('40');
+    fireEvent.change(quantityBox(), { target: { value: '3' } });
+    expect(line()).toContain('في رسالته');
+    expect(line()).not.toContain('سعر العرض');
   });
 
   it('sends the offer’s price, and the customer’s figure only as a record', async () => {
