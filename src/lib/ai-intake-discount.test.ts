@@ -319,7 +319,13 @@ describe('المقترَح للمراجع هو ما يَعِدُ به العرض
     expect((await preview()).suggestedPrice).toBe(25);
   });
 
-  it('وسعرٌ ذكرَه الزبونُ في رسالتِه يَسبِقُ العرضَ، فلا يُقرأ الخصمُ أصلاً', async () => {
+  /*
+   * REVERSED BY THE OWNER, 27/10 (RV151): «سعر العرض هو اللي بيمشي بإدخال
+   * الطلب بالذكاء». This test said the customer's figure beat the offer —
+   * «السعر: 5» beside a bundle of 22 opened the box on 5, and one keystroke
+   * made it the charge.
+   */
+  it('وسعرٌ ذكرَه الزبونُ في رسالتِه لا يَسبِقُ العرضَ — يُقترَح سعرُ العرض ويُقال رقمُ الزبون بجانبه', async () => {
     parseOrderText.mockImplementation(() => ({
       customerName: 'سامر الأحمد',
       phone: '0999111222',
@@ -331,10 +337,45 @@ describe('المقترَح للمراجع هو ما يَعِدُ به العرض
       notes: '',
       source: '',
     }));
-    const json = await preview();
-    expect(json.suggestedPrice).toBe(19);
+    const json = (await preview()) as Record<string, unknown>;
+    expect(json.suggestedPrice, 'رقمُ الزبون غلبَ العرض').toBe(22);
     expect(json.suggestedOfferName).toBe('قطعتان');
+    expect(json.priceFromOffer).toBe(true);
+    expect(json.typedPrice).toBe(19);
+    expect(json.offerPrices).toEqual([{ quantity: 2, price: 22, name: 'قطعتان' }]);
     expect(db.offer.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('ورقمُ الزبونِ إذا ساوى سعرَ العرضِ لا يُقال، فلا تنبيهَ بلا سبب', async () => {
+    parseOrderText.mockImplementation(() => ({
+      customerName: 'سامر الأحمد', phone: '0999111222', governorate: 'عمّان', address: 'شارع',
+      productQuery: 'منتج أ', quantity: 2, price: 22, notes: '', source: '',
+    }));
+    const json = (await preview()) as Record<string, unknown>;
+    expect(json.suggestedPrice).toBe(22);
+    expect(json.typedPrice).toBeNull();
+  });
+
+  it('ورقمٌ فوقَ حدِّ أيِّ سعرٍ (١٥٠٠٠٠) لا يُحمَل كرقمِ الزبون — فلا يَسُدُّ التسجيلَ بعدها', async () => {
+    parseOrderText.mockImplementation(() => ({
+      customerName: 'سامر الأحمد', phone: '0999111222', governorate: 'عمّان', address: 'شارع',
+      productQuery: 'منتج أ', quantity: 2, price: 150000, notes: '', source: '',
+    }));
+    const json = (await preview()) as Record<string, unknown>;
+    expect(json.suggestedPrice).toBe(22);
+    expect(json.typedPrice).toBeNull();
+  });
+
+  it('وكميّةٌ لا عرضَ لها بالضبط: لا يُقفَل المربّع، ورقمُ الرسالةِ يبقى اقتراحاً كما كان', async () => {
+    parseOrderText.mockImplementation(() => ({
+      customerName: 'سامر الأحمد', phone: '0999111222', governorate: 'عمّان', address: 'شارع',
+      productQuery: 'منتج أ', quantity: 3, price: 30, notes: '', source: '',
+    }));
+    const json = (await preview()) as Record<string, unknown>;
+    // An offer of two is not the price of three.
+    expect(json.priceFromOffer).toBe(false);
+    expect(json.typedPrice).toBeNull();
+    expect(json.suggestedPrice).toBe(30);
   });
 
   it('وبلا عرضٍ حيٍّ لا يُقترَح شيءٌ ولا يُستعلَم عن خصم', async () => {
@@ -379,10 +420,11 @@ describe('وبابُ الكتابةِ يقبض ما أكّدَه المراجع�
     expect(data.totalAmount, 'الخصمُ طُبِّق مرّةً في الاقتراحِ ومرّةً هنا').not.toBe(19);
   });
 
-  it('ولا يلمس جدولَ العروضِ في طريقِه، إذ لا عرضَ مربوطٌ بالتأكيد', async () => {
+  it('ويسألُ العروضَ مرّةً واحدةً بالقراءةِ المشتركة — لا قراءةَ ثانيةً للخصم', async () => {
     await confirm(22);
     expect(db.offer.findFirst).not.toHaveBeenCalled();
-    expect(activeOffersFor).not.toHaveBeenCalled();
+    // Once, to know the bundle's price for this quantity (RV151) — the same view the preview reads.
+    expect(activeOffersFor).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -398,6 +440,8 @@ describe('وبابُ الكتابةِ يقبض ما أكّدَه المراجع�
    * charged for an order a person had just confirmed at zero.
    */
   it('وصفرٌ مؤكَّدٌ يُكتَب صفراً — لا ٩٩، سعرَ المنتجِ الذي لم يَطلُبْه أحد', async () => {
+    // No bundle for this product: the reviewer's figure is the price (with one, the offer's is — RV151).
+    activeOffersFor.mockResolvedValue([]);
     const res = await confirm(0);
     expect(res.status).toBe(200);
     const data = db.order.create.mock.calls[0][0].data;
@@ -429,9 +473,88 @@ describe('وبابُ الكتابةِ يقبض ما أكّدَه المراجع�
   });
 
   it('وسعرٌ موجبٌ يمرّ كما هو، فالحذفُ لم يَكسِرِ الحالةَ الشائعة', async () => {
+    activeOffersFor.mockResolvedValue([]);
     const res = await confirm(45.5);
     expect(res.status).toBe(200);
     expect(db.order.create.mock.calls[0][0].data.totalAmount).toBe(45.5);
+  });
+});
+
+/**
+ * سعرُ العرضِ هو الذي يُكتَب — قرارُ المالك، ٢٧/١٠ (RV151).
+ *
+ * The preview locks the box on the offer's price; the write holds the same
+ * rule, so a box edited around the lock, a product changed after the parse
+ * or a hand-made payload cannot record a bundle at a price it does not have.
+ */
+describe('وبابُ الكتابةِ يُسجِّلُ سعرَ العرضِ لكميّتِه بالضبط', () => {
+  const confirmAt = (finalPrice: number, quantity = 2, extra: Record<string, unknown> = {}) =>
+    post({
+      confirm: true,
+      parsed: {
+        customerName: 'سامر الأحمد',
+        phone: '0999111222',
+        address: 'شارع',
+        governorate: 'عمّان',
+        productId: 'p-axxxxxxxxxx',
+        quantity,
+        finalPrice,
+        ...extra,
+      },
+    });
+
+  it('NEGATIVE: «السعر: ٥» بجانب عرضٍ بـ٢٢ يُرفَض بسعرِ العرض، ولا يُكتَب شيء', async () => {
+    const res = await confirmAt(5);
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.code).toBe('OFFER_PRICE');
+    expect(json.offerPrice).toBe(22);
+    expect(json.offerName).toBe('قطعتان');
+    expect(json.error).toContain('قطعتان');
+    expect(db.order.create).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+    // and no customer row is left behind a refused confirmation
+    expect(findOrCreateCustomer).not.toHaveBeenCalled();
+  });
+
+  it('وسعرُ العرضِ نفسُه يمرّ، ورقمُ الزبونِ يُحفَظ بتاريخِ الطلبِ — لا بملاحظتِه التي تُطبَع للشركة', async () => {
+    const res = await confirmAt(22, 2, { typedPrice: 5, notes: 'بعد العصر' });
+    expect(res.status).toBe(200);
+    const data = db.order.create.mock.calls[0][0].data;
+    expect(data.totalAmount).toBe(22);
+    expect(data.customerNotes).toBe('بعد العصر');
+    const meta = JSON.parse(db.orderActivity.create.mock.calls[0][0].data.metadata);
+    expect(meta.customerTypedPrice).toBe(5);
+  });
+
+  it('ورقمُ الزبونِ سجلٌّ لا شرط: رقمٌ خارجَ الحدِّ يُسقَط ولا يَرُدُّ الطلب', async () => {
+    const res = await confirmAt(22, 2, { typedPrice: 150000 });
+    expect(res.status).toBe(200);
+    const meta = JSON.parse(db.orderActivity.create.mock.calls[0][0].data.metadata);
+    expect(meta).not.toHaveProperty('customerTypedPrice');
+  });
+
+  it('وبلا رقمٍ من الزبونِ لا يُكتَب في التاريخِ شيءٌ عنه', async () => {
+    await confirmAt(22);
+    const meta = JSON.parse(db.orderActivity.create.mock.calls[0][0].data.metadata);
+    expect(meta).not.toHaveProperty('customerTypedPrice');
+  });
+
+  it('وكميّةٌ لا عرضَ لها بالضبط تُكتَب بما أكّدَه المراجع — عرضُ قطعتين ليس سعرَ ثلاث', async () => {
+    const res = await confirmAt(30, 3);
+    expect(res.status).toBe(200);
+    expect(db.order.create.mock.calls[0][0].data.totalAmount).toBe(30);
+  });
+
+  it('والمقارنةُ بتدويرِ عملةِ الطلب — لا يُرفَض فرقُ كسرٍ لا تحمله العملة', async () => {
+    // SYP has no minor unit: a bundle of 23 (25 − 2.4, rounded by the currency) and a box of 23 agree.
+    requireContext.mockResolvedValue({
+      user: { id: 'u1', name: 'موظف', role: 'ADMIN' },
+      companyId: 'c1', storeId: 's1', countryId: 'sy', country: SYP,
+    });
+    discountIs(2.4, SYP.minorUnit);
+    const res = await confirmAt(23);
+    expect(res.status).toBe(200);
   });
 });
 

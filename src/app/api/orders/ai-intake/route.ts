@@ -35,6 +35,20 @@ import { projectOrder } from '@/lib/order-projection';
 export type AiSkipped = 'NOT_LOCAL' | 'NOT_CONFIGURED' | 'FAILED' | null;
 
 /**
+ * THE OFFER WHOSE BUNDLE IS EXACTLY THIS MANY PIECES.
+ *
+ * Its price is that quantity's price, and through this door it is the price
+ * the order is written at — the owner's ruling, 27/10 (RV151): «سعر العرض
+ * هو اللي بيمشي بإدخال الطلب بالذكاء». A figure the customer typed into
+ * their message («السعر: 5» beside a bundle of 22) was a SUGGESTION that
+ * beat the offer, and one keystroke from the reviewer made it the charge.
+ * Only an exact quantity binds: an offer of two is not the price of three.
+ */
+function offerForQuantity<T extends { quantity: number }>(offers: T[], qty: number): T | null {
+  return offers.find((o) => o.quantity === qty) ?? null;
+}
+
+/**
  * THE SHAPE THE MODEL MUST ANSWER IN, fixed here and not editable.
  *
  * The company's own wording for this assistant is the VOICE
@@ -151,6 +165,11 @@ export async function POST(req: Request) {
          */
         quantity: count(999, 1),
         finalPrice: amount(100000),
+        /**
+         * What the customer's message named, when it differed from the offer — kept in the order's history, never charged.
+         * A RECORD, SO IT NEVER REFUSES AN ORDER: a figure out of range is dropped, not a 400 about a box the reviewer cannot edit.
+         */
+        typedPrice: amount(100000).optional().nullable().catch(null),
         moderatorId: z.string().min(10).max(64).optional().nullable(),
         notes: z.string().trim().max(500).optional().nullable(),
         source: z.string().trim().max(40).optional().nullable(),
@@ -181,6 +200,38 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: `هذا الرقم محظور: ${block.reason}`, code: 'CUSTOMER_BLOCKED', blockId: block.id },
           { status: 409 }
+        );
+      }
+
+      /*
+       * THE OFFER'S PRICE, AT THE WRITE AND NOT ONLY IN THE PREVIEW.
+       *
+       * The preview fills the box with the offer's price and locks it; this
+       * is the same rule where the money is written, so a box edited around
+       * the lock, a product changed after the parse, or a hand-made payload
+       * cannot record a bundle at a price it does not have. Refused rather
+       * than corrected: the button the reviewer pressed named a figure, and
+       * an order saved at a different one is a number nobody confirmed. The
+       * answer carries the offer's price so the screen can put it in the box.
+       *
+       * BEFORE THE CUSTOMER IS WRITTEN: a refused confirmation must leave no
+       * customer row behind it. `activeOffersFor` reads this company's offers
+       * only, so a product id from another company finds none here and is
+       * refused by name below.
+       */
+      const quantityOffer = offerForQuantity(
+        await activeOffersFor(db, companyId, p.productId, country.minorUnit),
+        p.quantity,
+      );
+      if (quantityOffer && roundMinor(p.finalPrice, country.minorUnit) !== roundMinor(quantityOffer.price, country.minorUnit)) {
+        return NextResponse.json(
+          {
+            error: `سعر العرض «${quantityOffer.name}» لهذه الكمية ${quantityOffer.price} — الطلب بالذكاء يُسجَّل بسعر العرض`,
+            code: 'OFFER_PRICE',
+            offerPrice: quantityOffer.price,
+            offerName: quantityOffer.name,
+          },
+          { status: 409 },
         );
       }
 
@@ -425,6 +476,9 @@ export async function POST(req: Request) {
               source: created.source,
               intakeMethod: 'AI_PASTE',
               createdBy: user.name,
+              // The figure the customer's message named, when the offer's price was written instead (RV151).
+              // Here and not in `customerNotes`: those print on the courier's waybill, beside the amount to collect.
+              ...(p.typedPrice != null ? { customerTypedPrice: p.typedPrice } : {}),
             }),
           },
         });
@@ -536,10 +590,33 @@ export async function POST(req: Request) {
     // Suggest price from matched product's offers
     let suggestedPrice: number | null = parsed.price;
     let suggestedOfferName: string | null = null;
+    /** True when the box holds the offer's price for exactly this quantity — the screen locks it. */
+    let priceFromOffer = false;
+    /** What the customer's message named, when the offer's price was put in its place. */
+    let typedPrice: number | null = null;
+    /** The matched product's bundles, so the screen re-prices when the reviewer changes the quantity. */
+    let offerPrices: { quantity: number; price: number; name: string }[] = [];
     if (match) {
       const offers = await activeOffersFor(db, companyId, match.id, country.minorUnit);
-      const qtyOffer = offers.find((o) => o.quantity === (parsed.quantity || 1)) || offers[0];
-      if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
+      offerPrices = offers.map((o) => ({ quantity: o.quantity, price: o.price, name: o.name }));
+      const exact = offerForQuantity(offers, parsed.quantity || 1);
+      const qtyOffer = exact || offers[0];
+      if (exact) {
+        // The offer's price, whatever the message said (RV151). A different figure the customer
+        // typed is returned beside it, said on the screen and kept in the order's history.
+        suggestedPrice = exact.price;
+        suggestedOfferName = exact.name;
+        priceFromOffer = true;
+        if (
+          parsed.price !== null &&
+          parsed.price > 0 &&
+          // the confirm door's own bound on a price: a figure past it is not a price anybody could record
+          parsed.price <= 100000 &&
+          roundMinor(parsed.price, country.minorUnit) !== roundMinor(exact.price, country.minorUnit)
+        ) {
+          typedPrice = parsed.price;
+        }
+      } else if (qtyOffer && (parsed.price === null || parsed.price <= 0)) {
         /*
          * WHAT THE OFFER PROMISES, AND NOW THAT IS WHAT THE VIEW SAYS.
          *
@@ -606,6 +683,9 @@ export async function POST(req: Request) {
       productMatchConfident: match ? match.score >= 16 : false,
       suggestedPrice,
       suggestedOfferName,
+      priceFromOffer,
+      typedPrice,
+      offerPrices,
       existingCustomer,
     });
   } catch (error) {
