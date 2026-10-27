@@ -204,6 +204,30 @@ describe('it is cheap', () => {
     expect(readHeartbeat).toHaveBeenCalledTimes(1);
   });
 
+  it('and once while a reading is still on its way — the burst waits for it instead of asking again', async () => {
+    // The loop above only proves the window works AFTER an answer came back.
+    // The calls that arrive while the database is slow to answer are the ones
+    // that matter (27/10: a deploy made the read take seconds), and each of
+    // them used to start its own read on a database that was already slow.
+    let answer!: (r: { db: 'up'; scheduler: 'alive' }) => void;
+    readHeartbeat.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const burst = [...Array.from({ length: 20 }, () => app()), ...Array.from({ length: 20 }, () => worker())];
+    expect(readHeartbeat, 'كل طلب بدأ قراءة لحاله').toHaveBeenCalledTimes(1);
+    answer({ db: 'up', scheduler: 'alive' });
+    const done = await Promise.all(burst);
+    expect(done.every((r) => r.status === 200)).toBe(true);
+    expect(readHeartbeat).toHaveBeenCalledTimes(1);
+  });
+
+  it('and a reading that came back clears the wait, so the next window asks again', async () => {
+    const { cachedHeartbeat } = await import('./cached');
+    const t0 = new Date('2026-10-02T12:00:00.000Z');
+    readHeartbeat.mockResolvedValue({ db: 'up', scheduler: 'alive' });
+    await cachedHeartbeat(t0);
+    await cachedHeartbeat(new Date(t0.getTime() + 6_000));
+    expect(readHeartbeat).toHaveBeenCalledTimes(2);
+  });
+
   it('does not keep answering from a cache long enough to hide a failure', async () => {
     // The opposite risk: a long cache would let the endpoint keep saying
     // "alive" after the worker died. A monitor polls every 60 seconds, so

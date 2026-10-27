@@ -120,19 +120,43 @@ function missingTable(e: unknown): boolean {
   return typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2021';
 }
 
+/** The latest of the watched jobs' last runs. Null when none of them has ever run. */
+function newest(rows: ({ startedAt: Date } | null)[]): { startedAt: Date } | null {
+  let best: { startedAt: Date } | null = null;
+  for (const row of rows) {
+    if (row && (!best || row.startedAt.getTime() > best.startedAt.getTime())) best = row;
+  }
+  return best;
+}
+
 /**
- * ── COST PER CALL: ONE INDEXED QUERY, ONE ROW ──
+ * ── COST PER CALL: ONE ROW PER WATCHED JOB, STRAIGHT OFF THE INDEX ──
  *
- * `JobRun` carries `@@index([jobName, startedAt])`. Three equality values
- * on `jobName` with a descending order on `startedAt` is an index scan per
- * name, merged, stopping at the first row — no table access, no sort, no
- * count, and flat as the run log grows to millions of rows. Measured
- * shape: ~0.1 ms of database time, one round trip.
+ * `JobRun` carries `@@index([jobName, startedAt])`. ONE job name with a
+ * descending order on `startedAt` and a limit of one is a backward
+ * index-only scan that stops at the first entry: no table access, no sort,
+ * and flat however long the run log grows.
+ *
+ * It used to be ONE query with `jobName IN (three names)`, on the belief
+ * that Postgres merges the three index ranges and stops at the first row.
+ * It does not (Postgres 16, `EXPLAIN` on this schema): the index orders by
+ * name first, so it read EVERY run of the three jobs and sorted them for
+ * the newest. Each of them writes a row a minute and nothing prunes the
+ * log, so that was ~4,300 more rows to read and sort every day, every five
+ * seconds. Calm, it cost tens of milliseconds. On 27/10, while a deploy was
+ * building on the same server, it crossed the 2 s cap below for twenty
+ * minutes. So the endpoint said «db: down» with a working database, and
+ * the container's own HEALTHCHECK, three misses in a row, can mark the app
+ * unhealthy. A proxy that follows that stops routing to it.
+ *
+ * Three single-name reads in parallel cost one round trip of wall time and
+ * stay one row each forever. The newest of the three answers the question
+ * the single query asked.
  *
  * NOTE what is deliberately NOT here: no `count()`, no "last run of every
  * job", no `SELECT 1` liveness probe on top. A separate `SELECT 1` would
- * be a second round trip to learn what this query already proves — if it
- * returned, the database is up. One query answers both questions.
+ * be another round trip to learn what these reads already prove: if they
+ * returned, the database is up.
  *
  * `select: { startedAt: true }` and not the row: `detail` and `error` are
  * free text written by jobs, and an unauthenticated endpoint must not be
@@ -142,11 +166,15 @@ export async function readHeartbeat(now: Date = new Date()): Promise<HeartbeatRe
   let latest: { startedAt: Date } | null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const query = db.jobRun.findFirst({
-      where: { jobName: { in: HEARTBEAT_JOBS as unknown as string[] } },
-      orderBy: { startedAt: 'desc' },
-      select: { startedAt: true },
-    });
+    const query = Promise.all(
+      HEARTBEAT_JOBS.map((jobName) =>
+        db.jobRun.findFirst({
+          where: { jobName },
+          orderBy: { startedAt: 'desc' },
+          select: { startedAt: true },
+        })
+      )
+    ).then(newest);
     /*
      * `Promise.race` subscribes to `query` itself, so a rejection that
      * arrives AFTER the timer won is already handled — it is ignored
