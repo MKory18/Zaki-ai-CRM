@@ -5,7 +5,7 @@ import { MAX_WINDOW_DAYS, stockHealth } from '../stock-health';
 import { DAY_MS, deliveredPerProduct, ledgerDepthDays } from '../stock-ledger';
 import { V1_CODE, V1Fault } from './door';
 import { amountString } from './shape';
-import type { SystemCaller } from './system-token';
+import { hasEconomicsScope, type SystemCaller } from './system-token';
 
 /**
  * THE PRODUCT FIGURES THE MEDIA BUYER ASKS FOR — `?fields=…` on the catalogue.
@@ -22,9 +22,16 @@ import type { SystemCaller } from './system-token';
  *                  somebody typed into this file would be inventing money.
  *   stock_days     `stockHealth(...).coverDays` — «تكفي كم يوم» exactly as
  *                  the inventory screen prints it, from the same facts.
- *   delivery_fee   null. The fee is per COURIER per REGION (`DeliveryFee`),
- *   return_fee     not per product; any one figure would be a choice of
- *                  courier and city nobody made.
+ *   delivery_fee   `DeliveryFee.fee` — but that table is per COURIER per REGION,
+ *   return_fee     not per product, so a figure is given ONLY where the
+ *                  table itself has one answer for the product's shop: every
+ *                  active fee of the shop's country, over the couriers that
+ *                  serve the shop, is the same positive number. If two
+ *                  couriers or two regions differ, any one figure would be a
+ *                  choice nobody made — it is null and the media buyer's own
+ *                  product settings hold the owner's number. A zero is
+ *                  `returnFee`'s column default, so it reads as «not set»,
+ *                  not as «free» (see `singleFee`).
  *   cod_fee_pct    null. No courier, store or company here carries a COD
  *                  percentage at all.
  *
@@ -32,7 +39,8 @@ import type { SystemCaller } from './system-token';
  *
  * The catalogue was built «بلا تكلفة ولا مخزون رقمي حساس» for the replies
  * system, and that stays true for it: asking for any of these without
- * `products.costs.read` is refused, not quietly answered.
+ * `products.economics.read` (or the older name, `products.costs.read`) is
+ * refused, not quietly answered.
  */
 
 /** The optional fields the catalogue may be asked for. Anything else in `fields` is ignored. */
@@ -66,12 +74,12 @@ export function readFields(raw: string | null): Set<ProductField> {
   return out;
 }
 
-/** Refuses a cost field to a key that was not granted `products.costs.read`. */
+/** Refuses a cost field to a key that was not granted `products.economics.read` (or its older name). */
 export function requireCostScope(caller: SystemCaller, wanted: Set<ProductField>): void {
   const asked = [...wanted].filter((f) => COST_FIELDS.has(f));
-  if (asked.length > 0 && !caller.scopes.includes('products.costs.read')) {
-    throw new V1Fault(403, V1_CODE.SCOPE_MISSING, 'The token lacks the scope products.costs.read', {
-      required: 'products.costs.read',
+  if (asked.length > 0 && !hasEconomicsScope(caller.scopes)) {
+    throw new V1Fault(403, V1_CODE.SCOPE_MISSING, 'The token lacks the scope products.economics.read', {
+      required: 'products.economics.read',
       fields: asked,
     });
   }
@@ -80,6 +88,8 @@ export function requireCostScope(caller: SystemCaller, wanted: Set<ProductField>
 export interface FigureProduct {
   id: string;
   storeId: string | null;
+  /** The shop's country — what the fee table is read by. Null: the shop has none, so no fee. */
+  countryId?: string | null;
   currency: string;
   minorUnit: number;
 }
@@ -87,9 +97,26 @@ export interface FigureProduct {
 export interface Figures {
   unit_cost_usd?: string | null;
   stock_days?: number | null;
-  delivery_fee?: null;
-  return_fee?: null;
+  delivery_fee?: string | null;
+  return_fee?: string | null;
   cod_fee_pct?: null;
+}
+
+/**
+ * ONE FEE, OR NONE.
+ *
+ * The distinct positive values among `fees`, compared at the currency's own
+ * places so 2.5 and 2.500 are one number. Exactly one → that figure.
+ * None (nothing configured, or every row still at the column's default of
+ * zero) or several (couriers/regions that differ) → null: the table does not
+ * answer «what is THIS product's fee», and a guess is invented money.
+ */
+export function singleFee(fees: readonly number[], minorUnit: number): string | null {
+  const distinct = new Set<string>();
+  for (const f of fees) {
+    if (Number.isFinite(f) && f > 0) distinct.add(amountString(f, minorUnit));
+  }
+  return distinct.size === 1 ? [...distinct][0] : null;
 }
 
 /** One decimal, the precision the inventory screen states a cover in. */
@@ -157,11 +184,29 @@ export async function productFigures(
     }
   }
 
+  if (wanted.has('delivery_fee') || wanted.has('return_fee')) {
+    const countryIds = [...new Set(products.map((p) => p.countryId).filter((c): c is string => !!c))];
+    const rows = countryIds.length
+      ? await db.deliveryFee.findMany({
+          where: { companyId, countryId: { in: countryIds }, isActive: true, provider: { isActive: true } },
+          select: { countryId: true, fee: true, returnFee: true, provider: { select: { storeId: true } } },
+        })
+      : [];
+    for (const p of products) {
+      // The couriers that serve THIS shop: its own, and the company-wide ones
+      // (`storeId` null) — never another shop's account with a courier.
+      const mine = rows.filter(
+        (r) => r.countryId === p.countryId && (r.provider.storeId === null || r.provider.storeId === p.storeId)
+      );
+      const f = out.get(p.id)!;
+      if (wanted.has('delivery_fee')) f.delivery_fee = singleFee(mine.map((r) => Number(r.fee)), p.minorUnit);
+      if (wanted.has('return_fee')) f.return_fee = singleFee(mine.map((r) => Number(r.returnFee)), p.minorUnit);
+    }
+  }
+
   for (const p of products) {
-    const f = out.get(p.id)!;
-    if (wanted.has('delivery_fee')) f.delivery_fee = null;
-    if (wanted.has('return_fee')) f.return_fee = null;
-    if (wanted.has('cod_fee_pct')) f.cod_fee_pct = null;
+    // No source at all: not a column, a setting or a courier field.
+    if (wanted.has('cod_fee_pct')) out.get(p.id)!.cod_fee_pct = null;
   }
   return out;
 }

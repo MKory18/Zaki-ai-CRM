@@ -35,8 +35,9 @@ import { productFigures, readFields, requireCostScope } from '@/lib/v1/product-f
  *
  * Without `fields` the answer is byte-for-byte what it was. With it, the
  * named optional fields are ADDED to each item — never instead of one:
- * `aliases` and `price_options` under `products.read`, and the cost and
- * shelf figures only under `products.costs.read` (`src/lib/v1/product-figures.ts`,
+ * `aliases` and `price_options` under `products.read`, and the cost, fee and
+ * shelf figures only under `products.economics.read` — or its older name
+ * `products.costs.read` (`src/lib/v1/product-figures.ts`,
  * which says where each comes from and which have no single source).
  */
 
@@ -69,7 +70,7 @@ export async function GET(req: Request) {
         nameEn: true,
         basePrice: true,
         storeId: true,
-        store: { select: { country: { select: { currencyCode: true, minorUnit: true } } } },
+        store: { select: { countryId: true, country: { select: { currencyCode: true, minorUnit: true } } } },
       },
     });
 
@@ -78,6 +79,7 @@ export async function GET(req: Request) {
       products.map((p) => ({
         id: p.id,
         storeId: p.storeId,
+        countryId: p.store?.countryId ?? null,
         currency: p.store?.country?.currencyCode ?? 'USD',
         minorUnit: p.store?.country?.minorUnit ?? 2,
       })),

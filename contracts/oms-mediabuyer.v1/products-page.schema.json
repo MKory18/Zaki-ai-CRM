@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "zaki/oms-mediabuyer.v1/products-page",
   "title": "GET /api/v1/products?fields=… (v1)",
-  "description": "الكتالوج. بلا fields الرد هو نفسه تبع نظام الردود حرفياً. الحقول الاختيارية بتنضاف بس لما تنطلب: aliases و price_options بصلاحية products.read، والباقي بصلاحية products.costs.read (وإلا 403 SCOPE_MISSING). إضافة حقل اختياري = v1؛ حذف أو تغيير اسم أو نوع = v2.",
+  "description": "الكتالوج. بلا fields الرد هو نفسه تبع نظام الردود حرفياً. الحقول الاختيارية بتنضاف بس لما تنطلب: aliases و price_options بصلاحية products.read، والباقي بصلاحية products.economics.read (وإلا 403 SCOPE_MISSING). إضافة حقل اختياري = v1؛ حذف أو تغيير اسم أو نوع = v2.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -162,7 +162,7 @@
                 "type": "null"
               }
             ],
-            "description": "fields=unit_cost_usd · products.costs.read · null لما المتجر مش بالدولار أو ما في مخزون بتكلفة"
+            "description": "fields=unit_cost_usd · products.economics.read · null لما المتجر مش بالدولار أو ما في مخزون بتكلفة"
           },
           "stock_days": {
             "anyOf": [
@@ -174,7 +174,7 @@
                 "type": "null"
               }
             ],
-            "description": "fields=stock_days · products.costs.read"
+            "description": "fields=stock_days · products.economics.read"
           },
           "delivery_fee": {
             "anyOf": [
@@ -186,7 +186,7 @@
                 "type": "null"
               }
             ],
-            "description": "fields=delivery_fee · products.costs.read · null: الأجرة بالـ OMS حسب الشركة والمنطقة مش حسب المنتج"
+            "description": "fields=delivery_fee · products.economics.read (أو الاسم القديم products.economics.read) · قيمة وحدة بس لما كل أجور الدولة الفعّالة لشركات المتجر نفس الرقم، وإلا null — ما منختار ولا منخمّن"
           },
           "return_fee": {
             "anyOf": [
@@ -198,7 +198,7 @@
                 "type": "null"
               }
             ],
-            "description": "fields=return_fee · products.costs.read · null: نفس السبب"
+            "description": "fields=return_fee · products.economics.read (أو products.economics.read) · نفس قاعدة delivery_fee، والصفر (الافتراضي) = «ما انحط» → null"
           },
           "cod_fee_pct": {
             "anyOf": [
@@ -210,7 +210,7 @@
                 "type": "null"
               }
             ],
-            "description": "fields=cod_fee_pct · products.costs.read · null: ما في نسبة بالـ OMS"
+            "description": "fields=cod_fee_pct · products.economics.read · null: ما في نسبة بالـ OMS"
           }
         }
       }

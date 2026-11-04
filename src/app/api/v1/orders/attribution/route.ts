@@ -42,6 +42,8 @@ export async function GET(req: Request) {
       // Where a landing page answers when it has no live domain of its own —
       // the same origin the conversions code builds `event_source_url` from.
       origin: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL,
+      // `capi_ref` is minted only for a key that may open it (`capi.identifiers`).
+      capiCompanyId: caller.scopes.includes('capi.identifiers') ? caller.companyId : null,
     });
 
     return v1Ok(requestId, page);

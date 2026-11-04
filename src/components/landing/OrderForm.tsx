@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, ShoppingBag, Search } from 'lucide-react';
 import { whatsappHref } from '@/lib/store-contact';
 import { ORDER_PLACED } from '@/lib/order-placed-event';
 import { leaveFor } from '@/lib/leave-for';
+import { collectWebAttribution } from '@/lib/web-attribution';
 import { RiWhatsappLine } from '@/components/storefront/icons';
 import { useTracking } from '@/components/tracking/GlobalTrackingProvider';
 
@@ -442,6 +443,10 @@ export function OrderForm({ slug, productName, basePrice, currency, offers, reco
       // because a mistyped link in an ad must never cost a sale.
 
       campaign: campaignCode(),
+
+      // The ad's own link and the browser's Meta cookies — which AD, not just
+      // which campaign. The server checks every value and seals the cookies.
+      attribution: collectWebAttribution(),
     };
 
     setState('loading');

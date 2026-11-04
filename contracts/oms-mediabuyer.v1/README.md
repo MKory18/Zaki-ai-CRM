@@ -15,8 +15,10 @@ across unchanged.
 ## The rules
 
 - **Read only.** Both endpoints are `GET`; the key's scopes are
-  `orders.attribution.read`, `products.read`, `products.costs.read`, and
-  nothing on the path writes (`src/lib/v1/the-media-buyer-cannot-write.test.ts`).
+  `orders.attribution.read`, `products.read`, `products.economics.read`
+  (older name `products.costs.read` still opens the same fields), and
+  `capi.identifiers` — in no system's default set — for the one POST,
+  `capi/identifiers` (`capi-identifiers.*.json`), which only reads; nothing on the path writes (`src/lib/v1/the-media-buyer-cannot-write.test.ts`).
 - **No customer.** No name, phone, address — not in any field, not under any
   name. `capi_ref` is null or an opaque `enc:` reference, never a readable phone.
 - **Bounded.** `updated_since` required and at most 31 days back, `limit` ≤ 200,

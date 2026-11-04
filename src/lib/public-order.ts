@@ -12,6 +12,8 @@ import { NEUTRAL_REFUSAL, isBlocked } from './blacklist';
 import { rateLimit } from './rate-limit';
 import { signAddonToken } from './landing-pages';
 import { emitAppEvent } from './apps/events';
+import { readWebAttribution } from './web-attribution';
+import { attributionColumns } from './web-attribution-server';
 import { notify } from './notify';
 import { queueConversions } from './conversions/emit';
 import {
@@ -502,6 +504,8 @@ export async function createPublicOrder(
     select: { id: true },
   });
 
+  const webAttribution = attributionColumns(readWebAttribution(raw));
+
   const order = await db.$transaction(async (tx) => {
     let created: Awaited<ReturnType<typeof tx.order.create>> | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -542,6 +546,10 @@ export async function createPublicOrder(
             source: surface.source,
             landingPageId: surface.landingPage?.id ?? null,
             campaignId: surface.campaignId,
+            // The ad's own link and the browser's Meta cookies, checked and
+            // (for the cookies) sealed. `{}` for an order that carried none —
+            // such an order is created exactly as it was before.
+            ...webAttribution,
             channelId: channel?.id ?? null,
             deviceClass: surface.deviceClass ?? null,
             priceIncludesDelivery,

@@ -31,7 +31,12 @@ import { stripComments } from '../guard-source';
 const ROOT = process.cwd();
 const rel = (p: string) => relative(ROOT, p).split(sep).join('/');
 
-const ENTRY_ROUTES = ['src/app/api/v1/orders/attribution/route.ts', 'src/app/api/v1/products/route.ts'];
+const ENTRY_ROUTES = [
+  'src/app/api/v1/orders/attribution/route.ts',
+  'src/app/api/v1/products/route.ts',
+  // A POST that only reads (2026-11-04): the call graph below proves it.
+  'src/app/api/v1/capi/identifiers/route.ts',
+];
 
 /** The named exception — see the header. */
 const ALLOWED = new Set(['src/lib/v1/system-token.ts#requireSystemToken']);
@@ -169,12 +174,12 @@ describe('the media buyer’s doors cannot write', () => {
     }
   });
 
-  it('and both doors answer GET only', () => {
+  it('and the doors answer GET only — but for the one POST that reads, because its input is sealed', () => {
     for (const route of ENTRY_ROUTES) {
       const handlers = [...source(route).matchAll(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g)].map(
         (m) => m[1]
       );
-      expect(handlers, route).toEqual(['GET']);
+      expect(handlers, route).toEqual(route.endsWith('/capi/identifiers/route.ts') ? ['POST'] : ['GET']);
     }
   });
 });

@@ -210,8 +210,10 @@ describe('4 · one event is counted once', () => {
  * beside it, rather than disappearing — which is how this file has handled
  * every other half-built thing.
  *
- * · `adset_id` still does not exist and nothing reports one. «Which ad SET
- *   won» cannot be answered from this system.
+ * · `adset_id` exists since 2026-11-04 — and only as what the AD'S OWN LINK
+ *   carried (`adset_id={{adset.id}}`), kept plain and nullable by the landing
+ *   page. Nothing infers one: an order whose link carried none has none, and
+ *   it is never read off the campaign.
  * · The click id and the chat account are ENCRYPTED columns, and no
  *   endpoint returns either. «Ad tokens reach no model at all» is the
  *   owner's rule; these do not reach a screen either.
@@ -220,8 +222,14 @@ describe('4 · one event is counted once', () => {
 describe('the ad evidence an order can carry, and what is still not built', () => {
   const schema = () => repoFile('prisma/schema.prisma');
 
-  it('there is no adset id anywhere', () => {
-    expect(schema()).not.toMatch(/adsetId|adset_id/i);
+  it('the adset id is a plain nullable column, written only from the ad’s own link', () => {
+    const m = schema().slice(schema().indexOf('model Order {'));
+    const order = m.slice(0, m.indexOf('\n}'));
+    expect(order).toMatch(/adsetId\s+String\?/);
+    // Written by exactly one place: the checked, web-attribution reading.
+    const writers = ['src/lib/public-order.ts', 'src/lib/v1/order-intake.ts'].filter((f) => /adsetId/.test(repoFile(f)));
+    expect(writers).toEqual([]);
+    expect(repoFile('src/lib/web-attribution-server.ts')).toMatch(/out\.adsetId = a\.adsetId/);
   });
 
   it('and the reported fields exist on the order, as nullable columns', () => {

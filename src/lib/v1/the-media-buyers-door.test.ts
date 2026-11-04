@@ -334,19 +334,23 @@ describe('each key reads what it was given and nothing else', () => {
     for (const f of ['unit_cost_usd', 'stock_days', 'delivery_fee', 'return_fee', 'cod_fee_pct']) {
       const res = await getProducts(call(`/api/v1/products?fields=code,name,${f}`));
       expect(res.status, f).toBe(403);
-      expect((await res.json()).error.details.required).toBe('products.costs.read');
+      expect((await res.json()).error.details.required).toBe('products.economics.read');
     }
     expect(h.db.product.findMany).not.toHaveBeenCalled();
   });
 
   it('the media buyer’s key is read-only: three scopes, none that writes or looks up a number', () => {
-    expect([...MEDIABUYER_SCOPES].sort()).toEqual(['orders.attribution.read', 'products.costs.read', 'products.read']);
+    expect([...MEDIABUYER_SCOPES].sort()).toEqual(['orders.attribution.read', 'products.economics.read', 'products.read']);
     for (const s of ['orders.create', 'orders.note', 'customers.lookup', 'orders.read']) {
       expect(MEDIABUYER_SCOPES).not.toContain(s);
     }
     // And the replies system did not gain the new two.
     expect(REPLIES_SCOPES).not.toContain('orders.attribution.read');
     expect(REPLIES_SCOPES).not.toContain('products.costs.read');
+    expect(REPLIES_SCOPES).not.toContain('products.economics.read');
+    expect(REPLIES_SCOPES).not.toContain('capi.identifiers');
+    // The one scope that opens a customer is never a default of any system.
+    for (const sys of V1_SYSTEMS) expect(sys.scopes).not.toContain('capi.identifiers');
     for (const s of MEDIABUYER_SCOPES) expect(V1_SCOPES).toContain(s);
     expect(V1_SYSTEMS.map((s) => s.key)).toEqual(['replies', 'mediabuyer']);
   });

@@ -150,6 +150,8 @@ describe('what the browser is allowed to remember', () => {
      */
     'blocks/Countdown.tsx': 'when a public page’s per-visitor countdown started, for that visitor',
     'landing/OrderForm.tsx': 'which campaign a visitor arrived from',
+    'lib/web-attribution.ts':
+      'which AD a visitor arrived from — the ad link’s own ad_id / adset_id / fbclid / utm labels, session storage, gone with the tab. Nothing about a person: the cookies _fbc/_fbp are READ, never written here',
     'shell/Sidebar.tsx': 'which menu groups this person leaves open',
     'growth/CampaignsBoard.tsx': 'which of the three campaign views this person last picked — a word, never a record',
     'shell/IdleGuard.tsx': 'a timestamp, shared between this account’s open tabs',
