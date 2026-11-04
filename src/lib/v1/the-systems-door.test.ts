@@ -55,6 +55,16 @@ function filesUnder(dir: string, match: RegExp): string[] {
 const read = (p: string) => stripComments(readFileSync(p, 'utf8'));
 
 const ROUTES = filesUnder(DOOR, /^route\.ts$/).map(rel).sort();
+
+/**
+ * POSTs that WRITE NOTHING, so a retry cannot double anything and an
+ * `Idempotency-Key` would protect nothing. A POST is here only because its
+ * input is not fit for a URL (`capi/identifiers` takes sealed order
+ * references, which must never sit in an access log). Each is held to the
+ * promise below: no Prisma write in its own body.
+ */
+const READ_ONLY_POSTS = new Set(['src/app/api/v1/capi/identifiers/route.ts']);
+const WRITES_RE = /db\s*\.\s*\w+\s*\.\s*(?:create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(|\$transaction|\$executeRaw/;
 const LIBS = filesUnder(LIB, /\.ts$/)
   .filter((p) => !/\.test\./.test(p))
   .map(rel)
@@ -87,7 +97,10 @@ describe('the door was found at all — a sweep over nothing proves nothing', ()
   it('has the five endpoints the contract names, and the media buyer’s one read', () => {
     // The sixth (2026-10-26) is `orders/attribution`, read-only, for the
     // media buyer — `the-media-buyers-door.test.ts` holds what it answers.
+    // The seventh (2026-11-04) is `capi/identifiers`, a POST that only READS
+    // (`capi-identifiers.test.ts`, and `READ_ONLY_POSTS` below).
     expect(ROUTES).toEqual([
+      'src/app/api/v1/capi/identifiers/route.ts',
       'src/app/api/v1/customers/lookup/route.ts',
       'src/app/api/v1/orders/[id]/notes/route.ts',
       'src/app/api/v1/orders/[id]/route.ts',
@@ -106,13 +119,18 @@ describe('the door was found at all — a sweep over nothing proves nothing', ()
     // · orders.read · orders.note — ولا شي غيرها.» — still exactly those five
     // on the replies key (`REPLIES_SCOPES`); the two added on 2026-10-26 are
     // the media buyer's and grant no write.
+    // 2026-11-04: the media buyer's work order added `products.economics.read`
+    // (the cost scope under its own name) and `capi.identifiers` (the only
+    // scope that opens a customer — in no system's default set).
     expect([...V1_SCOPES].sort()).toEqual([
+      'capi.identifiers',
       'customers.lookup',
       'orders.attribution.read',
       'orders.create',
       'orders.note',
       'orders.read',
       'products.costs.read',
+      'products.economics.read',
       'products.read',
     ]);
   });
@@ -177,6 +195,10 @@ describe('every write is idempotent, because the caller retries', () => {
     const missing: string[] = [];
     for (const h of handlers()) {
       if (h.method === 'GET') continue;
+      if (READ_ONLY_POSTS.has(h.file)) {
+        expect(h.body, `${h.file} is listed as read-only but writes`).not.toMatch(WRITES_RE);
+        continue;
+      }
       for (const needed of ['idempotencyKeyOf(', 'claimIdempotency(', 'rememberIdempotency(', 'releaseIdempotency(']) {
         if (!h.body.includes(needed)) missing.push(`${h.method} ${h.file} — ينقصه «${needed}»`);
       }
@@ -191,7 +213,7 @@ describe('every write is idempotent, because the caller retries', () => {
      * would make one key's answer replay for the other.
      */
     for (const h of handlers()) {
-      if (h.method === 'GET') continue;
+      if (h.method === 'GET' || READ_ONLY_POSTS.has(h.file)) continue;
       expect(h.body, `${h.method} ${h.file}`).toMatch(
         /requestFingerprint\(\s*'[A-Z]+'\s*,\s*new URL\(req\.url\)\.pathname\s*,/
       );

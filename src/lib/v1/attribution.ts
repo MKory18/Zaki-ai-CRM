@@ -4,6 +4,7 @@ import { minorUnitFor } from '../currencies';
 import { deriveCoreState, type CoreState } from '../order-state';
 import { publicAddress } from '../public-address';
 import { realStoresOnly } from '../test-store';
+import { mintCapiRef } from './capi-identifiers';
 import { V1_CODE, V1Fault } from './door';
 import { amountString, isoWithOffset } from './shape';
 
@@ -161,6 +162,7 @@ export const ATTRIBUTION_SELECT = {
   source: true,
   externalChannel: true,
   adId: true,
+  adsetId: true,
   landingPageId: true,
   product: { select: { sku: true } },
   channel: { select: { kind: true } },
@@ -178,7 +180,7 @@ export const ATTRIBUTION_SELECT = {
 type Row = Prisma.OrderGetPayload<{ select: typeof ATTRIBUTION_SELECT }>;
 
 /** One order as the media buyer reads it. Pure: no database, no clock. */
-export function attributionItem(o: Row, origin: string | null | undefined) {
+export function attributionItem(o: Row, origin: string | null | undefined, capiCompanyId: string | null = null) {
   const zone = o.store?.country?.timezone ?? 'UTC';
   const at = (d: Date | null | undefined) => (d ? isoWithOffset(d, zone) : null);
   const firstLog = (mark: keyof typeof LOG_MARKS) =>
@@ -196,12 +198,10 @@ export function attributionItem(o: Row, origin: string | null | undefined) {
     // kind, then the free-text source the order was raised with.
     channel: (o.externalChannel ?? o.channel?.kind ?? o.source).trim().toLowerCase(),
     ad_id: o.adId,
-    /*
-     * Not stored on an order today. The ad set and the ad's name arrive only
-     * once landing pages capture them from the link — the media buyer's
-     * P0.1, which changes order creation and waits for the owner's OK.
-     */
-    adset_id: null,
+    // From the ad's own link (`adset_id={{adset.id}}`), kept by the landing
+    // page when it creates the order. Null for every order placed before that,
+    // and for any whose link carried none — never guessed from the campaign.
+    adset_id: o.adsetId ?? null,
     campaign_id: o.campaign?.externalId ?? null,
     ad_name: null,
     landing_page: o.landingPage
@@ -230,14 +230,17 @@ export function attributionItem(o: Row, origin: string | null | undefined) {
     is_fake: o.rejectionReason === 'FAKE_ORDER',
     first_contact_at: at(o.contactAttempts[0]?.createdAt),
     /*
-     * NULL ON PURPOSE. The spec has this as «an encrypted reference to the
-     * phone and fbc/fbp/ctwa_clid that only CAPI code opens». This system
-     * already sends its own conversions to Meta (`conversions/meta-capi.ts`),
-     * and handing another system a sealed phone needs a key both hold —
-     * which is the owner's decision, not this endpoint's. Until he rules,
-     * the key stays and says «nothing».
+     * «An encrypted reference to the phone and fbc/fbp/ctwa_clid that only
+     * CAPI code opens» — and only a key that was GRANTED `capi.identifiers`
+     * is handed one. Without that scope it stays null, exactly as it was
+     * before the scope existed: a reference nobody may open is noise, and a
+     * key that cannot open it should not be told which orders have an
+     * identifier behind them (`capiCompanyId` is null for such a key).
+     *
+     * This does not touch the OMS's own conversions to Meta
+     * (`conversions/*`): whether both systems send is the owner's decision.
      */
-    capi_ref: null,
+    capi_ref: capiCompanyId ? mintCapiRef(capiCompanyId, o.id) : null,
   };
 }
 
@@ -248,8 +251,10 @@ export async function readAttributionPage(params: {
   cursor: { updatedAt: Date; id: string } | null;
   limit: number;
   origin: string | null | undefined;
+  /** Set only when the key holds `capi.identifiers`: the company its references are minted for. */
+  capiCompanyId?: string | null;
 }) {
-  const { companyId, since, cursor, limit, origin } = params;
+  const { companyId, since, cursor, limit, origin, capiCompanyId = null } = params;
   const rows = await db.order.findMany({
     where: {
       // From the token, never from the request — see `system-token.ts`.
@@ -275,7 +280,7 @@ export async function readAttributionPage(params: {
   const page = rows.slice(0, limit);
   const last = page[page.length - 1];
   return {
-    items: page.map((o) => attributionItem(o, origin)),
+    items: page.map((o) => attributionItem(o, origin, capiCompanyId)),
     next_cursor: rows.length > limit && last ? encodeCursor(last.updatedAt, last.id) : null,
   };
 }

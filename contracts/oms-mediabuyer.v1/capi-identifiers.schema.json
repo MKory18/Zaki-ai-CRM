@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "zaki/oms-mediabuyer.v1/capi-identifiers",
+  "title": "POST /api/v1/capi/identifiers — the answer (v1)",
+  "description": "الـ OMS ← الميديا باير. الطلب: {\"refs\":[\"enc:…\"]} (1–100). صلاحية capi.identifiers وحدها، وهي مو بأي مجموعة افتراضية. الجواب الوحيد بالباب اللي بيحمل زبون (رقم + معرّفات النقرة) — بالذاكرة بس، بلا تخزين وبلا لوغ، Cache-Control: no-store. مرجع ما انفتح (غلط، أو لشركة تانية) ما بيطلع بالجواب.",
+  "type": "object",
+  "required": ["items"],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "phone_e164", "fbc", "fbp", "external_ref", "ctwa_clid", "waba_id", "page_id", "psid"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string", "pattern": "^enc:[A-Za-z0-9_-]+$", "description": "المرجع نفسه كما انبعت" },
+          "phone_e164": {
+            "anyOf": [{ "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" }, { "type": "null" }],
+            "description": "null لما ما في كود دولة معروف — ما بنخمّن"
+          },
+          "fbc": { "anyOf": [{ "type": "string" }, { "type": "null" }], "description": "كوكي _fbc من الصفحة (مشفّر عندنا)" },
+          "fbp": { "anyOf": [{ "type": "string" }, { "type": "null" }], "description": "كوكي _fbp من الصفحة (مشفّر عندنا)" },
+          "external_ref": { "anyOf": [{ "type": "string" }, { "type": "null" }], "description": "معرّف الزبون الداخلي — للـ external_id" },
+          "ctwa_clid": { "anyOf": [{ "type": "string" }, { "type": "null" }], "description": "طلبات «اضغط للواتس» فقط" },
+          "waba_id": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "page_id": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "psid": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+        }
+      }
+    }
+  }
+}

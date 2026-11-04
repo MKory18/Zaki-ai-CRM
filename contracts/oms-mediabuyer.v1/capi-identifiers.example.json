@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "ref": "enc:djE6MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwOjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA6MDAwMDAw",
+      "phone_e164": "+963936000000",
+      "fbc": "fb.1.1762200000000.IwAR0example",
+      "fbp": "fb.1.1762200000000.1234567890",
+      "external_ref": "00000000-0000-4000-8000-000000000001",
+      "ctwa_clid": null,
+      "waba_id": null,
+      "page_id": null,
+      "psid": null
+    }
+  ]
+}

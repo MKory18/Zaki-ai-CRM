@@ -937,6 +937,28 @@ model Order {
   /// same reason as `ctwaClidEnc`.
   psidEnc                   String?
   wabaId                    String?
+  /// WHERE A WEB ORDER CAME FROM (2026-11-04, the media buyer's work order).
+  ///
+  /// A landing page used to keep only `?c=CODE`, which names a campaign. These
+  /// are what the ad's own link and the browser's Meta cookies carry:
+  ///
+  ///   · `adsetId` — `adset_id={{adset.id}}` from the ad's URL parameters,
+  ///     digits only. (`adId` above holds the ad's id, the same way.)
+  ///   · `fbcEnc` / `fbpEnc` — the `_fbc` / `_fbp` cookies, ENCRYPTED at rest
+  ///     like `ctwaClidEnc`: `_fbc` carries the click id (`fbclid`), which
+  ///     identifies one person's click on one ad. Never returned by any
+  ///     screen; opened only by `POST /api/v1/capi/identifiers`.
+  ///   · `utm*` — the campaign's own labels, short plain text.
+  ///
+  /// Every column is nullable with no default: no existing order is touched.
+  adsetId                   String?
+  fbcEnc                    String?
+  fbpEnc                    String?
+  utmSource                 String?
+  utmMedium                 String?
+  utmCampaign               String?
+  utmContent                String?
+  utmTerm                   String?
   /// The calling system's own handle for the conversation this came out of,
   /// so a reply can be traced back to the order without storing the chat.
   conversationRef           String?

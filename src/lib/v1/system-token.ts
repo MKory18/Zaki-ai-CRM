@@ -41,6 +41,19 @@ export const V1_SCOPES = [
   // because a third system needed them.
   'orders.attribution.read',
   'products.costs.read',
+  // The media buyer's three more (2026-11-04, its INTEGRATIONS §4.1). Each is
+  // its own scope for the same reason as the two above: the money questions
+  // and the customer questions are not the catalogue's.
+  //
+  // `products.economics.read` is `products.costs.read` under the name the
+  // media buyer's work order uses; either opens the same fields (see
+  // `hasEconomicsScope`), so a key minted last month keeps working.
+  'products.economics.read',
+  // THE ONE THAT HANDS OUT A CUSTOMER. `POST /api/v1/capi/identifiers` answers,
+  // for an order's sealed reference, the phone and the click ids a server-side
+  // conversion needs. It is never in a system's default scopes: the owner
+  // ticks it, knowing what it opens.
+  'capi.identifiers',
 ] as const;
 
 export type V1Scope = (typeof V1_SCOPES)[number];
@@ -67,7 +80,7 @@ export const REPLIES_SCOPES: V1Scope[] = [
  * writes here: no order, no note, no lookup of a customer's number — the
  * owner's rule is that ads are edited THERE and orders live HERE.
  */
-export const MEDIABUYER_SCOPES: V1Scope[] = ['products.read', 'products.costs.read', 'orders.attribution.read'];
+export const MEDIABUYER_SCOPES: V1Scope[] = ['products.read', 'products.economics.read', 'orders.attribution.read'];
 
 /**
  * The outside systems a key may be made for, each with its default scopes.
@@ -97,7 +110,14 @@ export const V1_SCOPE_AR: Record<V1Scope, string> = {
   'orders.note': 'إضافة ملاحظة على طلب',
   'orders.attribution.read': 'قراءة مصدر الطلبات وحالتها (بلا بيانات زبون)',
   'products.costs.read': 'قراءة تكلفة المنتج ومدة المخزون',
+  'products.economics.read': 'قراءة تكلفة المنتج وأجرة التوصيل والإرجاع ومدة المخزون',
+  'capi.identifiers': 'فتح معرّفات الطلب لإرسال التحويلات (رقم الزبون ومعرّفات الإعلان) — بيانات زبون',
 };
+
+/** Does the key hold the scope that opens the cost / fee / shelf figures? Either name does. */
+export function hasEconomicsScope(scopes: readonly V1Scope[]): boolean {
+  return scopes.includes('products.economics.read') || scopes.includes('products.costs.read');
+}
 
 /** The default life of a token: «90 يوم» in the contract's own table. */
 export const TOKEN_DAYS = 90;
